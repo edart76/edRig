@@ -91,6 +91,7 @@ class FkControl(Control):
 					ui control: # always last in output
 						world output # separate world output
 			spareControlInputA # mid in output
+		localOutput: locator for use as point datatype
 			"""
 
 	def __init__(self, name):
@@ -99,6 +100,10 @@ class FkControl(Control):
 		self.shape = None
 		self.spareInputs = {} # name, node
 		self.combineNode = None
+
+		# make local output
+		self.localOutput = ECA("locator", self.name+"_localOutput")
+		cmds.parent(self.localOutput, self.entry)
 
 	@property
 	def output(self):
@@ -127,7 +132,7 @@ class FkControl(Control):
 
 	def makeUi(self):
 		"""creates ui shape, parents it to control group (which should by now
-		be at home position and zeroes transforms"""
+		be at home position) and zeroes transforms"""
 		temp = cmds.circle(n=self.name, ch=False, normal=(1,0,0), r=3)
 		tf = AbsoluteNode(temp[0])
 		shape = AbsoluteNode(cmds.listRelatives(tf, shapes=True))
@@ -135,6 +140,8 @@ class FkControl(Control):
 		self.shape = shape
 		cmds.parent(self.tf, self.controlGrp)
 		transform.zeroTransforms(self.tf)
+
+		transform.connectTransformAttrs(self.tf, self.localOutput)
 
 	@property
 	def ui(self):
@@ -160,10 +167,12 @@ class FkControl(Control):
 	@property
 	def worldOutput(self):
 		"""world output of the control (strongly not recommended for use)"""
-		marker = invokeNode(name=self.name + "_controlGrp", type="locator",
+		marker = invokeNode(name=self.name + "_worldOutput", type="locator",
 		                  parent=self.spaceGrp)
 		transform.zeroTransforms(marker)
 		return marker
+
+
 
 
 

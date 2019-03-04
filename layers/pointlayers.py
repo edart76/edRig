@@ -39,7 +39,7 @@ class ControlOp(PointLayerOp):
 		self.addOutput(name="controlOutput", dataType="0D",
 		               desc="output local space matrix from control")
 		self.addOutput(name="controlUi", dataType="custom",
-		               desc="control ui object to be passed to a space op")
+		               desc="control ui shape to be passed forwards")
 
 	def plan(self):
 		self.start = self.makeStarter(name=self.opName+"ctrlStarter", d="0D")
@@ -49,7 +49,7 @@ class ControlOp(PointLayerOp):
 		transform.matchXforms(source=self.start, target=self.control.controlGrp)
 		self.control.makeUi()
 		self.getInput("controlOutput").value = self.control.output
-		self.getInput("controlUi").value = self.control
+		self.getInput("controlUi").value = Point(self.control.localOutput)
 
 
 
