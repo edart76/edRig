@@ -18,10 +18,10 @@ def getCurveInfo(shape):
 	if isCurve(shape):
 		curveInfo = {}
 		fn = shape.shapeFn
-		curveInfo["cvs"] = fn.cvPositions()
+		curveInfo["cvs"] = [(i.x, i.y, i.z) for i in fn.cvPositions()]
 		curveInfo["degree"] = fn.degree
 		curveInfo["form"] = fn.form
-		curveInfo["knots"] = fn.knots()
+		curveInfo["knots"] = [i for i in fn.knots()]
 		#curveInfo["rational"] = fn.rational()
 		curveInfo["rational"] = True
 
@@ -47,7 +47,7 @@ def setCurveInfo(info, target=None, create=True, parent=None):
 
 	cvs = [om.MPoint(i) for i in info["cvs"]]
 	shapeObj = fn.create(
-		cvs, info["knots"], info["form"], False, True, parent=parent.MObject
+		cvs, info["knots"], info["degree"], info["form"], False, True, parent=parent.MObject
 	)
 	return shapeObj
 

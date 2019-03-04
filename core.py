@@ -608,7 +608,7 @@ class AbsoluteNode(str):
 	def refreshDagPath(self):
 		self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
 		#self.node = self.MDagPath.fullPathName()
-		self.node = self.MFnDagNode.fullPathName()[0]
+		self.node = self.MFnDagNode.fullPathName()
 
 	def returnDepNode(self):
 		self.node = self.MFnDependency.name()

@@ -108,7 +108,9 @@ class Memory(SafeDict):
 	def refresh(self, infoName="", infoType="", *args, **kwargs):
 		"""updates existing memory with info from scene
 		DOES NOT create new info if none exists"""
-
+		print
+		print "memory refresh - nodesFromInfoName {} are {}".format(
+			infoName, self.nodesFromInfoName(infoName))
 		gatheredGoss = [self._gatherInfo(infoType, target=i)
 		                for i in self.nodesFromInfoName(infoName)]
 		self._storage[infoName][infoType] = gatheredGoss
@@ -309,6 +311,7 @@ class Memory(SafeDict):
 		elif target.isSurface:
 			info = surface.getSurfaceInfo(target)
 		pass
+		return info
 
 	@staticmethod
 	def setShapeInfo(info, target):
