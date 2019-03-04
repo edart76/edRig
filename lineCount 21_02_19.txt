@@ -1,0 +1,33 @@
+# top level
+75
+30
+100
+950
+310
+150
+350
+530
+190
+
+#abstract
+300
+520
+430
+
+#ui
+250
+750
+600
+120
+100
+400
+
+#actual rigging stuff
+600
+450
+350
+330
+
+total:
+7320?
+not that beefy really
