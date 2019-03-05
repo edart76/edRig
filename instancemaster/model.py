@@ -2,7 +2,7 @@
 from maya import cmds
 import maya.api.OpenMaya as om
 from edRig import attr, transform
-from edRig.core import AbsoluteNode, ECA
+from edRig.core import AbsoluteNode, ECA, invokeNode
 from PySide2 import QtCore
 from edRig.layers.setups import InvokedNode
 
@@ -39,20 +39,34 @@ combination
 class InstanceMasterObject(object):
 	"""defines access for global and instance offsets"""
 
-	def __init__(self, target, model):
+	def __init__(self, target, model, name=None, setup=True):
 		"""associates object with target maya dag node"""
-		self.name = "new_IMobject"
+		self.name = name or "new_IMobject"
 		self.model = model
 		self.realNode = AbsoluteNode(target)
+
 		self.realParent = cmds.listRelatives(target, parent=True)
 		self.globalOffset = None
 		self.instanceOffset = None
 		self.isMaster = False
 		self.isInstance = False # both CANNOT be true
+		self.network = None
 
+		if setup:
+			self.setup()
+		else:
+			self.regenerate()
+
+	def setup(self):
+		"""run on creation of instance, not regeneration"""
+		attr.addTag(self.realNode, "InstanceMasterObject")
 		# network nodes used to show relationship in graph and regenerate
 		self.network = ECA("network", self.name+"_network")
 		self.makeNetwork()
+
+	def regenerate(self):
+		test = attr.getImmediateNeighbours(self.realNode+".InstanceMasterObject_tag")
+		self.network = [i for i in test if "network" in i][0]
 
 	def makeOffsets(self):
 		"""creates new groups above target, with global offset matched to target"""
@@ -71,17 +85,23 @@ class InstanceMasterObject(object):
 	def makeNetwork(self):
 		attr.addTag(self.network, "InstanceMasterObject")
 		attr.addAttr(self.network, attrName="globalOffset", attrType="string")
+		attr.addAttr(self.network, attrName="instanceNode", attrType="string")
+
+		cmds.connectAttr(self.realNode+".InstanceMasterObject_tag",
+		                 self.network+".instanceNode")
 
 
 
 class MasterItem(InstanceMasterObject):
 	"""object for static master instances"""
-	def __init__(self, target, model):
-		super(MasterItem, self).__init__(target, model)
+	def __init__(self, target, model, name=None):
+		super(MasterItem, self).__init__(target, model, name)
 		self.isMaster = True
+		#attr.addTag(self.realNode, "IM_master")
+		SceneInstanceModel.tagAsMaster(self.realNode, self.name)
 		# self.children = [] # lists only instances of this specific master
 
-	def makeMaster(self, name):
+	def makeInstance(self, name):
 		"""called after operation has been verified"""
 		dummyMarker = ECA("transform", "newMaster_"+name+"_dummy")
 		transform.matchXforms(source=self.globalOffset, target=dummyMarker)
@@ -100,7 +120,8 @@ class MasterItem(InstanceMasterObject):
 
 	def makeInstance(self, name="newInstance"):
 		"""splits off a new instance of this master"""
-		newGlobal = None
+		newGlobal = cmds.instance(self.realNode, name=name)
+
 
 
 
@@ -113,6 +134,10 @@ class InstanceItem(InstanceMasterObject):
 		super(InstanceItem, self).__init__(target)
 		self.parent = parent
 
+	def makeNetwork(self):
+		"""uses master's network"""
+		pass
+
 
 class SceneInstanceModel(object):
 	"""tracks supported instances in the maya scene"""
@@ -123,9 +148,13 @@ class SceneInstanceModel(object):
 		self.updateMasterList()
 		self.ui = ui
 		#self.children = {}
-		self.masterGrp = InvokedNode("InstanceMaster_masters")
-		self.catalogue = {} # Abs(network node) : IM object
-		pass
+		#self.masterGrp = InvokedNode("InstanceMaster_masters")
+		#self.catalogue = {} # Abs(network node) : IM object
+
+		self.wireSignals()
+
+	def wireSignals(self):
+		self.ui.onNewMaster.connect(self.makeSelectedNewMaster)
 
 	def objectFromNetwork(self, network):
 		return self.catalogue[network]
@@ -133,13 +162,22 @@ class SceneInstanceModel(object):
 	def updateMasterList(self):
 		self.masters = self.listAllMasters()
 
-	def makeNewMaster(self, target):
+	def makeSelectedNewMaster(self, target=None):
+		if not target:
+			target = cmds.ls(sl=True)
+			if not target:
+				print "nothing selected, no new master to create"
+				return
+			target = target[0]
 		masterName = raw_input("Name new instance master")
 		if not masterName or not self.checkMasterNameValid(masterName):
 			print "no valid name input, terminating"
 			return
+		print "making master from {}".format(target)
 
 		# first make IM object and offsets
+		master = MasterItem(target, self, masterName)
+
 
 
 		# copy = cmds.instance(target, n=target+"_instance")
@@ -153,7 +191,9 @@ class SceneInstanceModel(object):
 
 	def checkMasterNameValid(self, name):
 		"""checks master name is maya-friendly and not a duplicate"""
-		#if name in
+		if name in self.listAllMasters().keys():
+			return False
+		return True
 
 
 
@@ -190,6 +230,10 @@ class SceneInstanceModel(object):
 			name = attr.getTag(i, tagName="IM_master")
 			found[name] = i
 		return found
+
+	@property
+	def masterGrp(self):
+		return invokeNode(name="InstanceMaster_masters", type="transform")
 
 
 

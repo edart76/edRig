@@ -7,20 +7,26 @@ from PySide2 import QtGui, QtWidgets, QtCore
 import shiboken2
 import maya.OpenMayaUI as omui
 from edRig.instancemaster.model import SceneInstanceModel
+from edRig.tilepile.ui2.lib import ContextMenu, MyDockingUI, dock_window
+from edRig.structures import ActionItem
 
 def show():
+	#eyy = dock_window(InstanceMasterUI)
 	eyy = InstanceMasterUI()
 	eyyyyy = eyy.show()
 	return eyyyyy
+	#return eyy
 
 class InstanceMasterUI(QtWidgets.QMainWindow):
 	"""main TilePile window"""
+	onNewMaster = QtCore.Signal()
 	def __init__(self):
 		super(InstanceMasterUI, self).__init__()
 		self.text = "hello :)"
 		self.width = 0
 		self.height = 0
 		self.sceneModel = SceneInstanceModel(ui=self)
+
 		self.initUi()
 
 
@@ -28,8 +34,14 @@ class InstanceMasterUI(QtWidgets.QMainWindow):
 		# anti rubbish collection
 
 		self.setWindowModality(QtCore.Qt.WindowModal)
+		#self.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
+		self.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+		                   QtWidgets.QSizePolicy.Expanding)
 
-		print "tp init finished"
+
+		self.wireSignals()
+
+		print "IM init finished"
 
 	def initUi(self):
 		parent = self.getMayaWindow()
@@ -47,15 +59,17 @@ class InstanceMasterUI(QtWidgets.QMainWindow):
 		self.mainBox.addWidget(self.catalogue)
 		self.mainBox.addWidget(self.tree)
 		self.mainFrame.setLayout(self.mainBox)
+		self.mainFrame.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+		                   QtWidgets.QSizePolicy.Expanding)
 
 		self.setCentralWidget(self.mainFrame)
 		self.setGeometry(200, 200, 700, 700)
 		self.setWindowTitle("InstanceMaster v0.0")
 		self.width, self.height = self.mainDimensions()
 
-	def mousePressEvent(self, event):
-		#self.graph.viewer().mousePressEvent(event)
-		pass
+	def sync(self):
+		self.catalogue.sync()
+		self.tree.sync()
 
 	def mainDimensions(self):
 		print "QtWidgets frame geo is {}".format(self.frameGeometry())
@@ -64,31 +78,56 @@ class InstanceMasterUI(QtWidgets.QMainWindow):
 		height = sizeRect.height()
 		return width, height
 
+	def wireSignals(self):
+		self.catalogue.onNewMaster.connect(self.newMasterCalled)
+
+	def newMasterCalled(self):
+		self.onNewMaster.emit()
+
 	def getMayaWindow(self):
 		pointer = omui.MQtUtil.mainWindow()
 		return shiboken2.wrapInstance(long(pointer), QtWidgets.QWidget)
 
 class InstanceCatalogue(QtWidgets.QListWidget):
+	"""flat list of all master instances"""
+	onNewMaster = QtCore.Signal()
 	def __init__(self, parent=None, sceneModel=None):
 		super(InstanceCatalogue, self).__init__(parent)
 		self.model = sceneModel
-		self.refresh()
+		#self.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
+		self.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+		                   QtWidgets.QSizePolicy.Expanding)
 
-	def refresh(self):
+		self.sync()
+		self.contextMenu = ContextMenu(self)
+
+	def sync(self):
 		"""updates UI with list of all master instances"""
 		self.clear()
 		newList = sorted(self.model.listAllMasters().keys())
 		for i in newList:
 			self.addItem(i)
 
+	def buildContext(self):
+		self.contextMenu.clearCustomEntries()
+		menuDict = {"make new master" : ActionItem({"func" : self.newMasterRequested},
+		                                           name="make new master")}
+		self.contextMenu.buildMenusFromDict(menuDict)
 
-	pass
+	def newMasterRequested(self):
+		self.onNewMaster.emit()
+
+	def contextMenuEvent(self, event):
+		self.buildContext()
+		self.contextMenu.exec_(event.globalPos())
+		super(InstanceCatalogue, self).contextMenuEvent(event)
+
 
 class InstanceTreeView(QtWidgets.QTreeWidget):
 	def __init__(self, parent=None, sceneModel=None):
 		super(InstanceTreeView, self).__init__(parent)
-		pass
-	pass
+		#self.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
 
-class ContextMenu(object):
+	def sync(self):
+		pass
 	pass

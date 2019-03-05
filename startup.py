@@ -30,7 +30,8 @@ def makeCodeNode():
 	# is scrubbing
 	codeNode = None
 	if cmds.objExists("CodeNode"):
-		codeNode = AbsoluteNode(codeNode)
+		#codeNode = AbsoluteNode("CodeNode")
+		pass
 	else:
 		codeNode = ECA("network", name="CodeNode")
 		# isPlaying attr

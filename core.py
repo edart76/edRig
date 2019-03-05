@@ -558,8 +558,11 @@ class AbsoluteNode(str):
 		if isinstance(node, AbsoluteNode):
 			return node
 		if isinstance(node, list):
+			print "node is list"
 			return AbsoluteNode(node[0])
 		absolute = str.__new__(cls, node)
+		print node
+		print "node is " + node
 		absolute.node = node
 		if not cmds.objExists(node):
 			print "{} DOES NOT EXIST - YER OFF THE MAP".format(node)

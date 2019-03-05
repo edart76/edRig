@@ -4,7 +4,7 @@ import shiboken2
 import maya.OpenMayaUI as omui
 from edRig.tilepile.ui2.abstractview import AbstractView
 from edRig.tilepile.ui2.statuspane import StatusPane
-from edRig.tilepile.ui2.lib import MayaDockWindow, getMayaWindow, MyDockingUI, dock_window
+from edRig.tilepile.ui2.lib import  MyDockingUI, dock_window
 from edRig.pipeline import TempAsset
 from edRig import ROOT_PATH
 
@@ -59,7 +59,7 @@ class TilePileUI(MyDockingUI):
 	def initUi(self):
 		"""no windows
 		no widgets
-		only beautiful seamless nodes"""
+		only beautiful boundless nodes"""
 
 		#parent = getMayaWindow()
 		#parentWindow = QtWidgets.QMainWindow(parent)

@@ -21,10 +21,6 @@ Author: Lior ben horin
 12-1-2017
 '''
 
-
-
-
-
 def dock_window(dialog_class):
 	try:
 		cmds.deleteUI(dialog_class.CONTROL_NAME)
@@ -51,7 +47,6 @@ def dock_window(dialog_class):
 	# after maya is ready we should restore the window since it may not be visible
 	cmds.evalDeferred(lambda *args: cmds.workspaceControl(main_control,
 	                                                      e=True, rs=True))
-
 	# will return the class of the dock content.
 	return win.run()
 
@@ -69,14 +64,6 @@ class MyDockingUI(QtWidgets.QWidget):
 		self.__class__.instances.append(weakref.proxy(self))
 
 		self.window_name = self.CONTROL_NAME
-		#self.ui = parent
-		#print "parent is {}".format(parent)
-		#self.main_layout = parent.layout()
-		#self.main_layout.setContentsMargins(2, 2, 2, 2)
-
-		# here we can start coding our UI
-		#self.my_label = QtWidgets.QLabel('hello world!')
-		#self.main_layout.addWidget(self.my_label)
 
 	@staticmethod
 	def delete_instances():
@@ -94,9 +81,6 @@ class MyDockingUI(QtWidgets.QWidget):
 	def run(self):
 		return self
 
-
-
-
 class MayaDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 	"""base class for dockable maya windows"""
 	def __init__(self, parent=None):
@@ -106,9 +90,6 @@ class MayaDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 
 	def dockCloseEventTriggered(self):
 		pass
-
-
-
 
 class ConfirmDialogue(QtWidgets.QMessageBox):
 	"""convenience for confirmation"""

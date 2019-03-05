@@ -364,6 +364,10 @@ class ActionItem(object):
 		self._name = name
 		if not execDict:
 			return
+		# this can just be passed a function
+		elif not isinstance(execDict, dict):
+			self.items[0] = execDict
+			return
 		for i, val in enumerate(["func", "args", "kwargs"]):
 			self.items[i] = execDict[val] if val in execDict.keys() else None
 

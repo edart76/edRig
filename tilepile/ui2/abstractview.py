@@ -480,7 +480,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		and adds them to default"""
 		self.contextMenu.clearCustomEntries()
 
-		nodeActions = { "nodes" : [self.getTileActions()]}
+		nodeActions = { "nodes" : [self.getTileActions()]} # returns combined dict
 		nodeExecActions = self.getTileExecActions()
 		print "nodeExecActions are {}".format(nodeExecActions)
 		if nodeExecActions:
