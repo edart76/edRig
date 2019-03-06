@@ -1,6 +1,6 @@
 # layers working with transforms, hierarchy, point data, joints
 
-from edRig import core, joint, transform, attrio, control
+from edRig import core, transform, attrio, control
 from maya import cmds
 from edRig.layers.datatypes import Point
 from edRig.tilepile.ops.layer import LayerOp

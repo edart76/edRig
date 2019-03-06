@@ -136,16 +136,14 @@ class Memory(SafeDict):
 			if k == "nodes" :
 				continue
 			#print "k is {}, v is {}".format(k, v)
-			if "closed" in v.keys() and v["closed"]:
+			if v.get("closed"):
 				continue
-			for kk in v.keys():
-				#print "kk is {}".format(kk)
-				if kk == "nodes" or kk == "closed" :
+			returnDict[k] = []
+			for vk in v.keys():
+				#print "vk is {}".format(vk)
+				if vk == "nodes" or vk == "closed" :
 					continue
-				# print "kk is {}, vv is {}".format(kk, vv)
-				# if "closed" in vv.keys() and vv["closed"]:
-				# 	continue
-				returnDict.update({k: kk})  # that's awkward
+				returnDict[k].append(vk)
 		return returnDict
 
 	def _gatherInfo(self, infoType, target=None, **kwargs):

@@ -6,6 +6,8 @@ from edRig.structures import ActionItem
 from maya import cmds # :(
 import functools
 import copy
+import pprint
+from collections import OrderedDict
 
 class LayerOp(Op):
 	"""base class for sequential operations that make up a rig"""
@@ -95,22 +97,47 @@ class LayerOp(Op):
 
 	def memoryActions(self):
 		openDict = self.memory.renewableMemory()
-		returnDict = {}
+		#print "op openDict is {}".format(openDict) # add proper list support here
+		#print "op memory is {}".format(pprint.pformat(self.memory))
+		#pprint.pprint(self.memory, indent=3)
+		returnDict = OrderedDict()
+		# add "all" options
+		if len(openDict.keys()) > 1:
+			returnDict["all"] = ActionItem(
+				{"func" : self.refreshAllMemory}, name="all")
 		for k,v in openDict.iteritems():
 			returnDict[k] = {}
-			#for vk, vv in v.iteritems():
-			returnDict[k][v] = ActionItem({
-				#"func" : self.memory.refresh,
-				"func" : self.refreshMemoryAndSave,
-				"kwargs" : {
-					"infoName" : k,
-					"infoType" : v,
-				} }, name=v )
+			# for vk, vv in v.iteritems():
+			# 	returnDict[k][vk] = ActionItem({
+			# 		# "func" : self.memory.refresh,
+			# 		"func": self.refreshMemoryAndSave,
+			# 		"kwargs": {
+			# 			"infoName": k,
+			# 			"infoType": v,
+			# 		}}, name=v)
+			for i in v:
+				returnDict[k][i] = ActionItem({
+					#"func" : self.memory.refresh,
+					"func" : self.refreshMemoryAndSave,
+					"kwargs" : {
+						"infoName" : k,
+						"infoType" : i,
+					} }, name=i )
+
+
+
 		return returnDict
 
 	def refreshMemoryAndSave(self, infoName=None, infoType=None):
 		"""save out memory with every refresh"""
 		self.memory.refresh(infoName=infoName, infoType=infoType)
+		self.saveOutMemory()
+
+	def refreshAllMemory(self):
+		"""refreshes all open memory cells"""
+		for k, v in self.memory.renewableMemory().iteritems():
+			for i in v:
+				self.memory.refresh(infoName=k, infoType=i)
 		self.saveOutMemory()
 
 	def remember(self, infoName=None, infoType=None, nodes=None, **kwargs):

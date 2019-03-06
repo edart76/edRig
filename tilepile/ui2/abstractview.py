@@ -7,7 +7,7 @@ from edRig.tilepile.ui2.abstracttile import AbstractTile, Knob, Pipe
 from edRig.tilepile.ui2.style import *
 from edRig.tilepile.ui2.context import ContextMenu
 from edRig.tilepile.ui2.lib import ConfirmDialogue
-from edRig.structures import ActionItem
+from edRig.structures import ActionItem, ActionList
 from edRig import attrio, pipeline, ROOT_PATH
 
 ZOOM_MIN = -0.95
@@ -504,15 +504,36 @@ class AbstractView(QtWidgets.QGraphicsView):
 			actions.update(i.abstract.getExecActions())
 		return actions
 
+	def mergeActionDicts(self, base, target):
+		"""if two identical paths appear, an actionList is created"""
+		for k, v in base.iteritems():
+			if isinstance(v, dict) and isinstance(target[k], dict):
+				if target.get(k):
+					self.mergeActionDicts(v, target[k])
+				elif isinstance(v, (ActionItem, ActionList)) and \
+					isinstance(target[k], (ActionItem, ActionList)):
+						v.addAction(target[k])
+		return base
+
 
 	def getTileActions(self):
 		"""desperately, desperately need a better way to concatenate
 		similar actions into the same menu"""
 		actions = {}
+		tileDicts = []
+		if not self.selectedNodes():
+			return {}
 		for i in self.selectedNodes():
 			#print "tile get actions is {}".format(i.getActions())
 			actions.update(i.getActions())
-		return {"tile" : actions}
+			tileDicts.append(i.getActions())
+		if len(tileDicts) == 1:
+			return tileDicts[0]
+
+		base = tileDicts[0]
+		for i in tileDicts[0:]:
+			base = self.mergeActionDicts(base, i)
+		return base
 
 
 	def getIoActions(self):

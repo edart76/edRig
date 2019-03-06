@@ -478,30 +478,30 @@ class ActionBranch(object):
 class AbstractTreeThing(object):
 	"""in case of inheritance"""
 
-class AbstractTreeLeaf(AbstractTreeThing):
-	"""man can only build so many different recursive tree structures"""
-	def __init__(self, name, parent=None, value=None):
-		self.name = name
-		if parent:
-			assert isinstance(parent, AbstractTreeBranch)
-		self._parent = parent
-		#self.real = real
-		self.value = value
-
-	@property
-	def parent(self):
-		return self._parent
-
-	@parent.setter
-	def parent(self, val):
-		self._parent = val
-
-	@property
-	def siblings(self):
-		return [i for i in self.parent.leaves if i is not self]
+# class AbstractTreeLeaf(AbstractTreeThing):
+# 	"""man can only build so many different recursive tree structures"""
+# 	def __init__(self, name, parent=None, value=None):
+# 		self.name = name
+# 		if parent:
+# 			assert isinstance(parent, AbstractTreeBranch)
+# 		self._parent = parent
+# 		#self.real = real
+# 		self.value = value
 #
-# class AbstractTreeList
-# NOT USED, literally just use a normal list instead
+# 	@property
+# 	def parent(self):
+# 		return self._parent
+#
+# 	@parent.setter
+# 	def parent(self, val):
+# 		self._parent = val
+#
+# 	@property
+# 	def siblings(self):
+# 		return [i for i in self.parent.leaves if i is not self]
+# #
+# # class AbstractTreeList
+# # NOT USED, literally just use a normal list instead
 
 class AbstractTreeBranch(AbstractTreeThing):
 	"""uuuuugghg"""
@@ -538,4 +538,35 @@ class AbstractTreeBranch(AbstractTreeThing):
 					break
 		return branch
 
+""" consider the pattern of
+{keyA : {
+	keyA1 : value,
+	keyA2 : value
+	},
+keyB : {
+	keyB2 : value,
+	keyB3 : value
+	} }
+this is a common data structure, but in order to process headings, to work out
+the internal structure, is necessary to convert to this:
+{keyA : [keyA1, keyA2],
+keyB : [keyB2, keyB3] }
+
+conversion is involved, iteration is involved, a check is involved to process recursive structures,
+it's a nightmare.
+
+consider instead (for simple string keys at least), simply setting all leaf dict values to None
+before processing. something to bear in mind for abstractTree
+
+how would you iterate over a fully fractal structure, how would you interact with it?
+without involving code generation too much, consider:
+
+def iterate(tree, func) ? # apply function to every factorial combination of entries
+	and within func, can access certain local variables parent, children, next, last, root, leaves etc?
+	
+	by nature it has to be more involved than a simple generator
+
+
+"""
+	
 
