@@ -507,8 +507,9 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def mergeActionDicts(self, base, target):
 		"""if two identical paths appear, an actionList is created"""
 		for k, v in base.iteritems():
-			if isinstance(v, dict) and isinstance(target[k], dict):
-				if target.get(k):
+			if target.get(k):
+				if isinstance(v, dict) and isinstance(target[k], dict):
+
 					self.mergeActionDicts(v, target[k])
 				elif isinstance(v, (ActionItem, ActionList)) and \
 					isinstance(target[k], (ActionItem, ActionList)):
