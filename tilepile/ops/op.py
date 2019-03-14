@@ -2,7 +2,7 @@
 from maya import cmds
 import maya.api.OpenMaya as om
 from edRig.core import ECA, ECN, AbsoluteNode, shortUUID, invokeNode
-from edRig import Env, attrio, scene
+from edRig import Env, attrio, scene, attr
 from edRig.tilepile.abstractnode import AbstractAttr
 import random, copy, functools
 from edRig.structures import ActionItem
@@ -61,6 +61,12 @@ class Op(MayaReal):
 		"""base group for all tilePile stuff, named by character eventually"""
 		return invokeNode(name="tilePile", type="transform")
 
+	dataMapping = {
+		"0D" : "matrix",
+		"1D" : "nurbsCurve",
+		"2D" : "mesh",
+		"string" : "string",
+	}
 
 	def __init__(self, name=None, abstract=None):
 		self.character = None
@@ -89,6 +95,44 @@ class Op(MayaReal):
 		self.actions = {}
 		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
 			{"func" : self.clearMayaRig}))
+
+		# network nodes holding input and output plugs
+		self.inputNetwork = None
+		self.outputNetwork = None
+
+	def beforeExecution(self):
+		"""create network nodes procedurally from attributes"""
+		self.inputNetwork = self.ECA("network", name=self.opName+"_inputs")
+		self.outputNetwork = self.ECA("network", name=self.opName + "_outputs")
+
+		attr.makeStringConnection(self.inputNetwork, self.outputNetwork,
+								  startName="opStart", endName="opEnd")
+
+		for i in self.inputRoot.getAllLeaves():
+			self.makeOpIoNodes(self.inputNetwork, i)
+
+		for i in self.outputRoot.getAllLeaves():
+			self.makeOpIoNodes(self.outputNetwork, i)
+
+	def makeOpIoNodes(self, node, attr):
+		""":param node: AbsoluteNode
+		:param attr : AbstractAttr"""
+		#for i in attr.getAllChildren(): # get all leaves maybe?
+		# convert datatype to pass to addattr
+		if i.dataType in self.dataMapping.keys():
+			dt = self.dataMapping[i.dataType]
+
+			cmds.addAttr(node, ln=attr.name, dt=dt)
+		elif i.dataType == "enum":
+			options = ":".join(i.extras.get("items"))
+			cmds.addAttr(node, ln=attr.name, at="enum",
+						 enumName=options)
+		else:
+			dt = i.dataType
+			cmds.addAttr(node, ln=attr.name, at=dt)
+		i.plug = node+"."+i.name
+		return i.plug
+
 
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		"""attach op to abstractNode, and merge input and outputRoots"""

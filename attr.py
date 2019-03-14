@@ -26,8 +26,6 @@ def processAttrNames(attr, node=None, asPlug=False, asAttr=True):
 			returnList.append("".join(attr.split(".")[:-1]))
 	return returnList
 
-
-
 # functions for using string attributes like keys in dictionary
 def addTag(tagNode, tagName, tagContent=None, tag=True):
 	if not tagName + "_" in cmds.listAttr(tagNode):
@@ -127,7 +125,13 @@ def getImmediateFuture(target):
 def getImmediatePast(target):
 	return getImmediateNeighbours(target, source=True, dest=False)
 
-
+def makeStringConnection(startNode, endNode,
+						 startName="start", endName="end"):
+	"""adds a string connection between two nodes"""
+	cmds.addAttr(startNode, ln=startName, dt="string")
+	cmds.addAttr(endNode, ln=endName, dt="string")
+	cmds.connectAttr(startNode+"."+startName,
+					 endNode+"."+endName)
 
 
 

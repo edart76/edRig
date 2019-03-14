@@ -434,6 +434,12 @@ class AbstractAttr(AttrItem):
 	# 	super(AbstractAttr, self).__init__(*args, **kwargs)
 	# 	# that feel when you monkeypatch your own objects for readibility
 
+
+	def __init__(self, *args, **kwargs):
+		"""add maya-specific support, this inheritance is totally messed up"""
+		super(AbstractAttr, self).__init__(*args, **kwargs)
+		self.plug = None
+
 	def addConnection(self, edge):
 		"""ensures that input attributes will only ever have one incoming
 		connection"""

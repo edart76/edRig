@@ -16,7 +16,7 @@ class OpList(object):
 		#2D
 		SkinOp,
 		#misc
-		ImportDrivenOp, ImportDriverOp
+		ImportDrivenOp, ImportDriverOp, PythonOp,
 	]
 
 	def __repr__(self):

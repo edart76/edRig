@@ -132,3 +132,27 @@ class ImportDriverOp(ImportOp):
 		driver.dataType = d
 		self.addOutput(attrItem=driver)
 		self.refreshIo()
+
+
+class PythonOp(LayerOp):
+	"""base class for text-editor python snippets"""
+
+	@classmethod
+	def execStageNames(cls):
+		"""override base op execution stages - text ops only have one"""
+		execStageNames = ["execute"]
+		return execStageNames
+
+	@classmethod
+	def execFuncs(cls):
+		"""same as above"""
+		return {"execute" : {"onExec" : cls.execute}}
+
+	def __init__(self, *args, **kwargs):
+		super(PythonOp, self).__init__(*args, **kwargs)
+		self.text = ""
+
+	def execute(self):
+		scope = (locals(), globals())
+		exec self.text in scope
+
