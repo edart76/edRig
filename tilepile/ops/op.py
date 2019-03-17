@@ -44,17 +44,19 @@ class Op(MayaReal):
 	@classmethod
 	def execStageNames(cls):
 		"""returns names of stages IN ORDER"""
-		execStages = ["plan", "build"]
+		#execStages = ["plan", "build"]
+		execStages = ["execute"]
 		return execStages
 
 	@classmethod
 	def execFuncs(cls):
 		"""all execution stages associated with class"""
-		return {
-			"plan" : {"onExec" : cls.plan,
-			          "onStop" : cls.onPlanStop},
-			"build" : {"onExec" : cls.build,
-			           "onStop" : cls.onBuildStop},}
+		# return {
+		# 	"plan" : {"onExec" : cls.plan,
+		# 	          "onStop" : cls.onPlanStop},
+		# 	"build" : {"onExec" : cls.build,
+		# 	           "onStop" : cls.onBuildStop},}
+		return {"run" : cls.execute}
 
 	@classmethod
 	def classRigGrp(cls):
@@ -394,21 +396,30 @@ class Op(MayaReal):
 		return shortUUID(length=length)
 
 	# execution methods - override at will
-	def plan(self):
-		pass
+	# def plan(self):
+	# 	pass
+	#
+	# def build(self):
+	# 	pass
+	#
+	# def onPlanStop(self):
+	# 	print "{} running onPlanStop".format(self.opName)
+	# 	pass
+	#
+	# def onBuildStop(self):
+	# 	pass
+	#
+	# def onRunStop(self):
+	# 	# isn't this just a finished rig?
+	# 	pass
 
-	def build(self):
-		pass
+	def execute(self):
+		raise NotImplementedError()
 
-	def onPlanStop(self):
-		print "{} running onPlanStop".format(self.opName)
-		pass
 
-	def onBuildStop(self):
-		pass
-
-	def onRunStop(self):
-		# isn't this just a finished rig?
+	def showGuides(self):
+		"""used to allow user direction over op, as a separate process
+		to execution"""
 		pass
 
 	# io

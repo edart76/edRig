@@ -81,6 +81,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		# signals
 		self.nameTag.value_changed.connect(self._onNameChange)
 		self.actions = {}
+		self.abstract.sync.connect(self.sync)
 
 	def sync(self):
 		"""verify number of tileEntries is in sync with abstractNode"""

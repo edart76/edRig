@@ -5,6 +5,7 @@ from edRig.pipeline import TempAsset
 from edRig.tilepile.abstractnode import AbstractNode, AbstractAttr
 from edRig.tilepile.abstractedge import AbstractEdge
 from edRig.tilepile.oplist import ValidList
+from edRig.tilepile.lib import Signal
 from edRig.structures import ActionItem
 import pprint
 
@@ -150,6 +151,9 @@ class AbstractGraph(object):
 		if it is. states are neutral, executing, (routing, for massive graphs?)"""
 		self._asset = TempAsset # maybe?
 
+		# signals
+		self.edgesChanged = Signal()
+
 	def log(self, message):
 		print message
 
@@ -283,13 +287,6 @@ class AbstractGraph(object):
 		if self.state != "neutral":
 			return False
 		entry = self.getNode(node, entry=True)
-		# keys = ["fedBy", "feeding"]
-		# altKeys = ["feeding", "fedBy"]
-		# #for i, n in zip(keys, alt = list(keys).reverse()): # tried swag
-		# for i, n in keys, altKeys:
-		# 	for k in [self.getNode(j, True) for j in entry[i]]:
-		# 		k[n].discard(entry["node"]) # obamaNotBad.png
-		# handled automatically by deleteEdge
 
 		node = entry["node"]
 		for i in node.edges:
@@ -356,7 +353,8 @@ class AbstractGraph(object):
 		return edges
 
 	def getSeedNodes(self):
-		"""get nodes with no history"""
+		"""get nodes with no history
+		do not trust them"""
 		seeds = set()
 		for i in self.nodes:
 			if not i.history:
@@ -370,12 +368,13 @@ class AbstractGraph(object):
 		for i in self.nodes:
 			if not i.future: # i know the feeling
 				lost.add(i) # don't cry, it doesn't help
-		return lost # things might not get better # but they can't get worse
+		return lost # things might not get better
+		# but they can't get worse
 
 
 	def checkLegalConnection(self, source, dest):
 		"""checks that a connection wouldn't undermine DAG-ness"""
-		if self.state != "neutral":
+		if self.state != "neutral": # graph is executing
 			return False
 		if source.node.uid == dest.node.uid:
 			Env.log("put some effort into it for god's sake")
@@ -390,6 +389,20 @@ class AbstractGraph(object):
 			Env.log("dest node in source's past")
 			return False
 		return True
+
+	def checkNodeConnections(self, node):
+		"""called whenever attributes change, to check there aren't any
+		dangling edges"""
+		removeList = []
+		for i in node.edges:
+			if not any([n in node.outputs + node.inputs for
+						n in i.sourceAttr, i.destAttr]):
+				removeList.append(i)
+
+		for i in removeList:
+			self.deleteEdge(i)
+			self.edgesChanged()
+
 
 	def getNodesBetween(self, nodes=[], entry=False, include=True):
 		"""get nodes only entirely contained by selection
@@ -429,25 +442,27 @@ class AbstractGraph(object):
 		"""executes nodes in given sequence to given index"""
 
 		execPath = self.getExecPath(nodes=nodes)
-		self.setState("executing")
+		#self.setState("executing")
 		# enter graph-level execution state here
-		for i in execPath.sequence:
-			nodeIndex = index
-			if index == -1: # all steps
-				nodeIndex = len(i.executionStages()) # returns ["plan", "build"] etc
-			# for n in range(nodeIndex):
-			# 	kSuccess = i.execute(index=n)
-			"""currently no support for executing all nodes to stage n before
-			all to n+1"""
-			try:
-				kSuccess = i.execToStage(index)
-				# enter and exit node-level execution state
-				self.log("all according to kSuccess")
-			except RuntimeError("NOT ACCORDING TO KSUCCESS"):
-				pass
+		with AbstractGraphExecutionManager(self):
+			for i in execPath.sequence:
+				nodeIndex = index
+				if index == -1: # all steps
+					nodeIndex = len(i.executionStages()) # returns ["plan", "build"] etc
+				# for n in range(nodeIndex):
+				# 	kSuccess = i.execute(index=n)
+				"""currently no support for executing all nodes to stage n before
+				all to n+1"""
+				try:
+					kSuccess = i.execToStage(index)
+					# enter and exit node-level execution state
+					self.log("all according to kSuccess")
+				except RuntimeError("NOT ACCORDING TO KSUCCESS"):
+					pass
 
 		# exit graph-level execution
-		self.setState("neutral")
+		#self.setState("neutral")
+		self.log("execution complete")
 
 	def getExecActions(self, nodes=None):
 		"""returns available execution actions for target nodes, or all"""

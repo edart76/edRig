@@ -4,6 +4,7 @@ from edRig.core import shortUUID
 from edRig import Env, pipeline, attrio
 # from edRig.tilepile.ops.op import Op
 import functools
+from edRig.tilepile.lib import Signal
 
 class AbstractAbstractNode(type):
 	"""abstract class for abstract nodes"""
@@ -16,9 +17,11 @@ class AbstractNodeExecutionManager(object):
 		self.node = node
 
 	def __enter__(self):
+		self.node.beforeExecute()
 		return self
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
+		self.node.afterExecute()
 		if exc_type:
 			print ""
 			print "node {} encountered error during execution".format(self.node.nodeName)
@@ -32,18 +35,6 @@ class AbstractNode(object):
 	"""abstract node managed by abstract graph
 	interfaces with direct operations, and with UI"""
 
-	# set up action framework
-	class action(object):
-		"""decorator for asynchronous functions, passed on to real component"""
-		actions = {}
-		def __init__(self, fn, name=None):
-			self.fn = functools.update_wrapper(self, fn)
-			self.name = name or fn.__name__
-		def __call__(self, *args, **kwargs):
-			pass
-		# ?????
-
-
 	defaultName = "basicAbstract"
 	realClass = None
 
@@ -56,12 +47,24 @@ class AbstractNode(object):
 	def setRealClass(cls, realClass):
 		cls.realClass = realClass
 
+	@classmethod
+	def action(cls, func, name=None):
+		"""add any function to right-click action menus"""
+		name = name or func.__name__
+		@functools.wraps(func)
+		def wrapperAction(*args, **kwargs):
+			return func(*args, **kwargs)
+		cls.actions.update({name : ActionItem(
+			{"func" : func}, name=name)})
+		return wrapperAction
+
 	def __init__(self, graph, name=None, realInstance=None):
 		self.real = None
 		self.nodeName = name or self.defaultName + shortUUID(2)
 
 		self.uid = shortUUID(8)
 		self.graph = graph
+		self.state = "neutral"
 		self.inputRoot = AbstractAttr(node=self, role="input", dataType="null",
 		                              hType="root", name="inputRoot")
 		self.outputRoot = AbstractAttr(node=self, role="output", dataType="null",
@@ -94,7 +97,23 @@ class AbstractNode(object):
 		self.colour = self.real.colour
 		# self.redraw = False
 		# colour-changing nodes could be done if you make this a property
+
+		# signals
+		self.sync = Signal()
+		self.attrsChanged = Signal()
+		self.stateChanged = Signal()
+		self.wireSignals()
 		pass
+
+	def wireSignals(self):
+		"""sets up signal hierarchy"""
+		self.sync.connect(self.attrsChanged)
+		self.sync.connect(self.stateChanged)
+		# sync triggers everything
+
+	def setState(self, state):
+		self.state = state
+		self.stateChanged()
 
 	@property
 	def dataPath(self):
@@ -176,29 +195,53 @@ class AbstractNode(object):
 		"""builds a single stage of the real component's execution order
 		ATOMIC - CALLED BY EXEC TO STAGE"""
 		# do node-level fancy with as error catching here
-		func = self.getExecFunction(index, variant)
+		#func = self.getExecFunction(index, variant)
+		func = self.getExecFunction(index)
 		return func(self.real)
 
 	def execToStage(self, index):
 		"""builds up until a target stage, running stop feature if schedule is incomplete"""
 		maxStage = len(self.executionStages())
-		if index >= maxStage:
-			index = maxStage
-		if index == -1: # build everything
-			self.execToStage(maxStage-1)
-		for i in range(index+1):
-			nodeKSuccess = self.execute(i, variant="onExec")
-		# check if stage is not end stage
-		if index < maxStage -1:
-			nodeKSuccess = self.execute(index, variant="onStop")
+		#self.beforeExecute()
 
-		self.propagateOutputs()
+		with AbstractNodeExecutionManager(self):
+
+			if index >= maxStage:
+				index = maxStage
+			if index == -1: # build everything
+				self.execToStage(maxStage-1)
+			for i in range(index+1):
+				# nodeKSuccess = self.execute(i, variant="onExec")
+				nodeKSuccess = self.execute(i)
+
+
+			#self.afterExecute() # superceded by context manager
 
 	def propagateOutputs(self):
 		"""references the value of every output to that of every connected input"""
 		for i in self.outEdges:
 			i.dest[1].value = i.source[1].value
 
+	"""IN THEORY this system can support multiple stages of execution,
+	but it is not recommended, and variants are not supported at all"""
+
+	def beforeExecute(self):
+		"""use to update state?"""
+		self.setState("executing")
+		pass
+
+	def afterExecute(self):
+		"""used to update state, propagate outputs, etc"""
+		self.setState("neutral")
+		self.propagateOutputs()
+		self.sync(self) # sure whatever
+
+		pass
+
+	"""we need a way to feed back to the graph and ui the state of the node
+	do not attempt this specifically here, just trigger sync with the 
+	abstract node as argument. errors are raised to graph level and then
+	re-directed"""
 
 
 
