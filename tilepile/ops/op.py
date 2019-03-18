@@ -5,7 +5,7 @@ from edRig.core import ECA, ECN, AbsoluteNode, shortUUID, invokeNode
 from edRig import Env, attrio, scene, attr
 from edRig.tilepile.abstractnode import AbstractAttr
 import random, copy, functools
-from edRig.structures import ActionItem
+from edRig.structures import ActionItem, action
 from edRig.pipeline import safeLoadModule
 
 from edRig.tilepile.real import MayaReal
@@ -56,7 +56,7 @@ class Op(MayaReal):
 		# 	          "onStop" : cls.onPlanStop},
 		# 	"build" : {"onExec" : cls.build,
 		# 	           "onStop" : cls.onBuildStop},}
-		return {"run" : cls.execute}
+		return {"execute" : cls.execute}
 
 	@classmethod
 	def classRigGrp(cls):
@@ -97,10 +97,12 @@ class Op(MayaReal):
 		self.actions = {}
 		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
 			{"func" : self.clearMayaRig}))
+		self.addAction(func=self.showGuides)
 
 		# network nodes holding input and output plugs
 		self.inputNetwork = None
 		self.outputNetwork = None
+		self.nodes = self.nodesFromScene()
 
 	def beforeExecution(self):
 		"""create network nodes procedurally from attributes"""
@@ -119,21 +121,20 @@ class Op(MayaReal):
 	def makeOpIoNodes(self, node, attr):
 		""":param node: AbsoluteNode
 		:param attr : AbstractAttr"""
-		#for i in attr.getAllChildren(): # get all leaves maybe?
-		# convert datatype to pass to addattr
-		if i.dataType in self.dataMapping.keys():
-			dt = self.dataMapping[i.dataType]
+		for i in attr.getAllChildren(): # get all leaves maybe?
+			# convert datatype to pass to addattr
+			if i.dataType in self.dataMapping.keys():
+				dt = self.dataMapping[i.dataType]
 
-			cmds.addAttr(node, ln=attr.name, dt=dt)
-		elif i.dataType == "enum":
-			options = ":".join(i.extras.get("items"))
-			cmds.addAttr(node, ln=attr.name, at="enum",
-						 enumName=options)
-		else:
-			dt = i.dataType
-			cmds.addAttr(node, ln=attr.name, at=dt)
-		i.plug = node+"."+i.name
-		return i.plug
+				cmds.addAttr(node, ln=attr.name, dt=dt)
+			elif i.dataType == "enum":
+				options = ":".join(i.extras.get("items"))
+				cmds.addAttr(node, ln=attr.name, at="enum",
+							 enumName=options)
+			else:
+				dt = i.dataType
+				cmds.addAttr(node, ln=attr.name, at=dt)
+			i.plug = node+"."+i.name
 
 
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
@@ -354,7 +355,10 @@ class Op(MayaReal):
 	def getTag(tagNode, tagName=None):
 		# retrieves specific tag information, or lists all of it
 		if tagName:
+			if not tagName in cmds.listAttr(tagNode):
+				return None
 			gotTag = cmds.getAttr(tagNode + "." + tagName)
+
 		else:
 			gotTag = cmds.listAttr(tagNode, string="*tag")
 		return gotTag
@@ -388,6 +392,7 @@ class Op(MayaReal):
 
 	def ECA(self, type, name="blankName", *args):
 		node = self.ECAsimple(type, name, cleanup=True, *args)
+		self.nodes.append(node)
 		#cmds.parent(node, self.opGrp)
 		return node
 
@@ -395,32 +400,16 @@ class Op(MayaReal):
 	def shortUUID(length=4):
 		return shortUUID(length=length)
 
-	# execution methods - override at will
-	# def plan(self):
-	# 	pass
-	#
-	# def build(self):
-	# 	pass
-	#
-	# def onPlanStop(self):
-	# 	print "{} running onPlanStop".format(self.opName)
-	# 	pass
-	#
-	# def onBuildStop(self):
-	# 	pass
-	#
-	# def onRunStop(self):
-	# 	# isn't this just a finished rig?
-	# 	pass
-
+	# execution
 	def execute(self):
 		raise NotImplementedError()
 
+	def reset(self):
+		"""as this rigging system should be purely additive,
+		just delete all associated nodes"""
+		for i in self.nodes:
+			cmds.delete(i)
 
-	def showGuides(self):
-		"""used to allow user direction over op, as a separate process
-		to execution"""
-		pass
 
 	# io
 	def searchData(self, infoName):
@@ -433,17 +422,19 @@ class Op(MayaReal):
 		self.checkDataFileExists()
 		attrio.updateData(infoName, data, path=self.dataFilePath)
 
-
 	# actions
 	def getAllActions(self):
 		return self.actions
 
-	def addAction(self, actionDict=None, actionItem=None):
+	def addAction(self, actionDict=None, actionItem=None, func=None):
 		if actionDict:
 			self.actions.update(actionDict)
 		elif actionItem:
 			print "adding action {}".format(actionItem)
 			self.actions.update({actionItem.name : actionItem})
+		elif func:  # just add the function
+			item = ActionItem(execDict={"func": func}, name=func.__name__)
+			self.actions.update({item.name : item})
 
 	def addInputWithAction(self, parent=None, name=None, datatype=None, copy=None,
 	                       suffix="", desc=""):
@@ -464,23 +455,6 @@ class Op(MayaReal):
 			"kwargs" : {"op": self}}
 		inputAction = ActionItem(name="add_custom_input", execDict=actionDict)
 		self.addAction(actionItem=inputAction)
-
-
-	# def action(self, name=None):
-	# 	def decoOuter(func):
-	# 		@functools.wraps(func)
-	# 		def decoInner(*args, **kwargs):
-	# 			return func(*args, **kwargs)
-	# 		print ""
-	# 		print "adding action from deco"
-	# 		# self.addAction(actionItem=ActionItem(name=name or func.__name__,
-	# 		#                                      execDict={"func": func,
-	# 		#                                                "args": args,
-	# 		#                                                "kwargs": kwargs}))
-	# 		self.addAction(actionItem=ActionItem(name=name or func.__name__,
-	# 		                                     execDict={"func": func}))
-	# 		return decoInner
-	# 	return decoOuter
 
 
 	# serialisation and regeneration
@@ -531,9 +505,14 @@ class Op(MayaReal):
 
 	def delete(self):
 		"""deletes op instance"""
+		self.reset()
 		del self
 
-
+	# @action
+	def showGuides(self):
+		"""used to allow user direction over op, as a separate process
+		to execution"""
+		pass
 
 	#### maya stuff ####
 	# yes i know this should go in a DCC-specific child class, but there's
@@ -547,6 +526,12 @@ class Op(MayaReal):
 	def clearMayaRig(self):
 		"""clears all edRig items from maya scene - this method needs a home"""
 		cmds.file(new=True, f=True)
+
+	def nodesFromScene(self):
+		"""list all nodes created by the op, called on instantiation"""
+		all = cmds.ls()
+		new = [i for i in all if self.opName == self.getTag(i, "opTag")]
+		return new
 
 	@property
 	def rigGrp(self):

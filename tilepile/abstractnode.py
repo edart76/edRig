@@ -1,5 +1,5 @@
 # container interfacing with the graph - concerned with connections
-from edRig.structures import SafeDict, AttrItem, ActionItem, ActionList
+from edRig.structures import SafeDict, AttrItem, ActionItem, ActionList, action
 from edRig.core import shortUUID
 from edRig import Env, pipeline, attrio
 # from edRig.tilepile.ops.op import Op
@@ -21,8 +21,8 @@ class AbstractNodeExecutionManager(object):
 		return self
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
-		self.node.afterExecute()
 		if exc_type:
+			self.node.afterExecute(success=False)
 			print ""
 			print "node {} encountered error during execution".format(self.node.nodeName)
 			print "error is {}".format(exc_val)
@@ -30,6 +30,7 @@ class AbstractNodeExecutionManager(object):
 
 			# we want execution to stop in this case
 			raise exc_type(exc_val)
+		self.node.afterExecute(success=True)
 
 class AbstractNode(object):
 	"""abstract node managed by abstract graph
@@ -37,6 +38,7 @@ class AbstractNode(object):
 
 	defaultName = "basicAbstract"
 	realClass = None
+	states = ["neutral", "executing", "complete", "failed", "approved"]
 
 	@classmethod
 	def nodeType(cls):
@@ -46,17 +48,6 @@ class AbstractNode(object):
 	@classmethod
 	def setRealClass(cls, realClass):
 		cls.realClass = realClass
-
-	@classmethod
-	def action(cls, func, name=None):
-		"""add any function to right-click action menus"""
-		name = name or func.__name__
-		@functools.wraps(func)
-		def wrapperAction(*args, **kwargs):
-			return func(*args, **kwargs)
-		cls.actions.update({name : ActionItem(
-			{"func" : func}, name=name)})
-		return wrapperAction
 
 	def __init__(self, graph, name=None, realInstance=None):
 		self.real = None
@@ -112,6 +103,8 @@ class AbstractNode(object):
 		# sync triggers everything
 
 	def setState(self, state):
+		if state not in self.states:
+			raise RuntimeError("invalid abstractNode state {}".format(state))
 		self.state = state
 		self.stateChanged()
 
@@ -227,21 +220,30 @@ class AbstractNode(object):
 
 	def beforeExecute(self):
 		"""use to update state?"""
-		self.setState("executing")
+		self.setState("executing") # neutral, executing, complete, failed, approved
 		pass
 
-	def afterExecute(self):
+	def afterExecute(self, success=True):
 		"""used to update state, propagate outputs, etc"""
-		self.setState("neutral")
+		if success:
+			self.setState("complete")
+		else:
+			self.setState("failed")
 		self.propagateOutputs()
-		self.sync(self) # sure whatever
-
+		#self.sync(self) # sure whatever
+		#self.sync([self])
+		self.sync()
 		pass
 
 	"""we need a way to feed back to the graph and ui the state of the node
 	do not attempt this specifically here, just trigger sync with the 
 	abstract node as argument. errors are raised to graph level and then
 	re-directed"""
+
+	def reset(self):
+		if self.real:
+			self.real.reset()
+		self.setState("neutral")
 
 
 
@@ -331,6 +333,10 @@ class AbstractNode(object):
 
 
 	# actions and real-facing methods
+	# def action(self, *args, **kwargs):
+	# 	"""decorator"""
+	# 	return assignAction(self, *args, **kwargs)
+
 	def getAllActions(self):
 		#self.addAction(self.getRealActions())
 		actions = {}

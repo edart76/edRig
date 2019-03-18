@@ -1,6 +1,6 @@
 # useful structures finding repeated use in ops and frameworks
 from collections import MutableMapping, OrderedDict
-import os, copy
+import os, copy, functools
 
 # FilePathTree = FilePathTree # back compatibility
 
@@ -441,6 +441,32 @@ class ActionItem(object):
 	# this will break if you sneeze on it, but not if you use it properly
 
 
+def action(name=None):
+	"""add any function to right-click action menus - at INSTANCE level
+	intercept "self" argument from wrapped function"""
+	inst = None
+	print
+	print "ADDING ACTION"
+	def _addAction(func):
+		newName = name or func.__name__
+		@functools.wraps(func)
+		def wrapperAction(*args, **kwargs):
+			inst = args[0]
+			return func(*args, **kwargs)
+		print
+		print "inst is {}".format(inst)
+		inst.actions.update({newName: ActionItem(
+			{"func": func}, name=newName)})
+		return wrapperAction
+	print "inst is {}".format(inst)
+	return _addAction
+"""override at instance level: def action(self, *args, **kwargs):
+	return assignAction(self, *args, **kwargs)"""
+
+# def action(self, ):
+# 	"""decorator"""
+# 	return assignAction(self, *args, **kwargs)
+
 class ActionList(object):
 	"""convenience for carting round multiple actions to be
 	taken simultaneously
@@ -457,12 +483,13 @@ class ActionList(object):
 		[i.execute() for i in self.getActions()]
 		return
 
-	def addAction(self, action):
+	def addAction(self, action, func=None):
 		# need to add better processing for concatenating groups of actions
 		if isinstance(action, ActionList):
 			for i in action.getActions():
 				self.addAction(i)
 		self._actions.append(action)
+
 
 class ActionBranch(object):
 	"""used to recursively build trees of action items"""
