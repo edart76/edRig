@@ -181,24 +181,22 @@ class AbstractNode(object):
 		"""retrieves specific function"""
 		self.log("execIndex is {}".format(index))
 		stageName = self.executionStages()[index]
-		funcs = self.executionFunctions()[stageName]
-		return funcs[variant]
+		func = self.executionFunctions()[stageName]
+		return func
 
 	def execute(self, index, variant="onExec"):
 		"""builds a single stage of the real component's execution order
 		ATOMIC - CALLED BY EXEC TO STAGE"""
-		# do node-level fancy with as error catching here
-		#func = self.getExecFunction(index, variant)
 		func = self.getExecFunction(index)
-		return func(self.real)
+		with self.real.executionManager(): # real-level
+			return func(self.real)
 
 	def execToStage(self, index):
 		"""builds up until a target stage, running stop feature if schedule is incomplete"""
 		maxStage = len(self.executionStages())
 		#self.beforeExecute()
 
-		with AbstractNodeExecutionManager(self):
-
+		with AbstractNodeExecutionManager(self): #abstract-level
 			if index >= maxStage:
 				index = maxStage
 			if index == -1: # build everything

@@ -123,6 +123,8 @@ class AbstractGraph(object):
 	"""graph documenting a collection of abstract nodes
 	absolute emphasis on topology and connectivity"""
 
+	states = ["neutral", "executing", "complete", "failed", "approved"]
+
 	def __init__(self, parent=None, name="NewGraph"):
 
 		self.graphName = name

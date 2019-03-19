@@ -8,23 +8,27 @@ import random, copy, functools
 from edRig.structures import ActionItem, action
 from edRig.pipeline import safeLoadModule
 
-from edRig.tilepile.real import MayaReal
+from edRig.tilepile.real import MayaReal, GeneralExecutionManager
 
-class OpExecutionManager(object):
+class OpExecutionManager(GeneralExecutionManager):
 	def __init__(self, op):
+		super(OpExecutionManager, self).__init__(op)
 		self.op = op
 		self.beforeSet = None
 		self.afterSet = None
 
 	def __enter__(self):
 		self.beforeSet = scene.listTopNodes()
+		self.op.beforeExecution()
 		return self
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		"""clean up maya scene nodes regardless"""
+		self.op.afterExecution()
 		self.afterSet = scene.listTopNodes()
 		new = self.afterSet - self.beforeSet
-		cmds.parent(new, self.op.setupGrp)
+		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()]
+		cmds.parent(newDags, self.op.setupGrp)
 
 		# halt execution
 		if exc_type:
@@ -104,38 +108,8 @@ class Op(MayaReal):
 		self.outputNetwork = None
 		self.nodes = self.nodesFromScene()
 
-	def beforeExecution(self):
-		"""create network nodes procedurally from attributes"""
-		self.inputNetwork = self.ECA("network", name=self.opName+"_inputs")
-		self.outputNetwork = self.ECA("network", name=self.opName + "_outputs")
-
-		attr.makeStringConnection(self.inputNetwork, self.outputNetwork,
-								  startName="opStart", endName="opEnd")
-
-		for i in self.inputRoot.getAllLeaves():
-			self.makeOpIoNodes(self.inputNetwork, i)
-
-		for i in self.outputRoot.getAllLeaves():
-			self.makeOpIoNodes(self.outputNetwork, i)
-
-	def makeOpIoNodes(self, node, attr):
-		""":param node: AbsoluteNode
-		:param attr : AbstractAttr"""
-		for i in attr.getAllChildren(): # get all leaves maybe?
-			# convert datatype to pass to addattr
-			if i.dataType in self.dataMapping.keys():
-				dt = self.dataMapping[i.dataType]
-
-				cmds.addAttr(node, ln=attr.name, dt=dt)
-			elif i.dataType == "enum":
-				options = ":".join(i.extras.get("items"))
-				cmds.addAttr(node, ln=attr.name, at="enum",
-							 enumName=options)
-			else:
-				dt = i.dataType
-				cmds.addAttr(node, ln=attr.name, at=dt)
-			i.plug = node+"."+i.name
-
+	def executionManager(self):
+		return OpExecutionManager(self)
 
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		"""attach op to abstractNode, and merge input and outputRoots"""
@@ -371,7 +345,7 @@ class Op(MayaReal):
 			cmds.addAttr(tagNode, ln="opTag", dt="string", writable=True)
 			cmds.setAttr(tagNode + ".opTag", self.opName, type="string")
 
-	def ECN(self, type, name="blankName", cleanup=True, *args):
+	def ECN(self, type, name="blankName", cleanup=False, *args):
 		# this is such a good idea
 		if name == "blankName":
 			name = type
@@ -391,7 +365,7 @@ class Op(MayaReal):
 		return AbsoluteNode(node)
 
 	def ECA(self, type, name="blankName", *args):
-		node = self.ECAsimple(type, name, cleanup=True, *args)
+		node = self.ECAsimple(type, name, cleanup=False, *args)
 		self.nodes.append(node)
 		#cmds.parent(node, self.opGrp)
 		return node
@@ -409,6 +383,45 @@ class Op(MayaReal):
 		just delete all associated nodes"""
 		for i in self.nodes:
 			cmds.delete(i)
+
+	def beforeExecution(self):
+		"""create network nodes procedurally from attributes
+		called by context immediately before exec"""
+		self.inputNetwork = self.ECA("network", name=self.opName+"_inputs")
+		self.outputNetwork = self.ECA("network", name=self.opName + "_outputs")
+
+		attr.makeStringConnection(self.inputNetwork, self.outputNetwork,
+								  startName="opStart", endName="opEnd")
+
+		for i in self.inputRoot.getAllLeaves():
+			self.makeOpIoNodes(self.inputNetwork, i)
+
+		for i in self.outputRoot.getAllLeaves():
+			self.makeOpIoNodes(self.outputNetwork, i)
+
+	def afterExecution(self):
+		"""immediately after exec"""
+		pass
+
+	def makeOpIoNodes(self, node, attrItem):
+		""":param node: AbsoluteNode
+		:param attrItem : AbstractAttr"""
+		#for i in attrItem.getAllChildren(): # get all leaves maybe?
+		i = attrItem
+		# convert datatype to pass to addattr
+		print "i.dataType is {}".format(i.dataType)
+		if i.dataType in self.dataMapping.keys():
+			dt = self.dataMapping[i.dataType]
+
+			cmds.addAttr(node, ln=attrItem.name, dt=dt)
+		elif i.dataType == "enum":
+			options = ":".join(i.extras.get("items"))
+			cmds.addAttr(node, ln=attrItem.name, at="enum",
+						 enumName=options)
+		else:
+			dt = i.dataType
+			cmds.addAttr(node, ln=attrItem.name, at=dt)
+		i.plug = node+"."+i.name
 
 
 	# io

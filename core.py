@@ -691,6 +691,12 @@ class AbsoluteNode(str):
 		if self.shapeFnType:
 			return True
 
+	def isDag(self):
+		if self.MObject.hasFn(107): # kDagNode
+			return True
+		return False
+
+
 	def delete(self, full=True):
 		"""deletes maya node, and by default deletes entire openmaya framework around it
 		tilepile is very unstable, and i think this might be why"""

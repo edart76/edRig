@@ -112,7 +112,6 @@ class JointCurveOp(SpookyLayerOp):
 		print "doot doot"
 
 	def execute(self):
-		super(JointCurveOp, self).plan()
 		print "running jointCurve plan"
 		# set up starter joints - only create controls if stop is true
 		#self.out1D = Curve()
@@ -132,7 +131,6 @@ class JointCurveOp(SpookyLayerOp):
 		self.updateOutputs()
 
 	def onPlanStop(self):
-		super(JointCurveOp, self).onPlanStop()
 		print "running jointCurve planStop"
 		#print "inputMode is {}".format(self.inputs["mode"]["value"])
 		self.memory.setClosed("joints", status=False)
