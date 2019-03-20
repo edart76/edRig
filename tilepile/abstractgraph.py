@@ -492,8 +492,13 @@ class AbstractGraph(object):
 		return {"execute nodes" : ActionItem(execDict={
 			"func" : self.executeNodes, "kwargs" : {"nodes" : nodes}},
 			name="execute nodes"),
+			"reset nodes": ActionItem(execDict={  # everything
+				"func": self.resetNodes, "kwargs" : {"nodes" : nodes}},
+				name="reset nodes"),
 			"rig it like you dig it" : ActionItem(execDict={ # everything
-				"func" : self.executeNodes}, name="rig it like you dig it")
+				"func" : self.executeNodes}, name="rig it like you dig it"),
+			"reset all": ActionItem(execDict={  # everything
+				"func": self.reset}, name="reset all")
 		}
 
 	def setState(self, state):
