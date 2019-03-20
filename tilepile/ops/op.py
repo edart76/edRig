@@ -11,6 +11,10 @@ from edRig.pipeline import safeLoadModule
 from edRig.tilepile.real import MayaReal, GeneralExecutionManager
 
 class OpExecutionManager(GeneralExecutionManager):
+	"""manage execution of ops"""
+	excludeList = [
+		"tilePile",
+	]
 	def __init__(self, op):
 		super(OpExecutionManager, self).__init__(op)
 		self.op = op
@@ -28,6 +32,7 @@ class OpExecutionManager(GeneralExecutionManager):
 		self.afterSet = scene.listTopNodes()
 		new = self.afterSet - self.beforeSet
 		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()]
+		newDags = [i for i in newDags if i not in self.excludeList]
 		cmds.parent(newDags, self.op.setupGrp)
 
 		# halt execution
@@ -39,8 +44,9 @@ class OpExecutionManager(GeneralExecutionManager):
 class Op(MayaReal):
 	# base class for "operations" executed by abstractGraph,
 	# mainly maya scripting
-	opName = None
 	colour = (100, 100, 150) # rgb
+
+	currentOp = None # set by exec handler?
 
 	# set up action framework
 
@@ -66,13 +72,6 @@ class Op(MayaReal):
 	def classRigGrp(cls):
 		"""base group for all tilePile stuff, named by character eventually"""
 		return invokeNode(name="tilePile", type="transform")
-
-	dataMapping = {
-		"0D" : "matrix",
-		"1D" : "nurbsCurve",
-		"2D" : "mesh",
-		"string" : "string",
-	}
 
 	def __init__(self, name=None, abstract=None):
 		self.character = None
@@ -382,7 +381,8 @@ class Op(MayaReal):
 		"""as this rigging system should be purely additive,
 		just delete all associated nodes"""
 		for i in self.nodes:
-			cmds.delete(i)
+			if cmds.objExists(i):
+				cmds.delete(i)
 
 	def beforeExecution(self):
 		"""create network nodes procedurally from attributes
@@ -403,6 +403,14 @@ class Op(MayaReal):
 		"""immediately after exec"""
 		pass
 
+	dataMapping = {
+		"0D" : "matrix",
+		"1D" : "nurbsCurve",
+		"2D" : "mesh",
+		"string" : "string",
+		"int" : "long",
+	}
+
 	def makeOpIoNodes(self, node, attrItem):
 		""":param node: AbsoluteNode
 		:param attrItem : AbstractAttr"""
@@ -413,14 +421,29 @@ class Op(MayaReal):
 		if i.dataType in self.dataMapping.keys():
 			dt = self.dataMapping[i.dataType]
 
-			cmds.addAttr(node, ln=attrItem.name, dt=dt)
+			#cmds.addAttr(node, ln=attrItem.name, dt=dt)
+			attr.addAttr(node, attrName=attrItem.name, attrType=dt)
+
 		elif i.dataType == "enum":
 			options = ":".join(i.extras.get("items"))
 			cmds.addAttr(node, ln=attrItem.name, at="enum",
 						 enumName=options)
+		elif i.dataType == "nD":
+			"""this is a bit involved. in theory if nd attribute has no input it shouldn't
+			exist at all - however, for purpose of my sanity, with no input it will
+			default to matrix.
+			with input connection, it will copy that datatype, with conversion (presume
+			to matrix) taking place internally to op"""
+			if i.getConnections():
+				dt = i.getConnections()[0].dataType
+				newItem = AbstractAttr(name=i.name, dataType=dt, hType="leaf")
+				self.makeOpIoNodes(node, newItem)
+			else:
+				dt = "matrix"
+				attr.addAttr(node, attrName=i.name, attrType=dt)
 		else:
 			dt = i.dataType
-			cmds.addAttr(node, ln=attrItem.name, at=dt)
+			attr.addAttr(node, attrName=attrItem.name, attrType=dt)
 		i.plug = node+"."+i.name
 
 

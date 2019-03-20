@@ -98,8 +98,14 @@ def addAttr(target, attrName="newAttr", attrType="float", **kwargs):
 	returns plug"""
 	if attrType == "string":
 		plug = cmds.addAttr(target, ln=attrName, dt="string", **kwargs)
+
 	else:
-		plug = cmds.addAttr(target, ln=attrName, at=attrType, **kwargs)
+		try:
+			plug = cmds.addAttr(target, ln=attrName, dt=attrType, **kwargs)
+		except:
+			plug = cmds.addAttr(target, ln=attrName, at=attrType, **kwargs)
+		# if you know the logic behind at vs dt, please contact me
+	# contact me urgently
 	return plug
 
 def getImmediateNeighbours(target, source=True, dest=True):

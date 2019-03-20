@@ -212,7 +212,8 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 
 	def drawBackground(self, painter, rect):
-		painter.save()
+		#painter.save()
+		# draw solid background
 		color = QtGui.QColor(*self._bg_color)
 		painter.setRenderHint(QtGui.QPainter.Antialiasing, False)
 		painter.setBrush(color)
@@ -232,7 +233,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			pass
 		pen = QtGui.QPen(color, 0.65)
 		self._draw_grid(painter, rect, pen, grid_size * 8)
-		painter.restore()
+		#painter.restore()
 
 
 	@property

@@ -37,7 +37,7 @@ class Datatype(object):
 		self.active = AbsoluteNode(node) if node else None
 		insert = cmds.listRelatives(node, parent=True)
 		self.spaceGrp = self.ECA("transform", "data"+self.__class__.__name__+self.name)
-		cmds.parent(self.active, self.spaceGrp)
+		#cmds.parent(self.active, self.spaceGrp)
 
 		if insert:
 			print "insert is {}".format(insert)
@@ -218,14 +218,11 @@ class Curve(Datatype):
 
 	def setUpCurve(self, upCurve):
 		self.upCurve = AbsoluteNode(upCurve)
-		cmds.parent(upCurve, self.spaceGrp)
+		#cmds.parent(upCurve, self.spaceGrp)
 
 	def getPoint(self, live=True, u=0.5, constantU=True, purpose="getPoint"):
 		"""returns riveted point on curve"""
 		return self.getRivetPoint(u, constantU=constantU, purpose=purpose)
-
-	def setUpCurve(self, upCurve):
-		self.upCurve = AbsoluteNode(upCurve)
 
 	def addPoint(self, u, point):
 		self.points[u] = point
@@ -239,7 +236,7 @@ class Curve(Datatype):
 		"""returns a point anchored on the main curve"""
 		dag = self.ECA("transform", self.name+"_pointAt{}U".format(u))
 		point = Point(dag)
-		libcurve.curveRivet(point.spaceGrp, self.active.shape, u, upCrv=self.upCurve.shape,
+		libcurve.curveRivet(point.active, self.active.shape, u, upCrv=self.upCurve.shape,
 		                    constantU=constantU, purpose=purpose)
 		return point
 

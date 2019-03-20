@@ -130,7 +130,7 @@ class JointCurveOp(SpookyLayerOp):
 
 		self.updateOutputs()
 
-	def onPlanStop(self):
+	def showGuides(self):
 		print "running jointCurve planStop"
 		#print "inputMode is {}".format(self.inputs["mode"]["value"])
 		self.memory.setClosed("joints", status=False)

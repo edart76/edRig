@@ -117,6 +117,10 @@ class AbstractGraphExecutionManager(object):
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		"""reset graph state"""
+		if exc_type:
+			self.graph.setState("neutral")
+			# anything other than neutral freezes forever
+			raise exc_type(exc_val)
 		self.graph.setState("neutral")
 
 class AbstractGraph(object):
@@ -154,7 +158,9 @@ class AbstractGraph(object):
 		self._asset = TempAsset # maybe?
 
 		# signals
+		self.sync = Signal()
 		self.edgesChanged = Signal()
+		self.stateChanged = Signal()
 
 	def log(self, message):
 		print message
@@ -466,6 +472,21 @@ class AbstractGraph(object):
 		#self.setState("neutral")
 		self.log("execution complete")
 
+	def resetNodes(self, nodes=None):
+		"""resets nodes to pre-executed state"""
+		if not nodes:
+			nodes = self.nodes
+		for i in nodes:
+			i.reset()
+		"""currently no support for specific order during reset, as in maya there
+		is no need. however, it could be done"""
+		self.sync()
+
+	def reset(self):
+		self.resetNodes(self.nodes)
+		self.setState("neutral")
+		self.stateChanged()
+
 	def getExecActions(self, nodes=None):
 		"""returns available execution actions for target nodes, or all"""
 		return {"execute nodes" : ActionItem(execDict={
@@ -477,7 +498,10 @@ class AbstractGraph(object):
 
 	def setState(self, state):
 		"""didn't know this was also a magic method but whatevs"""
+		if not state in self.states:
+			raise RuntimeError("tried to set invalid state {}".format(state))
 		self.state = state
+		self.stateChanged()
 
 
 
