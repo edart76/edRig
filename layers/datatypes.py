@@ -275,205 +275,6 @@ class Curve(Datatype):
 
 
 
-
-#
-# class JointCurve(Datatype):
-# 	#"""my life my love and my lady"""
-#
-# 	def __init__(self):
-# 		# the idea here is only to create joints or curve when needed
-# 		# do that later - for now both are created
-# 		super(JointCurve, self).__init__()
-# 		self._curveTf = None
-# 		self.curveFn = None
-# 		self.curveShape = None
-# 		self._upCurveTf = None
-# 		self.upCurveFn = None
-# 		self.upCurveShape = None
-# 		self._joints = []  # list of point datatypes
-# 		self.drivenBy = "curve"
-# 		self.chainedJoints = False
-#
-# 	@property
-# 	def __name__(self):
-# 		return "JointCurve1D"
-#
-# 	@property
-# 	def curveTf(self):
-# 		return self._curveTf
-#
-# 	@curveTf.setter
-# 	def curveTf(self, value):
-# 		if libcurve.isCurve(value):
-# 			self.curveShape = core.AbsoluteNode(value)
-# 			self._curveTf = core.AbsoluteNode(core.tfFromShape(value))
-# 		elif core.isType(value, "transform"):
-# 			self._curveTf = core.AbsoluteNode(value)
-# 			self.curveShape = core.AbsoluteNode(core.shapeListFromTf(value)[0])
-# 		self.curveFn = libcurve.curveFnFrom(self.curveShape)
-#
-# 	@property
-# 	def upCurveTf(self):
-# 		return self._upCurveTf
-#
-# 	@upCurveTf.setter
-# 	def upCurveTf(self, value):
-# 		if libcurve.isCurve(value):
-# 			self.upCurveShape = value
-# 			self._upCurveTf = core.tfFromShape(value)
-# 		elif core.isType(value, "transform"):
-# 			self._upCurveTf = value
-# 			self.upCurveShape = core.shapeListFromTf(value)[0]
-# 		self.upCurveFn = libcurve.curveFnFrom(self.upCurveShape)
-#
-# 	@property
-# 	def joints(self):
-# 		return self._joints
-#
-# 	@joints.setter
-# 	def joints(self, value):
-# 		print "setting joints"
-# 		self._joints = []
-# 		if not isinstance(value, list):
-# 			value = [value]
-# 		for i in value:
-# 			# create a 1D datatype for each joint
-# 			data = Point()
-# 			data.setActive(i)
-# 			if self._curveTf:
-# 				u = libcurve.getClosestU(self._curveTf, i)
-# 				#data.u = u
-# 				data.setU(u)
-# 			self._joints.append(data)
-# 		print "_joints is {}".format(str(self._joints))
-#
-#
-# 	def passJoints(self, nameList):
-# 		# at creation
-# 		# overrides things for now - don't try to change the same datatype later
-# 		self.joints = nameList
-#
-#
-# 	def createJoints(self):
-# 		for i in self.joints:
-# 			joint = self.ECA("joint", i["name"])
-# 			i["node"] = joint
-#
-# 		if self.chainedJoints:
-# 			self.chainJoints()
-#
-#
-# 	""" currently datatypes themselves do not save data;
-# 	this is handled by individual ops. reasoning is that
-# 	these datatypes should never need to be edited by op or
-# 	user - they're just collections of useful information.
-# 	user decides what to do with that information.
-# 	...doesn't mean we shouldn't help the op along"""
-#
-#
-# 	def updateData(self, data=None, joints=True, curves=True):
-# 		"""explicitly define the data to be updated - could be inputs,
-# 		outputs etc. example would be (from the parent op):
-# 			self.saveData["jointcurve"] = {}
-# 		and then populate that with the information from the datatype object
-# 		"""
-# 		pass
-#
-#
-# 	def applyData(self, joints=True, curves=True):
-# 		pass
-#
-#
-# 	def passCurve(self, curve):
-# 		# to make io easier - just set the datatype curve to the
-# 		# live output of the layer
-# 		pass
-#
-#
-# 	def passUpCurve(self, upCurve):
-# 		pass
-#
-#
-# 	def chainJoints(self):
-# 		for i, val in enumerate(self.joints):
-# 			if i == 0:
-# 				continue
-# 			cmds.parent(val["node"], self.joints[i - 1]["node"])
-# 			# val["node"].parentIs(self.joints[i-1]["node"])
-# 		pass
-#
-#
-# 	def emancipateJoints(self):
-# 		# still unsure how to handle dag organisation - wait to see how
-# 		# lowestCommonParent works out. might be better to let op handle it
-# 		for i, val in enumerate(self.joints):
-# 			cmds.parent(val["dag"], world=True)
-# 		pass
-#
-#
-# 	def driveCurveWithJoints(self):
-# 		"""for every cv, check for the closest joint,
-# 		and matrix constrain it to that joint"""
-# 		print "driving curve with joints"
-# 		print "joints are {}".format(self.joints)
-# 		if not self.curveFn:
-# 			print "no curveFn found"
-# 			return False
-# 		for curveFn, curveShape in zip(
-# 				[self.curveFn, self.upCurveFn],
-# 				[self.curveShape, self.upCurveShape]):
-# 			cvPosList = curveFn.cvPositions() # kObject only
-# 			for i, cv in enumerate(cvPosList):
-# 				closest = self.joints[self.closestJoint(cv)]
-# 				closestMat = closest.asMMatrix()
-# 				offset = cv * closestMat.inverse()
-#
-# 				mult = self.ECN("pointMatrixMult", "driveCurveCvWithJointMat")
-# 				cmds.setAttr(mult+".inPoint", *offset)
-# 				cmds.connectAttr(closest.tf+".worldMatrix", mult+".inMatrix")
-# 				cmds.connectAttr(mult+".output",
-# 				                 curveShape+".controlPoints[{}]".format(i))
-#
-# 				#libtf.matrixConstraint(self.curveShape+".")
-#
-#
-# 				pass
-#
-# 		pass
-#
-#
-# 	def driveJointsWithCurve(self):
-# 		print "driving joints with curve"
-# 		print "joints are {}".format(self.joints)
-# 		for i in self.joints:
-# 			libcurve.curveRivet(i.tf, self.curveShape, i["u"],
-# 			                    upCrv=self.upCurveShape)
-# 		pass
-#
-# 	# more convenience methods
-# 	def closestJoint(self, point, space="world"):
-# 		"""point can be Point, MPoint, or tuple as returned from xform"""
-# 		vec = om.MVector(point)
-# 		closest = None
-# 		mag = 10000.0
-# 		index = 0
-# 		for i, val in enumerate(self.joints):
-# 			newMag = om.MVector(vec - val.asMVector()).length()
-# 			#print "new mag is {}".format(newMag)
-# 			if newMag < mag:
-# 				#print "found new closest"
-# 				closest = val
-# 				mag = newMag
-# 				index = i
-# 		return index
-# 		# works
-#
-#
-#
-#
-# 		pass
-
-
 class Surface(Datatype):
 	def __init__(self):
 		super(Surface, self).__init__()
@@ -483,3 +284,27 @@ class Volume(Datatype):
 	def __init__(self):
 		super(Volume, self).__init__()
 		pass
+
+class DimFn(object):
+	"""function set for general work with dimensional data"""
+
+	@classmethod
+	def getPoint(cls, on=None, near=None, live=True):
+		"""blanket catch-all method for """
+		if core.isPlug(on):
+			cls.getPointFromPlug(on, near)
+		elif isinstance(on, Datatype):
+			plug = on.activePlug
+			cls.getPointFromPlug(plug, near)
+
+	@classmethod
+	def getPointFromPlug(cls, on, near):
+		kind = cmds.getAttr(on, type=True)
+		mat = None
+		if kind == "matrix" :
+			# my work is done
+			mat = on
+		elif kind == "nurbsCurve":
+			mat = libcurve.curveRivet()
+
+

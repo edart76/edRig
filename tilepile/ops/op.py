@@ -7,8 +7,7 @@ from edRig.tilepile.abstractnode import AbstractAttr
 import random, copy, functools
 from edRig.structures import ActionItem, action
 from edRig.pipeline import safeLoadModule
-
-from edRig.tilepile.real import MayaReal, GeneralExecutionManager
+from edRig.tilepile.real import MayaReal, GeneralExecutionManager, MayaStack, MayaDelta
 
 class OpExecutionManager(GeneralExecutionManager):
 	"""manage execution of ops"""
@@ -40,6 +39,20 @@ class OpExecutionManager(GeneralExecutionManager):
 			raise exc_type(exc_val)
 
 
+def tidy(inst):
+	"""decorator used  to associate any nodes with op"""
+	def decorator(func):
+		@functools.wraps(func)
+		def wrapper(*args, **kwargs):
+			before = scene.listTopNodes()
+			results = func(*args, **kwargs)
+			after = scene.listTopNodes() - before
+			inst.nodes.update(after)
+			print "tidied nodes"
+			return results
+		return wrapper
+	return decorator
+
 
 class Op(MayaReal):
 	# base class for "operations" executed by abstractGraph,
@@ -47,8 +60,19 @@ class Op(MayaReal):
 	colour = (100, 100, 150) # rgb
 
 	currentOp = None # set by exec handler?
+	tidy = tidy
 
-	# set up action framework
+	# FINALLY ACTIONS
+	def action(self, name=None):
+		def decorator(func):
+			#@functools.wraps(func)
+			newName = name or func.__name__
+			def wrapper(*args, **kwargs):
+				return func(*args, **kwargs)
+			self.addAction(actionItem=ActionItem(name=newName,
+			                          execDict={"func": func}))
+			return wrapper
+		return decorator
 
 	# execution architecture
 	@classmethod
@@ -105,7 +129,10 @@ class Op(MayaReal):
 		# network nodes holding input and output plugs
 		self.inputNetwork = None
 		self.outputNetwork = None
-		self.nodes = self.nodesFromScene()
+		self.nodes = self.nodesFromScene() # set
+
+		#experimental
+		self.deltaStack = MayaStack()
 
 	def executionManager(self):
 		return OpExecutionManager(self)
@@ -399,34 +426,43 @@ class Op(MayaReal):
 		for i in self.outputRoot.getAllLeaves():
 			self.makeOpIoNodes(self.outputNetwork, i)
 
+		# now connect inputs to previous outputs
+		for i in self.inputRoot.getAllLeaves():
+			self.connectInputPlug(i)
+
 	def afterExecution(self):
 		"""immediately after exec"""
 		pass
 
-	dataMapping = {
-		"0D" : "matrix",
-		"1D" : "nurbsCurve",
-		"2D" : "mesh",
-		"string" : "string",
-		"int" : "long",
-	}
+	# dataMapping = {
+	# 	"0D" : "matrix",
+	# 	"1D" : "nurbsCurve",
+	# 	"2D" : "mesh",
+	# 	"string" : "string",
+	# 	"int" : "long",
+	# }
 
-	def makeOpIoNodes(self, node, attrItem):
+	def makeOpIoNodes(self, node, attrItem, parentItem=None):
 		""":param node: AbsoluteNode
-		:param attrItem : AbstractAttr"""
+		:param attrItem : AbstractAttr
+		:param parentItem : attrItem"""
 		#for i in attrItem.getAllChildren(): # get all leaves maybe?
 		i = attrItem
+		plug = None
+		parentPlug = parentItem.plug if parentItem else ""
 		# convert datatype to pass to addattr
 		print "i.dataType is {}".format(i.dataType)
-		if i.dataType in self.dataMapping.keys():
-			dt = self.dataMapping[i.dataType]
 
-			#cmds.addAttr(node, ln=attrItem.name, dt=dt)
-			attr.addAttr(node, attrName=attrItem.name, attrType=dt)
+		if i.getChildren(): # need a compound
+			plug = attr.addAttr(node, attrName=i.name, attrType="compound",
+			                    parent=parentPlug)
+			for n in i.getChildren():
+				self.makeOpIoNodes(node, n, parentItem=i)
 
-		elif i.dataType == "enum":
+		if i.dataType == "enum":
 			options = ":".join(i.extras.get("items"))
-			cmds.addAttr(node, ln=attrItem.name, at="enum",
+			plug = attr.addAttr(node, attrName=attrItem.name, attrType="enum",
+			             parent=parentPlug,
 						 enumName=options)
 		elif i.dataType == "nD":
 			"""this is a bit involved. in theory if nd attribute has no input it shouldn't
@@ -437,15 +473,36 @@ class Op(MayaReal):
 			if i.getConnections():
 				dt = i.getConnections()[0].dataType
 				newItem = AbstractAttr(name=i.name, dataType=dt, hType="leaf")
-				self.makeOpIoNodes(node, newItem)
+				self.makeOpIoNodes(node, newItem, parentItem)
 			else:
 				dt = "matrix"
-				attr.addAttr(node, attrName=i.name, attrType=dt)
+				plug = attr.addAttr(node, attrName=i.name, attrType=dt)
+		elif i.dataType in attr.INTERFACE_ATTRS:
+			dtdict = attr.INTERFACE_ATTRS[i.dataType]
+			attr.makeAttrsFromDict(node,
+	                              attrDict={i.name : dtdict},
+	                              parent=parentPlug)
+			plug = node+ "." + "".join(parentPlug.split(".")[0:]) + i.name
 		else:
 			dt = i.dataType
-			attr.addAttr(node, attrName=attrItem.name, attrType=dt)
-		i.plug = node+"."+i.name
+			kwargs = i.extras or {}
+			plug = attr.addAttr(node, attrName=attrItem.name, attrType=dt,
+			                    parent=parentPlug, **kwargs)
+		# attr plug now points to network node
+		i.plug = plug
 
+		# set plug value if it's simple
+		if i.isSimple():
+			cmds.setAttr(i.plug, i.value)
+
+	@staticmethod
+	def connectInputPlug(attrItem):
+		"""connect previous network output to new network input
+		:param attrItem : AbstractAttr"""
+		if attrItem.getConnections():
+			prev = attrItem.getConnections()[0]
+			if hasattr(prev, name="plug"):
+				cmds.connectAttr(prev.plug, attrItem.plug, f=True)
 
 	# io
 	def searchData(self, infoName):
@@ -545,6 +602,7 @@ class Op(MayaReal):
 		del self
 
 	# @action
+	@tidy
 	def showGuides(self):
 		"""used to allow user direction over op, as a separate process
 		to execution"""
@@ -564,9 +622,10 @@ class Op(MayaReal):
 		cmds.file(new=True, f=True)
 
 	def nodesFromScene(self):
-		"""list all nodes created by the op, called on instantiation"""
+		"""list all nodes created by the op, called on instantiation
+		returns set"""
 		all = cmds.ls()
-		new = [i for i in all if self.opName == self.getTag(i, "opTag")]
+		new = {i for i in all if self.opName == self.getTag(i, "opTag")}
 		return new
 
 	@property

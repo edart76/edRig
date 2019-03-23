@@ -93,20 +93,29 @@ def hideAttr(plug):
 def lockAttr(plug):
 	cmds.setAttr(plug, locked=True)
 
-def addAttr(target, attrName="newAttr", attrType="float", **kwargs):
+def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs):
 	"""wrapper for more annoying attr types like string
 	returns plug"""
+	#parent = parent or "" # string includes node
+	if not parent:
+		parent = None # make sure is none type to pass to cmd
+	else:
+		if not target in parent:
+			parent = target + "." + parent
+
 	if attrType == "string":
-		plug = cmds.addAttr(target, ln=attrName, dt="string", **kwargs)
+		plug = cmds.addAttr(target, ln=attrName, dt="string", parent=parent, **kwargs)
 
 	else:
 		try:
-			plug = cmds.addAttr(target, ln=attrName, dt=attrType, **kwargs)
+			plug = cmds.addAttr(target, ln=attrName, dt=attrType, parent=parent, **kwargs)
 		except:
-			plug = cmds.addAttr(target, ln=attrName, at=attrType, **kwargs)
+			plug = cmds.addAttr(target, ln=attrName, at=attrType, parent=parent, **kwargs)
 		# if you know the logic behind at vs dt, please contact me
 	# contact me urgently
-	return plug
+	if parent:
+		return parent + "." + attrName
+	return target+"."+attrName
 
 def getImmediateNeighbours(target, source=True, dest=True):
 	"""returns nodes connected immediately downstream of plug, or all of node"""
@@ -138,6 +147,44 @@ def makeStringConnection(startNode, endNode,
 	cmds.addAttr(endNode, ln=endName, dt="string")
 	cmds.connectAttr(startNode+"."+startName,
 					 endNode+"."+endName)
+
+def makeAttrsFromDict(node, attrDict, parent=None):
+	"""creates compound hierarchies from a dict
+	:param attrDict : dict
+	:param parent : string
+	(compound plug)
+	{"parent" : {
+		"children" : { # sad times
+			"mid" : {
+				"children" : {
+					"child" : { "dt" : "nurbsCurve"}
+					}
+				},
+				"other" : { "dt" : "float",
+							"min" : 0 }
+					}"""
+	"""the syntax including "children" key is clunky, but it's most explicit
+	and futureproof for array attributes"""
+	for k, v in attrDict.iteritems():
+		if v.get("children"): # it's a compound
+			parent = addAttr(node, attrName=k, attrType="compound")
+			makeAttrsFromDict(node, v["children"], parent=parent)
+		elif v.get("dt"): # it's a normal attribute
+			kwargs = {nk : nv for nk, nv in v.iteritems() if nk != "dt"}
+			addAttr(node, attrName=k, attrType=v["dt"], parent=parent, **kwargs)
+
+
+INTERFACE_ATTRS = { # attribute templates for io network nodes
+	"0D" : {"dt" : "matrix"},
+	"1D" : {"children" : {
+		"mainCurve" : {"dt" : "nurbsCurve"},
+		"upCurve" : {"dt" : "nurbsCurve"}}},
+	"2D" : {"dt" : "mesh"},
+	"int" : {"dt" : "long"}
+	#ideally there would be a much closer link between this system and abstract attrs
+	# give me a minute
+	}
+
 
 
 

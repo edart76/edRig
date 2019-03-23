@@ -2,6 +2,7 @@
 # currently for use only in maya, but fully extensible to anything
 
 from __future__ import print_function, with_statement
+from edRig.tilepile.lib import DeltaStack, StackDelta
 
 class GeneralExecutionManager(object):
 	"""placeholder"""
@@ -25,7 +26,14 @@ class RealComponent(object):
 class MayaReal(RealComponent):
 	"""base real class for Maya"""
 
+class MayaStack(DeltaStack):
+	"""maya-specialised stack for tracking deltas in scenes"""
+
+class MayaDelta(StackDelta):
+	"""atomic maya scene delta, tracking addition, removal or
+	modification of nodes"""
 
 
 class HoudiniReal(RealComponent):
 	"""one day"""
+

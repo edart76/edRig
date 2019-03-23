@@ -5,7 +5,7 @@ from maya import cmds
 #from edRig.layers.base import LayerOp
 from edRig.tilepile.ops.layer import LayerOp
 import edRig.layers.base
-from edRig.layers.datatypes import Point, Curve
+from edRig.layers.datatypes import Point, Curve, DimFn
 import maya.api.OpenMaya as om
 import random
 
@@ -125,11 +125,13 @@ class JointCurveOp(SpookyLayerOp):
 		self.createCurves()
 		self.matchSavedJointInfo()
 		self.update1D()
+		self.connectInputs()
 
 		self.memory.setClosed("joints", status=True)
 
 		self.updateOutputs()
 
+	@LayerOp.tidy
 	def showGuides(self):
 		print "running jointCurve planStop"
 		#print "inputMode is {}".format(self.inputs["mode"]["value"])
@@ -138,18 +140,14 @@ class JointCurveOp(SpookyLayerOp):
 
 		pointList = [Point(i) for i in self.joints]
 
-		# if self.inputs["mode"]["value"] == "joints":
 		if self.getInput("mode").value == "joints":
 			self.matchControlsToJoints()
 			self.out1D.skinToPoints(pointList)
 
 		elif self.getInput("mode").value == "curve":
-		#	raise NotImplementedError
-			#self.matchControlsToCurve()
 			for i in pointList:
 				self.out1D.setRivetPoint(i)
 		#	pass
-
 		return 1
 
 	def update1D(self):
@@ -160,6 +158,10 @@ class JointCurveOp(SpookyLayerOp):
 			point = Point(i)
 			self.out1D.addPoint(u, Point)
 		pass
+
+	def connectInputs(self):
+		"""connect space group to parent"""
+		parentPoint = Point.getPoint()
 
 	def updateInputs(self):
 		self.prefix = self.getInput("prefix").value

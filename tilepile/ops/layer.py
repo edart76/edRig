@@ -45,13 +45,13 @@ class LayerOp(Op):
 			else:
 				self.checkDataFileExists()
 
-	def plan(self):
-		kSuccess = super(LayerOp, self).plan()
-		self.loadMemory()
-
-	def build(self):
-		kSuccess = super(LayerOp, self).build()
-		self.loadMemory()
+	# def plan(self):
+	# 	kSuccess = super(LayerOp, self).plan()
+	# 	self.loadMemory()
+	#
+	# def build(self):
+	# 	kSuccess = super(LayerOp, self).build()
+	# 	self.loadMemory()
 
 
 	@property
@@ -107,14 +107,7 @@ class LayerOp(Op):
 				{"func" : self.refreshAllMemory}, name="all")
 		for k,v in openDict.iteritems():
 			returnDict[k] = {}
-			# for vk, vv in v.iteritems():
-			# 	returnDict[k][vk] = ActionItem({
-			# 		# "func" : self.memory.refresh,
-			# 		"func": self.refreshMemoryAndSave,
-			# 		"kwargs": {
-			# 			"infoName": k,
-			# 			"infoType": v,
-			# 		}}, name=v)
+
 			for i in v:
 				returnDict[k][i] = ActionItem({
 					#"func" : self.memory.refresh,
