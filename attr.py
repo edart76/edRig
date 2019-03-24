@@ -96,26 +96,106 @@ def lockAttr(plug):
 def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs):
 	"""wrapper for more annoying attr types like string
 	returns plug"""
-	#parent = parent or "" # string includes node
-	if not parent:
-		parent = None # make sure is none type to pass to cmd
-	else:
+	#print ""
+	#print "attrType is " + attrType
+
+	if parent:
 		if not target in parent:
 			parent = target + "." + parent
+		parent = ".".join(parent.split(".")[1:])
+		kwargs.update({"parent" : parent})
+		#print "parent is {}".format(parent)
 
-	if attrType == "string":
-		plug = cmds.addAttr(target, ln=attrName, dt="string", parent=parent, **kwargs)
+	dtList = ["string", "nurbsCurve"]
+	if attrType in dtList:
+		plug = cmds.addAttr(target, ln=attrName, dt=attrType, **kwargs)
 
 	else:
-		try:
-			plug = cmds.addAttr(target, ln=attrName, dt=attrType, parent=parent, **kwargs)
-		except:
-			plug = cmds.addAttr(target, ln=attrName, at=attrType, parent=parent, **kwargs)
+
+		plug = cmds.addAttr(target, ln=attrName, at=attrType, **kwargs)
 		# if you know the logic behind at vs dt, please contact me
 	# contact me urgently
 	if parent:
 		return parent + "." + attrName
 	return target+"."+attrName
+
+
+def makeAttrsFromDict(node, attrDict, parent=None):
+	"""creates compound hierarchies from a dict
+	:param attrDict : dict
+	:param parent : string
+	(compound plug)
+	{"parent" : {
+		"children" : { # sad times
+			"mid" : {
+				"children" : {
+					"child" : { "dt" : "nurbsCurve"}
+					}
+				},
+				"other" : { "dt" : "float",
+							"min" : 0 }
+					}"""
+	"""the syntax including "children" key is clunky, but it's most explicit
+	and futureproof for array attributes"""
+	for k, v in attrDict.iteritems():
+		if v.get("children"): # it's a compound
+			parent = addAttr(node, attrName=k, attrType="compound",
+			                 nc=len(v["children"].keys()))
+			makeAttrsFromDict(node, v["children"], parent=parent)
+		elif v.get("dt"): # it's a normal attribute
+			kwargs = {nk : nv for nk, nv in v.iteritems() if nk != "dt"}
+			addAttr(node, attrName=k, attrType=v["dt"], parent=parent, **kwargs)
+
+
+INTERFACE_ATTRS = { # attribute templates for io network nodes
+	"0D" : {"dt" : "matrix"},
+	"1D" : {"children" : {
+		"mainCurve" : {"dt" : "nurbsCurve"},
+		"upCurve" : {"dt" : "nurbsCurve"}}},
+	"2D" : {"dt" : "mesh"},
+	"int" : {"dt" : "long"}
+	#ideally there would be a much closer link between this system and abstract attrs
+	# give me a minute
+	}
+
+def setAttr(targetPlug, attrValue=None, **kwargs):
+	"""similar wrapper for setAttr dealing with strings, matrices, etc"""
+	if not attrValue:
+		cmds.setAttr(targetPlug, **kwargs)
+
+	elif isinstance(attrValue, basestring):
+		# check for enum:
+		#print "plug type is {}".format(plugType(targetPlug))
+		if plugType(targetPlug) == "enum":
+			setEnumFromString(targetPlug, attrValue)
+		else:
+			cmds.setAttr(targetPlug, attrValue, type="string")
+
+	else:
+		cmds.setAttr(targetPlug, attrValue, **kwargs)
+
+def setEnumFromString(plug, value):
+	node, attr = decomposePlug(plug)
+	enumString = cmds.attributeQuery(attr, node=node, listEnum=True)[0]
+	enumList = enumString.split(":")
+	cmds.setAttr(plug, enumList.index(value))
+
+def decomposePlug(plug):
+	"""atomic to get node and attr from plug"""
+	print ""
+	attr = ".".join(plug.split(".")[1:])
+	node = plug.split(".")[0]
+	print "node is {}, attr is {}".format(node, attr)
+	return node, attr
+
+def plugType(plug):
+	"""returns string type for plugs"""
+	# attr, node = decomposePlug(plug)
+	return cmds.getAttr(plug, type=True)
+
+def getEnumValue(plug):
+	"""current enum value as string"""
+	return cmds.getAttr(plug, asString=True)
 
 def getImmediateNeighbours(target, source=True, dest=True):
 	"""returns nodes connected immediately downstream of plug, or all of node"""
@@ -148,43 +228,10 @@ def makeStringConnection(startNode, endNode,
 	cmds.connectAttr(startNode+"."+startName,
 					 endNode+"."+endName)
 
-def makeAttrsFromDict(node, attrDict, parent=None):
-	"""creates compound hierarchies from a dict
-	:param attrDict : dict
-	:param parent : string
-	(compound plug)
-	{"parent" : {
-		"children" : { # sad times
-			"mid" : {
-				"children" : {
-					"child" : { "dt" : "nurbsCurve"}
-					}
-				},
-				"other" : { "dt" : "float",
-							"min" : 0 }
-					}"""
-	"""the syntax including "children" key is clunky, but it's most explicit
-	and futureproof for array attributes"""
-	for k, v in attrDict.iteritems():
-		if v.get("children"): # it's a compound
-			parent = addAttr(node, attrName=k, attrType="compound")
-			makeAttrsFromDict(node, v["children"], parent=parent)
-		elif v.get("dt"): # it's a normal attribute
-			kwargs = {nk : nv for nk, nv in v.iteritems() if nk != "dt"}
-			addAttr(node, attrName=k, attrType=v["dt"], parent=parent, **kwargs)
 
-
-INTERFACE_ATTRS = { # attribute templates for io network nodes
-	"0D" : {"dt" : "matrix"},
-	"1D" : {"children" : {
-		"mainCurve" : {"dt" : "nurbsCurve"},
-		"upCurve" : {"dt" : "nurbsCurve"}}},
-	"2D" : {"dt" : "mesh"},
-	"int" : {"dt" : "long"}
-	#ideally there would be a much closer link between this system and abstract attrs
-	# give me a minute
-	}
-
+# class ArgParse(object):
+# 	"""experimental context handler to control creation and deletion
+# 	of proxy nodes for functions."""
 
 
 

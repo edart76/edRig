@@ -7,7 +7,8 @@ from edRig.tilepile.abstractnode import AbstractAttr
 import random, copy, functools
 from edRig.structures import ActionItem, action
 from edRig.pipeline import safeLoadModule
-from edRig.tilepile.real import MayaReal, GeneralExecutionManager, MayaStack, MayaDelta
+from edRig.tilepile.real import MayaReal, MayaStack, MayaDelta
+from edRig.tilepile.lib import GeneralExecutionManager
 
 class OpExecutionManager(GeneralExecutionManager):
 	"""manage execution of ops"""
@@ -36,12 +37,15 @@ class OpExecutionManager(GeneralExecutionManager):
 
 		# halt execution
 		if exc_type:
-			raise exc_type(exc_val)
+			# print exc_tb
+			#raise exc_type(exc_val)
+			self.printTraceback(exc_type, exc_val, exc_tb)
+			pass
 
 
-def tidy(inst):
-	"""decorator used  to associate any nodes with op"""
+def tidy(name=None):
 	def decorator(func):
+		inst = func.im_self
 		@functools.wraps(func)
 		def wrapper(*args, **kwargs):
 			before = scene.listTopNodes()
@@ -60,6 +64,19 @@ class Op(MayaReal):
 	colour = (100, 100, 150) # rgb
 
 	currentOp = None # set by exec handler?
+
+	# def tidy(self, name=None):
+	# 	def decorator(func):
+	# 		@functools.wraps(func)
+	# 		def wrapper(*args, **kwargs):
+	# 			before = scene.listTopNodes()
+	# 			results = func(*args, **kwargs)
+	# 			after = scene.listTopNodes() - before
+	# 			self.nodes.update(after)
+	# 			print "tidied nodes"
+	# 			return results
+	# 		return wrapper
+	# 	return decorator
 	tidy = tidy
 
 	# FINALLY ACTIONS
@@ -392,7 +409,7 @@ class Op(MayaReal):
 
 	def ECA(self, type, name="blankName", *args):
 		node = self.ECAsimple(type, name, cleanup=False, *args)
-		self.nodes.append(node)
+		self.nodes.update(node)
 		#cmds.parent(node, self.opGrp)
 		return node
 
@@ -451,7 +468,7 @@ class Op(MayaReal):
 		plug = None
 		parentPlug = parentItem.plug if parentItem else ""
 		# convert datatype to pass to addattr
-		print "i.dataType is {}".format(i.dataType)
+		#print "i.dataType is {}".format(i.dataType)
 
 		if i.getChildren(): # need a compound
 			plug = attr.addAttr(node, attrName=i.name, attrType="compound",
@@ -493,7 +510,7 @@ class Op(MayaReal):
 
 		# set plug value if it's simple
 		if i.isSimple():
-			cmds.setAttr(i.plug, i.value)
+			attr.setAttr(i.plug, i.value)
 
 	@staticmethod
 	def connectInputPlug(attrItem):
@@ -643,4 +660,8 @@ class Op(MayaReal):
 	@property
 	def controlGrp(self):
 		return self.invokeNode(name=self.opName+"_controls", type="transform",
+		                       parent=self.opGrp, func=self.ECAsimple)
+	@property
+	def spaceGrp(self): # moved from datatypes for sanity reasons
+		return self.invokeNode(name=self.opName+"_space", type="transform",
 		                       parent=self.opGrp, func=self.ECAsimple)

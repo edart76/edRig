@@ -4,16 +4,17 @@ from edRig.core import shortUUID
 from edRig import Env, pipeline, attrio
 # from edRig.tilepile.ops.op import Op
 import functools
-from edRig.tilepile.lib import Signal
+from edRig.tilepile.lib import Signal, GeneralExecutionManager
 
 class AbstractAbstractNode(type):
 	"""abstract class for abstract nodes"""
 	def __new__(cls, *args, **kwargs):
 		return cls
 
-class AbstractNodeExecutionManager(object):
+class AbstractNodeExecutionManager(GeneralExecutionManager):
 	"""manages abstract execution, updates ui, etc"""
 	def __init__(self, node):
+		super(AbstractNodeExecutionManager, self).__init__(node)
 		self.node = node
 
 	def __enter__(self):
@@ -29,7 +30,8 @@ class AbstractNodeExecutionManager(object):
 			#self.node.setState("error")
 
 			# we want execution to stop in this case
-			raise exc_type(exc_val)
+			#raise exc_type(exc_val)
+			#self.printTraceback(exc_type, exc_val, exc_tb)
 		self.node.afterExecute(success=True)
 
 class AbstractNode(object):

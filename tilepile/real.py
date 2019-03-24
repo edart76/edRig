@@ -2,12 +2,10 @@
 # currently for use only in maya, but fully extensible to anything
 
 from __future__ import print_function, with_statement
-from edRig.tilepile.lib import DeltaStack, StackDelta
+from edRig.tilepile.lib import DeltaStack, StackDelta, GeneralExecutionManager
+import traceback
 
-class GeneralExecutionManager(object):
-	"""placeholder"""
-	def __init__(self, real):
-		self.real = real
+
 
 class AbstractReal(type):
 	"""mainly used to facilitate reloading/recasting classes live"""

@@ -1,6 +1,6 @@
 # move stuff around
 from edRig import core
-from core import ECN, con, AbsoluteNode
+from core import ECN, con, AbsoluteNode, ECA
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -123,15 +123,22 @@ def driveShapeWithPivot(shape, tf=None):
 
 def matrixConstraint(driver, driven, offset=True, translate=True, rotate=True,
 					 scale=True, space="world"):
-
-
-	# check if driver and driven's parent spaces are the same - can then use
-	# direct attribute connection and addition
-
+	"""i swear to god i had this before i went to framestore"""
 	decomp = cmds.createNode("decomposeMatrix",
 							 n="matConst_{}_{}_decomp".format(driver, driven))
 	mult = cmds.createNode("multMatrix",
 	                       n="matConst_{}_{}_mult".format(driver, driven))
+
+	if offset:
+		driverMat = WorldMMatrixFrom(driver)
+		drivenMat = WorldMMatrixFrom(driven)
+		offsetMat = drivenMat * driverMat.inverse()
+
+	if space == "local":
+		# S P E E E  E   E    E      E        D
+		if offset:
+			offsetMat = core.MMatrixFrom(driven) * core.MMatrixFrom(driver).inverse()
+
 
 	if not offset and space == "world":
 		"""basic world space rivet - slow but reliable"""
@@ -153,9 +160,6 @@ def matrixConstraint(driver, driven, offset=True, translate=True, rotate=True,
 			                 driven+"."+n+ax, f=True)
 	return mult, decomp
 
-	# driverMat = WorldMMatrixFrom(driver)
-	# drivenMat = WorldMMatrixFrom(driven)
-	# offsetMat = drivenMat * driverMat.inverse()
 
 def connectTransformAttrs(driver, driven, translate=True,
                           rotate=True, scale=True):
@@ -189,8 +193,18 @@ def zeroTransforms(node):
 	cmds.makeIdentity(node, apply=False)
 	return node
 
+def decomposeMatrixPlug(plug, target=None):
+	"""basic atomic decomposition"""
+	decomp = ECA("decomposeMatrix", "decomposeMat"+plug)
+	cmds.connectAttr(plug, decomp+".inputMatrix")
 
-
+	if target: # hopefully a dag
+		target = AbsoluteNode(target)
+		for i in ["translate", "rotate", "scale"]:
+			for n in "XYZ":
+				cmds.connectAttr(decomp+".output"+i.capitalize()+n,
+				                 target+"."+i+n)
+	return decomp
 
 
 

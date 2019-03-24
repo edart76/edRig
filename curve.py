@@ -4,7 +4,7 @@ import core as core
 from core import ECN, con, AbsoluteNode, ECA
 import maya.api.OpenMaya as om
 from nodule import nodule
-from edRig import utils
+from edRig import utils, attr
 
 def isCurve(node):
 	if core.isType(node, "nurbsCurve") or core.isType(node, "bezierCurve"):
@@ -50,8 +50,6 @@ def setCurveInfo(info, target=None, create=True, parent=None):
 		cvs, info["knots"], info["degree"], info["form"], False, True, parent=parent.MObject
 	)
 	return shapeObj
-
-
 
 
 def getCurveDiff(base, target):
@@ -219,13 +217,22 @@ def curveFnFrom(curve):
 	return curveFn
 
 def getClosestU(curve, tf):
-	print "u curve is {}".format(curve)
+	#print "u curve is {}".format(curve)
+	dummy = None
+	if core.isPlug(curve): # create dummy shape node
+		curve = ECA("nurbsCurve", "dummyCrv")
+		dummy = True
 	curveFn = curveFnFrom(curve)
 	tfPos = cmds.xform(tf, q=True, ws=True, t=True)
 	point = om.MPoint(*tfPos)
 	#u = curveFn.closestPoint(point, space=om.MSpace.kWorld)
 	u = curveFn.closestPoint(point)[1]
+	if dummy:
+		cmds.delete(curve.transform)
 	return u
+
+def getLiveNearestPoint(curve, tf):
+	pass
 
 
 def pciAtU(crvShape, u=0.1, percentage=True,
@@ -247,7 +254,8 @@ def pciAtU(crvShape, u=0.1, percentage=True,
 	print "testPcis is {}".format(testPcis)
 	if testPcis:
 		for i in testPcis:
-			constantTest = core.Op.getTag(i, tagName = "constantU")
+			constantTest = attr.getTag(i, tagName="constantU")
+			# constantTest = core.Op.getTag(i, tagName = "constantU")
 			print "test is {}".format(constantTest)
 			if constantU:
 				if constantTest == "True":
@@ -292,11 +300,12 @@ def matrixAtU(crv, u=0.5, percentage=True):
 					posVec[0], posVec[1], posVec[2], 1))
 	return mat
 
-def liveMatrixAtU(crvShape, u=0.5, constantU=True, purpose="anyPurpose"):
+def liveMatrixAtU(crvShape, u=0.5, constantU=True, purpose="anyPurpose",
+                  upCurve=None):
 	data = {}
 	pci = pciAtU(crvShape, u=u, constantU=constantU, purpose=purpose)
-	mat = nodule(ECN("4x4", "matAtU"))
-	vec = nodule(ECN("vp", "biNormal", "cross"))
+	mat = ECA("4x4", "matAtU")
+	vec = ECA("vp", "biNormal", "cross")
 	con(pci+".normalizedTangentX", mat+".in00")
 	con(pci+".normalizedTangentY", mat+".in01")
 	con(pci+".normalizedTangentZ", mat+".in02")

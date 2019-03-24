@@ -128,10 +128,9 @@ class JointCurveOp(SpookyLayerOp):
 		self.connectInputs()
 
 		self.memory.setClosed("joints", status=True)
-
 		self.updateOutputs()
 
-	@LayerOp.tidy
+	#@tidy
 	def showGuides(self):
 		print "running jointCurve planStop"
 		#print "inputMode is {}".format(self.inputs["mode"]["value"])
@@ -161,7 +160,10 @@ class JointCurveOp(SpookyLayerOp):
 
 	def connectInputs(self):
 		"""connect space group to parent"""
-		parentPoint = Point.getPoint()
+		matPlug = DimFn.getPoint(on=self.getInput("parent").plug,
+		               near=self.joints[0])
+		transform.decomposeMatrixPlug(matPlug, target=self.spaceGrp)
+
 
 	def updateInputs(self):
 		self.prefix = self.getInput("prefix").value

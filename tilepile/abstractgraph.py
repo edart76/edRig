@@ -5,7 +5,7 @@ from edRig.pipeline import TempAsset
 from edRig.tilepile.abstractnode import AbstractNode, AbstractAttr
 from edRig.tilepile.abstractedge import AbstractEdge
 from edRig.tilepile.oplist import ValidList
-from edRig.tilepile.lib import Signal
+from edRig.tilepile.lib import Signal, GeneralExecutionManager
 from edRig.structures import ActionItem
 import pprint
 
@@ -105,9 +105,10 @@ class ExecutionPath(object):
 		path.buildToNodes() #?
 		return path
 
-class AbstractGraphExecutionManager(object):
+class AbstractGraphExecutionManager(GeneralExecutionManager):
 	"""manages context for entire execution process"""
 	def __init__(self, graph):
+		super(AbstractGraphExecutionManager, self).__init__(graph)
 		self.graph = graph
 
 	def __enter__(self):
@@ -120,7 +121,8 @@ class AbstractGraphExecutionManager(object):
 		if exc_type:
 			self.graph.setState("neutral")
 			# anything other than neutral freezes forever
-			raise exc_type(exc_val)
+			#raise exc_type(exc_val)
+			#self.printTraceback(exc_type, exc_val, exc_tb)
 		self.graph.setState("neutral")
 
 class AbstractGraph(object):

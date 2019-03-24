@@ -1,6 +1,6 @@
 
 from __future__ import print_function
-import inspect
+import inspect, traceback
 from weakref import WeakSet, WeakKeyDictionary
 
 """frequently used methods and techniques"""
@@ -43,6 +43,14 @@ class Signal(object):
 		self._functions.clear()
 		self._methods.clear()
 
+class GeneralExecutionManager(object):
+	"""placeholder"""
+	def __init__(self, real):
+		self.real = real
+
+	@staticmethod
+	def printTraceback(tb_type, tb_val, tb):
+		traceback.print_exception(tb_type, tb_val, tb)
 
 """TO-DO: implement context for this to gather deltas procedurally"""
 class DeltaStack(object):

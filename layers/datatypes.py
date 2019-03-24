@@ -1,4 +1,4 @@
-from edRig import core, control, attrio
+from edRig import core, transform
 import edRig.curve as libcurve
 import edRig.transform as libtf
 from edRig.layers import base
@@ -290,21 +290,35 @@ class DimFn(object):
 
 	@classmethod
 	def getPoint(cls, on=None, near=None, live=True):
-		"""blanket catch-all method for """
+		"""blanket catch-all method for getting closest point
+		on curves, meshes, surfaces"""
+		print "on is {}".format(on)
+		plug = None
 		if core.isPlug(on):
-			cls.getPointFromPlug(on, near)
+			plug = cls.getPointFromPlug(on, near)
 		elif isinstance(on, Datatype):
 			plug = on.activePlug
-			cls.getPointFromPlug(plug, near)
+			plug = cls.getPointFromPlug(plug, near)
+		print "plug is {}".format(plug)
+		return plug
 
 	@classmethod
-	def getPointFromPlug(cls, on, near):
+	def getPointFromPlug(cls, on, near, up=None):
+		"""returns matrix plug"""
 		kind = cmds.getAttr(on, type=True)
 		mat = None
 		if kind == "matrix" :
 			# my work is done
 			mat = on
-		elif kind == "nurbsCurve":
-			mat = libcurve.curveRivet()
+		else:
+			dummy = core.ECA("locator", "pointProxy")
+			transform.matchXforms(dummy, source=near)
+			if kind == "nurbsCurve":
+				u = libcurve.getClosestU(on, near)
+				libcurve.curveRivet(dummy, on, u, upCrv=up)
+				mat = dummy+".matrix"
+		return mat
+
+
 
 
