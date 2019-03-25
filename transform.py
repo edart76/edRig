@@ -195,6 +195,7 @@ def zeroTransforms(node):
 
 def decomposeMatrixPlug(plug, target=None):
 	"""basic atomic decomposition"""
+	print "plug is {}".format(plug)
 	decomp = ECA("decomposeMatrix", "decomposeMat"+plug)
 	cmds.connectAttr(plug, decomp+".inputMatrix")
 

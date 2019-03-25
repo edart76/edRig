@@ -172,6 +172,10 @@ class JointCurveOp(SpookyLayerOp):
 		"""transfer output objects to attribute values"""
 		# print "out1D is {}".format(self.getOutput("jc"))
 		self.getOutput("jc").value = self.out1D
+		cmds.connectAttr(self.mainCurve.shape+".local",
+		                 self.getOutput("jc").plug+".mainCurve")
+		cmds.connectAttr(self.upCurve.shape + ".local",
+		                 self.getOutput("jc").plug + ".upCurve")
 
 	def setJointsToCreate(self):
 		self.jointsToCreate = self.data["joints"]  # list of dicts
@@ -228,7 +232,7 @@ class JointCurveOp(SpookyLayerOp):
 				# see what we had to put up with before i saved programming in maya
 				cmds.parent(joint, self.joints[i - 1])
 
-		cmds.parent(self.joints[0], self.setupGrp)
+		cmds.parent(self.joints[0], self.spaceGrp)
 
 			#self.points.append(Point(node=joint))
 			#self.out1D.addPoint(Point(node=joint))
@@ -266,6 +270,7 @@ class JointCurveOp(SpookyLayerOp):
 		upData = curve.curveFromCvs(upPoints, deg=1, name=self.prefix+"_upCrv")
 		self.upCurve = core.AbsoluteNode(cmds.rebuildCurve(upData["shape"], ch=False, degree=upCurveDeg,
 		                               rebuildType=0, fitRebuild=True)[0])
+		cmds.parent([self.mainCurve, self.upCurve], self.spaceGrp)
 
 		pass
 

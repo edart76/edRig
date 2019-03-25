@@ -26,7 +26,9 @@ def isPlug(target):
 	node = target.split(".")[0]
 	if not isNode(target):
 		return False
-	plug = "".join(target.split(".")[0:])
+	plug = ".".join(target.split(".")[1:])
+	print ""
+	print "plug is " + plug
 	if plug in cmds.listAttr(node):
 		return True
 	return False
