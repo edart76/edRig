@@ -121,6 +121,10 @@ class InstanceCatalogue(QtWidgets.QListWidget):
 		self.buildContext()
 		self.contextMenu.exec_(event.globalPos())
 		super(InstanceCatalogue, self).contextMenuEvent(event)
+		
+	def mousePressEvent(self, event):
+		self.sync()
+		super(InstanceCatalogue, self).mousePressEvent(event)
 
 
 class InstanceTreeView(QtWidgets.QTreeWidget):

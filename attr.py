@@ -27,15 +27,14 @@ def processAttrNames(attr, node=None, asPlug=False, asAttr=True):
 	return returnList
 
 # functions for using string attributes like keys in dictionary
-def addTag(tagNode, tagName, tagContent=None, tag=True):
-	if not tagName + "_" in cmds.listAttr(tagNode):
-		if tag:
-			cmds.addAttr(tagNode, ln=tagName+"_tag", dt="string")
-		else:
-			cmds.addAttr(tagNode, ln=tagName, dt="string")
+def addTag(tagNode, tagName, tagContent=None, tag=False):
+	tagName = tagName + "_tag" if tag else tagName
+	if not tagName in cmds.listAttr(tagNode):
+		cmds.addAttr(tagNode, ln=tagName, dt="string")
 	if tagContent:
 		# tag content can be anything, keep track of it yourself
-		cmds.setAttr(tagNode + "." + tagName + "_tag", tagContent, type="string")
+		cmds.setAttr(tagNode + "." + tagName, tagContent, type="string")
+	return tagNode+"."+tagName
 
 def setTagsFromDict(tagNode, tagDict):
 	for k, v in tagDict.iteritems():
