@@ -160,7 +160,8 @@ INTERFACE_ATTRS = { # attribute templates for io network nodes
 		"mainCurve" : {"dt" : "nurbsCurve"},
 		"upCurve" : {"dt" : "nurbsCurve"}}},
 	"2D" : {"dt" : "mesh"},
-	"int" : {"dt" : "long"}
+	"int" : {"dt" : "long"},
+	#"message" : {"dt" : "message"}
 	#ideally there would be a much closer link between this system and abstract attrs
 	# give me a minute
 	}
@@ -232,8 +233,8 @@ def getImmediatePast(target):
 def makeStringConnection(startNode, endNode,
 						 startName="start", endName="end"):
 	"""adds a string connection between two nodes"""
-	addAttr(startNode, ln=startName, dt="string")
-	addAttr(endNode, ln=endName, dt="string")
+	addAttr(startNode, attrName=startName, attrType="string")
+	addAttr(endNode, attrName=endName, attrType="string")
 	cmds.connectAttr(startNode+"."+startName,
 					 endNode+"."+endName)
 

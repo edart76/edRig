@@ -417,8 +417,8 @@ def ECN(kind, name, parent=None, *args, **kwargs):
 	elif kind == "composeMat":
 		node = cmds.createNode("composeMatrix", n=name)
 
-	elif kind == "":
-		node = cmds.createNode("distanceBetween", n=name)
+	elif kind == "locator":
+		node = cmds.spaceLocator(name=name)[0]
 
 	elif kind == "":
 		node = cmds.createNode("distanceBetween", n=name)

@@ -43,7 +43,7 @@ class ControlOp(PointLayerOp):
 		               desc="output local space matrix from control")
 		self.addOutput(name="controlOutputWorld", dataType="0D",
 		               desc="output world space matrix from control")
-		self.addOutput(name="controlUi", dataType="custom",
+		self.addOutput(name="controlUi", dataType="message",
 		               desc="control ui shapes to be passed forwards")
 
 	# def plan(self):
@@ -61,6 +61,7 @@ class ControlOp(PointLayerOp):
 		self.remember("offset", "xform", self.control.uiOffset)
 		self.remember("ctrlShapes", "shape", self.control.shapes)
 
+		self.connectOutputs()
 		"""
 		self.remember("joints", "xform", self.joints, jointMode=True)
 		self.remember("joints", "attr", self.joints, transform=False)
@@ -72,7 +73,14 @@ class ControlOp(PointLayerOp):
 		cmds.parent(self.control.first["ui"], self.control.uiRoot)
 		cmds.parent(self.control.uiOffset, self.control.first["ui"])
 
-
+	def connectOutputs(self):
+		"""connect plugs"""
+		cmds.connectAttr(self.control.uiRoot+".message",
+		                 self.getOutput("controlUi").plug)
+		cmds.connectAttr(self.control.outputPlug,
+		                 self.getOutput("controlOutput").plug)
+		cmds.connectAttr(self.control.worldOutputPlug,
+		                 self.getOutput("controlOutputWorld").plug)
 
 
 

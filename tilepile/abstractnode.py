@@ -214,6 +214,8 @@ class AbstractNode(object):
 		"""references the value of every output to that of every connected input"""
 		for i in self.outEdges:
 			i.dest[1].value = i.source[1].value
+		if hasattr(self.real, "propagateOutputs"):
+			self.real.propagateOutputs()
 
 	"""IN THEORY this system can support multiple stages of execution,
 	but it is not recommended, and variants are not supported at all"""

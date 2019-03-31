@@ -449,9 +449,10 @@ def action(name=None):
 	print "ADDING ACTION"
 	def _addAction(func):
 		newName = name or func.__name__
+		inst = func.im_self
 		@functools.wraps(func)
 		def wrapperAction(*args, **kwargs):
-			inst = args[0]
+			#inst = args[0]
 			return func(*args, **kwargs)
 		print
 		print "inst is {}".format(inst)
@@ -460,6 +461,7 @@ def action(name=None):
 		return wrapperAction
 	print "inst is {}".format(inst)
 	return _addAction
+
 """override at instance level: def action(self, *args, **kwargs):
 	return assignAction(self, *args, **kwargs)"""
 

@@ -4,7 +4,7 @@ import maya.api.OpenMaya as om
 from edRig.core import ECA, ECN, AbsoluteNode, shortUUID, invokeNode
 from edRig import Env, attrio, scene, attr
 from edRig.tilepile.abstractnode import AbstractAttr
-import random, copy, functools
+import random, functools, pprint
 from edRig.structures import ActionItem, action
 from edRig.pipeline import safeLoadModule
 from edRig.tilepile.real import MayaReal, MayaStack, MayaDelta
@@ -43,20 +43,41 @@ class OpExecutionManager(GeneralExecutionManager):
 			pass
 
 
-def tidy(name=None):
-	def decorator(func):
-		inst = func.im_self
+def tidy(name=None, *args, **kwargs):
+	def decorator(inst, func, *args, **kwargs):
+		#inst = func.im_self
+		print "dir inst is {}".format(pprint.pformat(dir(inst)))
+		print "dir func is {}".format(pprint.pformat(dir(func)))
 		@functools.wraps(func)
 		def wrapper(*args, **kwargs):
 			before = scene.listTopNodes()
 			results = func(*args, **kwargs)
 			after = scene.listTopNodes() - before
-			inst.nodes.update(after)
+			#inst.nodes.update(after)
 			print "tidied nodes"
 			return results
 		return wrapper
 	return decorator
 
+# # FINALLY ACTIONS
+# def action(name=None, *args, **kwargs):
+# 	print "action args {}".format(args)
+# 	print "action kwargs {}".format(kwargs)
+# 	def decorator(func, *args, **kwargs):
+# 		#@functools.wraps(func)
+# 		print "decorator args {}".format(args)
+# 		print "decorator kwargs {}".format(kwargs)
+# 		newName = name or func.__name__
+# 		#print "dir inst is {}".format(pprint.pformat(dir(inst)))
+# 		print "dir func is {}".format(pprint.pformat(dir(func)))
+# 		def wrapper(*args, **kwargs):
+# 			print "wrapper args {}".format(args)
+# 			print "wrapper kwargs {}".format(kwargs)
+# 			return func(*args, **kwargs)
+# 		# inst.addAction(actionItem=ActionItem(name=newName,
+# 		#                           execDict={"func": func}))
+# 		return wrapper
+# 	return decorator
 
 class Op(MayaReal):
 	# base class for "operations" executed by abstractGraph,
@@ -79,16 +100,27 @@ class Op(MayaReal):
 	# 	return decorator
 	tidy = tidy
 
-	# FINALLY ACTIONS
-	def action(self, name=None):
-		def decorator(func):
-			#@functools.wraps(func)
+	def action(self, name=None, *args, **kwargs):
+		print "action args {}".format(args)
+		print "action kwargs {}".format(kwargs)
+
+		def decorator(func, *args, **kwargs):
+			# @functools.wraps(func)
+			print "decorator args {}".format(args)
+			print "decorator kwargs {}".format(kwargs)
 			newName = name or func.__name__
+			# print "dir inst is {}".format(pprint.pformat(dir(inst)))
+			print "dir func is {}".format(pprint.pformat(dir(func)))
+
 			def wrapper(*args, **kwargs):
+				print "wrapper args {}".format(args)
+				print "wrapper kwargs {}".format(kwargs)
 				return func(*args, **kwargs)
-			self.addAction(actionItem=ActionItem(name=newName,
-			                          execDict={"func": func}))
+
+			# inst.addAction(actionItem=ActionItem(name=newName,
+			#                           execDict={"func": func}))
 			return wrapper
+
 		return decorator
 
 	# execution architecture
@@ -132,7 +164,7 @@ class Op(MayaReal):
 			self.inputRoot = AbstractAttr(role="input", hType="root", name="inputRoot")
 			self.outputRoot = AbstractAttr(role="output", hType="root", name="outputRoot")
 		self.defineAttrs() # override this specific method with attr construction
-		self.data = copy.deepcopy(self.data)
+		#self.data = copy.deepcopy(self.data)
 		self.redraw = False  # single interface with UI
 		self.abstract = None
 		if abstract:
@@ -141,7 +173,7 @@ class Op(MayaReal):
 		self.actions = {}
 		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
 			{"func" : self.clearMayaRig}))
-		self.addAction(func=self.showGuides)
+		#self.addAction(func=self.showGuidesWrapper, name="showGuides")
 
 		# network nodes holding input and output plugs
 		self.inputNetwork = None
@@ -451,6 +483,14 @@ class Op(MayaReal):
 		"""immediately after exec"""
 		pass
 
+	def propagateOutputs(self):
+		"""connect attrItem plugs in maya"""
+		for i in self.outputs:
+			for n in i.getConnections(): # will return abstractEdges
+				# this is a car fire but it works for now
+				cmds.connectAttr(i.plug, n.destAttr.plug)
+
+
 	# dataMapping = {
 	# 	"0D" : "matrix",
 	# 	"1D" : "nurbsCurve",
@@ -536,14 +576,15 @@ class Op(MayaReal):
 	def getAllActions(self):
 		return self.actions
 
-	def addAction(self, actionDict=None, actionItem=None, func=None):
+	def addAction(self, actionDict=None, actionItem=None, func=None, name=None):
 		if actionDict:
 			self.actions.update(actionDict)
 		elif actionItem:
 			print "adding action {}".format(actionItem)
 			self.actions.update({actionItem.name : actionItem})
 		elif func:  # just add the function
-			item = ActionItem(execDict={"func": func}, name=func.__name__)
+			name = name or func.__name__
+			item = ActionItem(execDict={"func": func}, name=name)
 			self.actions.update({item.name : item})
 
 	def addInputWithAction(self, parent=None, name=None, datatype=None, copy=None,
@@ -574,8 +615,8 @@ class Op(MayaReal):
 		opDict["CLASS"] = self.__class__.__name__
 		opDict["MODULE"] = self.__class__.__module__
 		opDict["opName"] = self.opName
-		copyData = copy.copy(self.data)
-		opDict["data"] = copyData
+		#copyData = copy.copy(self.data)
+		#opDict["data"] = copyData
 		opDict["inputRoot"] = self.inputRoot.serialise()
 		opDict["outputRoot"] = self.outputRoot.serialise()
 		return opDict
@@ -618,12 +659,15 @@ class Op(MayaReal):
 		self.reset()
 		del self
 
-	# @action
-	@tidy
 	def showGuides(self):
 		"""used to allow user direction over op, as a separate process
 		to execution"""
 		pass
+
+	@action(name="showGuides") # aaaaa
+	def showGuidesWrapper(self):
+		self.showGuides()
+
 
 	#### maya stuff ####
 	# yes i know this should go in a DCC-specific child class, but there's
