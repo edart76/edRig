@@ -482,7 +482,13 @@ class OpAttrItem(AttrItem):
 		return self.connections
 
 	def setConnections(self, val):
-		self.connections = val
+		"""add maya plug support"""
+		super(OpAttrItem, self).setConnections(val)
+		for i in val:
+			if self.role == "input":
+				cmds.connectAttr(i.plug, self.plug)
+			else:
+				cmds.connectAttr(self.plug, i.plug)
 
 	@staticmethod
 	def opHierarchyFromDict(fromDict, role="input", value=None, name="newAttr"):

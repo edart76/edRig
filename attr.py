@@ -4,6 +4,10 @@ from edRig import core
 from maya import cmds
 import maya.api.OpenMaya as om
 
+def con(a, b, f=True):
+	"""let's try this again"""
+	cmds.connectAttr(a, b, f=f)
+
 def breakConnections(target, source=True, dest=True):
 	"""ed smash"""
 	if core.isNode(target):
@@ -104,6 +108,10 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs)
 		parent = ".".join(parent.split(".")[1:])
 		kwargs.update({"parent" : parent})
 		#print "parent is {}".format(parent)
+
+	# check if already exists
+	if attrName in cmds.listAttr(target):
+		return target+"."+attrName
 
 	dtList = ["string", "nurbsCurve"]
 	if attrType in dtList:
@@ -210,6 +218,8 @@ def getImmediateNeighbours(target, source=True, dest=True):
 
 def getDrivingPlug(plug):
 	plugs = cmds.listConnections(plug, plugs=True, source=True, dest=False)
+	if not plugs:
+		return []
 	return [i for i in plugs if i != plug][0]
 
 def getImmediateFuture(target):
@@ -222,11 +232,30 @@ def getImmediatePast(target):
 def makeStringConnection(startNode, endNode,
 						 startName="start", endName="end"):
 	"""adds a string connection between two nodes"""
-	cmds.addAttr(startNode, ln=startName, dt="string")
-	cmds.addAttr(endNode, ln=endName, dt="string")
+	addAttr(startNode, ln=startName, dt="string")
+	addAttr(endNode, ln=endName, dt="string")
 	cmds.connectAttr(startNode+"."+startName,
 					 endNode+"."+endName)
 
+
+def findPlugSource(startPlug):
+	"""walk the graph backwards from an input plug
+	until we find a plug without an input
+	used to trace back control ui nodes"""
+	stepBack = getDrivingPlug(startPlug)
+	if not stepBack: # no driving plug found
+		return stepBack
+	return findPlugSource(stepBack)
+
+def getTransformPlugs(node, t=True, r=True, s=True):
+	"""returns list of plugs for specified node
+	no more loops"""
+	plugs = []
+	mapping = {"translate" : t, "rotate" : r, "scale" : s}
+	for i in [k for k, v in mapping.iteritems() if v]:
+		for n in "XYZ":
+			plugs.append(node + "." + i + n)
+	return plugs
 
 # class ArgParse(object):
 # 	"""experimental context handler to control creation and deletion

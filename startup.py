@@ -3,6 +3,7 @@
 from edRig.core import AbsoluteNode, ECA
 from edRig import pipeline, attr
 import maya.api.OpenMaya as om
+import maya.api.OpenMayaAnim as oma
 import maya.OpenMaya as omOld # the things we do for rigging
 from maya import cmds
 import os
@@ -49,29 +50,27 @@ def makeCodeNode():
 
 
 	# isPlaying
-	conditions = (#"playingBack", # this is scrubbing
+	conditions = ("playingBack", # this is scrubbing
 	              "playingBackAuto",
 	              "playblasting"
 	              )
 	def setIsPlaying(*args, **kwargs):
-		playingState = any(om.MConditionMessage.getConditionState(i)
-		                   for i in conditions)
+		# playingState = any(om.MConditionMessage.getConditionState(i)
+		#                    for i in conditions)
+		playingState = oma.MAnimControl.isPlaying()
 		cmds.setAttr(codeNode+".isPlaying", playingState)
 		pass
+	# isTimeChanging
+	def setIsTimeChanging(*args, **kwargs):
+		changingState = any(om.MConditionMessage.getConditionState(i)
+		                   for i in conditions)
+		cmds.setAttr(codeNode+".isTimeChanging", changingState)
+	#isScrubbing
+	def setIsScrubbing(*args, **kwargs):
+		changingState = oma.MAnimControl.isScrubbing()
+		cmds.setAttr(codeNode+".isScrubbing", changingState)
 	for i in conditions:
 		om.MConditionMessage.addConditionCallback(i, setIsPlaying)
-
-	# isScrubbing
-	conditions = ("playingBack", # this is scrubbing
-	              #"playingBackAuto",
-	              #"playblasting"
-	              )
-	#negate = ("playingBackAuto",)
-	def setIsTimeChanging(*args, **kwargs):
-		scrubbingState = any(om.MConditionMessage.getConditionState(i)
-		                   for i in conditions)
-		cmds.setAttr(codeNode+".isTimeChanging", scrubbingState)
-	for i in conditions:
 		om.MConditionMessage.addConditionCallback(i, setIsTimeChanging)
 	# this modest amount of callbacks gives 315 fps in an empty scene
 	# i think we'll be fine

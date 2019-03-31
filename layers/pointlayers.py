@@ -23,8 +23,11 @@ class PointOp(PointLayerOp):
 	def defineAttrs(self):
 		self.addInput(name="parent", dataType="nD",
 		              desc="driver of the point")
-		self.addOutput(name="point", dataType="0D",
-		               desc="output point")
+		self.addOutput(name="pointLocal", dataType="0D",
+		               desc="output point local transforms")
+		self.addOutput(name="pointWorld", dataType="0D",
+		               desc="output point local transforms")
+
 
 class ControlOp(PointLayerOp):
 	"""creates an Fk control for user interaction
@@ -38,18 +41,36 @@ class ControlOp(PointLayerOp):
 
 		self.addOutput(name="controlOutput", dataType="0D",
 		               desc="output local space matrix from control")
+		self.addOutput(name="controlOutputWorld", dataType="0D",
+		               desc="output world space matrix from control")
 		self.addOutput(name="controlUi", dataType="custom",
-		               desc="control ui shape to be passed forwards")
+		               desc="control ui shapes to be passed forwards")
 
-	def plan(self):
-		self.start = self.makeStarter(name=self.opName+"ctrlStarter", d="0D")
+	# def plan(self):
+	# 	self.start = self.makeStarter(name=self.opName+"ctrlStarter", d="0D")
+	#
+	# def build(self):
+	# 	self.control = control.FkControl(self.opName)
+	# 	transform.matchXforms(source=self.start, target=self.control.uiOffset)
+	# 	self.control.makeUi()
+	# 	self.getInput("controlOutput").value = self.control.output
+	# 	self.getInput("controlUi").value = Point(self.control.localOutput)
 
-	def build(self):
+	def execute(self):
 		self.control = control.FkControl(self.opName)
-		transform.matchXforms(source=self.start, target=self.control.controlGrp)
-		self.control.makeUi()
-		self.getInput("controlOutput").value = self.control.output
-		self.getInput("controlUi").value = Point(self.control.localOutput)
+		self.remember("offset", "xform", self.control.uiOffset)
+		self.remember("ctrlShapes", "shape", self.control.shapes)
+
+		"""
+		self.remember("joints", "xform", self.joints, jointMode=True)
+		self.remember("joints", "attr", self.joints, transform=False)
+		self.remember("curves", "shape", [self.upCurve.shape, self.mainCurve.shape])
+		"""
+
+	def showGuides(self):
+		"""connects first ui ctrl to uiOffset group of control"""
+		cmds.parent(self.control.first["ui"], self.control.uiRoot)
+		cmds.parent(self.control.uiOffset, self.control.first["ui"])
 
 
 

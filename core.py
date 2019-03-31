@@ -295,7 +295,7 @@ def loc(name):
 	# you're a scrub
 
 
-def ECN(kind, name, *args):
+def ECN(kind, name, parent=None, *args, **kwargs):
 	# node creation without carpal conflagration
 	# short for EdCreateNode
 
@@ -435,8 +435,14 @@ def ECN(kind, name, *args):
 
 	if isinstance(node, list):
 		node = node[0]
+
 	if node:
-		# cmds.select(clear=True)
+		if parent:
+			try:
+				cmds.parent(node, parent)
+			except:
+				pass
+		#cmds.select(clear=True)
 		return node
 
 
@@ -713,9 +719,9 @@ class AbsoluteNode(str):
 		return cmds.nodeType(self.node)
 
 
-def ECA(type, name, *args):
+def ECA(type, name, colour=None, *args, **kwargs):
 	# node = cmds.createNode(type, n=name)
-	node = ECN(type, name, *args)
+	node = ECN(type, name, *args, **kwargs)
 	return AbsoluteNode(node)
 
 class NodeFunction(object):

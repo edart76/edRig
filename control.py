@@ -1,13 +1,12 @@
 # define all the pretty colours, and how to saving them
 import edRig.core as core
 from edRig.core import ECN, ECA, con, AbsoluteNode, invokeNode
-from edRig import attr, transform
-
-import attrio
-import curve
+from edRig import attr, transform, pipeline
 
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
+
+import string
 
 controlLibPath = r'F:\\all projects desktop\common\edCode\edRig\data\ctrls\ctrlLibraryv02.ma'
 
@@ -25,8 +24,9 @@ class Control(object):
 		# has the library already been imported?
 		libGrp = cmds.ls("*ctrlLib_grp")
 		if not libGrp:
-			cmds.file( controlLibPath, i=True, type="mayaAscii",
-				defaultNamespace=True)
+			pipeline.safeImport(controlLibPath)
+			# cmds.file( controlLibPath, i=True, type="mayaAscii",
+			# 	defaultNamespace=True)
 			libGrp = cmds.ls("*ctrlLib_grp")[0]
 			cmds.setAttr(libGrp+".visibility", 0)
 		validTypes = ["tet", "sphere", "dodec"]
@@ -69,16 +69,6 @@ class Control(object):
 	#     # for i in cmds.listRelatives(self.tf, children=True, recursive=True):
 	#     self.name = value
 
-# class ControlTransform(object):
-#     # simple wrapper around dag objects, mainly to make tf class attributes
-#     # robust to hierarchy changes
-#     def __init__(self, transform):
-#         # would be very nice to return the string of the transform
-#         self.tf = transform
-	# def reparentUnder(self, parent):
-	#     # seriously fuck maya
-	#     self.tf = cmds.parent(self.tf, parent)[0]
-
 
 class FkControl(Control):
 	# base for all controls whose physical location doesn't matter
@@ -94,89 +84,130 @@ class FkControl(Control):
 		localOutput: locator for use as point datatype
 			"""
 
-	def __init__(self, name):
-		super(FkControl, self).__init__(name)
-		self.tf = None
-		self.shape = None
+	def __init__(self, name, layers=1):
+		#super(FkControl, self).__init__(name)
+		self.name = name
 		self.spareInputs = {} # name, node
-		self.combineNode = None
+		self.layers = [{"local" : None, "ui" : None}] * layers # absoluteNodes
+		self.makeHierarchy()
+		if layers:
+			self.connectProxies()
+			self.connectOutput()
 
-		# make local output
-		self.localOutput = ECA("locator", self.name+"_localOutput")
-		cmds.parent(self.localOutput, self.entry)
+	def makeHierarchy(self):
+		"""creates uniform hierarchy, according to plan following class"""
+		# main and local
+		self.root = ECA("transform", name=self.name+"_controlRoot")
+		self.localRoot = ECA("transform", name=self.name+"_localRoot")
+		self.localOffset = ECA("transform",
+		                       name=self.name+"_localOffset", parent=self.localRoot)
+		self.localOutput = ECA("locator",
+		                       name=self.name+"_localOutput", parent=self.localOffset)
+
+		# ui and world
+		self.uiRoot = ECA("transform",
+		                       name=self.name+"_uiRoot", parent=self.root)
+		self.uiFollow = ECA("transform",
+		                       name=self.name+"_uiFollow", parent=self.uiRoot)
+		self.uiOffset = ECA("transform",
+		                       name=self.name+"_uiOffset", parent=self.uiFollow)
+
+		# layers
+		for i, val in enumerate(self.layers):
+			letter = string.ascii_uppercase[i]
+			val["local"] = ECA("transform",
+			                   name=self.name + "_localComponent"+letter,
+			                   parent=self.root)
+			parent = self.uiOffset if i == 0 else self.layers[i-1]["ui"]
+			val["ui"] = self.makeUiElement(name=self.name+"_"+letter,
+			                parent=parent)
+
+			attr.makeStringConnection(self.uiRoot, val["ui"],
+			                          startName="ui"+letter,
+			                          endName="uiRoot")
+
+		self.worldOutput = ECA("locator",
+		                        name=self.name+"_worldOutput",
+		                        parent=self.layers[-1]["ui"])
+
+	def connectProxies(self):
+		"""connect up proxy attributes from ui to local components
+		if proxies don't work, move to more advanced ways like blendDevices
+		and managing keys directly"""
+		# for i in self.layers:
+		# 	uiPlugs = attr.getTransformPlugs(i["ui"])
+		# 	localPlugs = attr.getTransformPlugs(i["local"])
+		# 	for n, k in zip(uiPlugs, localPlugs):
+		# 		newAttr = ".".join(n.split(".")[1:])
+		# 		cmds.addAttr(i["ui"], ln=newAttr, proxy=k)
+		"""imperative to do more here, this is just a stopgap until a callback system
+		is worked out
+		there will be no parallelism with this yet"""
+
+		for i in self.layers:
+			uiPlugs = attr.getTransformPlugs(i["ui"])
+			localPlugs = attr.getTransformPlugs(i["local"])
+			for n, k in zip(uiPlugs, localPlugs):
+				attr.con(n, k)
+
+	def connectOutput(self):
+		"""multiply local matrices and decompose to output
+		keeping it uniform with matrix decomp even if unnecessary - if we ever
+		get to the point of this being a bottleneck, we're doing alright"""
+		matMult = ECA("multMatrix", name=self.name+"_localMult")
+		for i, val in enumerate(self.layers):
+			cmds.connectAttr(val["ui"]+".matrix", matMult+".matrixIn[{}]".format(i))
+		transform.decomposeMatrixPlug(matMult+".matrixSum", self.localOutput)
+
+	def makeUiElement(self, name="test", parent=None):
+		"""make a proper visual representation at origin"""
+		# for now just a circle
+		ctrl = AbsoluteNode(cmds.circle(name=name)[0])
+		if parent:
+			cmds.parent(ctrl, parent)
+		return ctrl
 
 	@property
-	def output(self):
-		"""returns the local matrix plug of control unless there are spare inputs,
-		in which case it refreshes them and reconnects them"""
-		if not self.spareInputs:
-			return self.tf+".matrix"
-		else:
-			return self.matrixCombination+".matrixSum"
+	def outputPlug(self):
+		"""returns the local matrix plug of control """
+		return self.localOutput+".matrix"
 
 	@property
-	def matrixCombination(self):
-		if not self.combineNode:
-			self.combineNode = ECA("multMatrix", self.name+"_matrixCombination")
-		if not self.spareInputs:
-			return self.combineNode
-		self.updateCombination()
-		return self.combineNode
-
-	def updateCombination(self):
-		"""update and reconnect spare inputs"""
-		attr.breakConnections(self.combineNode, source=True)
-		for i, val in enumerate(self.spareInputs.values()):
-			cmds.connectAttr(val + ".matrix", self.combineNode + ".matrixIn[{}]".format(i))
-		cmds.connectAttr(self.ui + ".matrix", self.combineNode + ".matrixIn[{}]".format(i + 1))
-
-	def makeUi(self):
-		"""creates ui shape, parents it to control group (which should by now
-		be at home position) and zeroes transforms"""
-		temp = cmds.circle(n=self.name, ch=False, normal=(1,0,0), r=3)
-		tf = AbsoluteNode(temp[0])
-		shape = AbsoluteNode(cmds.listRelatives(tf, shapes=True))
-		self.tf = tf
-		self.shape = shape
-		cmds.parent(self.tf, self.controlGrp)
-		transform.zeroTransforms(self.tf)
-
-		transform.connectTransformAttrs(self.tf, self.localOutput)
-
-	@property
-	def ui(self):
-		return self.tf
-
-	@property
-	def entry(self):
-		"""first top level group of control, placed at origin"""
-		return invokeNode(name=self.name+"_entry", type="transform")
-
-	@property
-	def spaceGrp(self):
-		"""group used to drive the space of a control"""
-		return invokeNode(name=self.name + "_space", type="transform",
-		                  parent=self.entry)
-
-	@property
-	def controlGrp(self):
-		"""container around control for safety"""
-		return invokeNode(name=self.name + "_controlGrp", type="transform",
-		                  parent=self.spaceGrp)
-
-	@property
-	def worldOutput(self):
+	def worldOutputPlug(self):
 		"""world output of the control (strongly not recommended for use)"""
-		marker = invokeNode(name=self.name + "_worldOutput", type="locator",
-		                  parent=self.spaceGrp)
-		transform.zeroTransforms(marker)
-		return marker
+		return self.worldOutput+".worldMatrix[0]"
+
+	@property
+	def shapes(self):
+		"""returns list of ui shapes"""
+		return [i["ui"].shape for i in self.layers]
+	@property
+	def first(self):
+		"""returns first layer"""
+		return self.layers[0]
+
+"""new approach - uniform ctrl grp hierarchy:
+
+ctrlName_controlRoot
+| - ctrlName_localOffset
+|   | - ctrlName_localComponentA    | ui drives these directly with proxy attributes
+|   | - ctrlName_localComponentB    | local xforms multiplied to drive output
+|   | - ctrlName_localOutput
+|
+| - ctrlName_uiHome         | passes message attribute as marker back to follow group
+    | - ctrlName_uiFollow       | constrained to whatever
+        | - ctrlName_uiOffset       | static offset group, same as local
+            | - ctrlName_A              | visible ui controls
+                | - ctrlName_B          |
+                    | - ctrlName_C      |
+                        | - ctrlName_worldOutput
+by this system, concatenated controls sharing the same driver may still keep
+separate offsets
+"""
 
 
 
-
-
-"""there is a difficuly in the controls - we only care about the translate, rotate
+"""there is a difficulty in the controls - we only care about the translate, rotate
 and scale attributes, directly input by the user; the user only cares about the visual
 representation of the control, which should follow along with the full result of the rig,
 not just its own values. the real component must be injected at the start of evaluation,

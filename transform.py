@@ -17,12 +17,57 @@ def matchXforms(target=None, source=None, pos=True, rot=True):
 		rotation = cmds.xform(source, q=True, ws=True, ro=True)
 		cmds.xform(target, ws=True, ro=rotation)
 
-
 # def staticAxisFromTransform(dag, ax=(1,0,0), length=5):
 #     mat = cmds.getAttr(dag+".worldMatrix[0]")
 #     return mat * ax
 	# mat = core.MMatrixFrom(dag)
 	# return staticVecMatrixMult(mat, point=ax, length=length)
+
+def matrixFromValues(vals):
+	"""return an MMatrix from sequence of floats"""
+	if not (len(vals) == 16 or len(vals) == 4):
+		raise RuntimeError("wrong number of values supplied to matrix")
+	return om.MMatrix(vals)
+
+def valuesFromMatrix(mat):
+	vals = []
+	rows = [0,1,2,3]
+	columns = [0,1,2,3]
+	for row in rows:
+		for column in columns:
+			vals.append(mat.getElement(row, column))
+	return vals
+
+def fourByFourFromValues(vals, name, plug=True):
+	"""creates a static fourByFourMatrix node from mmatrix
+	for use as static offset"""
+	rank = 4
+	mat = ECA("fourByFourMatrix", name=name)
+	for i in range(rank): # rows
+		for n in range(rank): # columns
+			index = i * 4 + n
+			cmds.setAttr(mat+".in{}{}".format(i, n), vals[index])
+	return mat+".output" if plug else mat
+
+def fourByFourFromMatrix(mat, name, plug=True):
+	vals = valuesFromMatrix(mat)
+	return fourByFourFromValues(vals, name, plug)
+
+def matrixFromPlug(plug):
+	"""returns MMatrix with same values as matrix plug"""
+	vals = cmds.getAttr(plug)
+	return matrixFromValues(vals)
+
+def getMatrixOffset(a, b):
+	"""difference between two mmatrices"""
+	return a * b.inverse()
+
+def getMatrixPlugOffset(a, b):
+	aMat = matrixFromPlug(a)
+	bMat = matrixFromPlug(b)
+	return getMatrixOffset(aMat, bMat)
+
+
 
 def WorldMMatrixFrom(dag):
 	"""exact same as core, but should be in this module"""

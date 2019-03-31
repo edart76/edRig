@@ -1,6 +1,7 @@
 # functions for manipulation of pipeline folder structures
 import os, sys, importlib, pprint, io
 from edRig import ROOT_PATH, COMMON_PATH
+from maya import cmds # hurts but there's no point in a separate module yet
 
 defaultFolders = ["models", "materials", "ref", "assemblyData"] # create these dynamically as required
 defaultFiles = [] # maybe
@@ -370,6 +371,11 @@ def makeBogus(path):
 		f.writelines(wealthy)
 	return True
 
+def safeImport(path):
+	"""common import function across edRig"""
+	makeLegit(path)
+	cmds.file(path, i=True, type="mayaAscii",
+	          defaultNamespace=True)
 
 class AssetItem(str):
 	"""pythonic wrapper around assets, passed the top folder"""
