@@ -8,6 +8,7 @@ import maya.api.OpenMayaAnim as oma
 from maya import cmds
 
 
+
 def getConnectedDeformers(target):
 	"""gets all chained deformers since the previous shape node"""
 	shape = core.shapeFrom(target)
@@ -35,6 +36,21 @@ def splitHistoryAtPlug(inputPlug, name="split"):
 	tweak = ECA("tweak", name=name)
 	cmds.connectAttr(driver, tweak+".input[0].inputGeometry")
 	return tweak + ".outputGeometry[0]"
+
+def getLiveMatrixOnMesh(meshShape, closeTo):
+	"""attach a nurbs surface to nearest face, then get matrix from that"""
+	mesh = AbsoluteNode(meshShape)
+
+def attachNurbsSurfaceToMesh(meshShape, pntList):
+	"""attach nurbs surface to target points"""
+	nurbs = ECA("nurbsSurface")
+	# no checking for crossed surface here
+	for i, val in enumerate(pntList):
+		cmds.connectAttr(meshShape+".points[{}]".format(val),
+		                 nurbs+".controlPoints[{}]".format(i))
+	return nurbs
+
+
 
 
 """

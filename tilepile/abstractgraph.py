@@ -163,6 +163,8 @@ class AbstractGraph(object):
 		self.sync = Signal()
 		self.edgesChanged = Signal()
 		self.stateChanged = Signal()
+		self.nodeChanged = Signal()
+		self.wireSignals()
 
 	def log(self, message):
 		print message
@@ -172,6 +174,20 @@ class AbstractGraph(object):
 
 	def clearSession(self):
 		self.nodeGraph.clear()
+
+	# signals
+	def onNodeAttrsChanged(self, node):
+		"""checks if any connections to node are now invalid"""
+		legal = self.checkNodeConnections(node)
+		if not legal:
+			self.edgesChanged()
+		self.nodeChanged(node)
+
+	def wireSignals(self):
+		"""as usual, sync drives everything"""
+		self.sync.connect(self.edgesChanged)
+		self.sync.connect(self.stateChanged)
+		# self.sync.connect(self.nodeChanged) # not yet, no specific node
 
 	@property
 	def asset(self):
@@ -324,7 +340,6 @@ class AbstractGraph(object):
 		if not entries:
 			return history
 
-
 	def getCombinedFuture(self, nodes, entries=False):
 		future = set()
 		for i in nodes:
@@ -409,9 +424,13 @@ class AbstractGraph(object):
 						n in i.sourceAttr, i.destAttr]):
 				removeList.append(i)
 
-		for i in removeList:
-			self.deleteEdge(i)
-			self.edgesChanged()
+		if removeList:
+			for i in removeList:
+				self.deleteEdge(i)
+				self.edgesChanged()
+			return False # going for semantics here
+		return True
+
 
 
 	def getNodesBetween(self, nodes=[], entry=False, include=True):
@@ -511,11 +530,6 @@ class AbstractGraph(object):
 		self.stateChanged()
 
 
-
-
-
-
-
 	### node querying
 	def nodesFromName(self, name):
 		"""may by its nature return multiple nodes"""
@@ -541,6 +555,7 @@ class AbstractGraph(object):
 		if not entry:
 			return node
 		return [i for i in self.nodeGraph.values() if i["node"]==node][0]
+
 
 	# serialisation and regeneration
 	def serialise(self):

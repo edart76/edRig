@@ -467,6 +467,43 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 				self.dataType))
 		return widg
 
+class PassthroughTileEntry(TileEntry):
+	"""same as above but for pass-through attributes
+	extraAttr MUST be an output"""
+
+	def __init__(self, extraAttr=None, *args, **kwargs):
+		"""input attr still informs the main entry body"""
+		if extraAttr.role != "output":
+			raise RuntimeError("passthrough tileEntry called incorrectly,"
+			                   "extraAttr must be output")
+		super(PassthroughTileEntry, self).__init__(*args, **kwargs)
+		if self.attr.role != "input":
+			raise RuntimeError("passthrough tileEntry called incorrectly,"
+			                   "first attr must be input")
+		self.extraAttr = extraAttr
+		self.role = "passthrough"
+
+		self.extraText = QtWidgets.QGraphicsTextItem(self.extraAttr.name, self)
+		self.extraText.adjustSize()
+
+		self.extraKnob = Knob(self, attr=self.extraAttr)
+
+		self.arrangeExtra()
+
+
+	def arrangeExtra(self):
+		"""someday go back and refactor this, but for now it's fine"""
+
+		# place text outside node
+		textBox = self.extraText.boundingRect()
+		textWidth = textBox.width() + 30
+		mainWidth = self.rect().width()
+
+		x = mainWidth
+		textX = mainWidth + 30
+		knobY = self.height /2.0 - self.extraKnob.boundingRect().height() / 2.0
+		self.extraKnob.setPos(x, knobY)
+		self.extraText.setPos(textX, 1)
 
 
 class Knob(QtWidgets.QGraphicsRectItem):

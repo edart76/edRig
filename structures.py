@@ -441,29 +441,35 @@ class ActionItem(object):
 	# this will break if you sneeze on it, but not if you use it properly
 
 
-def action(name=None):
-	"""add any function to right-click action menus - at INSTANCE level
-	intercept "self" argument from wrapped function"""
-	inst = None
-	print
-	print "ADDING ACTION"
-	def _addAction(func):
-		newName = name or func.__name__
-		inst = func.im_self
-		@functools.wraps(func)
-		def wrapperAction(*args, **kwargs):
-			#inst = args[0]
-			return func(*args, **kwargs)
-		print
-		print "inst is {}".format(inst)
-		inst.actions.update({newName: ActionItem(
-			{"func": func}, name=newName)})
-		return wrapperAction
-	print "inst is {}".format(inst)
-	return _addAction
+# def action(name=None):
+# 	"""add any function to right-click action menus - at INSTANCE level
+# 	intercept "self" argument from wrapped function"""
+# 	inst = None
+# 	print
+# 	print "ADDING ACTION"
+# 	def _addAction(func):
+# 		newName = name or func.__name__
+# 		inst = func.im_self
+# 		@functools.wraps(func)
+# 		def wrapperAction(*args, **kwargs):
+# 			#inst = args[0]
+# 			return func(*args, **kwargs)
+# 		print
+# 		print "inst is {}".format(inst)
+# 		inst.actions.update({newName: ActionItem(
+# 			{"func": func}, name=newName)})
+# 		return wrapperAction
+# 	print "inst is {}".format(inst)
+# 	return _addAction
+#
+# """override at instance level: def action(self, *args, **kwargs):
+# 	return assignAction(self, *args, **kwargs)"""
 
-"""override at instance level: def action(self, *args, **kwargs):
-	return assignAction(self, *args, **kwargs)"""
+# def action(cls, name=None):
+# 	"""outer decorator, taking """
+# class action(object):
+# 	"""decorator class for adding common actions to a class"""
+
 
 # def action(self, ):
 # 	"""decorator"""

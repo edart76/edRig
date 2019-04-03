@@ -4,11 +4,12 @@ import maya.api.OpenMaya as om
 from edRig.core import ECA, ECN, AbsoluteNode, shortUUID, invokeNode
 from edRig import Env, attrio, scene, attr
 from edRig.tilepile.abstractnode import AbstractAttr
-import random, functools, pprint
-from edRig.structures import ActionItem, action
+import random, functools, pprint, copy
+from edRig.structures import ActionItem
 from edRig.pipeline import safeLoadModule
 from edRig.tilepile.real import MayaReal, MayaStack, MayaDelta
 from edRig.tilepile.lib import GeneralExecutionManager
+from edRig.lib.python import debug, outerVars
 
 class OpExecutionManager(GeneralExecutionManager):
 	"""manage execution of ops"""
@@ -60,28 +61,57 @@ def tidy(name=None, *args, **kwargs):
 	return decorator
 
 # # FINALLY ACTIONS
-# def action(name=None, *args, **kwargs):
-# 	print "action args {}".format(args)
-# 	print "action kwargs {}".format(kwargs)
-# 	def decorator(func, *args, **kwargs):
-# 		#@functools.wraps(func)
-# 		print "decorator args {}".format(args)
-# 		print "decorator kwargs {}".format(kwargs)
-# 		newName = name or func.__name__
-# 		#print "dir inst is {}".format(pprint.pformat(dir(inst)))
-# 		print "dir func is {}".format(pprint.pformat(dir(func)))
-# 		def wrapper(*args, **kwargs):
-# 			print "wrapper args {}".format(args)
-# 			print "wrapper kwargs {}".format(kwargs)
-# 			return func(*args, **kwargs)
-# 		# inst.addAction(actionItem=ActionItem(name=newName,
-# 		#                           execDict={"func": func}))
-# 		return wrapper
-# 	return decorator
+def action(name=None, *args, **kwargs):
+	print "action args {}".format(args)
+	print "action kwargs {}".format(kwargs)
+	def decorator(func, *args, **kwargs):
+		#@functools.wraps(func)
+		print "decorator args {}".format(args)
+		print "decorator kwargs {}".format(kwargs)
+		newName = name or func.__name__
+		#print "dir inst is {}".format(pprint.pformat(dir(inst)))
+		print "dir func is {}".format(pprint.pformat(dir(func)))
+		def wrapper(*args, **kwargs):
+			print "wrapper args {}".format(args)
+			print "wrapper kwargs {}".format(kwargs)
+			return func(*args, **kwargs)
+		# inst.addAction(actionItem=ActionItem(name=newName,
+		#                           execDict={"func": func}))
+		return wrapper
+	return decorator
 
 class Op(MayaReal):
 	# base class for "operations" executed by abstractGraph,
 	# mainly maya scripting
+
+	# def action(cls=None, name=None, *args, **kwargs):
+	# 	print "name is {}".format(name)
+	# 	print "cls is {}".format(cls)
+	# 	print "action args {}".format(args)
+	# 	print "action kwargs {}".format(kwargs)
+	#
+	# 	def decorator(func, *args, **kwargs):
+	# 		# @functools.wraps(func)
+	# 		print "decorator args {}".format(args)
+	# 		print "decorator kwargs {}".format(kwargs)
+	# 		newName = name or func.__name__
+	# 		# print "dir inst is {}".format(pprint.pformat(dir(inst)))
+	# 		print "dir func is {}".format(pprint.pformat(dir(func)))
+	#
+	# 		def wrapper(*args, **kwargs):
+	# 			print "wrapper args {}".format(args)
+	# 			print "wrapper kwargs {}".format(kwargs)
+	# 			return func(*args, **kwargs)
+	#
+	# 		# inst.addAction(actionItem=ActionItem(name=newName,
+	# 		#                           execDict={"func": func}))
+	# 		return wrapper
+	#
+	# 	return decorator
+	action = action
+
+	actions = {} # :(
+
 	colour = (100, 100, 150) # rgb
 
 	currentOp = None # set by exec handler?
@@ -99,29 +129,6 @@ class Op(MayaReal):
 	# 		return wrapper
 	# 	return decorator
 	tidy = tidy
-
-	def action(self, name=None, *args, **kwargs):
-		print "action args {}".format(args)
-		print "action kwargs {}".format(kwargs)
-
-		def decorator(func, *args, **kwargs):
-			# @functools.wraps(func)
-			print "decorator args {}".format(args)
-			print "decorator kwargs {}".format(kwargs)
-			newName = name or func.__name__
-			# print "dir inst is {}".format(pprint.pformat(dir(inst)))
-			print "dir func is {}".format(pprint.pformat(dir(func)))
-
-			def wrapper(*args, **kwargs):
-				print "wrapper args {}".format(args)
-				print "wrapper kwargs {}".format(kwargs)
-				return func(*args, **kwargs)
-
-			# inst.addAction(actionItem=ActionItem(name=newName,
-			#                           execDict={"func": func}))
-			return wrapper
-
-		return decorator
 
 	# execution architecture
 	@classmethod
@@ -166,11 +173,18 @@ class Op(MayaReal):
 		self.defineAttrs() # override this specific method with attr construction
 		#self.data = copy.deepcopy(self.data)
 		self.redraw = False  # single interface with UI
+
+		# abstract interface
 		self.abstract = None
+		# signals directly from abstract
+		self.sync = None
+		self.attrsChanged = None
+
 		if abstract:
 			self.setAbstract(abstract)
+
 		#self.refreshIo()
-		self.actions = {}
+		self.actions = copy.deepcopy(self.actions) # /shrug
 		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
 			{"func" : self.clearMayaRig}))
 		#self.addAction(func=self.showGuidesWrapper, name="showGuides")
@@ -179,6 +193,7 @@ class Op(MayaReal):
 		self.inputNetwork = None
 		self.outputNetwork = None
 		self.nodes = self.nodesFromScene() # set
+		debug(self.inputNetwork)
 
 		#experimental
 		self.deltaStack = MayaStack()
@@ -201,7 +216,9 @@ class Op(MayaReal):
 			self.outputRoot = self.outputRoot.fromDict(outDict, node=abstract)
 		# no luck all skill
 		self.redraw=True
-		#print "outputs after setAbstract are {}".format(self.outputs)
+
+		self.sync = self.abstract.sync
+		self.attrsChanged = self.abstract.attrsChanged
 
 		# i would really like some meta way to supplant all op-level methods
 		# with the "correct" abstract-level versions
