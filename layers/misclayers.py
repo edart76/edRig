@@ -1,4 +1,5 @@
 # ops for doing random things and interfacing with the scene
+from __future__ import print_function
 from edRig.core import ECN, con
 from edRig import core, transform, attrio, control, curve
 from maya import cmds
@@ -9,6 +10,7 @@ import maya.api.OpenMaya as om
 import random
 from edRig.layers.setups import Memory, OpAttrItem
 from edRig.structures import ActionItem
+
 
 
 
@@ -34,7 +36,7 @@ class ImportOp(LayerOp):
 		"""always redraw to be safe?"""
 		# update remove actions
 		self.makeRemoveActions()
-		return True
+		self.sync()
 
 	def defineAttrs(self):
 		"""nothing created by default, all in actions"""
@@ -51,16 +53,21 @@ class ImportOp(LayerOp):
 
 	def makeRemoveActions(self):
 		# always allow attribute deletion
-		for i in self.inputs:
-			action = ActionItem({
-				"func" : self.removeItem,
-				"args" : i.name}, name="remove"+i.name)
-			self.actions["removeItem"][i.name] = action
+		# for i in self.inputs:
+		# 	action = ActionItem({
+		# 		"func" : self.removeItem,
+		# 		"args" : i.name}, name="remove"+i.name)
+		# 	self.actions["removeItem"][i.name] = action
+		pass
 
 	def importItem(self, d="0D", attrName=""):
 		"""create string attr with user input name"""
-		value = self.getSel()
-		attrName = attrName or raw_input("Name this attribute")
+		value = self.getSel()[0]
+		if not value:
+			self.log("no selection specified")
+			return
+		#attrName = attrName or raw_input("Name this attribute")
+		attrName = raw_input("name this attribute")
 		if not attrName:
 			self.log("no name supplied for new import, skipping")
 			return
@@ -80,7 +87,7 @@ class ImportOp(LayerOp):
 	def getSel(self):
 		return cmds.ls(sl=True)
 
-	def plan(self):
+	def execute(self):
 		"""for each entry in inputs, duplicate and group"""
 		for i in self.inputs:
 			if "Knob" in i.name:
@@ -93,7 +100,7 @@ class ImportOp(LayerOp):
 			cmds.parent(spaceGrp, self.opGrp)
 
 
-
+#
 
 
 class ImportDrivenOp(ImportOp):
@@ -106,8 +113,10 @@ class ImportDrivenOp(ImportOp):
 
 	# make default input one day
 
-	def importItem(self, d="0D", attrName=""):
+	def importItem(self, d="0D", attrName="default"):
 		text = super(ImportDrivenOp, self).importItem(attrName=attrName)
+		if not text:
+			return
 		driven = text.copyAttr()
 		driven.name = text.name+"Knob"
 		driven.hType = "leaf"
@@ -121,10 +130,13 @@ class ImportDriverOp(ImportOp):
 	mode = "driver"
 
 	def defineAttrs(self):
-		self.importItem(d="2D")
+		#self.importItem(d="2D")
+		pass
 
 	def importItem(self, d="0D", attrName="default"):
 		text = super(ImportDriverOp, self).importItem(attrName=attrName)
+		if not text:
+			return
 		driver = text.copyAttr()
 		driver.name = text.name + "Knob"
 		driver.role = "output"

@@ -569,17 +569,11 @@ class AbsoluteNode(str):
 			print "node is list"
 			return AbsoluteNode(node[0])
 		absolute = str.__new__(cls, node)
-		print node
-		print "node is " + node
 		absolute.node = node
 		if not cmds.objExists(node):
 			print "{} DOES NOT EXIST - YER OFF THE MAP".format(node)
 			absolute.refreshPath = absolute.returnBasicNode
 			return absolute
-		# print "node is {}".format(node)
-		# print "node type is {}".format(type(node))
-		# if not "|" in node:
-		# 	node = "|" + node
 		absolute.MObject = MObjectFrom(node)
 		absolute.MFnDependency = om.MFnDependencyNode(absolute.MObject)
 		absolute._shapeFn = None
@@ -717,6 +711,14 @@ class AbsoluteNode(str):
 	def nodeType(self):
 		"""returns string name of node type - "joint", "transform", etc"""
 		return cmds.nodeType(self.node)
+
+	def worldPos(self, asMPoint=True):
+		"""returns world position as MPoint"""
+		assert self.isDag()
+		return om.MPoint(self.MFnTransform.translation(om.MSpace.kWorld))
+
+
+
 
 
 def ECA(type, name, colour=None, *args, **kwargs):

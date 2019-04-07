@@ -23,6 +23,7 @@ def matchXforms(target=None, source=None, pos=True, rot=True):
 	# mat = core.MMatrixFrom(dag)
 	# return staticVecMatrixMult(mat, point=ax, length=length)
 
+
 def matrixFromValues(vals):
 	"""return an MMatrix from sequence of floats"""
 	if not (len(vals) == 16 or len(vals) == 4):
@@ -41,13 +42,35 @@ def valuesFromMatrix(mat):
 def fourByFourFromValues(vals, name, plug=True):
 	"""creates a static fourByFourMatrix node from mmatrix
 	for use as static offset"""
-	rank = 4
 	mat = ECA("fourByFourMatrix", name=name)
+	plugs = getFourByFourInputs(mat)
+	for i, val in enumerate(vals):
+		cmds.setAttr(plugs[i], val)
+	return mat+".output" if plug else mat
+
+def fourByFourFromPlugs(plugs, name="constructedMat"):
+	"""base atomic function taking list of plugs and returning 4x4 matrix
+	could also use composeMatrix but this gives more control"""
+	assert isinstance(plugs, list)
+	assert len(plugs) == 16
+	mat = ECA("fourByFourMatrix", name=name)
+	matPlugs = getFourByFourInputs(mat)
+	for i, val in enumerate(plugs):
+		if not val:
+			continue
+		cmds.connectAttr(val, matPlugs[i])
+	return mat
+
+def getFourByFourInputs(matNode=None):
+	"""maps 0-15 index to annoying 01 - 31 plug naming"""
+	matNode = matNode or ""
+	rank = 4
+	plugs = []
 	for i in range(rank): # rows
 		for n in range(rank): # columns
-			index = i * 4 + n
-			cmds.setAttr(mat+".in{}{}".format(i, n), vals[index])
-	return mat+".output" if plug else mat
+			plugs.append(matNode+".in{}{}".format(i, n))
+	return plugs
+
 
 def fourByFourFromMatrix(mat, name, plug=True):
 	vals = valuesFromMatrix(mat)
@@ -66,6 +89,15 @@ def getMatrixPlugOffset(a, b):
 	aMat = matrixFromPlug(a)
 	bMat = matrixFromPlug(b)
 	return getMatrixOffset(aMat, bMat)
+
+def pointFrom(source):
+	"""returns an MPoint from existing MPoint, tuple, or object's transforms"""
+	if isinstance(source, om.MPoint):
+		return source
+	try:
+		return om.MPoint(source)
+	except: # it's a node
+		return AbsoluteNode(source).worldPos()
 
 
 

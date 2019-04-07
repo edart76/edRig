@@ -85,6 +85,10 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 	def sync(self):
 		"""verify number of tileEntries is in sync with abstractNode"""
+		self.abstract.log("")
+		self.abstract.log("begin abstractTile sync")
+		self.abstract.log("abstract attrs are {}, {}".format(
+			self.abstract.inputs, self.abstract.outputs))
 		for n in (self.abstract.inputs, self.inputs, "input"), \
 			(self.abstract.outputs, self.outputs, "output"):
 
@@ -100,6 +104,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 			for i in n[1].keys():
 				if not any(i in k.name for k in n[0]):
 					self.removeEntry(n[1][i], role=n[2])
+		self.arrangeEntries()
 
 	def getActions(self):
 		return self.abstract.getAllActions()
@@ -123,12 +128,13 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		"""all visual pipes connected to this tile"""
 		p = []
 		for i in self.knobs:
+			#if hasattr(i, "pipes"):
 			p += i.pipes
 		return p
 
 	@property
 	def knobs(self):
-		return [v.knob for v in self.entries.values()]
+		return [v.knob for v in self.entries.values() if v.knob]
 
 	def getKnob(self, knobName):
 		"""you know that feeling when you need a very specific kind of knob"""
@@ -349,6 +355,7 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		self.role = attrItem.role
 		self.widg = None
 		self.label = None
+		self.knob = None
 		self.setRect(0,0,self.parent.width-5,20)
 		if attrItem.isConnectable():
 			self.knob = Knob(self, attr=self.attr)
@@ -418,22 +425,21 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 			labelRect = self.label.boundingRect()
 			self.label.setPos(0, 0)
 
-
 		# place text outside node
 		textBox = self.text.boundingRect()
 		textWidth = textBox.width() + 30
-		if self.knob:
-			if self.role == "input":
-				# position knob on left
-				x = -20
-				textX = textWidth * -1
-			else:
-				x = mainWidth
-				textX = mainWidth + 30
 
+		if self.role == "output":
+			x = mainWidth
+			textX = mainWidth + 30
+		else:
+			# position knob on left
+			x = -20
+			textX = textWidth * -1
+		if self.knob:
 			knobY = self.height /2.0 - self.knob.boundingRect().height() / 2.0
 			self.knob.setPos(x, knobY)
-			self.text.setPos(textX, 1)
+		self.text.setPos(textX, 1)
 
 
 	def makeWidg(self):

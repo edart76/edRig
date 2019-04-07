@@ -1,5 +1,5 @@
 # container interfacing with the graph - concerned with connections
-from edRig.structures import SafeDict, AttrItem, ActionItem, ActionList, action
+from edRig.structures import SafeDict, AttrItem, ActionItem, ActionList
 from edRig.core import shortUUID
 from edRig import Env, pipeline, attrio
 # from edRig.tilepile.ops.op import Op
@@ -62,10 +62,12 @@ class AbstractNode(object):
 		                              hType="root", name="inputRoot")
 		self.outputRoot = AbstractAttr(node=self, role="output", dataType="null",
 		                              hType="root", name="outputRoot")
-		if realInstance:
-			real = realInstance
-		else:
-			real = self.instantiateReal(name=self.nodeName)
+
+		# signals
+		self.sync = Signal()
+		self.attrsChanged = Signal()
+		self.stateChanged = Signal()
+		self.wireSignals()
 
 		self.extras = None
 		self.inEdges = set()
@@ -81,9 +83,15 @@ class AbstractNode(object):
 		self.addAction(actionItem=ActionItem(execDict={"func" : self.recastReal},
 		                                     name="recast real"))
 		self.dataFileExists = False
-		self.setRealInstance(real)
 		#self.real.setAbstract(self)
 
+		# real interface
+		self.real = None
+		if realInstance:
+			real = realInstance
+		else:
+			real = self.instantiateReal(name=self.nodeName)
+		self.setRealInstance(real)
 
 		# ui stuff
 		self.pos = [0,0]
@@ -91,11 +99,6 @@ class AbstractNode(object):
 		# self.redraw = False
 		# colour-changing nodes could be done if you make this a property
 
-		# signals
-		self.sync = Signal()
-		self.attrsChanged = Signal()
-		self.stateChanged = Signal()
-		self.wireSignals()
 		pass
 
 	def wireSignals(self):
@@ -505,6 +508,7 @@ class AbstractAttr(AttrItem):
 	def addChild(self, newChild):
 		newChild = super(AbstractAttr, self).addChild(newChild)
 		newChild.node = self.node
+		#self.node.attrsChanged() # call from node
 
 	@property
 	def abstract(self):

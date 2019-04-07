@@ -88,7 +88,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 	# capture events #####
 	def keyPressEvent(self, event):
 		"""test"""
-		super(AbstractView, self).keyPressEvent(event)
 		if event.matches(QtGui.QKeySequence.Delete):
 			# print "deleteCalled"
 			self.nodeDeleteCalled.emit()
@@ -97,19 +96,22 @@ class AbstractView(QtWidgets.QGraphicsView):
 			print "viewer keyPress is {}".format(event.text())
 			self.tabSearchToggle()
 			return
-		elif event.key() == 0x53: # s
-			#self.saveAsTilePile()
-			pass
-		elif event.key() == 0x4e: # n
-			pass
-		elif event.key() == 0x46: # f
-			pass
-		elif event.key() == 0x43: # c
-			pass
-		elif event.key() == 0x56: #v
-			pass
-		elif event.key() == 0x45: #e
-			pass
+		# elif event.key() == 0x53: # s
+		# 	#self.saveAsTilePile()
+		# 	pass
+		# elif event.key() == 0x4e: # n
+		# 	pass
+		# elif event.key() == 0x46: # f
+		# 	pass
+		# elif event.key() == 0x43: # c
+		# 	pass
+		# elif event.key() == 0x56: #v
+		# 	pass
+		# elif event.key() == 0x45: #e
+		# 	pass
+		# else:
+		# 	#super(AbstractView, self).keyPressEvent(event)
+		# 	pass
 
 	def focusOutEvent(self, event):
 		#print "view focusOut is {}".format(event.reason())

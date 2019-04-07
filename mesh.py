@@ -1,7 +1,7 @@
 # fucnctions for renumbering mesh points, getting weights,
 # interfacing between weights and maps etc
 # additionally for working with nurbs shapes
-from edRig import core, attr
+from edRig import core, attr, transform
 from edRig.core import AbsoluteNode, ECA
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
@@ -39,7 +39,24 @@ def splitHistoryAtPlug(inputPlug, name="split"):
 
 def getLiveMatrixOnMesh(meshShape, closeTo):
 	"""attach a nurbs surface to nearest face, then get matrix from that"""
+	mesh = AbsoluteNode(meshShape).shape
+	closePoint = transform.pointFrom(closeTo)
+	point, face = getClosestPoint(meshShape, closePoint)
+	iterator = om.MItMeshPolygon(mesh.MObject) # use flat init and reset(object) if this fails
+	iterator.setIndex(face)
+	indices = iterator.getConnectedVertices()
+	surface = attachNurbsSurfaceToMesh(mesh, indices)
+
+	# continue with surface uv lookup
+	surfPoint, u, v = surface.shapeFn.closestPoint(closePoint) # don't care about point yet
+	psi = ECA("pointOnSurfaceInfo", )
+
+def getClosestPoint(meshShape, closeTo):
+	"""return index of closest face
+	:returns (MPoint closest point, int faceIndex)"""
+	point = transform.pointFrom(closeTo)
 	mesh = AbsoluteNode(meshShape)
+	return mesh.shapeFn.getClosestPoint(point, om.MSpace.kWorld)
 
 def attachNurbsSurfaceToMesh(meshShape, pntList):
 	"""attach nurbs surface to target points"""

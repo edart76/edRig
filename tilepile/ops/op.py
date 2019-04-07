@@ -157,13 +157,11 @@ class Op(MayaReal):
 		self.character = None
 		print "Op instantiated"
 		self._opName = None
-		if not name:
-			self.opName = self.__class__.__name__
-		else:
-			self.opName = name
+		self.opName = name or self.__class__.__name__
+		self.abstract = abstract
 
 		self.uuid = self.shortUUID(4)
-		if abstract:
+		if self.abstract:
 			self.inputRoot = abstract.inputRoot
 			self.outputRoot = abstract.outputRoot
 		else:
@@ -175,19 +173,18 @@ class Op(MayaReal):
 		self.redraw = False  # single interface with UI
 
 		# abstract interface
-		self.abstract = None
 		# signals directly from abstract
 		self.sync = None
 		self.attrsChanged = None
 
-		if abstract:
+		if self.abstract:
 			self.setAbstract(abstract)
 
 		#self.refreshIo()
 		self.actions = copy.deepcopy(self.actions) # /shrug
 		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
 			{"func" : self.clearMayaRig}))
-		#self.addAction(func=self.showGuidesWrapper, name="showGuides")
+		self.addAction(func=self.showGuidesWrapper, name="showGuides")
 
 		# network nodes holding input and output plugs
 		self.inputNetwork = None
@@ -204,10 +201,15 @@ class Op(MayaReal):
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		"""attach op to abstractNode, and merge input and outputRoots"""
 		self.abstract = abstract
+		print "abstract is {}".format(abstract)
+		print "abstract class is {}".format(abstract.__class__)
+		print "abstract mclass is {}".format(abstract.__class__.__class__)
+		print "new absInstance sync is {}".format(abstract.sync)
+
 		self.inputRoot = abstract.inputRoot
 		self.outputRoot = abstract.outputRoot
 		if define:
-			self.defineAttrs()
+			self.defineAttrs() # resets attributes, don't call on regeneration
 		#print "outputs after defineAttrs are {}".format(self.outputs)
 		# support for redefining attributes from dict
 		if inDict:
@@ -217,8 +219,11 @@ class Op(MayaReal):
 		# no luck all skill
 		self.redraw=True
 
+		print ""
 		self.sync = self.abstract.sync
 		self.attrsChanged = self.abstract.attrsChanged
+		# self.sync = None
+		# self.attrsChanged = None
 
 		# i would really like some meta way to supplant all op-level methods
 		# with the "correct" abstract-level versions
@@ -663,7 +668,7 @@ class Op(MayaReal):
 
 		# print "new inputs are {}".format(opInstance.inputs)
 		# print "new outputs are {}".format(opInstance.outputs)
-		opInstance.data = regenDict["data"]
+		opInstance.data = regenDict.get("data")
 		return opInstance
 
 	@staticmethod

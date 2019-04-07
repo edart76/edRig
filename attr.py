@@ -258,6 +258,10 @@ def getTransformPlugs(node, t=True, r=True, s=True):
 			plugs.append(node + "." + i + n)
 	return plugs
 
+def unrollPlug(plug, returnLen=3):
+	"""unrolls compound plug, and either curtails or fills in None up to length"""
+
+
 # class ArgParse(object):
 # 	"""experimental context handler to control creation and deletion
 # 	of proxy nodes for functions."""

@@ -1,9 +1,8 @@
 # ops to be main stages, able to be blended in a control chain
-from .op import Op
+from edRig.tilepile.ops.op import Op
 from edRig import core, attrio
 from edRig.layers.setups import Memory, OpAttrItem
 from edRig.structures import ActionItem
-from maya import cmds # :(
 import functools
 import copy
 import pprint
@@ -19,8 +18,9 @@ class LayerOp(Op):
 
 
 
-	def __init__(self, name=None):
-		super(LayerOp, self).__init__(name)
+	def __init__(self, *args, **kwargs):
+		super(LayerOp, self).__init__(*args, **kwargs)
+		print "layer sync is {}".format(self.sync)
 		self.controller = None
 		self.memory = Memory()
 		# self.loadMemory()
