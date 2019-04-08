@@ -82,6 +82,22 @@ class ControlOp(PointLayerOp):
 		cmds.connectAttr(self.control.worldOutputPlug,
 		                 self.getOutput("controlOutputWorld").plug)
 
+class IkOp(PointLayerOp):
+	"""sets up ik behaviour"""
+
+
+	def defineAttrs(self):
+		self.addInput(name="base", dataType="0D",
+		              desc="driver space for base")
+		self.addInput(name="mid", dataType="0D",
+		              desc="driver space for mid (recommend similar as base)")
+		self.addInput(name="end", dataType="0D",
+		              desc="driver space for end effector")
+
+		self.addOutput(name="base", dataType="0D",
+		               desc="output first ik segment")
+		self.addOutput(name="mid", dataType="0D",
+		               desc="output second ik segment")
 
 
 

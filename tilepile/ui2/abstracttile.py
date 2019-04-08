@@ -41,6 +41,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		# flags?
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable) # ????
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable) # ????
+		#self.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable, False)
 
 		print "abstract inputs are {}".format(self.abstract.inputs)
 
@@ -337,6 +338,9 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		return {
 			"pos" :	(self.pos().x(), self.pos().y()),
 			}
+
+	# def focusInEvent(self, event): # fucking help me
+	# 	event.ignore()
 
 class TileEntry(QtWidgets.QGraphicsRectItem):
 	"""individual shelf for knob and associated widget

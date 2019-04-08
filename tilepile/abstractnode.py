@@ -4,7 +4,8 @@ from edRig.core import shortUUID
 from edRig import Env, pipeline, attrio
 # from edRig.tilepile.ops.op import Op
 import functools
-from edRig.tilepile.lib import Signal, GeneralExecutionManager
+from edRig.tilepile.lib import GeneralExecutionManager
+from edRig.lib.python import Signal
 
 class AbstractAbstractNode(type):
 	"""abstract class for abstract nodes"""
@@ -66,6 +67,7 @@ class AbstractNode(object):
 		# signals
 		self.sync = Signal()
 		self.attrsChanged = Signal()
+		self.attrValueChanged = Signal() # emit tuple of attrItem, value
 		self.stateChanged = Signal()
 		self.wireSignals()
 

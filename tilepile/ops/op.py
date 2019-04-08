@@ -176,6 +176,7 @@ class Op(MayaReal):
 		# signals directly from abstract
 		self.sync = None
 		self.attrsChanged = None
+		self.attrValueChanged = None
 
 		if self.abstract:
 			self.setAbstract(abstract)
@@ -222,6 +223,7 @@ class Op(MayaReal):
 		print ""
 		self.sync = self.abstract.sync
 		self.attrsChanged = self.abstract.attrsChanged
+		self.attrValueChanged = self.abstract.attrValueChanged
 		# self.sync = None
 		# self.attrsChanged = None
 
@@ -294,7 +296,7 @@ class Op(MayaReal):
 
 		attr.parent.removeAttr(name)
 		self.redraw = True
-		self.refreshIo()
+		self.sync()
 
 
 	@staticmethod
@@ -353,16 +355,15 @@ class Op(MayaReal):
 	def makeAttrArray(self, archetype=None):
 		"""intended to be called as part of refreshIo
 		:param archetype: base attribute to copy from
-		:archetype is OpAttrItem"""
+		:archetype is """
 
 	def defineAttrs(self):
 		"""override with op specifics"""
 		raise NotImplementedError("op class {} DOES NOT override defineAttrs, please fix".format(
 			self.__class__.__name__))
 
-	def refreshIo(self, controller=None, attrChanged=None):
-		"""interface method with UI or anything else depending on
-		signals to update attr connections"""
+	def refreshIo(self):
+		"""leftover garbage, now used just to call sync"""
 		pass
 
 	def connectableInputs(self):

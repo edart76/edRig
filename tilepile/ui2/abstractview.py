@@ -71,6 +71,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		self.contextMenu = ContextMenu(self)
 
+		self._init_actions()
+
 	@property
 	def currentAsset(self):
 		return self.graph.asset
@@ -79,6 +81,16 @@ class AbstractView(QtWidgets.QGraphicsView):
 		"""soon maybe"""
 		pass
 
+	def _init_actions(self):
+		# setup tab search shortcut.
+		tab = QtWidgets.QAction('Search Nodes', self)
+		tab.setShortcut('tab')
+		tab.triggered.connect(self.tabSearchToggle)
+		self.addAction(tab)
+
+
+
+		#setup_actions(self)
 	# def setAsset(self, assetItem):
 	# 	self.currentAsset = assetItem
 
@@ -88,14 +100,17 @@ class AbstractView(QtWidgets.QGraphicsView):
 	# capture events #####
 	def keyPressEvent(self, event):
 		"""test"""
+		#super(AbstractView, self).keyPressEvent(event)
+		print "viewer keyPress is {}".format(event.text())
+
 		if event.matches(QtGui.QKeySequence.Delete):
 			# print "deleteCalled"
 			self.nodeDeleteCalled.emit()
 			self.scene.onDeleteCalled()
-		elif event.key() == 0x01000001: # tab
-			print "viewer keyPress is {}".format(event.text())
-			self.tabSearchToggle()
-			return
+			#event.accept()
+		# elif event.key() == 0x01000001: # tab
+		# 	self.tabSearchToggle()
+		# 	event.accept()
 		# elif event.key() == 0x53: # s
 		# 	#self.saveAsTilePile()
 		# 	pass
@@ -112,6 +127,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 		# else:
 		# 	#super(AbstractView, self).keyPressEvent(event)
 		# 	pass
+		# else:
+		# 	event.accept()
 
 	def focusOutEvent(self, event):
 		#print "view focusOut is {}".format(event.reason())
@@ -122,6 +139,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			                            QtCore.Qt.NoModifier)
 			#self.sendEvent(self, keyEvent)
 			self.keyPressEvent(keyEvent)
+			event.ignore()
 		else:
 			super(AbstractView, self).focusOutEvent(event)
 		# works

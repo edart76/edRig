@@ -1,6 +1,7 @@
 # useful structures finding repeated use in ops and frameworks
 from collections import MutableMapping, OrderedDict
 import os, copy, functools
+from edRig.lib.python import Signal
 
 # FilePathTree = FilePathTree # back compatibility
 

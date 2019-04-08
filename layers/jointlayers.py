@@ -69,29 +69,34 @@ class JointCurveOp(SpookyLayerOp):
 		              desc="build based on curve or on joints",
 		              items=["curve", "joints"], default="joints")
 
-		self.addOutput(name="jc", dataType="1D",
+		jc = self.addOutput(name="jc", dataType="1D",
 		               desc="static output jointcurve")
-		# for i in range(self.getInput("jointCount").value):
-		# 	jc.addAttr(name="point{}".format(i), dataType="0D",
-		# 	               desc="individual points on curve", hType="leaf")
-		self.refreshIo()
+
+		# dynamic attributes
+		for i in range(self.getInput("jointCount").value):
+			jc.addAttr(name="point{}".format(i), dataType="0D",
+			               desc="individual points on curve", hType="leaf")
+		#self.refreshIo()
 
 
-	def refreshIo(self, controller=None, attrChanged=None):
+	def refreshIo(self):
 		update = False
 		# here defines custom behaviour of the point outputs
 		# self.log("attr changed is {}".format(attrChanged))
-		# if attrChanged == "jointCount":
-		# 	newLen = self.getInput("jointCount").value
-		# 	oldLen = len(self.getOutput("jc").getChildren())
-		# 	if newLen > oldLen:
-		# 		for n in range(newLen - oldLen):
-		# 			newPoint = self.getOutput("point0").copyAttr()
-		# 			newPoint.name = "point{}".format(oldLen+n)
-		# 			self.addOutput(parent=self.getOutput("jc"), attrItem=newPoint)
-		# 	elif newLen < oldLen:
-		# 		for n in range(oldLen - newLen):
-		# 			self.getOutput("jc").removeAttr("point{}".format(oldLen-n))
+		newLen = self.getInput("jointCount").value
+		oldLen = len(self.getOutput("jc").getChildren())
+		if newLen > oldLen:
+			update = True
+			for n in range(newLen - oldLen):
+				newPoint = self.getOutput("point0").copyAttr()
+				newPoint.name = "point{}".format(oldLen+n)
+				self.addOutput(parent=self.getOutput("jc"), attrItem=newPoint)
+		elif newLen < oldLen:
+			update = True
+			for n in range(oldLen - newLen):
+				self.getOutput("jc").removeAttr("point{}".format(oldLen-n))
+		if update:
+			self.sync()
 		return update
 		pass
 
@@ -105,10 +110,12 @@ class JointCurveOp(SpookyLayerOp):
 		self.mainCurve = None
 		self.upCurve = None
 		self.prefix = None
-		print "inputs are {}".format(self.inputs)
-		print "instance inputs are {}".format(self.inputs)
-		print "inputs after super are {}".format(self.inputs)
-		print "outputs after super are {}".format(self.outputs)
+
+		self.refreshIo()
+		# print "inputs are {}".format(self.inputs)
+		# print "instance inputs are {}".format(self.inputs)
+		# print "inputs after super are {}".format(self.inputs)
+		# print "outputs after super are {}".format(self.outputs)
 		print "doot doot"
 
 	def execute(self):
