@@ -99,6 +99,34 @@ def pointFrom(source):
 	except: # it's a node
 		return AbsoluteNode(source).worldPos()
 
+def blendTwoMatrixPlugs(a, b, weight=0.5):
+	"""creates a wtAddMatrix node and connects up matrix plugs, either static or live blend"""
+	blend = ECA("wtAddMatrix", name="matrixBlend")
+	cmds.connectAttr(a, blend+".wtMatrix[0].matrixIn")
+	cmds.connectAttr(b, blend + ".wtMatrix[1].matrixIn")
+	if isinstance(weight, basestring): # it's a plug
+		weightB = getReverseOfPlug(weight)
+		cmds.connectAttr(weight, blend + ".wtMatrix[0].weightIn")
+		cmds.connectAttr(weightB, blend + ".wtMatrix[1].weightIn")
+	elif isinstance(weight, tuple):
+		cmds.connectAttr(weight[0], blend + ".wtMatrix[0].weightIn")
+		cmds.connectAttr(weight[1], blend + ".wtMatrix[1].weightIn")
+	else:
+		cmds.setAttr(blend+".wtMatrix[0].weightIn", weight)
+		cmds.setAttr(blend + ".wtMatrix[1].weightIn", 1.0 - weight)
+	return blend+".matrixSum"
+
+
+def getReverseOfPlug(plug):
+	"""shouldn't be in transform but it fits
+	returns plug of 1 - input plug"""
+	rev = ECA("reverse", "reverse")
+	cmds.connectAttr(plug, rev+".inputX")
+	return rev+".outputX"
+
+def isMatrix(plug):
+	return cmds.getAttr(plug, type=True) == "matrix"
+
 
 
 def WorldMMatrixFrom(dag):

@@ -5,7 +5,10 @@ from edRig import Env, pipeline, attrio
 # from edRig.tilepile.ops.op import Op
 import functools
 from edRig.tilepile.lib import GeneralExecutionManager
-from edRig.lib.python import Signal
+from edRig.lib.python import Signal, AbstractTree
+
+# test
+from edRig.tilepile.expression import EVALUATOR
 
 class AbstractAbstractNode(type):
 	"""abstract class for abstract nodes"""
@@ -43,6 +46,8 @@ class AbstractNode(object):
 	realClass = None
 	states = ["neutral", "executing", "complete", "failed", "approved"]
 
+	evaluatorClass = EVALUATOR
+
 	@classmethod
 	def nodeType(cls):
 		"""for use in managing instantiation"""
@@ -77,7 +82,6 @@ class AbstractNode(object):
 
 		self.index = None # execution order index
 
-
 		# self.actions = ActionList()
 		self.actions = {}
 		self.addAction(actionItem=ActionItem(execDict={"func" : self.setApproved},
@@ -86,6 +90,12 @@ class AbstractNode(object):
 		                                     name="recast real"))
 		self.dataFileExists = False
 		#self.real.setAbstract(self)
+
+
+		# settings
+		self.settings = AbstractTree(self.__class__.__name__+"_settings", None)
+		self.evaluator = self.evaluatorClass(graph=self.graph, node=self)
+
 
 		# real interface
 		self.real = None

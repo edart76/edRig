@@ -121,6 +121,10 @@ class AttrItem(object):
 		self.Env = None
 		self.colour = DataStyle[self.dataType]["colour"]
 
+		self.connectionChanged = Signal()
+		self.valueChanged = Signal()
+		self.childrenChanged = Signal()
+
 	@property
 	def name(self):
 		return self._name
@@ -153,7 +157,10 @@ class AttrItem(object):
 
 	@value.setter
 	def value(self, val):
+		oldVal = self._value
 		self._value = val
+		if not oldVal == self._value:
+			self.valueChanged( (self, self._value) )
 
 	def isLeaf(self):
 		return self.hType == "leaf"

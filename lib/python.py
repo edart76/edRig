@@ -2,6 +2,7 @@
 from __future__ import print_function
 import inspect,importlib, pprint
 from weakref import WeakSet, WeakKeyDictionary
+from collections import OrderedDict
 
 
 
@@ -68,3 +69,101 @@ class Signal(object):
 
 
 # move the module import here from pipeline
+
+class AbstractTree(object):
+	"""fractal tree-like data structure
+	each branch having both name and value"""
+	def __init__(self, name, val):
+		self.name = name
+		self.parent = None
+		self._val = val
+		# if self.parent:
+		# 	self.setParent(parent)
+		# else:
+		self.valueChanged = Signal()
+		self._map = OrderedDict()
+		self.extras = {}
+
+	def _setParent(self, tree):
+		"""sets new abstractTree to be parent"""
+		self.parent = tree
+		self.valueChanged = tree.valueChanged
+	def addChild(self, branch):
+		self._map[branch.name] = branch
+		branch._setParent(self)
+		return branch
+
+	def get(self, lookup, default):
+		"""same implementation as normal dict"""
+		return self._map.get(lookup, default)
+
+	def index(self, lookup, *args, **kwargs):
+		if lookup in self._map.keys():
+			return self._map.keys().index(lookup, *args, **kwargs)
+		else:
+			return -1
+
+	def getAddress(self, prev=""):
+		"""returns string path from root to this tree"""
+		path = ".".join( (self.name, prev) )
+		if self.root == self:
+			return path
+		else:
+			return self.parent.getAddress(prev=path)
+
+
+
+	def __getitem__(self, address):
+		""" allows lookups of string form "root.branchA.leaf" """
+		if isinstance(address, basestring): # if you look up [""] this will break
+			address = address.split(".")
+		if not address: # empty list
+			return self
+		first = address.pop(0)
+		if not first in self._map:
+			branch = self.addChild(AbstractTree(first, None))
+		else:
+			branch = self._map[first]
+		return branch[address]
+
+	# def __set__(self, instance, value):
+	# 	if isinstance(value, AbstractTree):
+	# 		raise RuntimeError
+	# 	self.value = value
+
+	@property
+	def root(self):
+		"""returns root tree object"""
+		return self.parent.root if self.parent else self
+
+	@property
+	def value(self):
+		return self._val
+	@value.setter
+	def value(self, val):
+		self._val = val
+		self.valueChanged(self)
+
+	@staticmethod
+	def fromDict(regenDict):
+		"""expects dict of format
+		name : eyy
+		value : whatever
+		children : [{
+			etc}, {etc}]"""
+		new = AbstractTree(regenDict["name"], regenDict["value"])
+		new.extras = regenDict["extras"]
+		for i in regenDict["children"]:
+			branch = AbstractTree.fromDict(i)
+			new.addChild(branch)
+		return new
+
+	def serialise(self):
+		serial = {
+			"name" : self.name,
+			"value" : self.value,
+			"extras" : self.extras,
+			"children" :
+				[v.serialise() for v in self._map.itervalues()]
+		}
+		return serial

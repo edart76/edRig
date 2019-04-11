@@ -69,12 +69,13 @@ class JointCurveOp(SpookyLayerOp):
 		              desc="build based on curve or on joints",
 		              items=["curve", "joints"], default="joints")
 
-		jc = self.addOutput(name="jc", dataType="1D",
+		self.addOutput(name="jc", dataType="1D",
 		               desc="static output jointcurve")
+
 
 		# dynamic attributes
 		for i in range(self.getInput("jointCount").value):
-			jc.addAttr(name="point{}".format(i), dataType="0D",
+			self.addOutput(name="point{}".format(i), dataType="0D",
 			               desc="individual points on curve", hType="leaf")
 		#self.refreshIo()
 
@@ -111,7 +112,7 @@ class JointCurveOp(SpookyLayerOp):
 		self.upCurve = None
 		self.prefix = None
 
-		self.refreshIo()
+		#self.refreshIo()
 		# print "inputs are {}".format(self.inputs)
 		# print "instance inputs are {}".format(self.inputs)
 		# print "inputs after super are {}".format(self.inputs)
