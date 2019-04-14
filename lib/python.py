@@ -77,10 +77,8 @@ class AbstractTree(object):
 		self.name = name
 		self.parent = None
 		self._val = val
-		# if self.parent:
-		# 	self.setParent(parent)
-		# else:
 		self.valueChanged = Signal()
+		self.structureChanged = Signal()
 		self._map = OrderedDict()
 		self.extras = {}
 
@@ -88,6 +86,7 @@ class AbstractTree(object):
 		"""sets new abstractTree to be parent"""
 		self.parent = tree
 		self.valueChanged = tree.valueChanged
+		self.structureChanged = tree.structureChanged
 	def addChild(self, branch):
 		self._map[branch.name] = branch
 		branch._setParent(self)
@@ -103,6 +102,12 @@ class AbstractTree(object):
 		else:
 			return -1
 
+	def items(self):
+		return self._map.items()
+
+	def iteritems(self):
+		return zip([self._map.keys()], [i.value for i in self._map.items()])
+
 	def getAddress(self, prev=""):
 		"""returns string path from root to this tree"""
 		path = ".".join( (self.name, prev) )
@@ -111,6 +116,21 @@ class AbstractTree(object):
 		else:
 			return self.parent.getAddress(prev=path)
 
+	def setName(self, name):
+		"""renames and syncs parent's map
+		currently destroys orderedDict order - oh well"""
+		if self.parent:
+			oldName = self.name
+			self.parent._map.pop(oldName)
+			self.parent._map[name] = self
+		self.name = name
+		self.structureChanged()
+
+	def remove(self, address=None):
+		"""removes address, or just removes the tree if no address is given"""
+		if not address:
+			if self.parent:
+				self.parent._map.pop(self.name)
 
 
 	def __getitem__(self, address):
@@ -120,7 +140,7 @@ class AbstractTree(object):
 		if not address: # empty list
 			return self
 		first = address.pop(0)
-		if not first in self._map:
+		if not first in self._map: # add it if doesn't exist
 			branch = self.addChild(AbstractTree(first, None))
 		else:
 			branch = self._map[first]
@@ -135,6 +155,9 @@ class AbstractTree(object):
 	def root(self):
 		"""returns root tree object"""
 		return self.parent.root if self.parent else self
+	@property
+	def address(self):
+		return self.getAddress()
 
 	@property
 	def value(self):
@@ -167,3 +190,17 @@ class AbstractTree(object):
 				[v.serialise() for v in self._map.itervalues()]
 		}
 		return serial
+
+def flatten(in_list):
+	"""Flatten a given list recursively.
+	Args: in_list (list or tuple): Can contain scalars, lists or lists of lists.
+	Returns: list: List of depth 1; no inner lists, only strings, ints, floats, etc.
+			flatten([1, [2, [3], 4, 5], 6])
+			>>> [1, 2, 3, 4, 5, 6]	"""
+	flattened_list = []
+	for item in in_list:
+		if isinstance(item, (list, tuple)):
+			flattened_list.extend(flatten(item))
+		else:
+			flattened_list.append(item)
+	return flattened_list

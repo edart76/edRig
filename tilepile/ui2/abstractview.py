@@ -101,12 +101,14 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def keyPressEvent(self, event):
 		"""test"""
 		#super(AbstractView, self).keyPressEvent(event)
-		print "viewer keyPress is {}".format(event.text())
+		#print "viewer keyPress is {}".format(event.text())
 
 		if event.matches(QtGui.QKeySequence.Delete):
 			# print "deleteCalled"
 			self.nodeDeleteCalled.emit()
 			self.scene.onDeleteCalled()
+		else:
+			super(AbstractView, self).keyPressEvent(event)
 			#event.accept()
 		# elif event.key() == 0x01000001: # tab
 		# 	self.tabSearchToggle()

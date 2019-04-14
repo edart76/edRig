@@ -1,11 +1,12 @@
 # manages connectivity and execution order of a dag graph
 
 from edRig import Env, ROOT_PATH, pipeline
+from edRig.lib.python import Signal
 from edRig.pipeline import TempAsset
 from edRig.tilepile.abstractnode import AbstractNode, AbstractAttr
 from edRig.tilepile.abstractedge import AbstractEdge
 from edRig.tilepile.oplist import ValidList
-from edRig.tilepile.lib import Signal, GeneralExecutionManager
+from edRig.tilepile.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
 import pprint
 

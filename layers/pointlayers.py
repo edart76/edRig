@@ -10,8 +10,8 @@ import maya.api.OpenMaya as om
 class PointLayerOp(LayerOp):
 	# don't know if this much inheritance is necessary
 	# but better safe than sorry
-	def __init__(self, name):
-		super(PointLayerOp, self).__init__(name=name)
+	def __init__(self, *args, **kwargs):
+		super(PointLayerOp, self).__init__(*args, **kwargs)
 		print "PointLayerOp instantiated"
 
 class PointOp(PointLayerOp):
@@ -62,8 +62,6 @@ class PointOp(PointLayerOp):
 class ControlOp(PointLayerOp):
 	"""creates an Fk control for user interaction
 	no inputs"""
-	def __init__(self, name):
-		super(ControlOp, self).__init__(name)
 
 	def defineAttrs(self):
 		self.addInput(name="driverSpace", dataType="0D",
@@ -174,6 +172,12 @@ class IkOp(PointLayerOp):
 		i've thought it through"""
 		transform.decomposeMatrixPlug(self.getInput("pv").plug,
 		                              self.poleDriver)
+
+		# set outputs
+		cmds.connectAttr(self.base+".worldMatrix[0]",
+		                 self.getOutput("base").plug)
+		cmds.connectAttr(self.mid+".worldMatrix[0]",
+		                 self.getOutput("mid").plug)
 
 	def makePoleMarker(self):
 		"""creates a transform at optimal range for being a pole"""

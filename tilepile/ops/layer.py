@@ -187,7 +187,7 @@ class LayerOp(Op):
 		if "memory" in regenDict.keys():
 			print "regen memory"
 			#opInstance.memory.reconstructMemory({"memory" : copy.deepcopy(regenDict["memory"])})
-			opInstance.memory.reconstructMemory(copy.deepcopy(regenDict["memory"]))
+			opInstance.memory.reconstructMemory(regenDict["memory"])
 			print "done"
 
 		return opInstance

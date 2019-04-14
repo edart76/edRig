@@ -2,7 +2,8 @@
 # currently for use only in maya, but fully extensible to anything
 
 from __future__ import print_function, with_statement
-from edRig.tilepile.lib import DeltaStack, StackDelta, GeneralExecutionManager
+from edRig.tilepile.lib import GeneralExecutionManager
+from edRig.lib.deltastack import DeltaStack, StackDelta
 import traceback
 
 

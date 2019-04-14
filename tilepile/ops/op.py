@@ -177,6 +177,8 @@ class Op(MayaReal):
 		self.sync = None
 		self.attrsChanged = None
 		self.attrValueChanged = None
+		self.settings = None
+		self.evaluator = None
 
 		if self.abstract:
 			self.setAbstract(abstract)
@@ -224,8 +226,10 @@ class Op(MayaReal):
 		self.sync = self.abstract.sync
 		self.attrsChanged = self.abstract.attrsChanged
 		self.attrValueChanged = self.abstract.attrValueChanged
-		# self.sync = None
-		# self.attrsChanged = None
+
+		# settings
+		self.settings = self.abstract.settings
+		self.evaluator = self.abstract.evaluator
 
 		# i would really like some meta way to supplant all op-level methods
 		# with the "correct" abstract-level versions

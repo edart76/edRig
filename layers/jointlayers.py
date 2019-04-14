@@ -101,6 +101,14 @@ class JointCurveOp(SpookyLayerOp):
 		return update
 		pass
 
+	def refreshSettings(self):
+		"""add a settings entry for every joint"""
+		for i in range(self.getInput("jointCount").value):
+			jointName = "joint{}".format(i)
+			jointEntry = self.settings["joints"][jointName]
+			jointEntry["crossLock"].value = False
+
+
 
 	def __init__(self, name="JointCurveOp"):
 		super(JointCurveOp, self).__init__(name)
@@ -233,7 +241,9 @@ class JointCurveOp(SpookyLayerOp):
 
 			self.joints.append(joint)
 			# refit this with scene scale eventually
-			cmds.xform(joint, t=[random.random(), i * 5.0, random.random()])
+			# cmds.xform(joint, t=[random.random(), i * 5.0, random.random()])
+			cmds.xform(joint, t=[0, i * 5.0, 0])
+
 
 			if i > 0:
 				# self.joints[i] = cmds.parent(joint, self.joints[i-1])[0]

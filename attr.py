@@ -8,6 +8,14 @@ def con(a, b, f=True):
 	"""let's try this again"""
 	cmds.connectAttr(a, b, f=f)
 
+def conOrSet(a, b, f=True):
+	"""connects plug to b if a is a plug,
+	sets static value if not"""
+	if isPlug(a):
+		con(a, b, f)
+	else:
+		setAttr(b, attrValue=a)
+
 def breakConnections(target, source=True, dest=True):
 	"""ed smash"""
 	if core.isNode(target):
@@ -16,6 +24,23 @@ def breakConnections(target, source=True, dest=True):
 	if core.isPlug(target):
 		for i in cmds.listConnections(target, plugs=True, s=source, d=dest):
 			cmds.disconnectAttr(target, i)
+
+def isNode(target):
+	if "." in target:
+		return False
+	return cmds.objExists(target)
+
+def isPlug(target):
+	"""returns true for format pCube1.translateX"""
+	node = target.split(".")[0]
+	if not isNode(target):
+		return False
+	plug = ".".join(target.split(".")[1:])
+	# print ""
+	# print "plug is " + plug
+	if plug in cmds.listAttr(node):
+		return True
+	return False
 
 def processAttrNames(attr, node=None, asPlug=False, asAttr=True):
 	"""absolute definite way of getting node.attr vs attr from any string"""

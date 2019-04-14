@@ -2,7 +2,6 @@
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 import math, random, sys, uuid, copy, functools
-from nodule import nodule
 
 sys.dont_write_bytecode = True
 

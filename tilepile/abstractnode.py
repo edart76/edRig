@@ -201,7 +201,7 @@ class AbstractNode(object):
 		func = self.executionFunctions()[stageName]
 		return func
 
-	def execute(self, index, variant="onExec"):
+	def execute(self, index):
 		"""builds a single stage of the real component's execution order
 		ATOMIC - CALLED BY EXEC TO STAGE"""
 		func = self.getExecFunction(index)
@@ -209,21 +209,17 @@ class AbstractNode(object):
 			return func(self.real)
 
 	def execToStage(self, index):
-		"""builds up until a target stage, running stop feature if schedule is incomplete"""
+		"""builds up until a target stage"""
 		maxStage = len(self.executionStages())
-		#self.beforeExecute()
+		if index == -1:  # build everything
+			return self.execToStage(maxStage - 1)
+		elif index >= maxStage:
+			index = maxStage
 
 		with AbstractNodeExecutionManager(self): #abstract-level
-			if index >= maxStage:
-				index = maxStage
-			if index == -1: # build everything
-				self.execToStage(maxStage-1)
 			for i in range(index+1):
-				# nodeKSuccess = self.execute(i, variant="onExec")
 				nodeKSuccess = self.execute(i)
-
-
-			#self.afterExecute() # superceded by context manager
+			self.evaluateSettings()
 
 	def propagateOutputs(self):
 		"""references the value of every output to that of every connected input"""
@@ -262,7 +258,12 @@ class AbstractNode(object):
 			self.real.reset()
 		self.setState("neutral")
 
-
+	# SETTINGS
+	def evaluateSettings(self):
+		"""ye sure ok whatever
+		real parses settings to find what needs evaluating"""
+		self.evaluator.evaluateSettings(self.settings)
+		# should this be called from real?
 
 	# ATTRIBUTES
 	@property
@@ -457,18 +458,10 @@ class AbstractNode(object):
 		print ""
 		print "ABSTRACT FROMDICT KEYS ARE {}".format(fromDict.keys())
 
-
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]
 			realInstance = realClass.fromDict(realDict, abstract=newInst)
 			print "realInstance is {}".format(realInstance)
-			# we sort of do this twice but for now it works
-			# newInst.setRealInstance(realInstance,
-			#                         inDict=fromDict["real"]["inputRoot"],
-			#                         outDict=fromDict["real"]["outputRoot"])
-			# # attributes are the goddamn thing
-			# """setRealInstance has to call defineAttrs - we need to reapply the right
-			# attributes afterwards"""
 			newInst.setRealInstance(realInstance, define=False)
 		return newInst
 
