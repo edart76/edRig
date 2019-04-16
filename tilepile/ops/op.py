@@ -110,7 +110,7 @@ class Op(MayaReal):
 	# 	return decorator
 	action = action
 
-	actions = {} # :(
+	#actions = {} # :(
 
 	colour = (100, 100, 150) # rgb
 
@@ -159,6 +159,7 @@ class Op(MayaReal):
 		self._opName = None
 		self.opName = name or self.__class__.__name__
 		self.abstract = abstract
+		self.actions = {}
 
 		self.uuid = self.shortUUID(4)
 		if self.abstract:
@@ -184,10 +185,9 @@ class Op(MayaReal):
 			self.setAbstract(abstract)
 
 		#self.refreshIo()
-		self.actions = copy.deepcopy(self.actions) # /shrug
-		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
-			{"func" : self.clearMayaRig}))
-		self.addAction(func=self.showGuidesWrapper, name="showGuides")
+		#self.actions = copy.deepcopy(self.actions) # /shrug
+		self.makeBaseActions()
+
 
 		# network nodes holding input and output plugs
 		self.inputNetwork = None
@@ -231,8 +231,15 @@ class Op(MayaReal):
 		self.settings = self.abstract.settings
 		self.evaluator = self.abstract.evaluator
 
+		self.makeBaseActions()
+
 		# i would really like some meta way to supplant all op-level methods
 		# with the "correct" abstract-level versions
+
+	def makeBaseActions(self):
+		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
+			{"func" : self.clearMayaRig}))
+		self.addAction(func=self.showGuidesWrapper, name="showGuides")
 
 	@property
 	def __name__(self):
@@ -655,13 +662,14 @@ class Op(MayaReal):
 		loadedModule = Op.safeLoadModule(module)
 		try:
 			opClass = getattr(loadedModule, regenDict["CLASS"])
-			opInstance = opClass()
+			opInstance = opClass(name=regenDict["opName"])
 		except Exception as e:
 			print "ERROR in reconstructing op {}".format(regenDict["NAME"])
 			print "error is {}".format(str(e))
 			return None
 
-		opInstance.opName = regenDict["opName"]
+		#opInstance.opName = regenDict["opName"]
+
 		# print "default inputs are {}".format(opInstance.inputs)
 		if abstract:
 			opInstance.inputRoot = abstract.inputRoot
@@ -674,6 +682,8 @@ class Op(MayaReal):
 		# print "new inputs are {}".format(opInstance.inputs)
 		# print "new outputs are {}".format(opInstance.outputs)
 		opInstance.data = regenDict.get("data")
+		#opInstance.addAction(func=opInstance.showGuides)
+		opInstance.makeBaseActions()
 		return opInstance
 
 	@staticmethod
@@ -689,9 +699,9 @@ class Op(MayaReal):
 	def showGuides(self):
 		"""used to allow user direction over op, as a separate process
 		to execution"""
+		return True
 		pass
 
-	@action(name="showGuides") # aaaaa
 	def showGuidesWrapper(self):
 		self.showGuides()
 

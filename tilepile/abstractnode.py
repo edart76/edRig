@@ -461,8 +461,9 @@ class AbstractNode(object):
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]
 			realInstance = realClass.fromDict(realDict, abstract=newInst)
-			print "realInstance is {}".format(realInstance)
+			#print "realInstance is {}".format(realInstance)
 			newInst.setRealInstance(realInstance, define=False)
+			newInst.real.makeBaseActions()
 		return newInst
 
 	@staticmethod
@@ -478,6 +479,11 @@ class AbstractNode(object):
 		self.inputRoot.delete()
 		self.outputRoot.delete()
 		self.real.delete()
+
+	# def showGuides(self):
+	# 	"""test"""
+	# 	print ""
+	# 	print "ABSTRACT SHOWGUIDES"
 
 
 class AbstractAttr(AttrItem):

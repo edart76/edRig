@@ -499,6 +499,10 @@ class ActionList(object):
 		[i.execute() for i in self.getActions()]
 		return
 
+	def execute(self):
+		[i.execute() for i in self.getActions()]
+		return
+
 	def addAction(self, action, func=None):
 		# need to add better processing for concatenating groups of actions
 		if isinstance(action, ActionList):

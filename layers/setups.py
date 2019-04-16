@@ -2,7 +2,7 @@
 # saving, loading and reapplying in general
 # goal is to have a "magic button" akin to Framestore's
 # data storage
-from collections import MutableMapping
+#from collections import MutableMapping
 from edRig.structures import SafeDict, AttrItem
 
 from edRig import core, attrio, mesh, curve, surface
@@ -11,11 +11,11 @@ from edRig.core import AbsoluteNode, ECA
 from edRig.layers import Env
 import copy
 from maya import cmds
-import maya.api.OpenMaya as om
-import maya.api.OpenMayaAnim as oma
+# import maya.api.OpenMaya as om
+# import maya.api.OpenMayaAnim as oma
 import pprint
 
-class Memory(SafeDict):
+class Memory(object):
 	"""stores maya scene data in regular, serialisable container
 	it would be cool to have this link live to the op datafile to
 	allow different workflows when editing, but one step at a time"""
@@ -24,6 +24,30 @@ class Memory(SafeDict):
 	def __init__(self, *args, **kwargs):
 		super(Memory, self).__init__(*args, **kwargs)
 		self.nodes = []
+		self._storage = dict(*args, **kwargs)
+
+	def __getitem__(self, key):
+		if not key in self._storage.keys():
+			return False
+		else:
+			return self._storage[key]
+
+
+	def __setitem__(self, key, value):
+		self._storage[key] = value
+
+	def __delitem__(self, key):
+		del self._storage[key]
+
+	def __iter__(self):
+		return iter(self._storage)
+
+	def __len__(self):
+		return len(self._storage)
+
+	def __repr__(self):
+		return self._storage.__repr__()
+
 
 	# achieve live linking by refreshing memory once before op plan and run
 

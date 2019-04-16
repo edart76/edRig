@@ -8,6 +8,7 @@ import maya.OpenMayaUI as omui
 import shiboken2, weakref
 import maya.cmds as cmds
 from shiboken2 import wrapInstance
+import pprint
 # https://github.com/mottosso/Qt.py by Marcus Ottosson
 
 def getMayaWindow():
@@ -119,10 +120,11 @@ class EmbeddedAction(QtWidgets.QAction):
 			print "no actionObject received for embedded action!"
 			return
 		self.name = self._actionObject.name
-		if isinstance(self._actionObject, ActionItem):
-			self.triggered.connect(self._actionObject.execute)
-		elif isinstance(self._actionObject, ActionList):
-			self.triggered.connect(self._actionObject.executeAll)
+		# if isinstance(self._actionObject, ActionItem):
+		# 	self.triggered.connect(self._actionObject.execute)
+		# elif isinstance(self._actionObject, ActionList):
+		# 	self.triggered.connect(self._actionObject.execute)
+		self.triggered.connect(self._actionObject.execute)
 
 
 class ContextMenu(object):
@@ -167,24 +169,37 @@ class ContextMenu(object):
 
 	def addSubAction(self, actionObject=None, parent=None):
 		"""not robust at all but idgaf"""
+		# regen bug affects this
 		if not parent:
 			parent = self.rootMenu
-		if isinstance(actionObject, ActionList):
-			for i in actionObject.getActions():
-				self.addSubAction(i, parent=parent)
-				return
+		# if isinstance(actionObject, ActionList):
+		# 	for i in actionObject.getActions():
+		# 		return self.addSubAction(i, parent=parent)
+		# if actionObject.name == "clear Maya scene":
+		# 	newAction = EmbeddedAction(actionObject=ActionItem({"func" : self.marker}),
+		# 	                           parent=parent)
+		# else:
+		# 	newAction = EmbeddedAction(actionObject=actionObject, parent=parent)
 		newAction = EmbeddedAction(actionObject=actionObject, parent=parent)
 		newAction.setText(newAction.name)
+		#print "addSubAction name is {}".format(newAction.name)
 		parent.addAction(newAction)
+		return newAction
 
-	def add_command(self, name, func=None, shortcut=None):
+	def marker(self):
+		print "TRIGGERING ACTION"
+
+	def add_command(self, name, func=None, shortcut=None, parent=None):
+		if not parent:
+			parent = self.rootMenu
 		action = QtWidgets.QAction(name, self.view)
 		# action.setShortcutVisibleInContextMenu(True)
 		if shortcut:
 			action.setShortcut(shortcut)
 		if func:
 			action.triggered.connect(func)
-		self.rootMenu.addAction(action, shortcut=shortcut)
+		parent.addAction(action, shortcut=shortcut)
+		return action
 
 	def add_separator(self):
 		self.rootMenu.addSeparator()
@@ -192,9 +207,9 @@ class ContextMenu(object):
 	def buildMenusFromDict(self, menuDict=None):
 		"""updates context menu with any action passed to it
 		"""
-
 		self.rootMenu.addSeparator()
 		try:
+			#print "context menuDict is {}".format(menuDict)
 			self.buildMenu(menuDict=menuDict, parent=self.rootMenu)
 		except RuntimeError("SOMETHING WENT WRONG WITH CONTEXT MENU"):
 			pass
@@ -204,16 +219,37 @@ class ContextMenu(object):
 	def buildMenu(self, menuDict={}, parent=None):
 		"""builds menu recursively from keys in dict
 		currently expects actionItems as leaves"""
+		print ""
 		for k, v in menuDict.iteritems():
+			#print "k is {}, v is {}".format(k, v)
 			if isinstance(v, dict):
+				#print "buildMenu v is dict {}".format(v)
+				if not v.keys():
+				#	print "skipping"
+					continue
 				newParent = self.addSubMenu(name=k, parent=parent)
 				self.buildMenu(v, parent=newParent)
 			elif isinstance(v, list):
+				#print "buildMenu v is list {}".format(v)
 				for i in v:
 					self.buildMenu(i, parent=parent)
 
-			elif isinstance(v, ActionItem) or isinstance(v, ActionList):
-				self.addSubAction(parent=parent, actionObject=v)
+			elif isinstance(v, ActionItem) or isinstance(v, ActionList)\
+					or v.__class__.__name__ == "ActionItem":
+				#print "buildMenu v is actionItem or actionList {} {}".format(v.name, v)
+				# if not isinstance(v, ActionItem):
+				# 	print "v dict is {}".format(pprint.pformat(v.__dict__))
+				# else:
+				# 	print "real v dict is {}".format(pprint.pformat(v.__dict__))
+				if v._name == "clear Maya scene":
+					print "v dict is {}".format(pprint.pformat(v.__dict__))
+					#v.items[0]() # works
+
+				action = self.addSubAction(parent=parent, actionObject=v)
+				# if v._name == "clear Maya scene":
+				# 	action.triggered() # works
+				#self.add_command(v.name, func=v.execute, parent=parent)
+
 		pass
 
 	def clearCustomEntries(self):

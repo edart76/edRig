@@ -17,6 +17,12 @@ class AbstractEvaluator(object):
 		self.graph = graph # expressions at least need graph to evaluate
 		self.node = node # node is nifty, but not required
 
+	@staticmethod
+	def stripWhitespace(string=""):
+		"""first just strip whitespace?"""
+		newString = "".join(string.split())
+		return newString
+
 class MayaEvaluator(AbstractEvaluator):
 	"""maya-specific evaluator, allowing maya attribute lookups
 	and node calculator"""
