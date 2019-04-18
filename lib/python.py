@@ -3,6 +3,8 @@ from __future__ import print_function
 import inspect,importlib, pprint
 from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
+import string
+from edRig import naming
 
 
 
@@ -88,6 +90,9 @@ class AbstractTree(object):
 		self.valueChanged = tree.valueChanged
 		self.structureChanged = tree.structureChanged
 	def addChild(self, branch):
+		if branch.name in self.keys():
+			raise RuntimeError(
+				"cannot add duplicate child of name {}".format(branch.name))
 		self._map[branch.name] = branch
 		branch._setParent(self)
 		return branch
@@ -105,6 +110,9 @@ class AbstractTree(object):
 	def items(self):
 		return self._map.items()
 
+	def keys(self):
+		return self._map.keys()
+
 	def iteritems(self):
 		return zip([self._map.keys()], [i.value for i in self._map.items()])
 
@@ -121,10 +129,18 @@ class AbstractTree(object):
 		currently destroys orderedDict order - oh well"""
 		if self.parent:
 			oldName = self.name
+			name = self.parent.getValidName(name)
 			self.parent._map.pop(oldName)
 			self.parent._map[name] = self
 		self.name = name
 		self.structureChanged()
+
+	def getValidName(self, name=""):
+		"""checks if name is already in children, returns valid one"""
+		if not name in self.keys():
+			return name
+		else:
+			return self.getValidName(naming.incrementName(name))
 
 	def remove(self, address=None):
 		"""removes address, or just removes the tree if no address is given"""

@@ -16,22 +16,37 @@ class TileSettings(QtWidgets.QTreeWidget):
 	}
 
 	def __init__(self, parent=None, tree=None):
+		""":param tree : AbstractTree"""
 		super(TileSettings, self).__init__(parent)
 		self.setAnimated(True) # attend first to swag
 		self.setAutoExpandDelay(1)
 
 		self.highlights = {} # dict of tree addresses to highlight
 		self.tree = None
+		self.root = None
 		self.contentChanged = Signal()
+		self.selectedEntry = None
+		self.actions = {}
 		if tree:
 			self.setTree(tree)
 
+		self.initActions()
 
+	def setTree(self, tree):
+		"""associates widget with AbstractTree object"""
+		self.tree = tree
+		self.root = tree.root
+		tree.valueChanged.connect(self.contentChanged)
+		tree.structureChanged.connect(self.contentChanged)
+		self.clearQTreeWidget(self)
 
 	def addHighlight(self, address, kind):
 		"""adds a highlight to TreeView line, depending on reason"""
 		colour = QtCore.QColor(self.highlightKind[kind])
 		self.highlights[address] = kind
+
+	def initActions(self):
+		"""sets up copy, add, delete etc actions for branch entries"""
 
 	@staticmethod
 	def clearQTreeWidget(treeWidget):
@@ -48,6 +63,52 @@ class TileSettings(QtWidgets.QTreeWidget):
 			# print "topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
 			i = i - 1
 
+class BranchEntry(object):
+	"""atomic for storing the name of a branch and its value"""
+
+class AbstractBranchItem(QtCore.QStandardItem):
+
+	ICONS = {}
+
+	"""small wrapper allowing standardItems to take tree objects directly"""
+	def __init__(self, tree):
+		""":param tree : AbstractTree"""
+		super(AbstractBranchItem, self).__init__(tree.name)
+		self.tree = tree
+		self.icon = tree.extras.get("icon")
+		if self.icon and self.icon in self.ICONS:
+			self.icon = QtGui.QIcon(self.icon)
+
+		# title and value are taken care of by inserting columns
+		self.addValueData()
+
+	def addValueData(self):
+		"""for now this only handles strings
+		in future it may be worth handling dicts, lists etc"""
+		textItem = QtCore.QStandardItem(self.tree.value)
+		self.appendColumn(textItem)
+
+
+class AbstractTreeModel(QtCore.QStandardItemModel):
+	"""is this worth it? maybe"""
+
+
+	def __init__(self, tree, parent=None):
+		super(AbstractTreeModel, self).__init__(parent)
+		self.tree = None
+		self.root = None
+		self.setTree(tree)
+
+	def setTree(self, tree):
+		self.tree = tree
+		self.clear()
+		self.root = AbstractBranchItem(tree.root)
+		self.buildFromTree(self.tree, parent=self.root)
+
+	def buildFromTree(self, tree, parent=None):
+		""":param tree : AbstractTree"""
+
+	def _buildBranches(self, tree, parent=None):
 
 #
 # class DataViewWidget(QtWidgets.QTreeWidget):

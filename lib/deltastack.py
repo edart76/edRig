@@ -5,10 +5,11 @@ class DeltaStack(object):
 	"""experimental system of keeping track of successive differences in
 	a system's state
 	may end up forming backbone of inheritance system"""
-	def __init__(self):
-		self._stack = []
+	def __init__(self, baseState=None):
+		#self._stack = []
+		self._stack = deque()
 		self._index = 0 # represents current level within deltas - usually latest
-		self.baseState = None
+		self.baseState = baseState
 		"""stack may contain mix of stackItems and other DeltaStacks - 
 		all that matters is the order"""
 		pass
@@ -37,14 +38,14 @@ class DeltaStack(object):
 
 	def setBaseState(self, state):
 		"""how abstract can we keep this?"""
-		self.stack = []
+		self.stack = deque()
 		self.baseState = state
 
 	def extend(self, delta):
 		self.stack.append(delta)
 
 	def reduce(self):
-		return self.stack.pop(self.endIndex)
+		return self.stack.pop()
 
 	"""add support for walking between delta levels later if necessary - assume
 	that combined delta stack is always representative of system"""
@@ -54,7 +55,43 @@ class DeltaStack(object):
 		self.reduce()
 
 	def sum(self):
-		"""?????"""
+		"""?????
+		apply all deltas sequentially i guess"""
+
+	def transformedState(self):
+		"""more explicit than above"""
+		return self.sum()
+
+	def __getattr__(self, item):
+		pass
+
+	def __setattr__(self, key, value):
+		"""creates a new delta"""
+
+		# parse key somehow to find proper level to assign delta
+
+		# create delta by comparing current state with assigned state
+		delta = self.createDelta(before=self.transformedState(),
+		                  after=self.makeState(value))
+		self.stack.append(delta)
+
+		pass
+
+	# saving
+	def serialise(self):
+		pass
+
+	@staticmethod
+	def fromDict(regenDict):
+		pass
+
+
+	# ----
+	# methods for stack creation
+	@staticmethod
+	def trackObject(target):
+		"""returns new DeltaStack with object as live base state"""
+		return DeltaStack(baseState=target)
 
 
 class StackDelta(object):
@@ -71,3 +108,81 @@ class StackDelta(object):
 	def undo(self):
 		"""called to remove delta from system"""
 		raise NotImplementedError()
+
+
+
+"""test case let's go
+
+
+class Test(object):
+	
+	def __init__:
+		self.A = 5
+		self.B = "this is test"
+		
+newTest = Test()
+stack = DeltaStack.trackObject(newTest)
+
+- this will return a deltaStack with newTest as its base
+this will be a top-level wrapper around newTest - any modification 
+of stack's attributes will be a modification delta
+
+eg
+
+stack.C = "newAttr"
+is an object-level modification, comprised of an attribute-level addition
+
+does not add the attribute to stack. compares previous transformedState of stack -
+this is treated as a dict for sanity - see if it contains C.
+
+if it does, then object level is NOT MODIFIED - no object level delta is created
+attribute lookup ten returns an inner stack, which handles it further.
+
+if it doesn't, an addition delta is created at object level to add the attribute
+AS NEW STACK with base state None - 
+object level contains no knowledge of attribute's value
+
+for convenience, register attribute value as stack base state. don't think it
+matters, but helps for determining delta type etc
+
+new stack processes attribute value, creates child stacks if necessary
+(if need to tokenise string, etc)
+
+
+
+
+is it worth returning a new deltastack around this attribute, as it has
+ no base state? would only allow for undo operations
+ 
+stack.B = "this is new test"
+more interesting.
+
+compare the source state and the target state
+
+is it worth tracking from the top down like this? surely bottom up would
+make more sense
+
+
+
+
+
+accessing object must apply all relevant modifications
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+
