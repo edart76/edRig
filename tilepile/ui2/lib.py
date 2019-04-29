@@ -219,7 +219,7 @@ class ContextMenu(object):
 	def buildMenu(self, menuDict={}, parent=None):
 		"""builds menu recursively from keys in dict
 		currently expects actionItems as leaves"""
-		print ""
+		# print ""
 		for k, v in menuDict.iteritems():
 			#print "k is {}, v is {}".format(k, v)
 			if isinstance(v, dict):
@@ -242,8 +242,9 @@ class ContextMenu(object):
 				# else:
 				# 	print "real v dict is {}".format(pprint.pformat(v.__dict__))
 				if v._name == "clear Maya scene":
-					print "v dict is {}".format(pprint.pformat(v.__dict__))
+					# print "v dict is {}".format(pprint.pformat(v.__dict__))
 					#v.items[0]() # works
+					pass
 
 				action = self.addSubAction(parent=parent, actionObject=v)
 				# if v._name == "clear Maya scene":

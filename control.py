@@ -84,8 +84,14 @@ class FkControl(Control):
 		localOutput: locator for use as point datatype
 			"""
 
-	def __init__(self, name, layers=1):
+	types = ("curve", "surface")
+
+	def __init__(self, name, layers=1, controlType="curve"):
 		#super(FkControl, self).__init__(name)
+		if not controlType in self.types:
+			print "control type {} is invalid".format(controlType)
+			controlType = "curve"
+		self.controlType = controlType
 		self.name = name
 		self.spareInputs = {} # name, node
 		self.layers = [{"local" : None, "ui" : None}] * layers # absoluteNodes
@@ -162,10 +168,22 @@ class FkControl(Control):
 	def makeUiElement(self, name="test", parent=None):
 		"""make a proper visual representation at origin"""
 		# for now just a circle
-		ctrl = AbsoluteNode(cmds.circle(name=name)[0])
+		ctrl = self.makeShape(name)
 		if parent:
 			cmds.parent(ctrl, parent)
 		return ctrl
+
+	def makeShape(self, name):
+		"""makes either a circle or circular surface"""
+		ctrl = cmds.circle(name="temp")[0]
+		if self.controlType == "surface":
+			surfaceTemp = cmds.planarSrf(ctrl)
+			# returns transform, planarTrim node
+			newTemp = cmds.duplicate(surfaceTemp[0], n="newCtrlTemp")[0]
+			cmds.delete(ctrl, surfaceTemp[0], surfaceTemp[1])
+			ctrl = cmds.rename(newTemp, name)
+		return AbsoluteNode(ctrl)
+
 
 	@property
 	def outputPlug(self):

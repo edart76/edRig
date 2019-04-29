@@ -2,7 +2,7 @@
 from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.tilepile.abstractnode import AbstractNode
 from edRig.structures import SafeDict
-from edRig.tilepile.ui2 import tilewidgets
+from edRig.tilepile.ui2 import tilewidgets, tilesettings
 from edRig.tilepile.ui2.style import *
 #import math
 
@@ -43,7 +43,9 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable) # ????
 		#self.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable, False)
 
-		print "abstract inputs are {}".format(self.abstract.inputs)
+		#print "abstract inputs are {}".format(self.abstract.inputs)
+
+
 
 		# entries
 		for i in self.abstract.inputs:
@@ -67,11 +69,15 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		for i in self.entries.values():
 			i.setRect(0,0, self.width, self.entryHeight)
 
-
+		# SETTINGS
+		self.settingsWidg = self.addSettings(self.abstract.settings)
 
 		# width, height = self.calc_size()
 		# self.setRect(0,0, width, height)
 		self.calc_size()
+
+
+
 
 		# arrange items
 		self.arrangeText()
@@ -83,6 +89,14 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.nameTag.value_changed.connect(self._onNameChange)
 		self.actions = {}
 		self.abstract.sync.connect(self.sync)
+
+	def addSettings(self, tree):
+		"""create a new abstractTree widget and add it to the bottom of node"""
+		self.settingsProxy = QtWidgets.QGraphicsProxyWidget(self)
+		settingsWidg = tilesettings.TileSettings(parent=None,
+		                                              tree= tree)
+		self.settingsProxy.setWidget(settingsWidg)
+		return settingsWidg
 
 	def sync(self):
 		"""verify number of tileEntries is in sync with abstractNode"""
@@ -194,6 +208,8 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 			# i.setPos(self.scene.mapToScene(10, y))
 			i.setPos(0, y)
 			#print "newPos is {}".format(i.pos())
+		y += 5
+		self.settingsProxy.setPos(0, y)
 
 
 

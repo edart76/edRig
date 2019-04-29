@@ -74,18 +74,17 @@ class ControlOp(PointLayerOp):
 		self.addOutput(name="controlUi", dataType="message",
 		               desc="control ui shapes to be passed forwards")
 
-	# def plan(self):
-	# 	self.start = self.makeStarter(name=self.opName+"ctrlStarter", d="0D")
-	#
-	# def build(self):
-	# 	self.control = control.FkControl(self.opName)
-	# 	transform.matchXforms(source=self.start, target=self.control.uiOffset)
-	# 	self.control.makeUi()
-	# 	self.getInput("controlOutput").value = self.control.output
-	# 	self.getInput("controlUi").value = Point(self.control.localOutput)
+	def defineSettings(self):
+		"""set options for control type"""
+		self.addSetting(entryName="controlType", options=["curve", "surface"],
+		                value="curve")
+		self.addSetting(entryName="controlCount", value=1)
 
 	def execute(self):
-		self.control = control.FkControl(self.opName)
+		count = self.settings["controlCount"]
+		controlType = self.settings["controlType"]
+		self.control = control.FkControl(self.opName, layers=count,
+		                                 controlType=controlType)
 		self.remember("offset", "xform", self.control.uiOffset)
 		self.remember("ctrlShapes", "shape", self.control.shapes)
 
@@ -98,6 +97,7 @@ class ControlOp(PointLayerOp):
 
 	def showGuides(self):
 		"""connects first ui ctrl to uiOffset group of control"""
+		transform.zeroTransforms(self.control.first["ui"])
 		cmds.parent(self.control.first["ui"], self.control.uiRoot)
 		cmds.parent(self.control.uiOffset, self.control.first["ui"])
 

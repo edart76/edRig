@@ -22,6 +22,7 @@ class AbstractNodeExecutionManager(GeneralExecutionManager):
 		self.node = node
 
 	def __enter__(self):
+		self.node.reset()
 		self.node.beforeExecute()
 		return self
 
@@ -31,12 +32,15 @@ class AbstractNodeExecutionManager(GeneralExecutionManager):
 			print ""
 			print "node {} encountered error during execution".format(self.node.nodeName)
 			print "error is {}".format(exc_val)
-			#self.node.setState("error")
+			#self.node.setState("failed")
+
 
 			# we want execution to stop in this case
 			#raise exc_type(exc_val)
 			#self.printTraceback(exc_type, exc_val, exc_tb)
-		self.node.afterExecute(success=True)
+		else:
+			self.node.afterExecute(success=True)
+			#self.node.setState("complete")
 
 class AbstractNode(object):
 	"""abstract node managed by abstract graph
@@ -44,7 +48,7 @@ class AbstractNode(object):
 
 	defaultName = "basicAbstract"
 	realClass = None
-	states = ["neutral", "executing", "complete", "failed", "approved"]
+	states = ["neutral", "executing", "complete", "failed", "approved", "guides"]
 
 	evaluatorClass = EVALUATOR
 
@@ -254,8 +258,9 @@ class AbstractNode(object):
 	re-directed"""
 
 	def reset(self):
-		if self.real:
-			self.real.reset()
+		if self.state != "neutral":
+			if self.real:
+				self.real.reset()
 		self.setState("neutral")
 
 	# SETTINGS
@@ -348,6 +353,19 @@ class AbstractNode(object):
 		for i in self.outputs:
 			if search in i.name or not search:
 				self.removeAttr(i)
+
+	# settings
+	def addSetting(self, parent=None, entryName=None, value=None,
+	               options=None, min=None, max=None):
+		"""add setting entry to abstractTree"""
+		parent = parent or self.settings
+		branch = parent[entryName]
+		extras = {"options" : options,
+		          "min" : min,
+		          "max" : max}
+		branch.extras = {k : v for k, v in extras.iteritems() if v}
+		branch.value = value
+
 
 
 	# actions and real-facing methods
@@ -455,8 +473,8 @@ class AbstractNode(object):
 		                                           node=newInst)
 		newInst.inputRoot = AbstractAttr.fromDict(fromDict=fromDict["inputRoot"],
 		                                          node=newInst)
-		print ""
-		print "ABSTRACT FROMDICT KEYS ARE {}".format(fromDict.keys())
+		# print ""
+		# print "ABSTRACT FROMDICT KEYS ARE {}".format(fromDict.keys())
 
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]

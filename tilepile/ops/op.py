@@ -171,15 +171,15 @@ class Op(MayaReal):
 			self.outputRoot = AbstractAttr(role="output", hType="root", name="outputRoot")
 		self.defineAttrs() # override this specific method with attr construction
 		#self.data = copy.deepcopy(self.data)
-		self.redraw = False  # single interface with UI
 
 		# abstract interface
-		# signals directly from abstract
+		# signals and methods directly from abstract
 		self.sync = None
 		self.attrsChanged = None
 		self.attrValueChanged = None
 		self.settings = None
 		self.evaluator = None
+		self.addSetting = None
 
 		if self.abstract:
 			self.setAbstract(abstract)
@@ -187,6 +187,8 @@ class Op(MayaReal):
 		#self.refreshIo()
 		#self.actions = copy.deepcopy(self.actions) # /shrug
 		self.makeBaseActions()
+
+		self.defineSettings()
 
 
 		# network nodes holding input and output plugs
@@ -204,10 +206,10 @@ class Op(MayaReal):
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		"""attach op to abstractNode, and merge input and outputRoots"""
 		self.abstract = abstract
-		print "abstract is {}".format(abstract)
-		print "abstract class is {}".format(abstract.__class__)
-		print "abstract mclass is {}".format(abstract.__class__.__class__)
-		print "new absInstance sync is {}".format(abstract.sync)
+		# print "abstract is {}".format(abstract)
+		# print "abstract class is {}".format(abstract.__class__)
+		# print "abstract mclass is {}".format(abstract.__class__.__class__)
+		# print "new absInstance sync is {}".format(abstract.sync)
 
 		self.inputRoot = abstract.inputRoot
 		self.outputRoot = abstract.outputRoot
@@ -230,6 +232,7 @@ class Op(MayaReal):
 		# settings
 		self.settings = self.abstract.settings
 		self.evaluator = self.abstract.evaluator
+		self.addSetting = self.abstract.addSetting
 
 		self.makeBaseActions()
 
@@ -372,6 +375,18 @@ class Op(MayaReal):
 		"""override with op specifics"""
 		raise NotImplementedError("op class {} DOES NOT override defineAttrs, please fix".format(
 			self.__class__.__name__))
+
+	def defineSettings(self):
+		"""override with op specifics"""
+		pass
+
+	def exposeNode(self, node, parent=None, entryName="node"):
+		"""CRUCIAL aspect of rigging system - allows exposing individual
+		nodes AND ATTRIBUTES in the graph, to be driven by expressions or
+		later lower-class graph connections"""
+		node = AbsoluteNode(node)
+		self.addSetting(parent, entryName, value=node)
+
 
 	def refreshIo(self):
 		"""leftover garbage, now used just to call sync"""
@@ -704,6 +719,10 @@ class Op(MayaReal):
 
 	def showGuidesWrapper(self):
 		self.showGuides()
+
+	def setState(self, state):
+		"""allows real to set abstract state"""
+		self.abstract.setState(state)
 
 
 	#### maya stuff ####

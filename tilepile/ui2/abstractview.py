@@ -504,7 +504,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		nodeActions = { "nodes" : [self.getTileActions()]} # returns combined dict
 		nodeExecActions = self.getTileExecActions()
-		print "nodeExecActions are {}".format(nodeExecActions)
+		# print "nodeExecActions are {}".format(nodeExecActions)
 		if nodeExecActions:
 			nodeActions["nodes"].append(nodeExecActions)
 
@@ -514,7 +514,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		if nodeActions["nodes"]:
 			#self.contextMenu.addSubMenu(name="nodes", nodeActions)
-			print "context building from {}".format(nodeActions)
+			# print "context building from {}".format(nodeActions)
 			self.contextMenu.buildMenusFromDict(nodeActions)
 
 		self.contextMenu.buildMenusFromDict(execActions)
@@ -548,7 +548,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		if not self.selectedNodes():
 			return {}
 		for i in self.selectedNodes():
-			print "tile get actions is {}".format(i.getActions())
+			# print "tile get actions is {}".format(i.getActions())
 			actions.update(i.getActions())
 			tileDicts.append(i.getActions())
 		if len(tileDicts) == 1:

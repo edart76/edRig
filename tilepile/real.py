@@ -25,7 +25,8 @@ class RealComponent(object):
 class MayaReal(RealComponent):
 	"""base real class for Maya"""
 
-class MayaStack(DeltaStack):
+# class MayaStack(DeltaStack):
+class MayaStack(object):
 	"""maya-specialised stack for tracking deltas in scenes"""
 
 class MayaDelta(StackDelta):

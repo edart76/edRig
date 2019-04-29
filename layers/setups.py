@@ -637,6 +637,7 @@ class InvokedNode(object):
 		if self.parent:
 			cmds.parent(node, self.parent)
 		return node
+	
 
 class SetupBase(object):
 	# main mechanism to save out and load information

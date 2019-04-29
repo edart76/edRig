@@ -7,11 +7,11 @@ from edRig.tilepile.expression import EVALUATOR
 # t i m e _ t o _ h a c k
 
 
-class TileSettings(QtWidgets.QTreeWidget):
+class TileSettings(QtWidgets.QTreeView):
 	"""widget for viewing and editing an AbstractTree"""
 	highlightKind = {
 		"error" : QtCore.Qt.red,
-		"warning" : QtCore.Qt.orange,
+		"warning" : QtCore.Qt.yellow,
 		"success" : QtCore.Qt.green,
 	}
 
@@ -19,7 +19,7 @@ class TileSettings(QtWidgets.QTreeWidget):
 		""":param tree : AbstractTree"""
 		super(TileSettings, self).__init__(parent)
 		self.setAnimated(True) # attend first to swag
-		self.setAutoExpandDelay(1)
+		self.setAutoExpandDelay(0.5)
 
 		self.highlights = {} # dict of tree addresses to highlight
 		self.tree = None
@@ -27,6 +27,7 @@ class TileSettings(QtWidgets.QTreeWidget):
 		self.contentChanged = Signal()
 		self.selectedEntry = None
 		self.actions = {}
+		self.modelObject = None
 		if tree:
 			self.setTree(tree)
 
@@ -38,7 +39,10 @@ class TileSettings(QtWidgets.QTreeWidget):
 		self.root = tree.root
 		tree.valueChanged.connect(self.contentChanged)
 		tree.structureChanged.connect(self.contentChanged)
-		self.clearQTreeWidget(self)
+
+		self.modelObject = AbstractTreeModel(tree=self.tree)
+		self.setModel(self.modelObject)
+
 
 	def addHighlight(self, address, kind):
 		"""adds a highlight to TreeView line, depending on reason"""
@@ -48,50 +52,65 @@ class TileSettings(QtWidgets.QTreeWidget):
 	def initActions(self):
 		"""sets up copy, add, delete etc actions for branch entries"""
 
-	@staticmethod
-	def clearQTreeWidget(treeWidget):
-		iterator = QtWidgets.QTreeWidgetItemIterator(treeWidget, QtWidgets.QTreeWidgetItemIterator.All)
-		while iterator.value():
-			iterator.value().takeChildren()
-			iterator += 1
-		i = treeWidget.topLevelItemCount() + 1
-		if i == 0:
-			return
-		# print "original topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
-		while i >= 0:
-			treeWidget.takeTopLevelItem(i)
-			# print "topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
-			i = i - 1
+	# @staticmethod
+	# def clearQTreeWidget(treeWidget):
+	# 	iterator = QtWidgets.QTreeWidgetItemIterator(treeWidget, QtWidgets.QTreeWidgetItemIterator.All)
+	# 	while iterator.value():
+	# 		iterator.value().takeChildren()
+	# 		iterator += 1
+	# 	i = treeWidget.topLevelItemCount() + 1
+	# 	if i == 0:
+	# 		return
+	# 	# print "original topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
+	# 	while i >= 0:
+	# 		treeWidget.takeTopLevelItem(i)
+	# 		# print "topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
+	# 		i = i - 1
 
-class BranchEntry(object):
-	"""atomic for storing the name of a branch and its value"""
 
-class AbstractBranchItem(QtCore.QStandardItem):
-
+class AbstractBranchItem(QtGui.QStandardItem):
+	"""small wrapper allowing standardItems to take tree objects directly"""
 	ICONS = {}
 
-	"""small wrapper allowing standardItems to take tree objects directly"""
 	def __init__(self, tree):
 		""":param tree : AbstractTree"""
 		super(AbstractBranchItem, self).__init__(tree.name)
-		self.tree = tree
+		self.tree = tree or AbstractTree()
 		self.icon = tree.extras.get("icon")
 		if self.icon and self.icon in self.ICONS:
 			self.icon = QtGui.QIcon(self.icon)
 
 		# title and value are taken care of by inserting columns
 		self.addValueData()
+		
+	def setData(self, value, *args, **kwargs): # sets the NAME of the tree
+		name = self.tree.setName(value)
+		print "args {}".format(args)
+		print "kwargs {}".format(kwargs)
+		super(AbstractBranchItem, self).setData(name, *args, **kwargs)
 
 	def addValueData(self):
 		"""for now this only handles strings
 		in future it may be worth handling dicts, lists etc"""
-		textItem = QtCore.QStandardItem(self.tree.value)
-		self.appendColumn(textItem)
+		# textItem = QtCore.QStandardItem(self.tree.value)
+		textItem = AbstractValueItem(self.tree)
+		self.appendColumn([textItem])
+
+class AbstractValueItem(QtGui.QStandardItem):
+	"""overly specific but it's fine"""
+	def __init__(self, tree):
+		self.tree = tree
+		super(AbstractValueItem, self).__init__(tree.value)
+	def setData(self, value, *args, **kwargs):
+		"""qt item objects manipulate trees directly, so
+		anything already connected to the tree object signals
+		works properly"""
+		self.tree.value = value
+		super(AbstractValueItem, self).setData(value, *args, **kwargs)
 
 
-class AbstractTreeModel(QtCore.QStandardItemModel):
+class AbstractTreeModel(QtGui.QStandardItemModel):
 	"""is this worth it? maybe"""
-
 
 	def __init__(self, tree, parent=None):
 		super(AbstractTreeModel, self).__init__(parent)
@@ -103,12 +122,24 @@ class AbstractTreeModel(QtCore.QStandardItemModel):
 		self.tree = tree
 		self.clear()
 		self.root = AbstractBranchItem(tree.root)
-		self.buildFromTree(self.tree, parent=self.root)
+		self.appendRow(self.root)
+		#self.buildFromTree(self.tree, parent=self.root)
+		for i in self.tree.root.branches:
+			# self.buildFromTree(i, parent=self.invisibleRootItem())
+			self.buildFromTree(i, parent=self.root)
+			pass
 
 	def buildFromTree(self, tree, parent=None):
 		""":param tree : AbstractTree"""
+		item = AbstractBranchItem(tree=tree)
+		parent.appendRow(item)
+		for i in tree.branches:
+			self.buildFromTree(i, parent=item)
 
-	def _buildBranches(self, tree, parent=None):
+
+
+
+	# def _buildBranches(self, tree, parent=None):
 
 #
 # class DataViewWidget(QtWidgets.QTreeWidget):

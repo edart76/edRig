@@ -110,6 +110,11 @@ class AbstractTree(object):
 	def items(self):
 		return self._map.items()
 
+	@property
+	def branches(self):
+		"""more explicit that it returns the child tree objects"""
+		return self.items()
+
 	def keys(self):
 		return self._map.keys()
 
@@ -134,6 +139,7 @@ class AbstractTree(object):
 			self.parent._map[name] = self
 		self.name = name
 		self.structureChanged()
+		return name
 
 	def getValidName(self, name=""):
 		"""checks if name is already in children, returns valid one"""
