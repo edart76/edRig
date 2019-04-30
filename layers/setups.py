@@ -344,6 +344,9 @@ class Memory(object):
 		kSuccess = False
 		if target.isCurve:
 			kSuccess = curve.setCurveInfo(info, target, parent=parent)
+		elif target.isSurface:
+			kSuccess = surface.setSurfaceInfo(info, target, parent=parent)
+
 
 		# if kSuccess:
 		#
