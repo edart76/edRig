@@ -81,8 +81,8 @@ class ControlOp(PointLayerOp):
 		self.addSetting(entryName="controlCount", value=1)
 
 	def execute(self):
-		count = self.settings["controlCount"]
-		controlType = self.settings["controlType"]
+		count = self.settings["controlCount"].value
+		controlType = self.settings["controlType"].value
 		self.control = control.FkControl(self.opName, layers=count,
 		                                 controlType=controlType)
 		self.remember("offset", "xform", self.control.uiOffset)

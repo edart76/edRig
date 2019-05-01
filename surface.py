@@ -2,20 +2,53 @@
 from maya import cmds
 import maya.api.OpenMaya as om
 from edRig.core import AbsoluteNode, ECA
+from edRig import curve # lol
+
+import tempfile
+
+tempfile.gettempdir()
 
 
 def getSurfaceInfo(shape):
 	"""return info necessary to reconstruct surface"""
 	surfInfo = {}
 	fn = shape.shapeFn
+	# needed for create
 	surfInfo["cvs"] = [(i.x, i.y, i.z) for i in fn.cvPositions()]
-	surfInfo["uKnots"] = fn.numKnotsInU
-	surfInfo["vKnots"] = fn.numKnotsInV
+	surfInfo["uKnots"] = fn.knotsInU()
+	surfInfo["vKnots"] = fn.knotsInV()
 	surfInfo["uDegree"] = fn.degreeInU
 	surfInfo["vDegree"] = fn.degreeInV
 	surfInfo["uForm"] = fn.formInU
 	surfInfo["vForm"] = fn.formInV
 	surfInfo["rational"] = True
+
+	# needed to keep trimmed shape
+	surfInfo["isTrimmedSurface"] = fn.isTrimmedSurface()
+	# if surfInfo["isTrimmedSurface"]:
+	# 	surfInfo["numRegions"] = fn.numRegions()
+	# 	surfInfo["numBoundaries"] = fn.numBoundaries()
+	# 	surfInfo["boundaryInfo"] = {}
+	# 	for region in range(surfInfo["numRegions"]):
+	# 		surfInfo["boundaryInfo"][region] = {}
+	# 		for boundary in range(surfInfo["numBoundaries"]):
+	# 			#surfInfo["boundaryInfo"][region][boundary] = {}
+	# 			boundaryInfo = {
+	# 				"boundaryType" : int(fn.boundaryType(region, boundary)),
+	# 				"numEdges" : fn.numEdges(region, boundary),
+	# 				"edgeInfo" : {},
+	# 			}
+	# 			for edge in range(boundaryInfo["numEdges"]):
+	# 				# this is getting ridiculous
+	# 				edgeFn = om.MFnNurbsCurve(fn.edge(
+	# 					region, boundary, edge, False)) # returning 3d edge
+	# 				edgeInfo = curve.getCurveInfo(fn=edgeFn)
+	# 				boundaryInfo[edge] = edgeInfo
+	#
+	# 			surfInfo["boundaryInfo"][region][boundary] = boundaryInfo
+	#
+	# 	# surfInfo["boundaryType"] = fn.boundaryType()
+
 	return surfInfo
 	pass
 
@@ -23,8 +56,10 @@ def getSurfaceInfo(shape):
 def setSurfaceInfo(info, target=None, create=True, parent=None):
 	"""apply info from dict, or just create anew"""
 	fn = om.MFnNurbsSurface()
-	target = AbsoluteNode(target)
+	target = AbsoluteNode(target).shape
 	target.delete()
+
+	parent = AbsoluteNode(parent).MObject
 
 	print "info to set is {}".format(info)
 

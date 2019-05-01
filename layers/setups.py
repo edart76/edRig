@@ -293,12 +293,12 @@ class Memory(object):
 
 	def restoreAbsoluteNodes(self):
 		"""restore strings to absNodes, assuming the same names exist"""
-		# self.nodes = [core.AbsoluteNode(i) for i in self.nodes]
-		# for k, v in self._storage.iteritems():
-		# 	print "k is {}, v is {}, v keys are {}".format(k, v, v.keys())
-		# 	if "nodes" in v.keys():
-		# 		v["nodes"] = [core.AbsoluteNode(i) for i in v["nodes"]]
-		# 	print "restored {}".format(v["nodes"])
+		self.nodes = [core.AbsoluteNode(i) for i in self.nodes]
+		for k, v in self._storage.iteritems():
+			print "k is {}, v is {}, v keys are {}".format(k, v, v.keys())
+			if "nodes" in v.keys():
+				v["nodes"] = [core.AbsoluteNode(i) for i in v["nodes"]]
+			print "restored {}".format(v["nodes"])
 		pass
 
 	@staticmethod
@@ -328,10 +328,13 @@ class Memory(object):
 		info = {}
 		if target.isCurve:
 			info = curve.getCurveInfo(target)
+			info["shapeType"] = "nurbsCurve"
 		elif target.isMesh:
 			info = mesh.getMeshInfo(target)
+			info["shapeType"] = "mesh"
 		elif target.isSurface:
 			info = surface.getSurfaceInfo(target)
+			info["shapeType"] = "nurbsSurface"
 		pass
 		return info
 
@@ -342,10 +345,15 @@ class Memory(object):
 		:param target = AbsoluteNode"""
 		parent = target.transform # shape nodes are irrelevant
 		kSuccess = False
-		if target.isCurve:
+		if target.isCurve and info.get("shapeType") == "nurbsCurve":
 			kSuccess = curve.setCurveInfo(info, target, parent=parent)
-		elif target.isSurface:
+
+		elif target.isSurface and info.get("shapeType") == "nurbsSurface":
 			kSuccess = surface.setSurfaceInfo(info, target, parent=parent)
+
+		else:
+			print "shape regen failed for some reason, likely mismatch in shapeType - try refreshing"
+			return
 
 
 		# if kSuccess:

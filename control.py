@@ -107,6 +107,7 @@ class FkControl(Control):
 		self.localRoot = ECA("transform", name=self.name+"_localRoot")
 		self.localOffset = ECA("transform",
 		                       name=self.name+"_localOffset", parent=self.localRoot)
+		print "local offset " + self.localOffset
 		self.localOutput = ECA("locator",
 		                       name=self.name+"_localOutput", parent=self.localOffset)
 

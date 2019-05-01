@@ -110,10 +110,13 @@ class AbstractTree(object):
 	def items(self):
 		return self._map.items()
 
+	def values(self):
+		return self._map.values()
+
 	@property
 	def branches(self):
 		"""more explicit that it returns the child tree objects"""
-		return self.items()
+		return self.values()
 
 	def keys(self):
 		return self._map.keys()

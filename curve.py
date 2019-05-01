@@ -12,33 +12,35 @@ def isCurve(node):
 	else:
 		return False
 
-def getCurveInfo(shape):
-	shape = AbsoluteNode(shape)
+def getCurveInfo(shape=None, fn=None):
+	"""gather information to regenerate nurbs curve from data"""
 	curveInfo = {}
-	if isCurve(shape):
-		curveInfo = {}
+	if isCurve(shape) and not fn:
+		shape = AbsoluteNode(shape)
 		fn = shape.shapeFn
-		curveInfo["cvs"] = [(i.x, i.y, i.z) for i in fn.cvPositions()]
-		curveInfo["degree"] = fn.degree
-		curveInfo["form"] = fn.form
-		curveInfo["knots"] = [i for i in fn.knots()]
-		#curveInfo["rational"] = fn.rational()
-		curveInfo["rational"] = True
 
-		print "{} info is {}".format(shape, curveInfo)
+	curveInfo["cvs"] = [(i.x, i.y, i.z) for i in fn.cvPositions()]
+	curveInfo["degree"] = fn.degree
+	curveInfo["form"] = fn.form
+	curveInfo["knots"] = [i for i in fn.knots()]
+	#curveInfo["rational"] = fn.rational()
+	curveInfo["rational"] = True
 
-	else:
-		testShape = shape.shape
-		if isCurve(testShape):
-			return getCurveInfo(testShape)
-		else:
-			print "it's called getCurveInfo for a reason, {} is not curvy".format(
-				shape)
+
+	# else:
+	# 	testShape = shape.shape
+	# 	if isCurve(testShape):
+	# 		return getCurveInfo(testShape)
+	# 	else:
+	# 		print "it's called getCurveInfo for a reason, {} is not curvy".format(
+	# 			shape)
 	print "{} info is {}".format(shape, curveInfo)
 	return curveInfo
 
-def setCurveInfo(info, target=None, create=True, parent=None):
+def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
 	"""apply info from dict, or just create anew"""
+
+
 	fn = om.MFnNurbsCurve()
 	target = AbsoluteNode(target)
 	target.delete()

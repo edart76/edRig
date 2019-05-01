@@ -34,7 +34,11 @@ class OpExecutionManager(GeneralExecutionManager):
 		new = self.afterSet - self.beforeSet
 		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()]
 		newDags = [i for i in newDags if i not in self.excludeList]
+		#print "{}".format(self.op.setupGrp)
 		cmds.parent(newDags, self.op.setupGrp)
+		for i in newDags:
+			self.op.opTag(i)
+		self.op.nodes.update(newDags)
 
 		# halt execution
 		if exc_type:
@@ -187,8 +191,8 @@ class Op(MayaReal):
 		#self.refreshIo()
 		#self.actions = copy.deepcopy(self.actions) # /shrug
 		self.makeBaseActions()
-
-		self.defineSettings()
+		#
+		# self.defineSettings()
 
 
 		# network nodes holding input and output plugs
@@ -211,10 +215,16 @@ class Op(MayaReal):
 		# print "abstract mclass is {}".format(abstract.__class__.__class__)
 		# print "new absInstance sync is {}".format(abstract.sync)
 
+		# settings
+		self.settings = self.abstract.settings
+		self.evaluator = self.abstract.evaluator
+		self.addSetting = self.abstract.addSetting
+
 		self.inputRoot = abstract.inputRoot
 		self.outputRoot = abstract.outputRoot
 		if define:
 			self.defineAttrs() # resets attributes, don't call on regeneration
+			self.defineSettings()
 		#print "outputs after defineAttrs are {}".format(self.outputs)
 		# support for redefining attributes from dict
 		if inDict:
@@ -229,10 +239,7 @@ class Op(MayaReal):
 		self.attrsChanged = self.abstract.attrsChanged
 		self.attrValueChanged = self.abstract.attrValueChanged
 
-		# settings
-		self.settings = self.abstract.settings
-		self.evaluator = self.abstract.evaluator
-		self.addSetting = self.abstract.addSetting
+
 
 		self.makeBaseActions()
 

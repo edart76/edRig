@@ -85,8 +85,9 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		
 	def setData(self, value, *args, **kwargs): # sets the NAME of the tree
 		name = self.tree.setName(value)
-		print "args {}".format(args)
-		print "kwargs {}".format(kwargs)
+		# print "args {}".format(args)
+		# print "kwargs {}".format(kwargs)
+		"""args and kwargs contain nothing useful, or even related to value"""
 		super(AbstractBranchItem, self).setData(name, *args, **kwargs)
 
 	def addValueData(self):
@@ -95,6 +96,8 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		# textItem = QtCore.QStandardItem(self.tree.value)
 		textItem = AbstractValueItem(self.tree)
 		self.appendColumn([textItem])
+		"""currently column only shows up below main heading
+		need to fix it"""
 
 class AbstractValueItem(QtGui.QStandardItem):
 	"""overly specific but it's fine"""
@@ -125,6 +128,7 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		self.appendRow(self.root)
 		#self.buildFromTree(self.tree, parent=self.root)
 		for i in self.tree.root.branches:
+			print "i tree is {}".format(i)
 			# self.buildFromTree(i, parent=self.invisibleRootItem())
 			self.buildFromTree(i, parent=self.root)
 			pass
