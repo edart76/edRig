@@ -1,5 +1,5 @@
 # functions for manipulation of pipeline folder structures
-import os, sys, importlib, pprint, io
+import os, sys, importlib, pprint, io, tempfile
 from edRig import ROOT_PATH, COMMON_PATH
 from maya import cmds # hurts but there's no point in a separate module yet
 
@@ -177,6 +177,10 @@ class FilePathTree(str):
 
 	def copyTo(self):
 		"""copies filetree to new location?"""
+
+def getTempFile(usage="temp"):
+	""""""
+
 
 def ioinfo(name="", mode="in", info=None, path=None):
 	# read and write generic info to and from maya
@@ -376,6 +380,16 @@ def safeImport(path):
 	makeLegit(path)
 	cmds.file(path, i=True, type="mayaAscii",
 	          defaultNamespace=True)
+
+def safeRead(path, lines=False):
+	"""simple wrapper for reading files"""
+	with open(path, "r") as f:
+		if lines:
+			content = f.readlines()
+		else:
+			content = f.read()
+	return content
+
 
 class AssetItem(str):
 	"""pythonic wrapper around assets, passed the top folder"""

@@ -183,6 +183,8 @@ class FkControl(Control):
 			newTemp = cmds.duplicate(surfaceTemp[0], n="newCtrlTemp")[0]
 			cmds.delete(ctrl, surfaceTemp[0], surfaceTemp[1])
 			ctrl = cmds.rename(newTemp, name)
+		else:
+			ctrl = cmds.rename(ctrl, name)
 		return AbsoluteNode(ctrl)
 
 

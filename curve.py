@@ -40,9 +40,9 @@ def getCurveInfo(shape=None, fn=None):
 def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
 	"""apply info from dict, or just create anew"""
 
-
 	fn = om.MFnNurbsCurve()
 	target = AbsoluteNode(target)
+	targetName = target.name
 	target.delete()
 
 	print "info to set is {}".format(info)
@@ -51,6 +51,8 @@ def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
 	shapeObj = fn.create(
 		cvs, info["knots"], info["degree"], info["form"], False, True, parent=parent.MObject
 	)
+	target.setMObject(shapeObj)
+	target.name = targetName
 	return shapeObj
 
 

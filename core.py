@@ -286,13 +286,6 @@ def debug(var):
 	print "{} is {}".format(xName, var)
 
 
-def loc(name):
-	# bread + butter
-	locTransform = nodule(cmds.spaceLocator(n=name)[0])
-	return locTransform
-	# maya for once correctly assumes that if you need access to a locator shape,
-	# you're a scrub
-
 
 def ECN(kind, name, parent=None, *args, **kwargs):
 	# node creation without carpal conflagration
@@ -445,10 +438,6 @@ def ECN(kind, name, parent=None, *args, **kwargs):
 		return node
 
 
-def ECn(kind, name, *args):
-	return nodule(ECN(kind, name, *args))
-
-
 def mag(x):
 	return math.sqrt(sum(i ** 2 for i in x))
 
@@ -471,6 +460,11 @@ def MObjectFrom(node):
 	# regardless if dag
 	return ref
 
+def stringFromMObject(obj):
+	"""opposite, retrieves string name"""
+	sel = om.MSelectionList()
+	sel.add(obj)
+	return sel.getSelectionStrings(0)[0]
 
 def MFnTransformFrom(dag):
 	# is this a transform or already an MObject?
@@ -562,35 +556,45 @@ class AbsoluteNode(str):
 	# DON'T LOSE YOUR WAAAAY
 	def __new__(cls, node):
 		# this is the stripped down fast version of pymel
+		# print "type node is {}".format(type(node))
+		# print "node is {}".format(node)
 		if isinstance(node, AbsoluteNode):
 			return node
-		if isinstance(node, list):
+		elif isinstance(node, list):
 			print "node is list"
 			return AbsoluteNode(node[0])
+		elif isinstance(node, om.MObject):
+			return AbsoluteNode.fromMObject(node)
+		elif isinstance(node, unicode):
+			return AbsoluteNode(str(node))
 		absolute = str.__new__(cls, node)
 		absolute.node = node
 		if not cmds.objExists(node):
 			print "{} DOES NOT EXIST - YER OFF THE MAP".format(node)
 			absolute.refreshPath = absolute.returnBasicNode
 			return absolute
-		absolute.MObject = MObjectFrom(node)
-		absolute.MFnDependency = om.MFnDependencyNode(absolute.MObject)
-		absolute._shapeFn = None
-		absolute.MDagPath = None
-		# check if it's dag or just dependency
-		if absolute.MObject.hasFn(107): # MFn.kDagNode
-			absolute.MDagPath = om.MDagPath.getAPathTo(absolute.MObject)
-			absolute.MFnDagNode = om.MFnDagNode(absolute.MObject)
-			absolute.refreshPath = absolute.refreshDagPath
-			if absolute.MObject.hasFn(110): # MFnTransform
-				absolute.MFnTransform = om.MFnTransform(absolute.MObject)
-
-		elif absolute.MObject.hasFn(4): # dependency
-			absolute.refreshPath = absolute.returnDepNode
+		obj = MObjectFrom(node)
+		absolute.setMObject(obj)
 
 		# metaprogramming for fun and profit
 		# cmds.select(clear=True)
 		return absolute
+
+	def setMObject(cls, obj):
+		cls.MObject = obj
+		cls.MFnDependency = om.MFnDependencyNode(cls.MObject)
+		cls._shapeFn = None
+		cls.MDagPath = None
+		# check if it's dag or just dependency
+		if cls.MObject.hasFn(107):  # MFn.kDagNode
+			cls.MDagPath = om.MDagPath.getAPathTo(cls.MObject)
+			cls.MFnDagNode = om.MFnDagNode(cls.MObject)
+			cls.refreshPath = cls.refreshDagPath
+			if cls.MObject.hasFn(110):  # MFnTransform
+				cls.MFnTransform = om.MFnTransform(cls.MObject)
+
+		elif cls.MObject.hasFn(4):  # dependency
+			cls.refreshPath = cls.returnDepNode
 
 	def __init__(self, *args, **kwargs):
 		super(AbsoluteNode, self).__init__(*args, **kwargs)
@@ -598,16 +602,16 @@ class AbsoluteNode(str):
 		pass
 
 	def __str__(self):
-		self.refreshPath()
-		if isinstance(self.node, list):
-			self.node = self.node[0]
+		try:
+			self.refreshPath()
+			if isinstance(self.node, list):
+				self.node = self.node[0]
+		except:
+			self.node = self.MFnDependency.absoluteName()
 		return self.node
 
 	def __repr__(self):
-		self.refreshPath()
-		if isinstance(self.node, list):
-			self.node = self.node[0]
-		return self.node
+		return self.__str__()
 
 	def refreshDagPath(self):
 		self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
@@ -629,6 +633,7 @@ class AbsoluteNode(str):
 		# is this a bad idea
 		#cmds.rename(self.node, value)
 		self.MFnDependency.setName(value)
+
 	# i've got no strings, so i have fn
 
 	@property
@@ -715,6 +720,13 @@ class AbsoluteNode(str):
 		"""returns world position as MPoint"""
 		assert self.isDag()
 		return om.MPoint(self.MFnTransform.translation(om.MSpace.kWorld))
+
+	@staticmethod
+	def fromMObject(obj):
+		"""find node associated with obj and wrap it"""
+		name = stringFromMObject(obj)
+		return AbsoluteNode(name)
+
 
 
 

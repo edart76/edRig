@@ -4,7 +4,7 @@
 import maya.cmds as cmds
 import edRig.core as core
 # tilepile is here to save our souls
-from edRig.core import con, ECN, ECn
+from edRig.core import con, ECN
 from edRig.tilepile.ops.layer import LayerOp
 import edRig.curve as curve
 import edRig.control as control

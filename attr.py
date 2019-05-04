@@ -4,6 +4,11 @@ from edRig import core
 from maya import cmds
 import maya.api.OpenMaya as om
 
+def getMPlug(plugName):
+	sel = om.MSelectionList()
+	sel.add(plugName)
+	return sel.getPlug(0)
+
 def con(a, b, f=True):
 	"""let's try this again"""
 	cmds.connectAttr(a, b, f=f)
