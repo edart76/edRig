@@ -152,6 +152,21 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self._set_viewer_zoom(adjust)
 
 	def contextMenuEvent(self, event):
+		"""i'm really honestly quite sick of this softlocking my program"""
+		# try:
+		# 	self.RMB_state = False
+		# 	self.buildContext()
+		# except:
+		# 	pass
+		# try:
+		# 	self.contextMenu.exec_(event.globalPos())
+		# except:
+		# 	pass
+		# try:
+		# 	super(AbstractView, self).contextMenuEvent(event)
+		# except:
+		# 	pass
+
 		self.RMB_state = False
 		self.buildContext()
 		self.contextMenu.exec_(event.globalPos())

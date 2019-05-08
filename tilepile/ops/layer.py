@@ -3,7 +3,7 @@ from edRig.tilepile.ops.op import Op
 from edRig import core, attrio
 from edRig.layers.setups import Memory, OpAttrItem
 from edRig.structures import ActionItem
-import functools
+import functools, inspect
 import copy
 import pprint
 from collections import OrderedDict
@@ -156,8 +156,21 @@ class LayerOp(Op):
 	or only update files at start and end of build process"""
 
 	def getAllActions(self):
-		base = super(LayerOp, self).getAllActions()
-		base.update({"memory" : self.memoryActions()})
+		"""super call freaks out for some reason with regen'd objects"""
+		base = {}
+		try:
+			# print "type type self is {}".format(type(type(self))) # returns type
+			base = super(LayerOp, self).getAllActions()
+
+		except Exception as e:
+			print "super call experienced error"
+			print "error is {}".format(e)
+
+		try:
+			base.update({"memory": self.memoryActions()})
+		except Exception as e:
+			print "memory actions error"
+			print "error is {}".format(e)
 		return base
 
 	# convenience and standardisation
@@ -184,6 +197,7 @@ class LayerOp(Op):
 		print "layerOpFromDict"
 		print "regendict is {}".format(regenDict)
 		opInstance = Op.fromDict(regenDict, abstract)
+		#opInstance = Op.fromDict()
 		if "memory" in regenDict.keys():
 			print "regen memory"
 			#opInstance.memory.reconstructMemory({"memory" : copy.deepcopy(regenDict["memory"])})

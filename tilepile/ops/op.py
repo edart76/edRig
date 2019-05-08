@@ -614,8 +614,11 @@ class Op(MayaReal):
 		:param attrItem : AbstractAttr"""
 		if attrItem.getConnections():
 			prev = attrItem.getConnections()[0]
-			if hasattr(prev, name="plug"):
+			#if hasattr(prev, name="plug"):
+			test = getattr(prev, "plug", None)
+			if test:
 				cmds.connectAttr(prev.plug, attrItem.plug, f=True)
+
 
 	# io
 	def searchData(self, infoName):

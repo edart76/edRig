@@ -288,11 +288,12 @@ def safeLoadModule(mod):
 	# print "loading module {}".format(mod)
 	module = None
 	for i in sys.modules.keys():
-		if "edRig" in i: del sys.modules[i]
+		# if "edRig" in i: del sys.modules[i] # how about FUCKIN NO
+		if mod in i : del sys.modules[i]
+		pass
+	#for i in
 	try:
 		module = importlib.import_module(mod)
-		# print "imported module is {}".format(module)
-		# print "imported module class is {}".format(module.__class__)
 	except Exception as e:
 		print "ERROR in loading module {}".format(mod)
 		print "error is {}".format(str(e))

@@ -272,7 +272,7 @@ class Memory(object):
 
 	def nodesFromInfoName(self, infoName):
 		"""returns list of all nodes tracked by infoName"""
-		return self._storage[infoName]["nodes"]
+		return [AbsoluteNode(i) for i in self._storage[infoName]["nodes"]]
 
 	def infoFromInfoName(self, infoName):
 		return self._storage[infoName]
