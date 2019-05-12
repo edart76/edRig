@@ -1,6 +1,6 @@
 # manages connectivity and execution order of a dag graph
 
-from edRig import Env, ROOT_PATH, pipeline
+from edRig import Env, ROOT_PATH, pipeline, naming
 from edRig.lib.python import Signal
 from edRig.pipeline import TempAsset
 from edRig.tilepile.abstractnode import AbstractNode, AbstractAttr
@@ -248,7 +248,9 @@ class AbstractGraph(object):
 			node.uid += 1
 			return self.addNode(node)
 		elif node.nodeName in self.knownNames:
-			Env.log("name {} already exists - rename it NOW".format(node.nodeName))
+			# Env.log("name {} already exists - rename it NOW".format(node.nodeName))
+			newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
+			node.rename(newName)
 		self.nodeGraph[node.uid] = {
 			"node" : node,
 			"feeding" : set(), # lists of AbstractNodes, use methods to process

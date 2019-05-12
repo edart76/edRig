@@ -2,7 +2,7 @@
 
 import string
 
-def incrementName(name):
+def incrementName(name, currentNames=None):
 	"""checks if name is already in children, returns valid one"""
 	if name[-1].isdigit(): # increment digit like basic bitch
 		new = int(name[-1]) + 1
@@ -15,4 +15,9 @@ def incrementName(name):
 			name = name[:-1] + string.ascii_uppercase[index+1]
 	else: # ends with lowerCase letter
 		name += "A"
+
+	# check if name already taken
+	if currentNames and name in currentNames:
+		return incrementName(name, currentNames)
+	print "found name is {}".format(name)
 	return name

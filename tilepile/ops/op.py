@@ -10,6 +10,7 @@ from edRig.pipeline import safeLoadModule
 from edRig.tilepile.real import MayaReal, MayaStack, MayaDelta
 from edRig.tilepile.lib import GeneralExecutionManager
 from edRig.lib.python import debug, outerVars
+from edRig.layers.setups import InvokedNode
 
 class OpExecutionManager(GeneralExecutionManager):
 	"""manage execution of ops"""
@@ -23,22 +24,23 @@ class OpExecutionManager(GeneralExecutionManager):
 		self.afterSet = None
 
 	def __enter__(self):
-		self.beforeSet = scene.listTopNodes()
+		self.beforeSet = set(scene.listAllNodes())
 		self.op.beforeExecution()
 		return self
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		"""clean up maya scene nodes regardless"""
 		self.op.afterExecution()
-		self.afterSet = scene.listTopNodes()
+		self.afterSet = set(scene.listAllNodes())
 		new = self.afterSet - self.beforeSet
 		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()]
 		newDags = [i for i in newDags if i not in self.excludeList]
 		#print "{}".format(self.op.setupGrp)
-		cmds.parent(newDags, self.op.setupGrp)
-		for i in newDags:
+		for i in new:
 			self.op.opTag(i)
-		self.op.nodes.update(newDags)
+			if not i in cmds.listRelatives(self.op.opGrp, children=True):
+				cmds.parent(i, self.op.opGrp)
+		#self.op.nodes.update(newDags)
 
 		# halt execution
 		if exc_type:
@@ -48,71 +50,9 @@ class OpExecutionManager(GeneralExecutionManager):
 			pass
 
 
-def tidy(name=None, *args, **kwargs):
-	def decorator(inst, func, *args, **kwargs):
-		#inst = func.im_self
-		print "dir inst is {}".format(pprint.pformat(dir(inst)))
-		print "dir func is {}".format(pprint.pformat(dir(func)))
-		@functools.wraps(func)
-		def wrapper(*args, **kwargs):
-			before = scene.listTopNodes()
-			results = func(*args, **kwargs)
-			after = scene.listTopNodes() - before
-			#inst.nodes.update(after)
-			print "tidied nodes"
-			return results
-		return wrapper
-	return decorator
-
-# # FINALLY ACTIONS
-def action(name=None, *args, **kwargs):
-	print "action args {}".format(args)
-	print "action kwargs {}".format(kwargs)
-	def decorator(func, *args, **kwargs):
-		#@functools.wraps(func)
-		print "decorator args {}".format(args)
-		print "decorator kwargs {}".format(kwargs)
-		newName = name or func.__name__
-		#print "dir inst is {}".format(pprint.pformat(dir(inst)))
-		print "dir func is {}".format(pprint.pformat(dir(func)))
-		def wrapper(*args, **kwargs):
-			print "wrapper args {}".format(args)
-			print "wrapper kwargs {}".format(kwargs)
-			return func(*args, **kwargs)
-		# inst.addAction(actionItem=ActionItem(name=newName,
-		#                           execDict={"func": func}))
-		return wrapper
-	return decorator
-
 class Op(MayaReal):
 	# base class for "operations" executed by abstractGraph,
 	# mainly maya scripting
-
-	# def action(cls=None, name=None, *args, **kwargs):
-	# 	print "name is {}".format(name)
-	# 	print "cls is {}".format(cls)
-	# 	print "action args {}".format(args)
-	# 	print "action kwargs {}".format(kwargs)
-	#
-	# 	def decorator(func, *args, **kwargs):
-	# 		# @functools.wraps(func)
-	# 		print "decorator args {}".format(args)
-	# 		print "decorator kwargs {}".format(kwargs)
-	# 		newName = name or func.__name__
-	# 		# print "dir inst is {}".format(pprint.pformat(dir(inst)))
-	# 		print "dir func is {}".format(pprint.pformat(dir(func)))
-	#
-	# 		def wrapper(*args, **kwargs):
-	# 			print "wrapper args {}".format(args)
-	# 			print "wrapper kwargs {}".format(kwargs)
-	# 			return func(*args, **kwargs)
-	#
-	# 		# inst.addAction(actionItem=ActionItem(name=newName,
-	# 		#                           execDict={"func": func}))
-	# 		return wrapper
-	#
-	# 	return decorator
-	action = action
 
 	#actions = {} # :(
 
@@ -120,19 +60,38 @@ class Op(MayaReal):
 
 	currentOp = None # set by exec handler?
 
-	# def tidy(self, name=None):
-	# 	def decorator(func):
-	# 		@functools.wraps(func)
-	# 		def wrapper(*args, **kwargs):
-	# 			before = scene.listTopNodes()
-	# 			results = func(*args, **kwargs)
-	# 			after = scene.listTopNodes() - before
-	# 			self.nodes.update(after)
-	# 			print "tidied nodes"
-	# 			return results
-	# 		return wrapper
-	# 	return decorator
-	tidy = tidy
+	def tidy(*args, **kwargs):
+		# print "outer args are {}, {}".format(args, kwargs)
+		# direct arguments to decorator
+		category = kwargs.get("category")
+		def midWrapper(*args, **kwargs):
+			# print "mid args are {}, {}".format(args, kwargs)
+			func = args[0]
+			#@functools.wraps(func)
+			def wrapper(*args, **kwargs):
+				# print "inner args are {}, {}".format(args, kwargs)
+				# default function arguments, including self
+				self = args[0]
+				before = set(scene.listAllNodes())
+				beforeDags = set(scene.listTopDags())
+
+				results = func(*args, **kwargs)
+
+				after = set(scene.listAllNodes()) - before
+				afterDags = set(scene.listTopDags()) - beforeDags
+				for i in after:
+					try:
+						self.opTag(i)
+					finally:
+						pass
+
+				for i in afterDags:
+					cmds.parent(i, self.opGrp)
+
+				# self.nodes.update(after)
+				return results
+			return wrapper
+		return midWrapper
 
 	# execution architecture
 	@classmethod
@@ -165,7 +124,7 @@ class Op(MayaReal):
 		self.abstract = abstract
 		self.actions = {}
 
-		self.uuid = self.shortUUID(4)
+		self.uuid = self.shortUUID(8)
 		if self.abstract:
 			self.inputRoot = abstract.inputRoot
 			self.outputRoot = abstract.outputRoot
@@ -196,10 +155,10 @@ class Op(MayaReal):
 
 
 		# network nodes holding input and output plugs
-		self.inputNetwork = None
-		self.outputNetwork = None
-		self.nodes = self.nodesFromScene() # set
-		debug(self.inputNetwork)
+		# self.inputNetwork = None
+		# self.outputNetwork = None
+		# self.nodes = self.nodesFromScene() # set
+		# debug(self.inputNetwork)
 
 		#experimental
 		self.deltaStack = MayaStack()
@@ -429,6 +388,7 @@ class Op(MayaReal):
 		happyList = [
 			":)", ":D", ".o/", "^-^", "i wish you happiness",
 			"bein alive is heckin swell!!!", "it's a beautiful day today",
+			"we can do this", "you matter"
 		]
 		ey = random.randint(0, len(happyList) - 1)
 		cmds.setAttr(tagNode + ".edTag", happyList[ey], type="string")
@@ -468,13 +428,22 @@ class Op(MayaReal):
 			gotTag = cmds.listAttr(tagNode, string="*tag")
 		return gotTag
 
-	# might be useful
+	def getTaggedNodes(self, searchNodes=None,
+	                   searchTag=None, searchContent=None, searchDict=None):
+		"""calls main scene tag methods"""
+		return scene.listTaggedNodes(searchNodes,
+		                             searchTag,
+		                             searchContent,
+		                             searchDict)
 
 	def opTag(self, tagNode):
 		# add tag for the specific op
 		if self.opName:
-			cmds.addAttr(tagNode, ln="opTag", dt="string", writable=True)
-			cmds.setAttr(tagNode + ".opTag", self.opName, type="string")
+			#cmds.addAttr(tagNode, ln="opTag", dt="string", writable=True)
+			attr.addAttr(tagNode, attrName="opTag", attrType="string")
+			#cmds.setAttr(tagNode + ".opTag", self.opName, type="string")
+			attr.setAttr(tagNode + ".opTag", self.opName)
+		attr.addTag(tagNode, "opUID", self.uuid)
 
 	def ECN(self, type, name="blankName", cleanup=False, *args):
 		# this is such a good idea
@@ -483,8 +452,7 @@ class Op(MayaReal):
 		node = ECN(type, name, *args)
 		self.edTag(node)
 		self.opTag(node)
-		# print "node is {}".format(node)
-		# print "self.opGrp is {}".format(self.opGrp)
+
 		if cleanup:
 			node = cmds.parent(node, self.opGrp)[0] # prevent messy scenes
 		return node
@@ -495,11 +463,39 @@ class Op(MayaReal):
 		node = self.ECN(type, *args, name=name, cleanup=cleanup)
 		return AbsoluteNode(node)
 
-	def ECA(self, type, name="blankName", *args):
+	def ECA(self, type, name="blankName", category=None, *args):
 		node = self.ECAsimple(type, name, cleanup=False, *args)
 		self.nodes.update(node)
+		if category: # add specific tags
+			self.addTag(node, "category", category)
 		#cmds.parent(node, self.opGrp)
 		return node
+
+	# live node attributes from tags
+	@property
+	def nodes(self):
+		"""unsuitable for ordered or specific indexing. if we need that,
+		make a new function"""
+		return set(self.getTaggedNodes(searchTag="opUID",
+		                           searchContent=self.uuid))
+	@property
+	def inputNetwork(self):
+		searchDict = {"opUID" : self.uuid,
+		              "category" : "opIo",
+		              "role" : "input"}
+		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)[0]
+		print "inNetwork node is {}".format(node)
+		return AbsoluteNode(node)
+
+	@property
+	def outputNetwork(self):
+		searchDict = {"opUID" : self.uuid,
+		              "category" : "opIo",
+		              "role" : "output"}
+		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)[0]
+		print "outNetwork node is {}".format(node)
+		return AbsoluteNode(node)
+
 
 	@staticmethod
 	def shortUUID(length=4):
@@ -519,17 +515,14 @@ class Op(MayaReal):
 	def beforeExecution(self):
 		"""create network nodes procedurally from attributes
 		called by context immediately before exec"""
-		self.inputNetwork = self.ECA("network", name=self.opName+"_inputs")
-		self.outputNetwork = self.ECA("network", name=self.opName + "_outputs")
-
-		attr.makeStringConnection(self.inputNetwork, self.outputNetwork,
-								  startName="opStart", endName="opEnd")
+		#self.inputNetwork, self.outputNetwork = self.makeOpIoNodes()
+		self.makeOpIoNodes()
 
 		for i in self.inputRoot.getAllLeaves():
-			self.makeOpIoNodes(self.inputNetwork, i)
+			self.makeOpIoNodeAttrs(self.inputNetwork, i)
 
 		for i in self.outputRoot.getAllLeaves():
-			self.makeOpIoNodes(self.outputNetwork, i)
+			self.makeOpIoNodeAttrs(self.outputNetwork, i)
 
 		# now connect inputs to previous outputs
 		for i in self.inputRoot.getAllLeaves():
@@ -546,16 +539,24 @@ class Op(MayaReal):
 				# this is a car fire but it works for now
 				cmds.connectAttr(i.plug, n.destAttr.plug)
 
+	def makeOpIoNodes(self):
+		"""create connected bookend network nodes"""
+		inputNetwork = self.ECA("network", name=self.opName+"_inputs")
+		outputNetwork = self.ECA("network", name=self.opName + "_outputs")
 
-	# dataMapping = {
-	# 	"0D" : "matrix",
-	# 	"1D" : "nurbsCurve",
-	# 	"2D" : "mesh",
-	# 	"string" : "string",
-	# 	"int" : "long",
-	# }
+		# add tags
+		for i in inputNetwork, outputNetwork:
+			attr.addTag(i, "category", "opIo")
+		attr.addTag(inputNetwork, "role", "input")
+		attr.addTag(outputNetwork, "role", "output")
 
-	def makeOpIoNodes(self, node, attrItem, parentItem=None):
+		attr.makeStringConnection(self.inputNetwork, self.outputNetwork,
+								  startName="opStart", endName="opEnd")
+
+		return inputNetwork, outputNetwork
+
+
+	def makeOpIoNodeAttrs(self, node, attrItem, parentItem=None):
 		""":param node: AbsoluteNode
 		:param attrItem : AbstractAttr
 		:param parentItem : attrItem"""
@@ -570,7 +571,7 @@ class Op(MayaReal):
 			plug = attr.addAttr(node, attrName=i.name, attrType="compound",
 			                    parent=parentPlug)
 			for n in i.getChildren():
-				self.makeOpIoNodes(node, n, parentItem=i)
+				self.makeOpIoNodeAttrs(node, n, parentItem=i)
 
 		if i.dataType == "enum":
 			options = ":".join(i.extras.get("items"))
@@ -586,7 +587,7 @@ class Op(MayaReal):
 			if i.getConnections():
 				dt = i.getConnections()[0].dataType
 				newItem = AbstractAttr(name=i.name, dataType=dt, hType="leaf")
-				self.makeOpIoNodes(node, newItem, parentItem)
+				self.makeOpIoNodeAttrs(node, newItem, parentItem)
 			else:
 				dt = "matrix"
 				plug = attr.addAttr(node, attrName=i.name, attrType=dt)
@@ -727,6 +728,7 @@ class Op(MayaReal):
 		return True
 		pass
 
+	@tidy(category="test")
 	def showGuidesWrapper(self):
 		self.showGuides()
 

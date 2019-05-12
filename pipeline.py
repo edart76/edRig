@@ -337,12 +337,12 @@ def makeLegit(path):
 		heinous = f.readlines()
 		f.seek(0)
 		f.truncate()
-		print "heinous is {}".format(heinous)
+		#print "heinous is {}".format(heinous)
 		#legit = [i for i in heinous if not i == 'fileInfo "license" "student";\n']
 
 		testLines = heinous[:20]
 		for i, line in enumerate(testLines):
-			print "line is " + line
+			#print "line is " + line
 			if 'fileInfo "license" "student";\n' in line:
 				heinous.pop(i)
 				break
@@ -366,7 +366,7 @@ def makeBogus(path):
 		mod = True
 
 		for i, line in enumerate(testLines):
-			print "line is " + line
+			#print "line is " + line
 			if 'fileInfo "license" "student";\n' in line:
 				print "already poor lol"
 				mod=False

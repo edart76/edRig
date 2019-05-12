@@ -648,6 +648,27 @@ class InvokedNode(object):
 		if self.parent:
 			cmds.parent(node, self.parent)
 		return node
+
+
+class InvokedNodeDescriptor(object):
+	"""same as above but it actually works"""
+	def __init__(self, name, nodeType="transform", parent=None):
+		"""name and parent should include namespaces"""
+		self.name = name
+		self.parent = parent
+		self.nodeType = nodeType
+
+	def __get__(self, instance, owner):
+		test = cmds.ls(self.name)
+		if not test:
+			node = ECA(self.nodeType, self.name)
+		else:
+			node = test[0]
+		if cmds.objExists(self.parent) and node.isDag():
+			cmds.parent(node, self.parent)
+		return node
+
+
 	
 
 class SetupBase(object):

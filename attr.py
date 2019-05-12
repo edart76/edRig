@@ -61,8 +61,8 @@ def processAttrNames(attr, node=None, asPlug=False, asAttr=True):
 	return returnList
 
 # functions for using string attributes like keys in dictionary
-def addTag(tagNode, tagName, tagContent=None, tag=False):
-	tagName = tagName + "_tag" if tag else tagName
+def addTag(tagNode, tagName, tagContent=None, tagSuffix=False):
+	tagName = tagName + "_tag" if tagSuffix else tagName
 	if not tagName in cmds.listAttr(tagNode):
 		cmds.addAttr(tagNode, ln=tagName, dt="string")
 	if tagContent:
@@ -83,18 +83,18 @@ def getDictFromTags(tagNode):
 			returnDict.update({tagName : tagContent})
 	return returnDict
 
-def listTaggedNodes(searchTag="", searchType=None):
-	if searchType:
-		allDag = cmds.ls(type=searchType)
-	else:
-		allDag = cmds.ls(dagObjects=True)
-	tag = searchTag+"_tag" if searchTag else "_tag"
-	returnList = []
-	for i in allDag:
-		for n in cmds.listAttr(i):
-			if tag in n:
-				returnList.append(i)
-	return returnList
+# def listTaggedNodes(searchTag="", searchType=None):
+# 	if searchType:
+# 		allDag = cmds.ls(type=searchType)
+# 	else:
+# 		allDag = cmds.ls(dagObjects=True)
+# 	tag = searchTag+"_tag" if searchTag else "_tag"
+# 	returnList = []
+# 	for i in allDag:
+# 		for n in cmds.listAttr(i):
+# 			if tag in n:
+# 				returnList.append(i)
+# 	return returnList
 
 def listWithTagContent(searchNodes = [], searchTag="", searchContent=""):
 	found = []

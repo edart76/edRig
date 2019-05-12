@@ -44,7 +44,32 @@ class Globals(object):
 		return super(Globals, self).__getattr__(item)
 
 
+def listTaggedNodes(searchNodes=None, searchTag="", searchContent=None, searchDict={}):
+	"""looks up all nodes with tag value that equals searchContent
+	would be cool to enable this to search using a tag : content dict"""
+	#print ""
+	tests = searchNodes or listAllNodes()
+	#print "tests are {}".format(tests)
+	if searchDict:
+		for k, v in searchDict.iteritems():
+			tests = listTaggedNodes(tests, k, v)
+		return tests
 
+	returns = []
+
+	for i in tests:
+		if searchTag in cmds.listAttr(i):
+			if searchContent:
+				if cmds.getAttr(i+"."+searchTag) == searchContent:
+					returns.append(i)
+			else:
+				returns.append(i)
+	return returns
 
 def listTopNodes():
-	return set(cmds.ls("|*", recursive=True))
+	return listTopDags()
+def listTopDags():
+	return cmds.ls("|*", recursive=True)
+def listAllNodes():
+	"""all alphabetically"""
+	return cmds.ls("*", recursive=True)
