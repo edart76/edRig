@@ -43,6 +43,19 @@ class Globals(object):
 			return self.invokeNode(self.nodes[item], name=item)
 		return super(Globals, self).__getattr__(item)
 
+def ls(*args, **kwargs):
+	"""you know how maya returns None when it can't find anything
+	don't you just love that"""
+	result = cmds.ls(*args, **kwargs)
+	return result or []
+
+def listRelatives(*args, **kwargs):
+	"""same as above"""
+	result = cmds.listRelatives(*args, **kwargs)
+	return result or []
+
+# def parent(*args, **kwargs):
+# 	"""for im"""
 
 def listTaggedNodes(searchNodes=None, searchTag="", searchContent=None, searchDict={}):
 	"""looks up all nodes with tag value that equals searchContent
@@ -73,3 +86,4 @@ def listTopDags():
 def listAllNodes():
 	"""all alphabetically"""
 	return cmds.ls("*", recursive=True)
+

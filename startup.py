@@ -62,16 +62,17 @@ def makeCodeNode():
 		pass
 	# isTimeChanging
 	def setIsTimeChanging(*args, **kwargs):
-		changingState = any(om.MConditionMessage.getConditionState(i)
-		                   for i in conditions)
+		changingState = (oma.MAnimControl.isPlaying() or
+			oma.MAnimControl.isScrubbing())
 		cmds.setAttr(codeNode+".isTimeChanging", changingState)
 	#isScrubbing
 	def setIsScrubbing(*args, **kwargs):
 		changingState = oma.MAnimControl.isScrubbing()
 		cmds.setAttr(codeNode+".isScrubbing", changingState)
-	for i in conditions:
-		om.MConditionMessage.addConditionCallback(i, setIsPlaying)
-		om.MConditionMessage.addConditionCallback(i, setIsTimeChanging)
+	# for i in conditions:
+	om.MDGMessage.addTimeChangeCallback(setIsPlaying)
+	om.MDGMessage.addTimeChangeCallback(setIsTimeChanging)
+	om.MDGMessage.addTimeChangeCallback(setIsScrubbing)
 	# this modest amount of callbacks gives 315 fps in an empty scene
 	# i think we'll be fine
 

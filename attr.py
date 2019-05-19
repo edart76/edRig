@@ -1,5 +1,5 @@
 # lib for adding and modifying attributes
-# framestore pls no sue
+import random
 from edRig import core
 from maya import cmds
 import maya.api.OpenMaya as om
@@ -67,8 +67,32 @@ def addTag(tagNode, tagName, tagContent=None, tagSuffix=False):
 		cmds.addAttr(tagNode, ln=tagName, dt="string")
 	if tagContent:
 		# tag content can be anything, keep track of it yourself
-		cmds.setAttr(tagNode + "." + tagName, tagContent, type="string")
+		try:
+			cmds.setAttr(tagNode + "." + tagName, tagContent, type="string")
+		except:
+			pass
 	return tagNode+"."+tagName
+
+def edTag(tagNode):
+	# more tactile to have a little top tag
+	#cmds.addAttr(tagNode, ln="edTag", dt="string", writable=True)
+	happyList = [
+		":)", ":D", ".o/", "^-^", "i wish you happiness",
+		"bein alive is heckin swell!!!", "it's a beautiful day today",
+		"we can do this", "you matter"
+	]
+	ey = random.randint(0, len(happyList) - 1)
+	#cmds.setAttr(tagNode + ".edTag", happyList[ey], type="string")
+	addTag(tagNode, tagName="edTag", tagContent=happyList[ey])
+	cmds.setAttr(tagNode + ".edTag", l=True)
+
+def checkTag(tagNode, tagName, tagContent):
+	# checks if a node has a specific edTag
+	testList = cmds.listAttr(tagNode, string="edTag")
+	if testList:
+		return True
+	else:
+		return False
 
 def setTagsFromDict(tagNode, tagDict):
 	for k, v in tagDict.iteritems():

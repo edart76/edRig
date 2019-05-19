@@ -534,6 +534,14 @@ class AbstractAttr(AttrItem):
 		else:
 			self.connections = [edge]
 
+	def getConnectedAttrs(self):
+		"""returns only connected attrItems, not abstractEdges -
+		this should be the limit of what's called in normal api"""
+		if self.role == "input":
+			return [i.sourceAttr for i in self.getConnections()]
+		elif self.role == "output":
+			return [i.destAttr for i in self.getConnections()]
+
 	def addChild(self, newChild):
 		newChild = super(AbstractAttr, self).addChild(newChild)
 		newChild.node = self.node

@@ -684,6 +684,17 @@ class AbsoluteNode(str):
 		else:
 			return AbsoluteNode(tfFrom(self))
 
+	@property
+	def parent(self):
+		test = cmds.listRelatives(self.node, parent=True)
+		return AbsoluteNode(test[0]) if test else None
+
+	@property
+	def children(self):
+		test = cmds.listRelatives(self.node, children=True)
+		return [AbsoluteNode(i) for i in test] if test else []
+
+
 
 	def isTransform(self):
 		if self.shapeFnType:
@@ -748,145 +759,6 @@ class NodeFunction(object):
 
 
 
-
-
-#
-# class Op(object):
-# 	# base class for "operations" in Maya scripting
-# 	opName = None
-# 	controller = None
-#
-# 	def __init__(self, name=None):
-# 		self.character = None
-# 		print "Op instantiated"
-# 		self._opName = None
-# 		if not name:
-# 			self.opName = self.__class__.__name__
-# 		else:
-# 			self.opName = name
-#
-# 		self.uuid = self.shortUUID(4)
-# 		#self.uuid =
-# 		# self.inputs = {}
-# 		# self.outputs = {}
-# 		# ops have inputs and outputs, but you need to define them yourself
-#
-# 	@property
-# 	def __name__(self):
-# 		# return str(self.__class__) + "-" + self.opName + "-" + self.uuid
-# 		return str(self.__class__.__name__) + "-" + self.opName
-#
-# 	@property
-# 	def opName(self):
-# 		# because this wasn't confusing enough already
-# 		if self._opName:
-# 			return self._opName
-# 		else:
-# 			return self.__class__.__name__ #+ self.uuid
-#
-# 	@opName.setter
-# 	def opName(self, val):
-# 		# equivalent to renaming an op
-# 		if self.controller:
-# 			self.controller.renameOp(op=self, newName=val)
-# 		else:
-# 			self._opName = val
-# 			# return val
-#
-# 	def rename(self, name):
-# 		self.opName = name
-#
-#
-# 	# ever look at a node and think
-# 	# wtf are you
-# 	@staticmethod
-# 	def edTag(tagNode):
-# 		# more tactile to have a little top tag
-# 		cmds.addAttr(tagNode, ln="edTag", dt="string", writable=True)
-# 		happyList = [
-# 			":)", ":D", ".o/", "^-^", "i wish you happiness",
-# 			"bein alive is heckin swell!!!", "it's a beautiful day today",
-# 		]
-# 		ey = random.randint(0, len(happyList) - 1)
-# 		cmds.setAttr(tagNode + ".edTag", happyList[ey], type="string")
-# 		cmds.setAttr(tagNode + ".edTag", l=True)
-#
-# 	@staticmethod
-# 	def checkTag(tagNode, op=None, specific=False):
-# 		# checks if a node has a specific edTag
-# 		testList = cmds.listAttr(tagNode, string="edTag")
-#
-# 		if testList:
-# 			return True
-# 		else:
-# 			return False
-#
-# 	@staticmethod
-# 	def addTag(tagNode, tagName, tagContent=None):
-# 		# use string arrays(?) to store op that created tag as well as type
-# 		# better to store content of string as dictionary
-# 		if Op.checkTag(tagNode) == False:
-# 			Op.edTag(tagNode)
-#
-# 		cmds.addAttr(tagNode, ln=tagName, dt="string")
-# 		if tagContent:
-# 			# tag content can be anything, keep track of it yourself
-# 			cmds.setAttr(tagNode + "." + tagName, tagContent, type="string")
-#
-# 	@staticmethod
-# 	def getTag(tagNode, tagName=None):
-# 		# retrieves specific tag information, or lists all of it
-# 		if tagName:
-# 			gotTag = cmds.getAttr(tagNode + "." + tagName)
-# 		else:
-# 			gotTag = cmds.listAttr(tagNode, string="*tag")
-# 		return gotTag
-#
-# 	# might be useful
-#
-# 	def opTag(self, tagNode):
-# 		# add tag for the specific op
-# 		if self.opName:
-# 			cmds.addAttr(tagNode, ln="opTag", dt="string", writable=True)
-# 			cmds.setAttr(tagNode + ".opTag", self.opName, type="string")
-#
-# 	def ECN(self, type, name="blankName", *args):
-# 		# this is such a good idea
-# 		if name == "blankName":
-# 			name = type
-# 		node = ECN(type, name, *args)
-# 		self.edTag(node)
-# 		self.opTag(node)
-# 		return node
-#
-# 	def ECA(self, type, name="blankName", *args):
-# 		# this is such a good idea
-# 		# first check if node already exists, later
-# 		node = self.ECN(type, *args, name=name)
-# 		return AbsoluteNode(node)
-#
-# 	def ECn(self, type, name="blankName", *args):
-# 		if name == "blankName":
-# 			name = type
-# 		node = self.ECN(type, name, *args)
-# 		return nodule(node)
-#
-# 	@staticmethod
-# 	def shortUUID(self, length=4):
-# 		return shortUUID(length=length)
-#
-# 	def serialise(self):
-#
-# 		opDict = {}
-# 		opDict["NAME"] = self.__name__
-# 		opDict["CLASS"] = self.__class__.__name__
-# 		opDict["MODULE"] = self.__class__.__module__
-# 		opDict["opName"] = self.opName
-#
-# 		copyData = copy.copy(self.data)
-# 		opDict["data"] = copyData
-#
-# 		return opDict
 
 
 def isInstanceUserDefined(instance):

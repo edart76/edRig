@@ -36,10 +36,23 @@ class OpExecutionManager(GeneralExecutionManager):
 		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()]
 		newDags = [i for i in newDags if i not in self.excludeList]
 		#print "{}".format(self.op.setupGrp)
+		print "new {}".format(new)
+		print "newDags {}".format(newDags)
+
+		print "opgrp is {}".format(self.op.opGrp)
 		for i in new:
+			#print "i is {}".format(i)
+			#print "i isDag {}".format(i.isDag())
+			attr.edTag(i)
 			self.op.opTag(i)
-			if not i in cmds.listRelatives(self.op.opGrp, children=True):
-				cmds.parent(i, self.op.opGrp)
+		for i in newDags:
+			current = scene.listRelatives(self.op.opGrp, ad=True)
+			#print "current {}".format(current)
+			if not i in current:
+				try:
+					cmds.parent(i, self.op.opGrp)
+				except:
+					pass
 		#self.op.nodes.update(newDags)
 
 		# halt execution
@@ -103,7 +116,10 @@ class Op(MayaReal):
 						pass
 
 				for i in afterDags:
-					cmds.parent(i, self.opGrp)
+					try:
+						cmds.parent(i, self.opGrp)
+					except:
+						pass
 
 				# self.nodes.update(after)
 				return results
@@ -267,37 +283,12 @@ class Op(MayaReal):
 	@staticmethod
 	def edTag(tagNode):
 		# more tactile to have a little top tag
-		cmds.addAttr(tagNode, ln="edTag", dt="string", writable=True)
-		happyList = [
-			":)", ":D", ".o/", "^-^", "i wish you happiness",
-			"bein alive is heckin swell!!!", "it's a beautiful day today",
-			"we can do this", "you matter"
-		]
-		ey = random.randint(0, len(happyList) - 1)
-		cmds.setAttr(tagNode + ".edTag", happyList[ey], type="string")
-		cmds.setAttr(tagNode + ".edTag", l=True)
+		return attr.edTag(tagNode)
 
-	@staticmethod
-	def checkTag(tagNode, op=None, specific=False):
-		# checks if a node has a specific edTag
-		testList = cmds.listAttr(tagNode, string="edTag")
-
-		if testList:
-			return True
-		else:
-			return False
 
 	@staticmethod
 	def addTag(tagNode, tagName, tagContent=None):
-		# use string arrays(?) to store op that created tag as well as type
-		# better to store content of string as dictionary
-		if Op.checkTag(tagNode) == False:
-			Op.edTag(tagNode)
-
-		cmds.addAttr(tagNode, ln=tagName, dt="string")
-		if tagContent:
-			# tag content can be anything, keep track of it yourself
-			cmds.setAttr(tagNode + "." + tagName, tagContent, type="string")
+		return attr.addTag(tagNode, tagName, tagContent)
 
 	@staticmethod
 	def getTag(tagNode, tagName=None):
@@ -321,12 +312,21 @@ class Op(MayaReal):
 
 	def opTag(self, tagNode):
 		# add tag for the specific op
-		if self.opName:
-			#cmds.addAttr(tagNode, ln="opTag", dt="string", writable=True)
-			attr.addAttr(tagNode, attrName="opTag", attrType="string")
-			#cmds.setAttr(tagNode + ".opTag", self.opName, type="string")
+		attr.addAttr(tagNode, attrName="opTag", attrType="string")
+		try:
 			attr.setAttr(tagNode + ".opTag", self.opName)
+		except:
+			pass
 		attr.addTag(tagNode, "opUID", self.uuid)
+
+		# connect all created nodes to the input network node
+		if self.inputNetwork:
+			try:
+				# cmds.connectAttr(self.inputNetwork+".opTag",
+			     #                 tagNode+".opTag")
+				pass
+			except:
+				pass
 
 	def ECN(self, type, name="blankName", cleanup=False, *args):
 		# this is such a good idea
@@ -366,18 +366,16 @@ class Op(MayaReal):
 		searchDict = {"opUID" : self.uuid,
 		              "category" : "opIo",
 		              "role" : "input"}
-		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)[0]
-		print "inNetwork node is {}".format(node)
-		return AbsoluteNode(node)
+		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)
+		return None if not node else node[0]
 
 	@property
 	def outputNetwork(self):
 		searchDict = {"opUID" : self.uuid,
 		              "category" : "opIo",
 		              "role" : "output"}
-		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)[0]
-		print "outNetwork node is {}".format(node)
-		return AbsoluteNode(node)
+		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)
+		return None if not node else AbsoluteNode(node[0])
 
 
 	@staticmethod
@@ -491,6 +489,7 @@ class Op(MayaReal):
 
 		# add the real-facing component for the attrItem with the plug
 		i.plug = MayaAttrInterface(i, self)
+		print "made plug {}".format(i.plug)
 		# i.plug = plug
 
 		# set plug value if it's simple
@@ -501,10 +500,12 @@ class Op(MayaReal):
 	def connectInputPlug(attrItem):
 		"""connect previous network output to new network input
 		:param attrItem : AbstractAttr"""
+		print "input connections {}".format(attrItem.getConnectedAttrs())
 		if attrItem.getConnections():
-			prev = attrItem.getConnections()[0]
+			prev = attrItem.getConnectedAttrs()[0]
 			#if hasattr(prev, name="plug"):
-			test = getattr(prev, "plug", None)
+			test = getattr(prev, "plug")
+			print "test {}".format(test)
 			if test:
 				cmds.connectAttr(prev.plug, attrItem.plug, f=True)
 
@@ -512,23 +513,29 @@ class Op(MayaReal):
 	def connectOutputPlug(attrItem):
 		"""connect previous network output to new network input
 		:param attrItem : AbstractAttr"""
-		for i in attrItem.getConnections():
-			test = getattr(i, "plug", None)
+		#print "output connections {}".format(attrItem.getConnections())
+		for i in attrItem.getConnectedAttrs():
+			test = getattr(i, "plug")
+			print "test {}".format(test)
 			if test:
 				cmds.connectAttr(attrItem.plug, i, f=True)
 
 	def connectIoPlugs(self):
 		"""tries to connect attrItems on both sides of node"""
 		for i in self.inputRoot.getAllLeaves():
+			print "inputConnections {}".format(i.getConnectedAttrs())
 			try:
 				self.connectInputPlug(i)
-			except:
-				self.log("unable to connect attrItem " + i.name)
+			except Exception as e:
+				self.log("unable to connect attrItem " + i.name +
+				         "error {}".format(e))
 		for i in self.outputRoot.getAllLeaves():
+			print "outputConnections {}".format(i.getConnectedAttrs())
 			try:
 				self.connectOutputPlug(i)
-			except:
-				self.log("unable to connect attrItem " + i.name)
+			except Exception as e:
+				self.log("unable to connect attrItem " + i.name +
+				         "error {}".format(e))
 
 	# io
 	def searchData(self, infoName):
@@ -657,12 +664,18 @@ class Op(MayaReal):
 
 	def clearMayaRig(self):
 		"""clears all edRig items from maya scene - this method needs a home"""
-		cmds.file(new=True, f=True)
+		#cmds.file(new=True, f=True)
+		for i in scene.listTaggedNodes(searchNodes=scene.ls(),
+		                               searchTag="edTag"):
+			try:
+				cmds.delete(i)
+			except:
+				pass
 
 	def nodesFromScene(self):
 		"""list all nodes created by the op, called on instantiation
 		returns set"""
-		all = cmds.ls()
+		all = scene.ls()
 		new = {i for i in all if self.opName == self.getTag(i, "opTag")}
 		return new
 
