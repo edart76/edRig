@@ -156,6 +156,9 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs)
 		return parent + "." + attrName
 	return target+"."+attrName
 
+def getAttr(*args, **kwargs):
+	"""J U S T I N C A S E"""
+
 
 def makeAttrsFromDict(node, attrDict, parent=None):
 	"""creates compound hierarchies from a dict

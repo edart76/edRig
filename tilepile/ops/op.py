@@ -7,7 +7,7 @@ from edRig.tilepile.abstractnode import AbstractAttr
 import random, functools, pprint, copy
 from edRig.structures import ActionItem
 from edRig.pipeline import safeLoadModule
-from edRig.tilepile.real import MayaReal, MayaStack, MayaDelta
+from edRig.tilepile.real import MayaReal, MayaStack, MayaDelta, RealAttrInterface
 from edRig.tilepile.lib import GeneralExecutionManager
 from edRig.lib.python import debug, outerVars
 from edRig.layers.setups import InvokedNode
@@ -49,6 +49,19 @@ class OpExecutionManager(GeneralExecutionManager):
 			self.printTraceback(exc_type, exc_val, exc_tb)
 			pass
 
+class MayaAttrInterface(RealAttrInterface):
+	"""allows access between tesserae attrItems
+	and maya io network nodes and plugs"""
+
+	def getRealAttrComponent(self):
+		"""look up the network node and plug"""
+		plugName = self.attrItem.name
+		if self.attrItem.role == "input":
+			node = self.mainReal.inputNetwork
+		elif self.attrItem.role == "output":
+			node = self.mainReal.outputNetwork
+		return node + "." + plugName
+
 
 class Op(MayaReal):
 	# base class for "operations" executed by abstractGraph,
@@ -60,10 +73,13 @@ class Op(MayaReal):
 
 	currentOp = None # set by exec handler?
 
+	categories = ["opIo", "main"]
+	persistCategories = ["opIo"]
+
 	def tidy(*args, **kwargs):
 		# print "outer args are {}, {}".format(args, kwargs)
 		# direct arguments to decorator
-		category = kwargs.get("category")
+		category = kwargs.get("category", "main")
 		def midWrapper(*args, **kwargs):
 			# print "mid args are {}, {}".format(args, kwargs)
 			func = args[0]
@@ -82,6 +98,7 @@ class Op(MayaReal):
 				for i in after:
 					try:
 						self.opTag(i)
+						attr.addTag(i, "category", category)
 					finally:
 						pass
 
@@ -153,13 +170,6 @@ class Op(MayaReal):
 		#
 		# self.defineSettings()
 
-
-		# network nodes holding input and output plugs
-		# self.inputNetwork = None
-		# self.outputNetwork = None
-		# self.nodes = self.nodesFromScene() # set
-		# debug(self.inputNetwork)
-
 		#experimental
 		self.deltaStack = MayaStack()
 
@@ -197,9 +207,6 @@ class Op(MayaReal):
 		self.sync = self.abstract.sync
 		self.attrsChanged = self.abstract.attrsChanged
 		self.attrValueChanged = self.abstract.attrValueChanged
-
-
-
 		self.makeBaseActions()
 
 		# i would really like some meta way to supplant all op-level methods
@@ -238,104 +245,6 @@ class Op(MayaReal):
 		"""if we implement proper logging replace everything here"""
 		Env.log(message, **kwargs)
 
-	@property
-	def inputs(self):
-		#return {i.name : i for i in self.inputRoot.getAllChildren()}
-		if self.abstract:
-			return self.abstract.inputRoot.getAllChildren()
-		return self.inputRoot.getAllChildren()
-
-	@property
-	def outputs(self):
-		#return {i.name : i for i in self.outputRoot.getAllChildren()}
-		if self.abstract:
-			return self.abstract.outputRoot.getAllChildren()
-		return self.outputRoot.getAllChildren()
-
-
-	@staticmethod
-	def addAttr(parent=None, name=None, dataType=None,
-	            hType=None, desc="", default=None, attrItem=None,
-	            *args, **kwargs):
-		if attrItem:
-			print "adding attrItem {} directly to {}".format(attrItem.name, parent.name)
-			return parent.addChild(attrItem)
-		#print "base addAttr name is {}".format(name)
-		if parent.attrFromName(name=name):
-			print "attr {} already in {} children".format(
-				name, parent.name)
-			return parent.attrFromName(name)
-		return parent.addAttr(name=name, dataType=dataType, hType=hType,
-		                      desc=desc, default=default, *args, **kwargs)
-
-	def removeAttr(self, name, role="output"):
-		if role == "output":
-			attr = self.getOutput(name=name)
-		else:
-			attr = self.getInput(name=name)
-
-		attr.parent.removeAttr(name)
-		self.redraw = True
-		self.sync()
-
-
-	@staticmethod
-	def addAttrsFromDict(parent=None, fromDict=None):
-		pass
-		# for k, v in fromDict.iteritems():
-		# 	newAttr = None
-
-	def addInput(self, parent=None, name=None, dataType=None,
-	             hType="leaf", desc="", default=None, attrItem=None,
-	             *args, **kwargs):
-		parent = parent or self.inputRoot
-		self.redraw = True
-		return self.addAttr(parent=parent, name=name, dataType=dataType,
-		                    hType=hType, desc=desc, default=default,
-		                    attrItem=attrItem, *args, **kwargs)
-
-	def addOutput(self, parent=None, name=None, dataType=None,
-	              hType="leaf", desc="", default=None, attrItem=None,
-	              *args, **kwargs):
-		parent = self.outputRoot if not parent else parent
-		self.redraw = True
-		return self.addAttr(parent=parent, name=name, dataType=dataType,
-		                    hType=hType, desc=desc, default=default,
-		                    attrItem=attrItem, *args, **kwargs)
-
-	def getInput(self, name):
-		return self.inputRoot.attrFromName(name)
-
-	def searchInputs(self, match):
-		return [i for i in self.inputs if match in i.name]
-
-	def searchOutputs(self, match):
-		return [i for i in self.outputs if match in i.name]
-
-	def getOutput(self, name):
-		# print "getting output {}".format(name)
-		# print "current outputs are {}".format(self.outputs)
-		return self.outputRoot.attrFromName(name)
-
-	def getConnectedInputs(self):
-		inputs = self.inputRoot.getAllChildren()
-		return [i for i in inputs if i.getConnections()]
-
-	def getConnectedOutputs(self):
-		outputs = self.outputRoot.getAllChildren()
-		return [i for i in outputs if i.getConnections()]
-
-	def clearOutputs(self, search=""):
-		for i in self.outputs:
-			if search in i.name or not search:
-				self.removeAttr(i)
-		#self.refreshIo()
-		# do not automatically refresh, let ops call it individually
-
-	def makeAttrArray(self, archetype=None):
-		"""intended to be called as part of refreshIo
-		:param archetype: base attribute to copy from
-		:archetype is """
 
 	def defineAttrs(self):
 		"""override with op specifics"""
@@ -352,32 +261,6 @@ class Op(MayaReal):
 		later lower-class graph connections"""
 		node = AbsoluteNode(node)
 		self.addSetting(parent, entryName, value=node)
-
-
-	def refreshIo(self):
-		"""leftover garbage, now used just to call sync"""
-		pass
-
-	def connectableInputs(self):
-		self.log("op connectableInputs are {}".format(self.inputRoot.getAllConnectable()))
-		return self.inputRoot.getAllConnectable()
-
-	def interactibleInputs(self):
-		return self.inputRoot.getAllInteractible()
-
-	def connectableOutputs(self):
-		return self.outputRoot.getAllConnectable()
-
-	def substituteRoot(self, role="input", newAttr=None):
-		"""used to supplant op root attributes with abstract ones"""
-		if role == "input":
-			attr = self.inputRoot
-			vals = attr.serialise()
-			self.inputRoot = newAttr.fromDict(vals)
-		else:
-			attr = self.outputRoot
-			vals = attr.serialise()
-			self.outputRoot = newAttr.fromDict(vals)
 
 	# ever look at a node and think
 	# wtf are you
@@ -505,12 +388,13 @@ class Op(MayaReal):
 	def execute(self):
 		raise NotImplementedError()
 
-	def reset(self):
+	def reset(self, exclude=persistCategories):
 		"""as this rigging system should be purely additive,
 		just delete all associated nodes"""
 		for i in self.nodes:
 			if cmds.objExists(i):
-				cmds.delete(i)
+				if not attr.getAttr(i+".category") in exclude:
+					cmds.delete(i)
 
 	def beforeExecution(self):
 		"""create network nodes procedurally from attributes
@@ -525,11 +409,13 @@ class Op(MayaReal):
 			self.makeOpIoNodeAttrs(self.outputNetwork, i)
 
 		# now connect inputs to previous outputs
-		for i in self.inputRoot.getAllLeaves():
-			self.connectInputPlug(i)
+		# for i in self.inputRoot.getAllLeaves():
+		# 	self.connectInputPlug(i)
+		self.connectIoPlugs() # spam this all the time
 
 	def afterExecution(self):
 		"""immediately after exec"""
+		self.connectIoPlugs()
 		pass
 
 	def propagateOutputs(self):
@@ -602,8 +488,10 @@ class Op(MayaReal):
 			kwargs = i.extras or {}
 			plug = attr.addAttr(node, attrName=attrItem.name, attrType=dt,
 			                    parent=parentPlug, **kwargs)
-		# attr plug now points to network node
-		i.plug = plug
+
+		# add the real-facing component for the attrItem with the plug
+		i.plug = MayaAttrInterface(i, self)
+		# i.plug = plug
 
 		# set plug value if it's simple
 		if i.isSimple():
@@ -620,6 +508,27 @@ class Op(MayaReal):
 			if test:
 				cmds.connectAttr(prev.plug, attrItem.plug, f=True)
 
+	@staticmethod
+	def connectOutputPlug(attrItem):
+		"""connect previous network output to new network input
+		:param attrItem : AbstractAttr"""
+		for i in attrItem.getConnections():
+			test = getattr(i, "plug", None)
+			if test:
+				cmds.connectAttr(attrItem.plug, i, f=True)
+
+	def connectIoPlugs(self):
+		"""tries to connect attrItems on both sides of node"""
+		for i in self.inputRoot.getAllLeaves():
+			try:
+				self.connectInputPlug(i)
+			except:
+				self.log("unable to connect attrItem " + i.name)
+		for i in self.outputRoot.getAllLeaves():
+			try:
+				self.connectOutputPlug(i)
+			except:
+				self.log("unable to connect attrItem " + i.name)
 
 	# io
 	def searchData(self, infoName):
@@ -719,7 +628,7 @@ class Op(MayaReal):
 
 	def delete(self):
 		"""deletes op instance"""
-		self.reset()
+		self.reset(exclude=[])
 		del self
 
 	def showGuides(self):
