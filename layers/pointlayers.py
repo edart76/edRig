@@ -82,9 +82,12 @@ class ControlOp(PointLayerOp):
 
 	def execute(self):
 		count = self.settings["controlCount"].value
-		controlType = self.settings["controlType"].value
+		controlType = min(self.settings["controlType"].value, 1)
 		self.control = control.FkControl(self.opName, layers=count,
 		                                 controlType=controlType)
+
+		self.connectInputs()
+
 		self.remember("offset", "xform", self.control.uiOffset)
 		self.remember("ctrlShapes", "shape", self.control.shapes)
 
@@ -101,14 +104,23 @@ class ControlOp(PointLayerOp):
 		cmds.parent(self.control.first["ui"], self.control.uiRoot)
 		cmds.parent(self.control.uiOffset, self.control.first["ui"])
 
+	def connectInputs(self):
+		"""connect driving space to control
+		offset not necessary as we recall world transforms just after"""
+
+		# attr.con(self.getInput("driverSpace").plug,
+		#          self.control.uiRoot)
+		transform.decomposeMatrixPlug(self.getInput("driverSpace").plug(),
+		                              self.control.uiRoot)
+
 	def connectOutputs(self):
 		"""connect plugs"""
 		cmds.connectAttr(self.control.uiRoot+".message",
-		                 self.getOutput("controlUi").plug)
+		                 self.getOutput("controlUi").plug())
 		cmds.connectAttr(self.control.outputPlug,
-		                 self.getOutput("controlOutput").plug)
+		                 self.getOutput("controlOutput").plug())
 		cmds.connectAttr(self.control.worldOutputPlug,
-		                 self.getOutput("controlOutputWorld").plug)
+		                 self.getOutput("controlOutputWorld").plug())
 
 
 class IkOp(PointLayerOp):

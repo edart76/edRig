@@ -312,6 +312,12 @@ def decomposeMatrixPlug(plug, target=None):
 				                 target+"."+i+n)
 	return decomp
 
+def multMatrixPlugs(plugs, name="matMult"):
+	"""multiplies matrix plugs in given sequence"""
+	node = ECA("multMatrix", n=name)
+	for i, val in enumerate(plugs):
+		cmds.connectAttr(val, node+".matrixIn[{}]".format(i))
+	return node + ".matrixSum"
 
 
 

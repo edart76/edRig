@@ -694,6 +694,11 @@ class AbsoluteNode(str):
 		test = cmds.listRelatives(self.node, children=True)
 		return [AbsoluteNode(i) for i in test] if test else []
 
+	def parentTo(self, targetParent, *args, **kwargs):
+		"""reparents node under target dag"""
+		if not self.isDag():
+			return
+		cmds.parent(self.node, targetParent, *args, **kwargs)
 
 
 	def isTransform(self):
@@ -713,6 +718,9 @@ class AbsoluteNode(str):
 			return True
 		return False
 
+	def hide(self):
+		if self.isDag():
+			cmds.hide(self.node)
 
 	def delete(self, full=True):
 		"""deletes maya node, and by default deletes entire openmaya framework around it
@@ -743,8 +751,9 @@ class AbsoluteNode(str):
 
 
 
-def ECA(type, name, colour=None, *args, **kwargs):
+def ECA(type, name="", colour=None, *args, **kwargs):
 	# node = cmds.createNode(type, n=name)
+	name = kwargs.get("n") or name
 	node = ECN(type, name, *args, **kwargs)
 	return AbsoluteNode(node)
 

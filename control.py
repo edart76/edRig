@@ -74,13 +74,12 @@ class FkControl(Control):
 	# base for all controls whose physical location doesn't matter
 	"""control dag structure is this: # contributes to output
 	entry: organisation
-		spareWorldInputA # first in output
 		space grp:
 			control grp:
 				inverse grp: (only if control is marked as static
-					ui control: # always last in output
-						world output # separate world output
-			spareControlInputA # mid in output
+					ui controlA: # always last in output
+						ui controlB : # only if necessary for offsets
+					world output # separate world output, in same space
 		localOutput: locator for use as point datatype
 			"""
 
@@ -94,7 +93,7 @@ class FkControl(Control):
 		self.controlType = controlType
 		self.name = name
 		self.spareInputs = {} # name, node
-		self.layers = [{"local" : None, "ui" : None}] * layers # absoluteNodes
+		self.layers = [] * layers # absoluteNodes
 		self.makeHierarchy()
 		if layers:
 			self.connectProxies()
@@ -103,39 +102,43 @@ class FkControl(Control):
 	def makeHierarchy(self):
 		"""creates uniform hierarchy, according to plan following class"""
 		# main and local
-		self.root = ECA("transform", name=self.name+"_controlRoot")
+		self.root = ECA("transform", name=self.name+"_control")
 		self.localRoot = ECA("transform", name=self.name+"_localRoot")
 		self.localOffset = ECA("transform",
 		                       name=self.name+"_localOffset", parent=self.localRoot)
-		print "local offset " + self.localOffset
+		#print "local offset " + self.localOffset
 		self.localOutput = ECA("locator",
 		                       name=self.name+"_localOutput", parent=self.localOffset)
 
 		# ui and world
 		self.uiRoot = ECA("transform",
 		                       name=self.name+"_uiRoot", parent=self.root)
-		self.uiFollow = ECA("transform",
-		                       name=self.name+"_uiFollow", parent=self.uiRoot)
+		# self.uiFollow = ECA("transform",
+		#                        name=self.name+"_uiFollow", parent=self.uiRoot)
 		self.uiOffset = ECA("transform",
-		                       name=self.name+"_uiOffset", parent=self.uiFollow)
+		                       name=self.name+"_uiOffset", parent=self.uiRoot)
+
+		transform.connectTransformAttrs(self.uiOffset, self.localOffset)
 
 		# layers
 		for i, val in enumerate(self.layers):
 			letter = string.ascii_uppercase[i]
-			val["local"] = ECA("transform",
-			                   name=self.name + "_localComponent"+letter,
-			                   parent=self.root)
-			parent = self.uiOffset if i == 0 else self.layers[i-1]["ui"]
-			val["ui"] = self.makeUiElement(name=self.name+"_"+letter,
+			# val["local"] = ECA("transform",
+			#                    name=self.name + "_localComponent"+letter,
+			#                    parent=self.root)
+			parent = self.uiOffset if i == 0 else self.layers[i-1]
+			self.layers[i] = self.makeUiElement(name=self.name+"_"+letter,
 			                parent=parent)
 
-			attr.makeStringConnection(self.uiRoot, val["ui"],
+			attr.makeStringConnection(self.uiRoot, val,
 			                          startName="ui"+letter,
 			                          endName="uiRoot")
 
 		self.worldOutput = ECA("locator",
 		                        name=self.name+"_worldOutput",
-		                        parent=self.layers[-1]["ui"])
+		                        parent=self.uiOffset)
+		self.worldOutput.hide()
+		self.localOutput.hide()
 
 	def connectProxies(self):
 		"""connect up proxy attributes from ui to local components
@@ -151,20 +154,22 @@ class FkControl(Control):
 		is worked out
 		there will be no parallelism with this yet"""
 
-		for i in self.layers:
-			uiPlugs = attr.getTransformPlugs(i["ui"])
-			localPlugs = attr.getTransformPlugs(i["local"])
-			for n, k in zip(uiPlugs, localPlugs):
-				attr.con(n, k)
+		# for i in self.layers:
+		# 	uiPlugs = attr.getTransformPlugs(i)
+		# 	localPlugs = attr.getTransformPlugs(i["local"])
+		# 	for n, k in zip(uiPlugs, localPlugs):
+		# 		attr.con(n, k)
+		pass
 
 	def connectOutput(self):
 		"""multiply local matrices and decompose to output
 		keeping it uniform with matrix decomp even if unnecessary - if we ever
 		get to the point of this being a bottleneck, we're doing alright"""
-		matMult = ECA("multMatrix", name=self.name+"_localMult")
-		for i, val in enumerate(self.layers):
-			cmds.connectAttr(val["ui"]+".matrix", matMult+".matrixIn[{}]".format(i))
-		transform.decomposeMatrixPlug(matMult+".matrixSum", self.localOutput)
+		plugs = [i + ".matrix" for i in self.layers]
+		layerMult = transform.multMatrixPlugs(plugs,
+		                                      name=self.name+"_layerMult")
+		transform.decomposeMatrixPlug(layerMult, self.worldOutput)
+		transform.connectTransformAttrs(self.worldOutput, self.localOutput)
 
 	def makeUiElement(self, name="test", parent=None):
 		"""make a proper visual representation at origin"""
@@ -201,7 +206,7 @@ class FkControl(Control):
 	@property
 	def shapes(self):
 		"""returns list of ui shapes"""
-		return [i["ui"].shape for i in self.layers]
+		return [i.shape for i in self.layers]
 	@property
 	def first(self):
 		"""returns first layer"""

@@ -156,7 +156,12 @@ class RealAttrInterface(object):
 		self.attrItem = attrItem
 		self.mainReal = mainReal
 
+	def __call__(self, *args, **kwargs):
+		return self.getRealAttrComponent()
+
 	def __repr__(self):
+		return self.__str__()
+	def __str__(self):
 		return self.getRealAttrComponent()
 
 	def getRealAttrComponent(self):

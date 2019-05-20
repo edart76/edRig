@@ -36,10 +36,11 @@ class OpExecutionManager(GeneralExecutionManager):
 		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()]
 		newDags = [i for i in newDags if i not in self.excludeList]
 		#print "{}".format(self.op.setupGrp)
-		print "new {}".format(new)
-		print "newDags {}".format(newDags)
-
-		print "opgrp is {}".format(self.op.opGrp)
+		# print "new {}".format(new)
+		# print "newDags {}".format(newDags)
+		#
+		# print "opgrp is {}".format(self.op.opGrp)
+		self.op.opGrp
 		for i in new:
 			#print "i is {}".format(i)
 			#print "i isDag {}".format(i.isDag())
@@ -75,6 +76,8 @@ class MayaAttrInterface(RealAttrInterface):
 			node = self.mainReal.outputNetwork
 		return node + "." + plugName
 
+	# def __add__(self, other):
+	# 	return self.__str__().__add__(other)
 
 class Op(MayaReal):
 	# base class for "operations" executed by abstractGraph,
@@ -489,7 +492,7 @@ class Op(MayaReal):
 
 		# add the real-facing component for the attrItem with the plug
 		i.plug = MayaAttrInterface(i, self)
-		print "made plug {}".format(i.plug)
+		#print "made plug {}".format(i.plug)
 		# i.plug = plug
 
 		# set plug value if it's simple
@@ -500,7 +503,7 @@ class Op(MayaReal):
 	def connectInputPlug(attrItem):
 		"""connect previous network output to new network input
 		:param attrItem : AbstractAttr"""
-		print "input connections {}".format(attrItem.getConnectedAttrs())
+		#print "input connections {}".format(attrItem.getConnectedAttrs())
 		if attrItem.getConnections():
 			prev = attrItem.getConnectedAttrs()[0]
 			#if hasattr(prev, name="plug"):
@@ -523,14 +526,14 @@ class Op(MayaReal):
 	def connectIoPlugs(self):
 		"""tries to connect attrItems on both sides of node"""
 		for i in self.inputRoot.getAllLeaves():
-			print "inputConnections {}".format(i.getConnectedAttrs())
+			#print "inputConnections {}".format(i.getConnectedAttrs())
 			try:
 				self.connectInputPlug(i)
 			except Exception as e:
 				self.log("unable to connect attrItem " + i.name +
 				         "error {}".format(e))
 		for i in self.outputRoot.getAllLeaves():
-			print "outputConnections {}".format(i.getConnectedAttrs())
+			#print "outputConnections {}".format(i.getConnectedAttrs())
 			try:
 				self.connectOutputPlug(i)
 			except Exception as e:
