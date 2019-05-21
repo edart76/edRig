@@ -76,14 +76,18 @@ class ControlOp(PointLayerOp):
 
 	def defineSettings(self):
 		"""set options for control type"""
-		self.addSetting(entryName="controlType", options=["curve", "surface"],
+		self.addSetting(entryName="controlType",
+		                options=["curve", "surface", "sliding"],
 		                value="curve")
-		self.addSetting(entryName="controlCount", value=1)
+		self.addSetting(entryName="controlCount", value=1),
+		self.addSetting(entryName="controlColour",
+		                value=(0, 0, 256))
 
 	def execute(self):
-		count = self.settings["controlCount"].value
-		controlType = min(self.settings["controlType"].value, 1)
-		self.control = control.FkControl(self.opName, layers=count,
+		count = min(self.settings["controlCount"].value, 1)
+		controlType = self.settings["controlType"].value
+
+		self.control = control.FkControl(name=self.opName, layers=count,
 		                                 controlType=controlType)
 
 		self.connectInputs()
@@ -92,6 +96,9 @@ class ControlOp(PointLayerOp):
 		self.remember("ctrlShapes", "shape", self.control.shapes)
 
 		self.connectOutputs()
+
+		# test
+		self.log("ctrl parent {}".format(self.control.first.parent))
 		"""
 		self.remember("joints", "xform", self.joints, jointMode=True)
 		self.remember("joints", "attr", self.joints, transform=False)
@@ -100,9 +107,10 @@ class ControlOp(PointLayerOp):
 
 	def showGuides(self):
 		"""connects first ui ctrl to uiOffset group of control"""
-		transform.zeroTransforms(self.control.first["ui"])
-		cmds.parent(self.control.first["ui"], self.control.uiRoot)
-		cmds.parent(self.control.uiOffset, self.control.first["ui"])
+		#transform.zeroTransforms(self.control.first)
+		cmds.parent(self.control.first, self.control.uiRoot)
+		cmds.parent(self.control.uiOffset, self.control.first, r=True)
+		self.control.markAsGuides()
 
 	def connectInputs(self):
 		"""connect driving space to control

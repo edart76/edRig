@@ -4,6 +4,12 @@ from edRig import core
 from maya import cmds
 import maya.api.OpenMaya as om
 
+dimTypes = {
+	"0D" : ("matrix",),
+	"1D" : ("nurbsCurve", "bezierCurve"),
+	"2D" : ("nurbsSurface", "mesh")
+}
+
 def getMPlug(plugName):
 	sel = om.MSelectionList()
 	sel.add(plugName)

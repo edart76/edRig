@@ -173,6 +173,7 @@ class Memory(object):
 	def _gatherInfo(self, infoType, target=None, **kwargs):
 		"""implements specific methods of gathering information from scene
 		could have done some fancy metamethod but i am but a basic boi"""
+		target = AbsoluteNode(target)
 		if infoType not in self.infoKinds:
 			raise RuntimeError("cannot gather info of type {}".format(infoType))
 		if not cmds.objExists(target):
@@ -661,7 +662,7 @@ class InvokedNodeDescriptor(object):
 	def __get__(self, instance, owner):
 		test = cmds.ls(self.name)
 		if not test:
-			node = ECA(self.nodeType, self.name)
+			node = ECA(self.nodeType, n=self.name)
 		else:
 			node = test[0]
 		if cmds.objExists(self.parent) and node.isDag():

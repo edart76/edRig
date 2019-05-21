@@ -103,12 +103,16 @@ class AbstractValueItem(QtGui.QStandardItem):
 	"""overly specific but it's fine"""
 	def __init__(self, tree):
 		self.tree = tree
-		super(AbstractValueItem, self).__init__(tree.value)
+		self.trueType = type(self.tree.value)
+		# special treatment for illegal types, hacky for now
+		# if isinstance(tree, (tuple,)):
+		# 	self.tree = str(self.tree)
+		super(AbstractValueItem, self).__init__(str(tree.value))
 	def setData(self, value, *args, **kwargs):
 		"""qt item objects manipulate trees directly, so
 		anything already connected to the tree object signals
 		works properly"""
-		self.tree.value = value
+		self.tree.value = self.trueType(value)
 		super(AbstractValueItem, self).setData(value, *args, **kwargs)
 
 

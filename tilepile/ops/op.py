@@ -2,7 +2,7 @@
 from maya import cmds
 import maya.api.OpenMaya as om
 from edRig.core import ECA, ECN, AbsoluteNode, shortUUID, invokeNode
-from edRig import Env, attrio, scene, attr
+from edRig import Env, attrio, scene, attr, transform
 from edRig.tilepile.abstractnode import AbstractAttr
 import random, functools, pprint, copy
 from edRig.structures import ActionItem
@@ -33,7 +33,8 @@ class OpExecutionManager(GeneralExecutionManager):
 		self.op.afterExecution()
 		self.afterSet = set(scene.listAllNodes())
 		new = self.afterSet - self.beforeSet
-		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()]
+		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()
+		           and not n.parent]
 		newDags = [i for i in newDags if i not in self.excludeList]
 		#print "{}".format(self.op.setupGrp)
 		# print "new {}".format(new)
@@ -510,7 +511,7 @@ class Op(MayaReal):
 			test = getattr(prev, "plug")
 			print "test {}".format(test)
 			if test:
-				cmds.connectAttr(prev.plug, attrItem.plug, f=True)
+				cmds.connectAttr(prev.plug(), attrItem.plug(), f=True)
 
 	@staticmethod
 	def connectOutputPlug(attrItem):
@@ -521,7 +522,7 @@ class Op(MayaReal):
 			test = getattr(i, "plug")
 			print "test {}".format(test)
 			if test:
-				cmds.connectAttr(attrItem.plug, i, f=True)
+				cmds.connectAttr(attrItem.plug(), i.plug(), f=True)
 
 	def connectIoPlugs(self):
 		"""tries to connect attrItems on both sides of node"""
@@ -702,3 +703,27 @@ class Op(MayaReal):
 	def spaceGrp(self): # moved from datatypes for sanity reasons
 		return self.invokeNode(name=self.opName+"_space", type="transform",
 		                       parent=self.opGrp, func=self.ECAsimple)
+
+	@staticmethod
+	def plugFromAttr(attr):
+		"""gets plug from either attrItem or attrInterface"""
+		if isinstance(attr, basestring):
+			result = attr
+		elif getattr(attr, "plug"):
+			result = attr.plug()
+		else:
+			result = attr()
+		return result
+
+	#### common maya helper methods
+	def constrain0DToInput(self, master, slave, offset=True):
+		"""common method to specify constraining a transform
+		to another transform, curve or surface"""
+		master = self.plugFromAttr(master)
+		if attr.plugType(master) in attr.dimTypes["0D"]:
+			transform.matrixConstraint(master, slave, offset=offset)
+
+
+
+
+

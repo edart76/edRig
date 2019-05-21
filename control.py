@@ -85,7 +85,7 @@ class FkControl(Control):
 
 	types = ("curve", "surface")
 
-	def __init__(self, name, layers=1, controlType="curve"):
+	def __init__(self, name=None, layers=1, controlType="curve"):
 		#super(FkControl, self).__init__(name)
 		if not controlType in self.types:
 			print "control type {} is invalid".format(controlType)
@@ -93,7 +93,7 @@ class FkControl(Control):
 		self.controlType = controlType
 		self.name = name
 		self.spareInputs = {} # name, node
-		self.layers = [] * layers # absoluteNodes
+		self.layers = [None] * layers # absoluteNodes
 		self.makeHierarchy()
 		if layers:
 			self.connectProxies()
@@ -123,14 +123,16 @@ class FkControl(Control):
 		# layers
 		for i, val in enumerate(self.layers):
 			letter = string.ascii_uppercase[i]
-			# val["local"] = ECA("transform",
-			#                    name=self.name + "_localComponent"+letter,
-			#                    parent=self.root)
+			if i != 0:
+				controlName = self.name + "_" + letter
+			else:
+				controlName = self.name
 			parent = self.uiOffset if i == 0 else self.layers[i-1]
-			self.layers[i] = self.makeUiElement(name=self.name+"_"+letter,
+			print "outer parent {}".format(parent)
+			self.layers[i] = self.makeUiElement(name=controlName,
 			                parent=parent)
 
-			attr.makeStringConnection(self.uiRoot, val,
+			attr.makeStringConnection(self.uiRoot, self.layers[i],
 			                          startName="ui"+letter,
 			                          endName="uiRoot")
 
@@ -140,25 +142,17 @@ class FkControl(Control):
 		self.worldOutput.hide()
 		self.localOutput.hide()
 
+		print "ctrl parent is {}".format(self.first.parent)
+
 	def connectProxies(self):
 		"""connect up proxy attributes from ui to local components
 		if proxies don't work, move to more advanced ways like blendDevices
 		and managing keys directly"""
-		# for i in self.layers:
-		# 	uiPlugs = attr.getTransformPlugs(i["ui"])
-		# 	localPlugs = attr.getTransformPlugs(i["local"])
-		# 	for n, k in zip(uiPlugs, localPlugs):
-		# 		newAttr = ".".join(n.split(".")[1:])
-		# 		cmds.addAttr(i["ui"], ln=newAttr, proxy=k)
+
 		"""imperative to do more here, this is just a stopgap until a callback system
 		is worked out
 		there will be no parallelism with this yet"""
 
-		# for i in self.layers:
-		# 	uiPlugs = attr.getTransformPlugs(i)
-		# 	localPlugs = attr.getTransformPlugs(i["local"])
-		# 	for n, k in zip(uiPlugs, localPlugs):
-		# 		attr.con(n, k)
 		pass
 
 	def connectOutput(self):
@@ -175,6 +169,8 @@ class FkControl(Control):
 		"""make a proper visual representation at origin"""
 		# for now just a circle
 		ctrl = self.makeShape(name)
+		print "ctrl {}".format(ctrl)
+		print "parent {}".format(parent)
 		if parent:
 			cmds.parent(ctrl, parent)
 		return ctrl
@@ -191,6 +187,10 @@ class FkControl(Control):
 		else:
 			ctrl = cmds.rename(ctrl, name)
 		return AbsoluteNode(ctrl)
+
+	def markAsGuides(self):
+		"""turns everything bright yellow"""
+		pass
 
 
 	@property
@@ -216,12 +216,10 @@ class FkControl(Control):
 
 ctrlName_controlRoot
 | - ctrlName_localOffset
-|   | - ctrlName_localComponentA    | ui drives these directly with proxy attributes
-|   | - ctrlName_localComponentB    | local xforms multiplied to drive output
 |   | - ctrlName_localOutput
 |
-| - ctrlName_uiHome         | passes message attribute as marker back to follow group
-    | - ctrlName_uiFollow       | constrained to whatever
+| - ctrlName_uiRoot         | passes message attribute as marker back to follow group
+    # | - ctrlName_uiFollow       | constrained to whatever
         | - ctrlName_uiOffset       | static offset group, same as local
             | - ctrlName_A              | visible ui controls
                 | - ctrlName_B          |
@@ -241,4 +239,10 @@ while the visual component need only follow along with the end.
 
 contemplated proxy stuff to avoid backwards flow - HOPEFULLY that won't be necessary.
 for now literally connect transform attributes from visual to real
+
+of course because maya is amazing, even local transforms are not computed until
+the object's world position is known.
+woooooooooooooooooooooooo
+
+
 """

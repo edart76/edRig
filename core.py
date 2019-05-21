@@ -596,12 +596,16 @@ class AbsoluteNode(str):
 		elif cls.MObject.hasFn(4):  # dependency
 			cls.refreshPath = cls.returnDepNode
 
-	def __init__(self, *args, **kwargs):
-		super(AbsoluteNode, self).__init__(*args, **kwargs)
-
-		pass
+	# def __init__(self, *args, **kwargs):
+	# 	super(AbsoluteNode, self).__init__(*args, **kwargs)
+	#
+	# 	pass
 
 	def __str__(self):
+		# if self.MObject and self.MObject.isNull():
+		# 	self.node = self.MFnDependency.absoluteName()
+		# 	print "absoluteNode {} is null".format(self.node)
+		# 	return self.node
 		try:
 			self.refreshPath()
 			if isinstance(self.node, list):
@@ -612,6 +616,10 @@ class AbsoluteNode(str):
 
 	def __repr__(self):
 		return self.__str__()
+
+	def __call__(self, *args, **kwargs):
+		self.refreshPath()
+		return self
 
 	def refreshDagPath(self):
 		self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
@@ -675,7 +683,7 @@ class AbsoluteNode(str):
 		if self.isShape():
 			return self
 		else:
-			return AbsoluteNode(shapeFrom(self.node))
+			return AbsoluteNode(shapeFrom(self))
 
 	@property
 	def transform(self):
@@ -686,19 +694,19 @@ class AbsoluteNode(str):
 
 	@property
 	def parent(self):
-		test = cmds.listRelatives(self.node, parent=True)
+		test = cmds.listRelatives(self, parent=True)
 		return AbsoluteNode(test[0]) if test else None
 
 	@property
 	def children(self):
-		test = cmds.listRelatives(self.node, children=True)
+		test = cmds.listRelatives(self, children=True)
 		return [AbsoluteNode(i) for i in test] if test else []
 
 	def parentTo(self, targetParent, *args, **kwargs):
 		"""reparents node under target dag"""
 		if not self.isDag():
 			return
-		cmds.parent(self.node, targetParent, *args, **kwargs)
+		cmds.parent(self, targetParent, *args, **kwargs)
 
 
 	def isTransform(self):
@@ -720,11 +728,12 @@ class AbsoluteNode(str):
 
 	def hide(self):
 		if self.isDag():
-			cmds.hide(self.node)
+			cmds.hide(self)
 
 	def delete(self, full=True):
 		"""deletes maya node, and by default deletes entire openmaya framework around it
 		tilepile is very unstable, and i think this might be why"""
+		self
 		name = self.node
 		self.MObject = None
 

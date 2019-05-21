@@ -231,8 +231,8 @@ def matrixConstraint(driver, driven, offset=True, translate=True, rotate=True,
 	"""i swear to god i had this before i went to framestore"""
 	decomp = cmds.createNode("decomposeMatrix",
 							 n="matConst_{}_{}_decomp".format(driver, driven))
-	mult = cmds.createNode("multMatrix",
-	                       n="matConst_{}_{}_mult".format(driver, driven))
+	# mult = cmds.createNode("multMatrix",
+	#                        n="matConst_{}_{}_mult".format(driver, driven))
 
 	if offset:
 		driverMat = WorldMMatrixFrom(driver)
