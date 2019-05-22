@@ -3,11 +3,11 @@
 # right is tree view of instances contained in selected
 # get lists, lookup, new instance and master updates working
 # then allow splitting of instances from the tree view
-from PySide2 import QtGui, QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore
 import shiboken2
 import maya.OpenMayaUI as omui
-from edRig.instancemaster.model import SceneInstanceModel
-from edRig.tilepile.ui2.lib import ContextMenu, MyDockingUI, dock_window
+from edRig.tools.instancemaster.model import SceneInstanceModel
+from edRig.tilepile.ui2.lib import ContextMenu
 from edRig.structures import ActionItem
 
 def show():
