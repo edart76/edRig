@@ -6,8 +6,8 @@ from edRig.layers import base
 from maya import cmds
 import maya.api.OpenMaya as om
 from collections import OrderedDict
-from edRig.core import invokeNode, shortUUID, randomWord
-from edRig.node import AbsoluteNode
+from edRig.core import shortUUID, randomWord
+from edRig.node import AbsoluteNode, invokeNode
 from edRig.tilepile.ops.op import Op
 from edRig.layers import Env
 

@@ -1,8 +1,8 @@
 # base op
 from maya import cmds
 import maya.api.OpenMaya as om
-from edRig.core import ECN, shortUUID, invokeNode
-from edRig.node import AbsoluteNode, ECA
+from edRig.core import ECN, shortUUID
+from edRig.node import AbsoluteNode, ECA, invokeNode
 from edRig import Env, attrio, scene, attr, transform
 from edRig.tilepile.abstractnode import AbstractAttr
 import random, functools, pprint, copy
