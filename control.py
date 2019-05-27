@@ -1,6 +1,7 @@
 # define all the pretty colours, and how to saving them
 import edRig.core as core
-from edRig.core import ECN, ECA, con, AbsoluteNode, invokeNode
+from edRig.core import ECN, con, invokeNode
+from edRig.node import AbsoluteNode, ECA
 from edRig import attr, transform, pipeline
 
 import maya.cmds as cmds

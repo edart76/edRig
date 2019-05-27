@@ -2,7 +2,7 @@
 import pprint
 from maya import cmds, mel
 import maya.api.OpenMaya as om
-from edRig.core import AbsoluteNode, ECA
+from edRig.node import AbsoluteNode, ECA
 from edRig import curve, COMMON_PATH, pipeline, attr # lol
 
 def exportShapeToTempFile(target):

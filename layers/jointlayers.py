@@ -1,4 +1,5 @@
 # layers working with transforms, hierarchy, point data, joints
+import edRig.node
 from edRig.core import ECN, con
 from edRig import core, transform, attrio, control, curve
 from maya import cmds
@@ -274,8 +275,8 @@ class JointCurveOp(SpookyLayerOp):
 		linearShape = linData["shape"]
 
 		# rebuild in a way that is exactly reproducible every time
-		self.mainCurve = core.AbsoluteNode(cmds.rebuildCurve(linearShape, ch=False, degree=curveDeg,
-		                               rebuildType=0, fitRebuild=True)[0])
+		self.mainCurve = edRig.node.AbsoluteNode(cmds.rebuildCurve(linearShape, ch=False, degree=curveDeg,
+		                                                           rebuildType=0, fitRebuild=True)[0])
 		#self.out1D.setActive(self.mainCurve)
 
 		# now create upCurve
@@ -286,8 +287,8 @@ class JointCurveOp(SpookyLayerOp):
 				mat, point=(1,0,0), length=1))
 		#self.log("upPoints are {}".format(upPoints))
 		upData = curve.curveFromCvs(upPoints, deg=1, name=self.prefix+"_upCrv")
-		self.upCurve = core.AbsoluteNode(cmds.rebuildCurve(upData["shape"], ch=False, degree=upCurveDeg,
-		                               rebuildType=0, fitRebuild=True)[0])
+		self.upCurve = edRig.node.AbsoluteNode(cmds.rebuildCurve(upData["shape"], ch=False, degree=upCurveDeg,
+		                                                         rebuildType=0, fitRebuild=True)[0])
 		cmds.parent([self.mainCurve, self.upCurve], self.spaceGrp)
 
 		pass

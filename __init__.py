@@ -1,6 +1,8 @@
 from edRig.structures import EnvironmentSettings
 import sys
 
+from edRig.node import AbsoluteNode, ECA
+
 sys.dont_write_bytecode = True
 ROOT_PATH = "F:" + "/" + "all projects desktop"
 COMMON_PATH = "F:" + "/" + "all projects desktop/common"

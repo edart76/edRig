@@ -1,0 +1,30 @@
+from __future__ import print_function
+from maya import cmds
+from edRig import deformer, AbsoluteNode, ECA
+
+def addSelectedToDeformer(sel):
+	"""check through selection to see if there are deformers
+	if not get deformer in first geo history and use that"""
+	targetDeformer = None
+	sel = [AbsoluteNode(i)for i in sel]
+	sel = [i.shape for i in sel if i.isDag()]
+	print("sel {}".format(sel))
+	if not sel:
+		print("nothing selected")
+		return
+	selDeformers = [i for i in sel if deformer.isDeformer(i)]
+	print("selDeformers {}".format(selDeformers))
+	if selDeformers:
+		targetDeformer = selDeformers
+	else:
+		for i in sel:
+			targetDeformer = deformer.getDeformers(i)
+			print("i getDeformer {}".format(targetDeformer))
+			if targetDeformer:
+				break
+	if not targetDeformer:
+		print("no deformer found")
+		return
+	targetDeformer = targetDeformer[0]
+	for i in [n for n in sel if not deformer.isDeformer(n)]:
+		deformer.addToDeformer(i, targetDeformer)

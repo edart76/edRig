@@ -2,7 +2,8 @@
 from maya import cmds
 import maya.api.OpenMaya as om
 from edRig import attr, transform
-from edRig.core import AbsoluteNode, ECA, invokeNode
+from edRig.core import invokeNode
+from edRig.node import AbsoluteNode, ECA
 from PySide2 import QtCore
 from edRig.layers.setups import InvokedNode
 

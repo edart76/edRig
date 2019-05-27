@@ -1,20 +1,73 @@
 # fucnctions for renumbering mesh points, getting weights,
 # interfacing between weights and maps etc
 # additionally for working with nurbs shapes
-from edRig import core, attr, transform
-from edRig.core import AbsoluteNode, ECA
+from edRig import core, attr, transform, naming
+from edRig.node import AbsoluteNode, ECA
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
 from maya import cmds
-
-
 
 def getConnectedDeformers(target):
 	"""gets all chained deformers since the previous shape node"""
 	shape = core.shapeFrom(target)
 
+def getLiveShapeLayer(target, local=True):
+	"""creates new shape node with direct mesh connection to master"""
+	newName = naming.incrementName(target)
+	newShape = ECA("mesh", newName)
+	# cmds.parent(newShape, s=True)
+	meshAttr = "outMesh" if local else "worldMesh[0]"
+	cmds.connectAttr(target+"."+meshAttr, newShape+".inMesh")
+	return newShape
+
+
 def getMeshInfo(target):
 	"""saves mesh vertex positions and connections to data"""
+	fn = AbsoluteNode(target).shapeFn
+
+	connectList = []
+	countList = []
+	for i in range(fn.numPolygons):
+		connects = fn.getPolygonVertices(i) # int array
+		countList.append(len(connects))
+		connectList += [n for n in connects]
+
+	meshInfo = {
+		"vertices": [(i.x, i.y, i.z) for i in fn.getPoints()],
+		"polygonCounts" : countList,
+		"polygonConnects" : connectList,
+	}
+	# tackle UVs when we need to
+	return meshInfo
+
+
+def setMeshInfo(target, parent, info):
+	"""regenerate a mesh from stored info"""
+
+	"""create params:
+	vertices - list of MPoints of vertex positions
+	polygonCounts - sequence of ints - one per polygon, showing number of verts
+	polygonConnects - Indices into the sequence of vertices, 
+		mapping them onto the individual polygons. 
+		This sequence is partitioned according to the polygonCounts. 
+		So if the counts were [3, 4] then the first 3 elements 
+		of polygonConnects would be the indices for the first polygon's 
+		vertices and the next 4 elements would be the indices for the 
+		second polygon's vertices.
+	uValues - sequence of floats of indices
+	vValues - same
+	parent - MObject
+	"""
+	parent = AbsoluteNode(parent).MObject
+	meshObj = om.MFnMesh().create(
+		vertices=info["vertices"],
+		polygonCounts=info["polygonCounts"],
+		polygonConnects=info["polygonConnects"]
+	)
+	target.setMObject(meshObj)
+	return meshObj
+
+
 
 def getWeights(targetMesh, targetDeformer, attr):
 	"""gets normal weights"""

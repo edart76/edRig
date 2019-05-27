@@ -3,10 +3,11 @@
 # goal is to have a "magic button" akin to Framestore's
 # data storage
 #from collections import MutableMapping
+import edRig.node
 from edRig.structures import SafeDict, AttrItem
 
 from edRig import core, attrio, mesh, curve, surface
-from edRig.core import AbsoluteNode, ECA
+from edRig.node import AbsoluteNode, ECA
 #from edRig.tilepile.ops.op import Op
 from edRig.layers import Env
 import copy
@@ -108,7 +109,7 @@ class Memory(object):
 			self._storage[infoName][infoType] = gatheredGoss
 		# always set node regardless to ensure info is relevant in scene
 		# self.setNode(infoName, core.AbsoluteNode(node))
-		self._storage[infoName]["nodes"] = [core.AbsoluteNode(i) for i in nodes]
+		self._storage[infoName]["nodes"] = [edRig.node.AbsoluteNode(i) for i in nodes]
 		#print ""
 
 
@@ -183,7 +184,7 @@ class Memory(object):
 		print "GATHERING GOSS"
 
 		returnDict = {}
-		target = core.AbsoluteNode(target)  # speed
+		target = edRig.node.AbsoluteNode(target)  # speed
 		attrList = []
 		if infoType == "attr":
 			# gather dict of attribute names and values
@@ -294,11 +295,11 @@ class Memory(object):
 
 	def restoreAbsoluteNodes(self):
 		"""restore strings to absNodes, assuming the same names exist"""
-		self.nodes = [core.AbsoluteNode(i) for i in self.nodes]
+		self.nodes = [edRig.node.AbsoluteNode(i) for i in self.nodes]
 		for k, v in self._storage.iteritems():
 			print "k is {}, v is {}, v keys are {}".format(k, v, v.keys())
 			if "nodes" in v.keys():
-				v["nodes"] = [core.AbsoluteNode(i) for i in v["nodes"]]
+				v["nodes"] = [edRig.node.AbsoluteNode(i) for i in v["nodes"]]
 			print "restored {}".format(v["nodes"])
 		pass
 

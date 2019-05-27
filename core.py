@@ -1,7 +1,7 @@
 # core functions and useful things
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
-import math, random, sys, uuid, copy, functools
+import math, random, sys, functools
 
 sys.dont_write_bytecode = True
 
@@ -10,12 +10,6 @@ def isThisMaya():
 	"""returns true if code is run from within maya, else false"""
 	# use the frames
 	return True  # for now
-
-
-# basic parenting
-def EdPar(children, parent, rel=False):
-	for i, item in enumerate(children):
-		cmds.parent(item, parent, relative=rel)
 
 def isNode(target):
 	return cmds.objExists(target)
@@ -44,15 +38,6 @@ def shortUUID(length=4):
 		uid += o
 	return uid
 
-
-def nameDeco(name):
-	if name:
-		n = name + "_"
-	else:
-		n = ""
-	return n
-
-
 def nodeFromAttr(attr):
 	node = (attr.split(".")).pop(0)
 	return node
@@ -64,19 +49,33 @@ def shapeListFromTf(tf):
 def tfFromShape(shape):
 	return cmds.listRelatives(shape, parent=True)
 
-def invokeNode(name="", type="", parent="", func=None):
-	# print "core invokeNode looking for {}".format(name)
-	if cmds.objExists(name):
-		#print "found {}".format(name)
-		return AbsoluteNode(name)
-	if not func:
-		func = ECA
-	node = func(type=type, name=name)
-	if parent and cmds.objExists(parent):
-		#print "parenting invoked"
-		cmds.parent(node, parent)
-	return node
 
+def duplicateShape(shape, search="", replace=""):
+	oldTf = cmds.listRelatives(shape, parent=True)[0]
+	oldShapeType = cmds.nodeType(shape)
+	newName = shape.replace(search, replace)
+	newTf = cmds.duplicate(shape, name="temp", rc=True)[0]
+	newShapeList = cmds.listRelatives(newTf, shapes=True)
+	newShape = [i for i in newShapeList if shape[:-1] in i][0]
+	newShape = cmds.rename(newShape, newName)
+	newShape = cmds.parent(newShape, oldTf, r=True, s=True)[0]
+	cmds.delete(newTf)
+	return newShape
+
+def setColour(dag, colour):
+	cmds.setAttr(dag + ".overrideEnabled", 1)
+	for i, val in enumerate(["R", "G", "B"]):
+		cmds.setAttr(dag + ".overrideColour" + val, colour[i])
+
+
+def rotOrder(order, toInt=False, toString=False):
+	stringList = ["xyz", "zyx", "zxy", "xzy", "yxz", "zyx"]
+	if toInt:
+		int = stringList.index(order)
+		return int
+	elif toString:
+		string = stringList[order]
+		return string
 
 def con(start, end, *args):
 	# cmds.connectAttr is so fun to type every single time
@@ -483,43 +482,6 @@ def MMatrixFrom(dag):
 	return transMat.asMatrix()
 
 
-def setColour(dag, colour):
-	cmds.setAttr(dag + ".overrideEnabled", 1)
-	for i, val in enumerate(["R", "G", "B"]):
-		cmds.setAttr(dag + ".overrideColour" + val, colour[i])
-
-
-def rotOrder(order, toInt=False, toString=False):
-	stringList = ["xyz", "zyx", "zxy", "xzy", "yxz", "zyx"]
-	if toInt:
-		int = stringList.find(order)
-		return int
-	elif toString:
-		string = stringList[order]
-		return string
-
-
-def duplicateShape(shape, search="", replace=""):
-	oldTf = cmds.listRelatives(shape, parent=True)[0]
-	oldShapeType = cmds.nodeType(shape)
-	newName = shape.replace(search, replace)
-	newTf = cmds.duplicate(shape, name="temp", rc=True)[0]
-	newShapeList = cmds.listRelatives(newTf, shapes=True)
-	#print "newShapeList is {}".format(newShapeList)
-	# uuuuugh
-	newShape = [i for i in newShapeList if shape[:-1] in i][0]
-	# NO DUPLICATE SHAPE NAMES KIDDOS
-	#print "newShape is {}".format(newShape)
-	newShape = cmds.rename(newShape, newName)
-	# newTf = cmds.listRelatives(newShape, parent=True)[0]
-	newShape = cmds.parent(newShape, oldTf, r=True, s=True)[0]
-	# ugly but whatevs
-	# con(shape+".local", newShape+".create")
-	# breakConnections(newShape+".create")
-	#print "newTf is {}".format(newTf)
-	cmds.delete(newTf)
-	return newShape
-
 def shapeFrom(target):
 	"""sometimes you just say gimme the shape
 	ask and ye shall receive"""
@@ -550,221 +512,6 @@ def isoViewPoint():
 	mag = math.sqrt(v[3]*2 + v[4]*2 + v[5]*2)
 	return (1, 1, 1) * (mag + mag/2.0)
 
-# argument functions, allowing functions to take either transforms or
-
-class AbsoluteNode(str):
-	# DON'T LOSE YOUR WAAAAY
-	def __new__(cls, node):
-		# this is the stripped down fast version of pymel
-		# print "type node is {}".format(type(node))
-		# print "node is {}".format(node)
-		if isinstance(node, AbsoluteNode):
-			return node
-		elif isinstance(node, list):
-			print "node is list"
-			return AbsoluteNode(node[0])
-		elif isinstance(node, om.MObject):
-			return AbsoluteNode.fromMObject(node)
-		elif isinstance(node, unicode):
-			return AbsoluteNode(str(node))
-		absolute = str.__new__(cls, node)
-		absolute.node = node
-		if not cmds.objExists(node):
-			print "{} DOES NOT EXIST - YER OFF THE MAP".format(node)
-			absolute.refreshPath = absolute.returnBasicNode
-			return absolute
-		obj = MObjectFrom(node)
-		absolute.setMObject(obj)
-
-		# metaprogramming for fun and profit
-		# cmds.select(clear=True)
-		return absolute
-
-	def setMObject(cls, obj):
-		cls.MObject = obj
-		cls.MFnDependency = om.MFnDependencyNode(cls.MObject)
-		cls._shapeFn = None
-		cls.MDagPath = None
-		# check if it's dag or just dependency
-		if cls.MObject.hasFn(107):  # MFn.kDagNode
-			cls.MDagPath = om.MDagPath.getAPathTo(cls.MObject)
-			cls.MFnDagNode = om.MFnDagNode(cls.MObject)
-			cls.refreshPath = cls.refreshDagPath
-			if cls.MObject.hasFn(110):  # MFnTransform
-				cls.MFnTransform = om.MFnTransform(cls.MObject)
-
-		elif cls.MObject.hasFn(4):  # dependency
-			cls.refreshPath = cls.returnDepNode
-
-	# def __init__(self, *args, **kwargs):
-	# 	super(AbsoluteNode, self).__init__(*args, **kwargs)
-	#
-	# 	pass
-
-	def __str__(self):
-		# if self.MObject and self.MObject.isNull():
-		# 	self.node = self.MFnDependency.absoluteName()
-		# 	print "absoluteNode {} is null".format(self.node)
-		# 	return self.node
-		try:
-			self.refreshPath()
-			if isinstance(self.node, list):
-				self.node = self.node[0]
-		except:
-			self.node = self.MFnDependency.absoluteName()
-		return self.node
-
-	def __repr__(self):
-		return self.__str__()
-
-	def __call__(self, *args, **kwargs):
-		self.refreshPath()
-		return self
-
-	def refreshDagPath(self):
-		self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
-		#self.node = self.MDagPath.fullPathName()
-		self.node = self.MFnDagNode.fullPathName()
-
-	def returnDepNode(self):
-		self.node = self.MFnDependency.name()
-
-	def returnBasicNode(self):
-		return self.node
-
-	@property
-	def name(self):
-		return self.node.split("|")[-1]
-
-	@name.setter
-	def name(self, value):
-		# is this a bad idea
-		#cmds.rename(self.node, value)
-		self.MFnDependency.setName(value)
-
-	# i've got no strings, so i have fn
-
-	@property
-	def shapeFnType(self):
-		# lightweight way to know how to treat the shapeFn
-		if self.MObject.hasFn(296): # kMesh
-			return "kMesh"
-		elif self.MObject.hasFn(267): # kNurbsCurve
-			return "kNurbsCurve"
-		elif self.MObject.hasFn(294): # kNurbsSurface
-			return "kNurbsSurface"
-		else:
-			return None
-
-	@property
-	def shapeFn(self):
-		# initialise costly shape mfns only when needed, then never again
-		if not self._shapeFn:
-			if self.shapeFnType:
-				self._shapeFn = eval("om.MFn"+self.shapeFnType[1:]+"(self.MObject)")
-			else:
-				return self.shape.shapeFn
-		return self._shapeFn
-
-	@property
-	def isCurve(self):
-		return self.shapeFnType == "kNurbsCurve"
-	@property
-	def isMesh(self):
-		return self.shapeFnType == "kMesh"
-	@property
-	def isSurface(self):
-		return self.shapeFnType == "kNurbsSurface"
-
-
-	@property
-	def shape(self):
-		"""this feels like a bad idea"""
-		if self.isShape():
-			return self
-		else:
-			return AbsoluteNode(shapeFrom(self))
-
-	@property
-	def transform(self):
-		if self.isTransform():
-			return self
-		else:
-			return AbsoluteNode(tfFrom(self))
-
-	@property
-	def parent(self):
-		test = cmds.listRelatives(self, parent=True)
-		return AbsoluteNode(test[0]) if test else None
-
-	@property
-	def children(self):
-		test = cmds.listRelatives(self, children=True)
-		return [AbsoluteNode(i) for i in test] if test else []
-
-	def parentTo(self, targetParent, *args, **kwargs):
-		"""reparents node under target dag"""
-		if not self.isDag():
-			return
-		cmds.parent(self, targetParent, *args, **kwargs)
-
-
-	def isTransform(self):
-		if self.shapeFnType:
-			return False
-		if self.MDagPath:
-			return True
-		else:
-			return False
-
-	def isShape(self):
-		if self.shapeFnType:
-			return True
-
-	def isDag(self):
-		if self.MObject.hasFn(107): # kDagNode
-			return True
-		return False
-
-	def hide(self):
-		if self.isDag():
-			cmds.hide(self)
-
-	def delete(self, full=True):
-		"""deletes maya node, and by default deletes entire openmaya framework around it
-		tilepile is very unstable, and i think this might be why"""
-		self
-		name = self.node
-		self.MObject = None
-
-		cmds.delete(name)
-
-	@property
-	def nodeType(self):
-		"""returns string name of node type - "joint", "transform", etc"""
-		return cmds.nodeType(self.node)
-
-	def worldPos(self, asMPoint=True):
-		"""returns world position as MPoint"""
-		assert self.isDag()
-		return om.MPoint(self.MFnTransform.translation(om.MSpace.kWorld))
-
-	@staticmethod
-	def fromMObject(obj):
-		"""find node associated with obj and wrap it"""
-		name = stringFromMObject(obj)
-		return AbsoluteNode(name)
-
-
-
-
-
-
-def ECA(type, name="", colour=None, *args, **kwargs):
-	# node = cmds.createNode(type, n=name)
-	name = kwargs.get("n") or name
-	node = ECN(type, name, *args, **kwargs)
-	return AbsoluteNode(node)
 
 class NodeFunction(object):
 	"""decorator class that encapsulates maya node functions with network nodes"""

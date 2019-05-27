@@ -81,14 +81,12 @@ def addTag(tagNode, tagName, tagContent=None, tagSuffix=False):
 
 def edTag(tagNode):
 	# more tactile to have a little top tag
-	#cmds.addAttr(tagNode, ln="edTag", dt="string", writable=True)
 	happyList = [
 		":)", ":D", ".o/", "^-^", "i wish you happiness",
 		"bein alive is heckin swell!!!", "it's a beautiful day today",
 		"we can do this", "you matter"
 	]
 	ey = random.randint(0, len(happyList) - 1)
-	#cmds.setAttr(tagNode + ".edTag", happyList[ey], type="string")
 	addTag(tagNode, tagName="edTag", tagContent=happyList[ey])
 	cmds.setAttr(tagNode + ".edTag", l=True)
 
@@ -112,19 +110,6 @@ def getDictFromTags(tagNode):
 			tagContent = cmds.getAttr(tagNode+"."+i)
 			returnDict.update({tagName : tagContent})
 	return returnDict
-
-# def listTaggedNodes(searchTag="", searchType=None):
-# 	if searchType:
-# 		allDag = cmds.ls(type=searchType)
-# 	else:
-# 		allDag = cmds.ls(dagObjects=True)
-# 	tag = searchTag+"_tag" if searchTag else "_tag"
-# 	returnList = []
-# 	for i in allDag:
-# 		for n in cmds.listAttr(i):
-# 			if tag in n:
-# 				returnList.append(i)
-# 	return returnList
 
 def listWithTagContent(searchNodes = [], searchTag="", searchContent=""):
 	found = []
@@ -159,9 +144,6 @@ def lockAttr(plug):
 def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs):
 	"""wrapper for more annoying attr types like string
 	returns plug"""
-	#print ""
-	#print "attrType is " + attrType
-
 	if parent:
 		if not target in parent:
 			parent = target + "." + parent
@@ -176,9 +158,7 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs)
 	dtList = ["string", "nurbsCurve"]
 	if attrType in dtList:
 		plug = cmds.addAttr(target, ln=attrName, dt=attrType, **kwargs)
-
 	else:
-
 		plug = cmds.addAttr(target, ln=attrName, at=attrType, **kwargs)
 		# if you know the logic behind at vs dt, please contact me
 	# contact me urgently
@@ -188,6 +168,7 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs)
 
 def getAttr(*args, **kwargs):
 	"""J U S T I N C A S E"""
+	return cmds.getAttr(*args, **kwargs)
 
 
 def makeAttrsFromDict(node, attrDict, parent=None):
@@ -293,13 +274,21 @@ def getImmediateFuture(target):
 def getImmediatePast(target):
 	return getImmediateNeighbours(target, source=True, dest=False)
 
+def makeMutualConnection(startNode, endNode, attrType="string",
+                         startName="start", startContent=None,
+                         endName="end"):
+	"""base function for connecting two nodes"""
+	startPlug = addAttr(startNode, attrName=startName, attrType=attrType)
+	if startContent:
+		setAttr(startPlug, startContent)
+	endPlug = addAttr(endNode, attrName=endName, attrType=attrType)
+	con(startPlug, endPlug)
+
 def makeStringConnection(startNode, endNode,
 						 startName="start", endName="end"):
 	"""adds a string connection between two nodes"""
-	addAttr(startNode, attrName=startName, attrType="string")
-	addAttr(endNode, attrName=endName, attrType="string")
-	cmds.connectAttr(startNode+"."+startName,
-					 endNode+"."+endName)
+	makeMutualConnection(startNode, endNode, attrType="string",
+	                     startName=startName, endName=endName)
 
 
 def findPlugSource(startPlug):

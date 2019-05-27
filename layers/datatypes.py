@@ -1,3 +1,4 @@
+import edRig.node
 from edRig import core, transform
 import edRig.curve as libcurve
 import edRig.transform as libtf
@@ -5,7 +6,8 @@ from edRig.layers import base
 from maya import cmds
 import maya.api.OpenMaya as om
 from collections import OrderedDict
-from edRig.core import AbsoluteNode, invokeNode, shortUUID, randomWord
+from edRig.core import invokeNode, shortUUID, randomWord
+from edRig.node import AbsoluteNode
 from edRig.tilepile.ops.op import Op
 from edRig.layers import Env
 
@@ -69,7 +71,7 @@ class Datatype(object):
 		return node
 
 	def ECA(self, type, name, *args):
-		node = core.ECA(type, name, *args)
+		node = edRig.node.ECA(type, name, *args)
 		Op.addTag(node, "datatype", self.__class__.__name__)
 		return node
 
@@ -157,7 +159,7 @@ class Point(Datatype):
 	#def setPoint(self, transform=None):
 	def setActive(self, transform):
 		super(Point, self).setActive(transform)
-		self.tf = core.AbsoluteNode(transform)
+		self.tf = edRig.node.AbsoluteNode(transform)
 		self.MObject = self.tf.MObject
 		self.tfn = self.tf.MFnTransform
 		self.activePlug = self.tf+".matrix"
@@ -311,7 +313,7 @@ class DimFn(object):
 			# my work is done
 			mat = on
 		else:
-			dummy = core.ECA("locator", "pointProxy")
+			dummy = edRig.node.ECA("locator", "pointProxy")
 			transform.matchXforms(dummy, source=near)
 			if kind == "nurbsCurve":
 				u = libcurve.getClosestU(on, near)

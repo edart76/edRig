@@ -1,7 +1,8 @@
 # in framestore, they called me the curve guy
 import maya.cmds as cmds
 import core as core
-from core import ECN, con, AbsoluteNode, ECA
+from core import ECN, con
+from edRig.node import AbsoluteNode, ECA
 import maya.api.OpenMaya as om
 from nodule import nodule
 from edRig import utils, attr
@@ -25,15 +26,6 @@ def getCurveInfo(shape=None, fn=None):
 	curveInfo["knots"] = [i for i in fn.knots()]
 	#curveInfo["rational"] = fn.rational()
 	curveInfo["rational"] = True
-
-
-	# else:
-	# 	testShape = shape.shape
-	# 	if isCurve(testShape):
-	# 		return getCurveInfo(testShape)
-	# 	else:
-	# 		print "it's called getCurveInfo for a reason, {} is not curvy".format(
-	# 			shape)
 	print "{} info is {}".format(shape, curveInfo)
 	return curveInfo
 
