@@ -25,7 +25,7 @@ class Control(object):
 		# has the library already been imported?
 		libGrp = cmds.ls("*ctrlLib_grp")
 		if not libGrp:
-			pipeline.safeImport(controlLibPath)
+			pipeline.safeMayaImport(controlLibPath)
 			# cmds.file( controlLibPath, i=True, type="mayaAscii",
 			# 	defaultNamespace=True)
 			libGrp = cmds.ls("*ctrlLib_grp")[0]

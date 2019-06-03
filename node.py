@@ -21,6 +21,19 @@ def invokeNode(name="", type="", parent="", func=None):
 
 class AbsoluteNode(str):
 	# DON'T LOSE YOUR WAAAAY
+
+	allInfo = {
+		"mesh" : {
+			"inShape" : "inMesh",
+			"outLocal" : "outMesh",
+			"outWorld" : "worldMesh[0]"
+		},
+		"transform" : {
+			"outLocal" : "matrix",
+			"outWorld" : "worldMatrix[0]"
+		}
+	}
+
 	def __new__(cls, node):
 		# this is the stripped down fast version of pymel
 		# print "type node is {}".format(type(node))
@@ -42,6 +55,9 @@ class AbsoluteNode(str):
 			return absolute
 		obj = MObjectFrom(node)
 		absolute.setMObject(obj)
+
+		# set custom nodeinfo
+		absolute.nodeInfo = cls.allInfo.get(cls.nodeType)
 
 		# metaprogramming for fun and profit
 		# cmds.select(clear=True)
@@ -203,6 +219,20 @@ class AbsoluteNode(str):
 		assert self.isDag()
 		return om.MPoint(self.MFnTransform.translation(om.MSpace.kWorld))
 
+	@property
+	def outWorld(self):
+		"""do a procedural thing here to help custom declaration of node info"""
+		return self + "." + self.nodeInfo["outWorld"]
+
+	@property
+	def outLocal(self):
+		return self + "." + self.nodeInfo["outLocal"]
+
+	@property
+	def inShape(self):
+		return self + "." + self.nodeInfo["inShape"]
+
+
 	@staticmethod
 	def fromMObject(obj):
 		"""find node associated with obj and wrap it"""
@@ -214,10 +244,17 @@ class AbsoluteNode(str):
 		"""tribulations"""
 		attr.con(sourcePlug, destPlug, f=True)
 
+	def driveWith(self, attrName, driverPlug):
+		attr.con(driverPlug, self() + "." + attrName)
+
 	@staticmethod
 	def setAttr(plug, value, **kwargs):
 		"""set attribute directly"""
 		attr.setAttr(plug, value)
+
+	def set(self, attrName, val, **kwargs):
+		"""sets value of node's own attr"""
+		attr.setAttr(self() + "." + attrName, val, **kwargs)
 
 	def getShapeLayer(self, local=True):
 		"""returns live instance of shape"""
@@ -232,9 +269,22 @@ def ECA(type, name="", colour=None, *args, **kwargs):
 	return AbsoluteNode(node)
 
 #### node wrapper classes ###
+class NodeWrapper(AbsoluteNode):
+	"""base class for specific wrapper"""
 
-class RemapValue(AbsoluteNode):
+	nodeType = None
+
+	def __new__(cls, name=None):
+		"""check"""
+		if not cls.nodeType:
+			raise NotImplementedError("wrapper {} does not define a node type".format(cls.__name__))
+		node = cmds.createNode(cls.nodeType, n=name)
+		return super(NodeWrapper, cls).__new__(node)
+
+
+class RemapValue(NodeWrapper):
 	"""wrapper for rempValue nds"""
+	nodeType = "remapValue"
 
 	def getRampInstance(self, name="rampInstance"):
 		"""creates new ramp exactly mirroring master and connects it by message"""

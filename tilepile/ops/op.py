@@ -182,6 +182,11 @@ class Op(MayaReal):
 		self.evaluator = None
 		self.addSetting = None
 
+		# sets
+		self.addToSet = None
+		self.removeFromSet = None
+		self.getConnectedSets = None
+
 		if self.abstract:
 			self.setAbstract(abstract)
 
@@ -209,6 +214,11 @@ class Op(MayaReal):
 		self.settings = self.abstract.settings
 		self.evaluator = self.abstract.evaluator
 		self.addSetting = self.abstract.addSetting
+
+		# sets
+		self.addToSet = self.abstract.addToSet
+		self.removeFromSet = self.abstract.removeFromSet
+		self.getConnectedSets = self.abstract.getConnectedSets
 
 		self.inputRoot = abstract.inputRoot
 		self.outputRoot = abstract.outputRoot

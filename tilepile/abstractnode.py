@@ -366,7 +366,15 @@ class AbstractNode(object):
 		branch.extras = {k : v for k, v in extras.iteritems() if v}
 		branch.value = value
 
+	# sets
+	def addToSet(self, setName):
+		self.graph.addNodeToSet(self, setName)
 
+	def removeFromSet(self, setName):
+		self.graph.removeNodeFromSet(self, setName)
+
+	def getConnectedSets(self):
+		return self.graph.getSetsFromNode(self)
 
 	# actions and real-facing methods
 	# def action(self, *args, **kwargs):
@@ -436,6 +444,7 @@ class AbstractNode(object):
 			"inputRoot" : self.inputRoot.serialise(),
 			"outputRoot" : self.outputRoot.serialise(),
 			"extras" : self.extras,
+			"settings" : self.settings.serialise(),
 			#"CLASS" : self.__class__.__name__
 		}
 		if self.real:
@@ -473,6 +482,7 @@ class AbstractNode(object):
 		                                           node=newInst)
 		newInst.inputRoot = AbstractAttr.fromDict(fromDict=fromDict["inputRoot"],
 		                                          node=newInst)
+		newInst.settings = AbstractTree.fromDict(fromDict["settings"])
 		# print ""
 		# print "ABSTRACT FROMDICT KEYS ARE {}".format(fromDict.keys())
 

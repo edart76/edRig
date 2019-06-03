@@ -1,12 +1,10 @@
 """general lib for nifty python things like decorators and debugs"""
 from __future__ import print_function
-import inspect,importlib, pprint
+import inspect,importlib, pprint, pkgutil
 from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
 import string
 from edRig import naming
-
-
 
 # thank you code recipe 576925
 def caller():
@@ -229,3 +227,84 @@ def flatten(in_list):
 		else:
 			flattened_list.append(item)
 	return flattened_list
+
+def itersubclasses(cls, _seen=None):
+	"""
+	itersubclasses(cls)
+	http://code.activestate.com/recipes/576949-find-all-subclasses-of-a-given-class/
+	Generator over all subclasses of a given class, in depth first order.
+
+	>>> list(itersubclasses(int)) == [bool]
+	True
+	>>> class A(object): pass
+	>>> class B(A): pass
+	>>> class C(A): pass
+	>>> class D(B,C): pass
+	>>> class E(D): pass
+	>>>
+	>>> for cls in itersubclasses(A):
+	...     print(cls.__name__)
+	B
+	D
+	E
+	C
+	>>> # get ALL (new-style) classes currently defined
+	>>> [cls.__name__ for cls in itersubclasses(object)] #doctest: +ELLIPSIS
+	['type', ...'tuple', ...]
+	"""
+
+	if not isinstance(cls, type):
+		raise TypeError('itersubclasses must be called with '
+		                'new-style classes, not %.100r' % cls)
+	if _seen is None: _seen = set()
+	try:
+		subs = cls.__subclasses__()
+	except TypeError:  # fails only when cls is type
+		subs = cls.__subclasses__(cls)
+	for sub in subs:
+		if sub not in _seen:
+			_seen.add(sub)
+			yield sub
+			for sub in itersubclasses(sub, _seen):
+				yield sub
+
+def iterSubModuleNames(package=None, path=None, fullPath=True):
+	"""yields names of all modules in package - DOES NOT import them"""
+	names = []
+	if not path:
+		# path = inspect.getfile(package)
+		# if path.endswith("__init__.py"):
+		# 	path = path.replace("\__init__.py", "")
+		# path = package.__file__.replace("\\", "\\\\")
+		# #path = package.__path__
+		loader = pkgutil.get_loader(package)
+		if not loader.is_package(loader.fullname):
+			names.append(package.__name__)
+			return names
+
+
+		path = [loader.filename]
+
+		print("path {}".format(path))
+
+	#print(package.__name__)
+	#print([i for i in pkgutil.iter_modules([path])])
+	for loader, module_name, is_pkg in pkgutil.walk_packages(path):
+		print("module name {}".format(module_name))
+
+		names.append(module_name)
+	if fullPath:
+		names = [package.__name__ + "." + i for i in names]
+	return names
+
+def safeLoadModule(mod, logFunction=None):
+	"""takes string name of module
+	DEPRECATED, use lib/python/safeLoadModule"""
+	logFunction = logFunction or print
+	module = None
+	try:
+		module = importlib.import_module(mod)
+	except Exception as e:
+		logFunction("ERROR in loading module {}".format(mod))
+		logFunction("error is {}".format(str(e)))
+	return module

@@ -24,13 +24,17 @@ def matchXforms(target=None, source=None, pos=True, rot=True):
 #     return mat * ax
 	# mat = core.MMatrixFrom(dag)
 	# return staticVecMatrixMult(mat, point=ax, length=length)
-
+def MMatrixFromValues(vals):
+	return matrixFromValues(vals)
 
 def matrixFromValues(vals):
 	"""return an MMatrix from sequence of floats"""
 	if not (len(vals) == 16 or len(vals) == 4):
 		raise RuntimeError("wrong number of values supplied to matrix")
 	return om.MMatrix(vals)
+
+def MMatrixFromPlug(plug):
+	return matrixFromPlug(plug)
 
 def valuesFromMatrix(mat):
 	vals = []
@@ -116,7 +120,7 @@ def blendTwoMatrixPlugs(a, b, weight=0.5):
 	else:
 		cmds.setAttr(blend+".wtMatrix[0].weightIn", weight)
 		cmds.setAttr(blend + ".wtMatrix[1].weightIn", 1.0 - weight)
-	return blend+".matrixSum"
+	return blend+".matrixSum" # AND THE BLENDER ATTRIBUTES
 
 
 def getReverseOfPlug(plug):
@@ -128,7 +132,6 @@ def getReverseOfPlug(plug):
 
 def isMatrix(plug):
 	return cmds.getAttr(plug, type=True) == "matrix"
-
 
 
 def WorldMMatrixFrom(dag):

@@ -146,9 +146,9 @@ class AbstractGraph(object):
 		tuples of nodes and attrs stored by edges
 				"""
 
-
 		self.edges = []
 		self.selectedNodes = []
+		self.nodeSets = {}
 
 		# register real classes that nodes can represent
 		self.realClasses = ValidList.ops
@@ -165,6 +165,7 @@ class AbstractGraph(object):
 		self.edgesChanged = Signal()
 		self.stateChanged = Signal()
 		self.nodeChanged = Signal()
+		self.nodeSetsChanged = Signal()
 		self.wireSignals()
 
 	def log(self, message):
@@ -560,6 +561,54 @@ class AbstractGraph(object):
 		return [i for i in self.nodeGraph.values() if i["node"]==node][0]
 
 
+	### node sets
+	@property
+	def nodeSetNames(self):
+		return self.nodeSets.keys()
+
+	def addNodeToSet(self, node, setName):
+		"""adds node to set - creates set if it doesn't exist
+		:param node : AbstractNode
+		:param setName : str"""
+		origSet = self.nodeSets.get(setName)
+		if not origSet:
+			self.nodeSets[setName] = set()
+		self.nodeSets[setName].add(node)
+
+	def removeNodeFromSet(self, node, setName):
+		""":param node : AbstractNode
+		:param setName : str"""
+		targetSet = self.nodeSets.get(setName)
+		if not targetSet:
+			# i aint even mad
+			self.log("target set {} not found".format(setName))
+			return
+		if not node in targetSet:
+			# you aint even mad
+			self.log("target node {} not in set {}".format(node.nodeName, setName))
+			return
+		targetSet.remove(node)
+
+		if not targetSet:
+			# we aint even mad?
+			self.nodeSets.pop(setName)
+
+	def getNodesInSet(self, setName):
+		nodes = set()
+		targetSet = self.nodeSets.get(setName)
+		if targetSet:
+			nodes = {i for i in targetSet}
+		return nodes
+
+	def getSetsFromNode(self, node):
+		node = self.getNode(node)
+		sets = set()
+		for i in self.nodeSets.iteritems():
+			if node in i[1]:
+				sets.add(i)
+
+
+
 	# serialisation and regeneration
 	def serialise(self):
 		"""oof ouchie"""
@@ -572,6 +621,7 @@ class AbstractGraph(object):
 			# don't worry about fedBy and feeding - these will be reconstructed
 			# from edges
 		graph["edges"] = [i.serialise() for i in self.edges]
+		graph["nodeSets"] = {k : [i.nodeName for i in v] for k, v in self.nodeSets.iteritems()}
 		# add another section for groupings when necessary
 
 		#return pprint.pformat(graph, indent=3)
@@ -594,6 +644,8 @@ class AbstractGraph(object):
 			newEdge = AbstractEdge.fromDict(i, newGraph)
 			newGraph.addEdge(sourceAttr=newEdge.sourceAttr,
 			                 destAttr=newEdge.destAttr, newEdge=newEdge)
+		for k, v in regen["nodeSets"]:
+			newGraph.nodeSets[k] = set([newGraph.getNode(n) for n in v])
 		return newGraph
 
 	### initial startup when tilepile is run for the first time

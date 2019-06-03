@@ -284,14 +284,14 @@ def getExistingAssets(checkPath=ROOT_PATH):
 	return assets
 
 def safeLoadModule(mod):
-	"""takes string name of module"""
+	"""takes string name of module
+	DEPRECATED, use lib/python/safeLoadModule"""
 	# print "loading module {}".format(mod)
 	module = None
 	for i in sys.modules.keys():
 		# if "edRig" in i: del sys.modules[i] # how about FUCKIN NO
 		# if mod in i : del sys.modules[i]
 		pass
-	#for i in
 	try:
 		module = importlib.import_module(mod)
 	except Exception as e:
@@ -376,7 +376,7 @@ def makeBogus(path):
 		f.writelines(wealthy)
 	return True
 
-def safeImport(path):
+def safeMayaImport(path):
 	"""common import function across edRig"""
 	makeLegit(path)
 	cmds.file(path, i=True, type="mayaAscii",
