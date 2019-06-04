@@ -123,7 +123,11 @@ def beforeNew(*args, **kwargs):
 	# if not modified:
 	# 	cmds.file(new=True, force=True)
 
-
+def setupViewport():
+	"""makes things silky smooth"""
+	cmds.setAttr("hardwareRenderingGlobals.transparentShadow", 1)
+	cmds.setAttr( "hardwareRenderingGlobals.ssaoSamples", 8)
+	cmds.setAttr( "hardwareRenderingGlobals.lineAAEnable", 1)
 
 def mainStartup():
 	# ECA("transform", name="mainStartup")
@@ -144,6 +148,8 @@ def mainStartup():
 		om.MSceneMessage.kBeforeNew, beforeNew)
 	om.MSceneMessage.addCallback(
 		om.MSceneMessage.kAfterNew, afterNew)
+
+	setupViewport()
 	pass
 
 """conditionNames:

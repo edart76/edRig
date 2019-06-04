@@ -12,7 +12,7 @@ def invokeNode(name="", type="", parent="", func=None):
 		return AbsoluteNode(name)
 	if not func:
 		func = ECA
-	node = func(type=type, name=name)
+	node = func(type, name=name)
 	if parent and cmds.objExists(parent):
 		#print "parenting invoked"
 		cmds.parent(node, parent)
@@ -79,6 +79,7 @@ class AbsoluteNode(str):
 		elif cls.MObject.hasFn(4):  # dependency
 			cls.refreshPath = cls.returnDepNode
 
+	## refreshing mechanism
 	def __str__(self):
 		try:
 			self.refreshPath()
@@ -87,6 +88,9 @@ class AbsoluteNode(str):
 		except:
 			self.node = self.MFnDependency.absoluteName()
 		return self.node
+
+	"""for repeated operations this will incur a penalty in speed
+	consider leaving the call function explicitly to refresh the path"""
 
 	def __repr__(self):
 		return self.__str__()
@@ -231,6 +235,30 @@ class AbsoluteNode(str):
 	@property
 	def inShape(self):
 		return self + "." + self.nodeInfo["inShape"]
+
+	def TRS(self, *args):
+		"""returns unrolled transform attrs
+		args is any combination of t, r, s, x, y, z
+		will return product of each side"""
+		mapping = {"T" : "translate", "R" : "rotate", "S" : "scale"}
+		if not args:
+			args = ["T", "R", "S", "X", "Y", "Z"]
+		elif isinstance(args[0], basestring):
+			args = [i for i in args[0]]
+
+		args = [i.upper() for i in args]
+		attrs = [mapping[i] for i in "TRS" if i in args]
+		dims = [i for i in "XYZ" if i in args]
+
+		plugs = []
+		for i in attrs:
+			for n in dims:
+				plugs.append(self+"."+i+n)
+		return plugs
+
+	def attrs(self, **kwargs):
+		"""return all the attributes of the node"""
+		return cmds.listAttr(self(), **kwargs)
 
 
 	@staticmethod

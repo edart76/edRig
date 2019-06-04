@@ -20,8 +20,8 @@ def isPlug(target):
 	if not isNode(target):
 		return False
 	plug = ".".join(target.split(".")[1:])
-	print ""
-	print "plug is " + plug
+	# print ""
+	# print "plug is " + plug
 	if plug in cmds.listAttr(node):
 		return True
 	return False

@@ -27,6 +27,8 @@ def conOrSet(a, b, f=True):
 	else:
 		setAttr(b, attrValue=a)
 
+# def getChildren(plug)
+
 def breakConnections(target, source=True, dest=True):
 	"""ed smash"""
 	if core.isNode(target):
@@ -134,6 +136,16 @@ def removeTag(tagNode, tagName=None):
 	tags = cmds.listAttr(tagNode, string=search)
 	for i in tags:
 		cmds.deleteAttr(tagNode+"."+i)
+
+BUILT_ATTR = "node_built"
+def tagAsBuilt(node):
+	"""used in conjunction with the listing principle
+	to tell if a node needs to be reconstructed or not"""
+	addAttr(node, attrName=BUILT_ATTR, dv=1, dt="bool")
+
+def isBuilt(node):
+	return BUILT_ATTR in cmds.listAttr(node)
+
 
 def hideAttr(plug):
 	cmds.setAttr(plug, cb=False)

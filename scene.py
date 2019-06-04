@@ -1,7 +1,8 @@
 # operations for listing, grouping, adding to sets etc
 from maya import cmds
-#from edRig.core import ECA, AbsoluteNode
-#import maya.api.OpenMaya as om
+from edRig.node import ECA, AbsoluteNode, invokeNode
+from edRig import attr
+import maya.api.OpenMaya as om
 
 class Globals(object):
 	"""holder for various singleton nodes and values"""
@@ -26,22 +27,81 @@ class Globals(object):
 		},
 	}
 
-	def invokeNode(self, nodeDict, name=None):
-		"""creates a node from globals library or lists and returns it"""
-		name = name or nodeDict["name"]
-		test = cmds.ls(name)
-		if test:
-			return test[0]
-		node = cmds.createNode(nodeDict["type"], name=name)
-		if "attrs" in nodeDict:
-			for k, v in nodeDict["attrs"].iteritems():
-				cmds.setAttr(k, v)
+	rootAttrs = {
+		"assetNodesSelectable" : {
+			"dt" : "bool",
+			"dv" : False },
+		"blackBoxAsset" : {
+			"at" : "message"},
+		"solvers" : {
+			"at" : "message",
+			"multi" : True,
+		}
+		}
+
+
+	def __init__(self):
+		pass
+
+	@property
+	def globalsRoot(self):
+		node = invokeNode("globals_root", "network")
+		if not attr.isBuilt(node):
+			self.buildGlobalsRoot(node)
 		return node
 
-	def __getattr__(self, item):
-		if item in self.nodes:
-			return self.invokeNode(self.nodes[item], name=item)
-		return super(Globals, self).__getattr__(item)
+	def buildGlobalsRoot(self, node):
+		"""usually indicates everything else needs building too"""
+		attr.makeAttrsFromDict(node, self.rootAttrs)
+		attr.tagAsBuilt(node)
+
+	@property
+	def blackBoxAsset(self):
+		"""returns special asset node used to make shapes unselectable
+		kill me"""
+		asset = ls("globals_blackBoxAsset")
+		if asset:
+			return asset
+		else:
+			asset = cmds.container("globals_blackBoxAsset")
+			cmds.setAttr(asset+".blackBox", 1)
+			attr.makeMutualConnection(self.globalsRoot, asset,
+			                          attrType="message", startName="blackBoxAsset",
+			                          endName="globalsRoot")
+			return asset
+
+	def addSolver(self, solver):
+		"""catalogues solver properly"""
+		attr.makeMutualConnection(self.globalsRoot, solver, attrType="message",
+		                          startName="solvers", endName="globalsRoot")
+
+	@property
+	def globalsControl(self):
+		node = AbsoluteNode(invokeNode("globals_ctrl", "transform"))
+		for i in node.TRS():
+			attr.setAttr(i, l=True, cb=False)
+		return node
+
+def addToAsset(assetName=None, targetNode=None):
+	"""very skittish of all this stuff"""
+	cmds.container(assetName, force=True, addNode=targetNode)
+
+def removeFromAsset(assetName=None, targetNode=None):
+	"""very skittish of all this stuff"""
+	cmds.container(assetName, force=True, removeNode=targetNode)
+
+
+
+
+
+
+
+
+
+
+
+
+SceneGlobals = Globals()
 
 def ls(*args, **kwargs):
 	"""you know how maya returns None when it can't find anything
