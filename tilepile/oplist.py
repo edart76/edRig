@@ -55,6 +55,9 @@ class OpList(object):
 
 		# now load ops
 		for op in itersubclasses(Op):
+			# for now we skip parent ops - this may not be desired
+			if op.__subclasses__() and not op.forceInclude:
+				continue
 			self.ops.add(op)
 
 		#print (pprint.pformat("ops {}".format(self.ops)))

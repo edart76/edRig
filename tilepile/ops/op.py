@@ -85,7 +85,7 @@ class Op(MayaReal):
 	# base class for "operations" executed by abstractGraph,
 	# mainly maya scripting
 
-	#actions = {} # :(
+	forceInclude = False
 
 	colour = (100, 100, 150) # rgb
 
