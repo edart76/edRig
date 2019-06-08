@@ -391,6 +391,10 @@ def safeRead(path, lines=False):
 			content = f.read()
 	return content
 
+def getMostRecentVersion(dir):
+	"""returns filepath of the most recent file version in the directory,
+	specified by v01, v_01 etc"""
+
 
 class AssetItem(str):
 	"""pythonic wrapper around assets, passed the top folder"""

@@ -1,6 +1,6 @@
 # lib for adding and modifying attributes
 import random
-from edRig import core
+from edRig import core, log
 from maya import cmds
 import maya.api.OpenMaya as om
 
@@ -222,8 +222,9 @@ INTERFACE_ATTRS = { # attribute templates for io network nodes
 	# give me a minute
 	}
 
-def setAttr(targetPlug, attrValue=None, **kwargs):
-	"""similar wrapper for setAttr dealing with strings, matrices, etc"""
+def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
+	"""similar wrapper for setAttr dealing with strings, matrices, etc
+	absNode allows passing absoluteNode where performance is important"""
 	if not attrValue:
 		cmds.setAttr(targetPlug, **kwargs)
 
@@ -238,13 +239,19 @@ def setAttr(targetPlug, attrValue=None, **kwargs):
 	else:
 		cmds.setAttr(targetPlug, attrValue, **kwargs)
 
+def setAttrsFromDict(attrDict, node=None):
+	"""expects dict of format {"attr" : value}"""
+	for k, v in attrDict.iteritems():
+		plug = node+"."+k if node else k
+		setAttr(plug, v)
+
 def setEnumFromString(plug, value):
-	node, attr = decomposePlug(plug)
+	node, attr = tokenisePlug(plug)
 	enumString = cmds.attributeQuery(attr, node=node, listEnum=True)[0]
 	enumList = enumString.split(":")
 	cmds.setAttr(plug, enumList.index(value))
 
-def decomposePlug(plug):
+def tokenisePlug(plug):
 	"""atomic to get node and attr from plug"""
 	print ""
 	attr = ".".join(plug.split(".")[1:])
@@ -254,14 +261,14 @@ def decomposePlug(plug):
 
 def plugType(plug):
 	"""returns string type for plugs"""
-	# attr, node = decomposePlug(plug)
+	# attr, node = tokenisePlug(plug)
 	return cmds.getAttr(plug, type=True)
 
 def getEnumValue(plug):
 	"""current enum value as string"""
 	return cmds.getAttr(plug, asString=True)
 
-def getImmediateNeighbours(target, source=True, dest=True):
+def getImmediateNeighbours(target, source=True, dest=True, wantPlug=False):
 	"""returns nodes connected immediately downstream of plug, or all of node"""
 	nodeList = []
 	if core.isNode(target):
@@ -324,6 +331,12 @@ def getTransformPlugs(node, t=True, r=True, s=True):
 
 def unrollPlug(plug, returnLen=3):
 	"""unrolls compound plug, and either curtails or fills in None up to length"""
+
+def getNextAvailableIndex(arrayPlug):
+	"""gets the first free index for an array attribute"""
+	length = cmds.getAttr(arrayPlug, size=True)
+	return arrayPlug+"[{}]".format(length)
+
 
 
 # class ArgParse(object):

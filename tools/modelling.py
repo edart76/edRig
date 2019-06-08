@@ -2,6 +2,8 @@ from __future__ import print_function
 from maya import cmds
 from edRig import deformer, AbsoluteNode, ECA
 
+#### deformers
+
 def addSelectedToDeformer(sel):
 	"""check through selection to see if there are deformers
 	if not get deformer in first geo history and use that"""
@@ -28,3 +30,9 @@ def addSelectedToDeformer(sel):
 	targetDeformer = targetDeformer[0]
 	for i in [n for n in sel if not deformer.isDeformer(n)]:
 		deformer.addToDeformer(i, targetDeformer)
+
+#### dynamics
+
+def makeCurveDynamic(sel):
+	"""allows modelling using tension and collision
+	expose tether controls for both ends if curve is not closed"""

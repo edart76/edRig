@@ -1,5 +1,5 @@
 # define all the pretty colours, and how to saving them
-import edRig.core as core
+from edRig import CURRENT_PATH
 from edRig.core import ECN, con
 from edRig.node import AbsoluteNode, ECA, invokeNode
 from edRig import attr, transform, pipeline
@@ -9,7 +9,8 @@ import maya.api.OpenMaya as om
 
 import string
 
-controlLibPath = r'F:\\all projects desktop\common\edCode\edRig\data\ctrls\ctrlLibraryv02.ma'
+#controlLibPath = r'F:\\all projects desktop\common\edCode\edRig\data\ctrls\ctrlLibraryv02.ma'
+controlLibPath = CURRENT_PATH + r'\data\ctrls\ctrlLibraryv02.ma'
 
 class Control(object):
 	#base class for all forms of control

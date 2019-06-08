@@ -34,6 +34,11 @@ class AbsoluteNode(str):
 		}
 	}
 
+	defaultAttrs = {}
+	# override with {"nodeState" : 1} etc
+
+	nodeType = None
+
 	def __new__(cls, node):
 		# this is the stripped down fast version of pymel
 		# print "type node is {}".format(type(node))
@@ -288,6 +293,29 @@ class AbsoluteNode(str):
 		"""returns live instance of shape"""
 		newShape = self.shapeFn.copy()
 
+	@classmethod
+	def create(cls, name=None, n=None, *args, **kwargs):
+		"""any subsequent wrapper class will create its own node type"""
+		nodeType = cls.nodeType or cls.__name__
+		name = name or n
+		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
+		return node
+
+	def setDefaults(self):
+		"""called when node is created"""
+		if self.defaultAttrs:
+			attr.setAttrsFromDict(self.defaultAttrs, self)
+
+	def copy(self, name=None):
+		"""copies node, without copying children"""
+		name = name or self.name+"_copy"
+		node = AbsoluteNode(cmds.duplicate(self(), parentOnly=True, n=name)[0])
+		if self.isShape():
+			cmds.parent(node, self.parent, r=True, s=True)
+		elif self.isDag():
+			cmds.parent(node, self.parent)
+		return node
+
 
 
 def ECA(type, name="", colour=None, *args, **kwargs):
@@ -308,6 +336,7 @@ class NodeWrapper(AbsoluteNode):
 			raise NotImplementedError("wrapper {} does not define a node type".format(cls.__name__))
 		node = cmds.createNode(cls.nodeType, n=name)
 		return super(NodeWrapper, cls).__new__(node)
+
 
 
 class RemapValue(NodeWrapper):
