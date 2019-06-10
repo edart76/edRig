@@ -15,10 +15,16 @@ class RegenCallback(object):
 	def __call__(self, *args, **kwargs):
 		pass
 
+class CallbackObject(object):
+	"""potentially necessary if we can't figure out proper arguments"""
+
 def addCallbackOnPlugChanged(listenPlug, callbackFn=None):
 	"""executes callbackFn when listenPlug is changed by user
 	WILL NOT BE CALLED DURING PLAYBACK - this is only active for the
 	user's direct interaction
-	:param listenPlug : string name of plug"""
+	:param listenPlug : string name of plug to attach callback
+	:param callbackFn : function to trigger, passed plug name as argument"""
 	event = om.MNodeMessage.kAttributeEval
 	# event = om.MNodeMessage.kAttributeSet
+
+

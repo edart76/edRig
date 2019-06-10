@@ -102,11 +102,10 @@ class AbsoluteNode(str):
 
 	def __call__(self, *args, **kwargs):
 		self.refreshPath()
-		return self
+		return self.node
 
 	def refreshDagPath(self):
 		self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
-		#self.node = self.MDagPath.fullPathName()
 		self.node = self.MFnDagNode.fullPathName()
 
 	def returnDepNode(self):
@@ -289,9 +288,12 @@ class AbsoluteNode(str):
 		"""sets value of node's own attr"""
 		attr.setAttr(self() + "." + attrName, val, **kwargs)
 
-	def getShapeLayer(self, local=True):
+	def getShapeLayer(self, name="newLayer", local=True):
 		"""returns live instance of shape"""
-		newShape = self.shapeFn.copy()
+		parentObj = self.transform.MObject
+		newShape = self.shapeFn.copy(self.MObject, parentObj)
+		newNode = AbsoluteNode.fromMObject(newShape)
+		self.con(self.outLocal, newNode.inShape)
 
 	@classmethod
 	def create(cls, name=None, n=None, *args, **kwargs):
@@ -315,7 +317,6 @@ class AbsoluteNode(str):
 		elif self.isDag():
 			cmds.parent(node, self.parent)
 		return node
-
 
 
 def ECA(type, name="", colour=None, *args, **kwargs):
