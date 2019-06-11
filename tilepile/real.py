@@ -90,6 +90,7 @@ class RealComponent(object):
 		                    attrItem=attrItem, *args, **kwargs)
 
 	def getInput(self, name):
+		""":returns AbstractAttr"""
 		return self.inputRoot.attrFromName(name)
 
 	def searchInputs(self, match):

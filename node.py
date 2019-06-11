@@ -299,7 +299,8 @@ class AbsoluteNode(str):
 	def create(cls, name=None, n=None, *args, **kwargs):
 		"""any subsequent wrapper class will create its own node type"""
 		nodeType = cls.nodeType or cls.__name__
-		name = name or n
+		nodeType = nodeType[0].lower() + nodeType[1:]
+		name = name or n or "eyy"
 		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
 		return node
 
@@ -325,22 +326,35 @@ def ECA(type, name="", colour=None, *args, **kwargs):
 	node = ECN(type, name, *args, **kwargs)
 	return AbsoluteNode(node)
 
-#### node wrapper classes ###
-class NodeWrapper(AbsoluteNode):
-	"""base class for specific wrapper"""
 
-	nodeType = None
+class PlugObject(str):
+	"""small wrapper allowing plug to be returned as priority,
+	and while still accessing the node easily
+	NOT robust to name changes"""
 
-	def __new__(cls, name=None):
-		"""check"""
-		if not cls.nodeType:
-			raise NotImplementedError("wrapper {} does not define a node type".format(cls.__name__))
-		node = cmds.createNode(cls.nodeType, n=name)
-		return super(NodeWrapper, cls).__new__(node)
+	def __new__(cls, plug):
+		plugObj = str.__new__(plug)
+		plugObj.plug = plug
+
+	def __repr__(self):
+		return self.plug
+	def __str__(self):
+		return self.__repr__()
+
+	@property
+	def node(self):
+		return self.getNode()
+	def getNode(self):
+		return ".".join(self.split(".")[1:])
+
+	@property
+	def MPlug(self):
+		"""shrug"""
+		pass
 
 
 
-class RemapValue(NodeWrapper):
+class RemapValue(AbsoluteNode):
 	"""wrapper for rempValue nds"""
 	nodeType = "remapValue"
 

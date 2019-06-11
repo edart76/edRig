@@ -12,6 +12,8 @@ import string
 #controlLibPath = r'F:\\all projects desktop\common\edCode\edRig\data\ctrls\ctrlLibraryv02.ma'
 controlLibPath = CURRENT_PATH + r'\data\ctrls\ctrlLibraryv02.ma'
 
+validTypes = ["tet", "sphere", "dodec"]
+
 class Control(object):
 	#base class for all forms of control
 	def __init__(self, name, type="tet"):
@@ -31,7 +33,7 @@ class Control(object):
 			# 	defaultNamespace=True)
 			libGrp = cmds.ls("*ctrlLib_grp")[0]
 			cmds.setAttr(libGrp+".visibility", 0)
-		validTypes = ["tet", "sphere", "dodec"]
+
 		newCtrl = cmds.duplicate(type+"_base", name=self.name+"_ctrl", rc=True)
 		self.tf = cmds.parent(newCtrl[0], w=True)[0]
 		self.shapes = cmds.listRelatives(newCtrl[0], shapes=True)
@@ -213,6 +215,18 @@ class FkControl(Control):
 	def first(self):
 		"""returns first layer"""
 		return self.layers[0]
+
+class TileControl(Control):
+	"""literally just a square"""
+
+	"""include methods for adding tile to group of other tiles
+	this may result in unpredictable arrangements, which is nice"""
+
+class RampControl(Control):
+	"""live ramp control in the scene connected to remapvalue network
+	probably the most disco thing I've done at framestore"""
+	pass
+
 
 """new approach - uniform ctrl grp hierarchy:
 

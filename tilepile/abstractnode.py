@@ -78,6 +78,9 @@ class AbstractNode(object):
 		self.attrsChanged = Signal()
 		self.attrValueChanged = Signal() # emit tuple of attrItem, value
 		self.stateChanged = Signal()
+		self.nodeNameChanged = Signal()
+		self.connectionsChanged = Signal()
+		self.nodeChanged = Signal()
 		self.wireSignals()
 
 		self.extras = None
@@ -119,9 +122,28 @@ class AbstractNode(object):
 
 	def wireSignals(self):
 		"""sets up signal hierarchy"""
-		self.sync.connect(self.attrsChanged)
-		self.sync.connect(self.stateChanged)
-		# sync triggers everything
+		intermediateSignals = [self.attrsChanged, self.stateChanged, self.connectionsChanged,
+		          self.nodeNameChanged]
+
+		for i in intermediateSignals:
+			# connect sync to everything
+			self.sync.connect(i)
+			# connect everything to nodeChanged
+			i.connect(self.nodeChanged)
+		"""need more sophistication in signal system to avoid mashing nodeChanged 5 times
+		every time sync is called"""
+
+	# signal-fired methods
+	def onNodeChanged(self, *args, **kwargs):
+		pass
+	def onAttrsChanged(self, *args, **kwargs):
+		pass
+	def onStateChanged(self, *args, **kwargs):
+		pass
+	def onConnectionsChanged(self, *args, **kwargs):
+		pass
+
+
 
 	def setState(self, state):
 		if state not in self.states:

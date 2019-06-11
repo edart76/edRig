@@ -6,9 +6,8 @@ import maya.api.OpenMaya as om
 import curve
 import time
 
-class RemapWrapper(object):
-	"""specialised wrapper for working with remapValues"""
 
+def getMatrixFromPlug():
 
 # rotate transform around axis vector with quaternion
 def quatAxis(inSpace="", pos=[1,0,0], axis=[0,0,1],

@@ -1,8 +1,9 @@
 """operations working on plugs as live operation components"""
 
 from maya import cmds
+import maya.api.OpenMaya as om
 from edRig import core, attr
-from edRig.node import ECA, AbsoluteNode
+from edRig.node import ECA, AbsoluteNode, PlugObject
 
 def conOrSet(driver, driven):
 	"""if EITHER is a static value, the opposite will be set as a plug"""
@@ -20,11 +21,19 @@ def conOrSet(driver, driven):
 		attr.setAttr(plug, attrValue=val)
 
 
+
 def plugCondition(val1, val2, operation="greaterThan"):
 	"""compares conditions"""
 
 def plugMin(*args):
 	"""gets minimum of a set of plugs"""
+
+def plugAdd(*args):
+	"""adds set of plugs"""
+
+def plugAverage(*args):
+	"""gets average of plugs"""
+
 
 def reversePlug(plug):
 	"""returns 1 - plug"""
