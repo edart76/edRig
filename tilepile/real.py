@@ -44,15 +44,13 @@ class RealComponent(object):
 	            hType=None, desc="", default=None, attrItem=None,
 	            *args, **kwargs):
 		if attrItem:
-			print("adding attrItem {} directly to {}".format(attrItem.name, parent.name))
-			return parent.addChild(attrItem)
-		#print "base addAttr name is {}".format(name)
+			result = parent.addChild(attrItem)
+
 		if parent.attrFromName(name=name):
-			print( "attr {} already in {} children".format(
-				name, parent.name))
-			return parent.attrFromName(name)
-		return parent.addAttr(name=name, dataType=dataType, hType=hType,
+			result = parent.attrFromName(name)
+		else: result = parent.addAttr(name=name, dataType=dataType, hType=hType,
 		                      desc=desc, default=default, *args, **kwargs)
+		return result
 
 	def removeAttr(self, name, role="output"):
 		if role == "output":

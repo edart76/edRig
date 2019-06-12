@@ -308,38 +308,42 @@ class AbstractNode(object):
 	            hType=None, desc="", default=None, attrItem=None,
 	            *args, **kwargs):
 		if attrItem:
-			print "adding attrItem {} directly to {}".format(attrItem.name, parent.name)
-			return parent.addChild(attrItem)
-		#print "base addAttr name is {}".format(name)
-		if parent.attrFromName(name=name):
-			raise RuntimeError("attr {} already in {} children".format(
-				name, parent.name))
-		return parent.addAttr(name=name, dataType=dataType, hType=hType,
-		                      desc=desc, default=default, *args, **kwargs)
+			result = parent.addChild(attrItem)
+
+		elif parent.attrFromName(name=name):
+			result = parent.attrFromName(name)
+		else:
+			result = parent.addAttr(name=name, dataType=dataType, hType=hType,
+			                        desc=desc, default=default, *args, **kwargs)
+		return result
 
 	def removeAttr(self, name, role="output"):
 		if role == "output":
 			attr = self.getOutput(name=name)
 		else:
 			attr = self.getInput(name=name)
-
 		attr.parent.removeAttr(name)
+		self.attrsChanged()
 
 	def addInput(self, parent=None, name=None, dataType=None,
 	             hType="leaf", desc="", default=None, attrItem=None,
 	             *args, **kwargs):
 		parent = parent or self.inputRoot
-		return self.addAttr(parent=parent, name=name, dataType=dataType,
+		result =  self.addAttr(parent=parent, name=name, dataType=dataType,
 		                    hType=hType, desc=desc, default=default,
 		                    attrItem=attrItem, *args, **kwargs)
+		self.attrsChanged()
+		return result
 
 	def addOutput(self, parent=None, name=None, dataType=None,
 	              hType="leaf", desc="", default=None, attrItem=None,
 	              *args, **kwargs):
 		parent = parent or self.outputRoot
-		return self.addAttr(parent=parent, name=name, dataType=dataType,
+		result = self.addAttr(parent=parent, name=name, dataType=dataType,
 		                    hType=hType, desc=desc, default=default,
 		                    attrItem=attrItem, *args, **kwargs)
+		self.attrsChanged()
+		return result
 
 	def getInput(self, name):
 		return self.inputRoot.attrFromName(name)
@@ -382,6 +386,7 @@ class AbstractNode(object):
 		"""add setting entry to abstractTree"""
 		parent = parent or self.settings
 		branch = parent[entryName]
+		if options == bool: options = (True, False)
 		extras = {"options" : options,
 		          "min" : min,
 		          "max" : max}
@@ -397,11 +402,6 @@ class AbstractNode(object):
 
 	def getConnectedSets(self):
 		return self.graph.getSetsFromNode(self)
-
-	# actions and real-facing methods
-	# def action(self, *args, **kwargs):
-	# 	"""decorator"""
-	# 	return assignAction(self, *args, **kwargs)
 
 	def getAllActions(self):
 		#self.addAction(self.getRealActions())
@@ -544,11 +544,6 @@ class AbstractAttr(AttrItem):
 		"nD" : ["0D", "1D", "2D", "3D"],
 		# this should probably be exposed to user per-attribute
 	}
-	# def __init__(self, *args, **kwargs):
-	# 	"""adds reference to an abstractNode, because it's just easier"""
-	# 	super(AbstractAttr, self).__init__(*args, **kwargs)
-	# 	# that feel when you monkeypatch your own objects for readibility
-
 
 	def __init__(self, *args, **kwargs):
 		"""add maya-specific support, this inheritance is totally messed up"""
@@ -582,6 +577,9 @@ class AbstractAttr(AttrItem):
 	@property
 	def abstract(self):
 		return self.node
+
+	def addFreeArrayIndex(self, arrayAttr):
+		"""looks at array attr and ensures there is always at least one free index"""
 
 
 

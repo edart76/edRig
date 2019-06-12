@@ -7,11 +7,36 @@ import maya.api.OpenMaya as om
 from nodule import nodule
 from edRig import utils, attr
 
+sceneScale = 1
+# for later
+
+class NurbsCurve(AbsoluteNode):
+	"""is this a mistake"""
+
+	@classmethod
+	def create(cls, name=None, n=None, *args, **kwargs):
+		pass
+
 def isCurve(node):
 	if core.isType(node, "nurbsCurve") or core.isType(node, "bezierCurve"):
 		return True
 	else:
 		return False
+
+def makeLine(name):
+	"""makes a basic nurbs curve"""
+	newCurve = AbsoluteNode(cmds.curve(point=[(0,0,0), (0, sceneScale, 0)],
+	                                   degree=1))
+	# i love not being able to name a curve when you create it
+	newCurve.name = name
+	return newCurve
+
+def rebuildCurve(curve, **kwargs):
+	curve = AbsoluteNode(curve).shape
+	return cmds.rebuildCurve(curve, **kwargs)
+
+
+
 
 def getCurveInfo(shape=None, fn=None):
 	"""gather information to regenerate nurbs curve from data"""
@@ -189,7 +214,7 @@ def curveBinarySearch(crv, startU, targetLength):
 	pass
 	#it's time to ascend
 
-def createCurve(name):
+def createCurve(name, init=True):
 	#create a single nurbs curve node (named properly) for data management
 	shape = cmds.createNode("nurbsCurve", n=name+"_shape")
 	parent = cmds.listRelatives(shape, parent=True)

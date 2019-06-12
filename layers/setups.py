@@ -20,7 +20,7 @@ class Memory(object):
 	"""stores maya scene data in regular, serialisable container
 	it would be cool to have this link live to the op datafile to
 	allow different workflows when editing, but one step at a time"""
-	infoKinds = ["attr", "xform", "weight", "shape"]
+	infoKinds = ["attr", "xform", "weight", "shape", "multi"]
 
 	def __init__(self, *args, **kwargs):
 		super(Memory, self).__init__(*args, **kwargs)
@@ -92,6 +92,12 @@ class Memory(object):
 		# print "REMEMBER"
 		# print "current infoNames are {}, infoTypes".format(self.infoNames())
 		# print "infoName is {}, infoType is {}".format(infoName, infoType)
+
+		# multi memory support
+		if isinstance(infoType, list):
+			for i in infoType:
+				self.remember(infoName, i, nodes)
+
 		if not isinstance(nodes, list):
 			nodes = [nodes]
 		if not infoName in self.infoNames():

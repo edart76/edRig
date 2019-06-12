@@ -82,14 +82,10 @@ class MayaAttrInterface(RealAttrInterface):
 	# 	return self.__str__().__add__(other)
 
 class Op(MayaReal):
-	# base class for "operations" executed by abstractGraph,
-	# mainly maya scripting
 
 	forceInclude = False
 
 	colour = (100, 100, 150) # rgb
-
-	currentOp = None # set by exec handler?
 
 	categories = ["opIo", "main"]
 	persistCategories = ["opIo"]
@@ -205,10 +201,6 @@ class Op(MayaReal):
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		"""attach op to abstractNode, and merge input and outputRoots"""
 		self.abstract = abstract
-		# print "abstract is {}".format(abstract)
-		# print "abstract class is {}".format(abstract.__class__)
-		# print "abstract mclass is {}".format(abstract.__class__.__class__)
-		# print "new absInstance sync is {}".format(abstract.sync)
 
 		# settings
 		self.settings = self.abstract.settings
@@ -225,14 +217,13 @@ class Op(MayaReal):
 		if define:
 			self.defineAttrs() # resets attributes, don't call on regeneration
 			self.defineSettings()
-		#print "outputs after defineAttrs are {}".format(self.outputs)
+
 		# support for redefining attributes from dict
 		if inDict:
 			self.inputRoot = self.inputRoot.fromDict(inDict, node=abstract)
 		if outDict:
 			self.outputRoot = self.outputRoot.fromDict(outDict, node=abstract)
 		# no luck all skill
-		self.redraw=True
 
 		print ""
 		self.sync = self.abstract.sync

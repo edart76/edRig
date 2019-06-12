@@ -102,6 +102,8 @@ class Completer(object):
 class AttrItem(object):
 	"""base used to define a tree of connectable attributes"""
 
+	hTypes = ["leaf", "compound", "array", "root", "dummy"]
+
 	def __init__(self, node=None, role="input", dataType="0D",
 	             hType="leaf", name="blankName", desc="", default=None,
 	             *args, **kwargs):
@@ -224,6 +226,9 @@ class AttrItem(object):
 			allChildren.append(i)
 		#print "{} getAllChildren is {}".format(self.name, allChildren)
 		return allChildren
+
+	def getConnectedChildren(self):
+		return [i for i in self.getChildren() if i.getConnections()]
 
 	def getAllLeaves(self):
 		level = self.getAllChildren()
