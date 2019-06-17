@@ -20,6 +20,14 @@ def conOrSet(driver, driven):
 		val, plug = (args[i] if plugs[0] else args[not i] for i in plugs)
 		attr.setAttr(plug, attrValue=val)
 
+def vecFromTo(startPlug, endPlug):
+	"""get vector between two plugs"""
+	vec = ECA("plusMinusAverage", name="vecFrom_{}_{}".format(
+		startPlug, endPlug))
+	vec.set("operation", "subtract") #smart enum setting bois :D
+	vec.con(endPlug, vec+".input3D[0]")
+	vec.con(startPlug, vec+".input3D[1]")
+	return vec+".output3D"
 
 
 def plugCondition(val1, val2, operation="greaterThan"):

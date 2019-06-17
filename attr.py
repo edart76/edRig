@@ -1,6 +1,6 @@
 # lib for adding and modifying attributes
 import random
-from edRig import core, log
+from edRig import core # can't import log :(
 from maya import cmds
 import maya.api.OpenMaya as om
 

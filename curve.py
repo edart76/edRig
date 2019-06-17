@@ -5,7 +5,7 @@ from core import ECN, con
 from edRig.node import AbsoluteNode, ECA
 import maya.api.OpenMaya as om
 from nodule import nodule
-from edRig import utils, attr
+from edRig import attr, plug
 
 sceneScale = 1
 # for later
@@ -137,7 +137,7 @@ def curveRivet(dag, crv, uVal, upCrv=None, upSpace="world", top=True, rotX=True,
 		#     con(upCrv+".worldSpace[0]", pci+".inputCurve")
 
 		cmds.setAttr(aim+".worldUpType", 3) #vector up
-		upVec = utils.vecFromTo( upPci+".position", pci+".position")
+		upVec = plug.vecFromTo( upPci+".position", pci+".position")
 		con(upVec, aim+".upVector")
 	else:
 		# just use the normal of the point node
@@ -283,7 +283,7 @@ def pciAtU(crvShape, u=0.1, percentage=True,
 					targetPci = i
 					break
 			if not constantU:
-				purposeTest = core.Op.getTag(i, tagName="purpose")
+				purposeTest = attr.getTag(i, tagName="purpose")
 				print "purposeTest is {}".format(purpose)
 				if constantTest == "False" and purposeTest == purpose:
 					targetPci = i
@@ -292,8 +292,8 @@ def pciAtU(crvShape, u=0.1, percentage=True,
 
 	if not targetPci:
 		targetPci = nodule(ECN("pci", "pointOn_{}_at{}u".format(crvShape, str(u))))
-		core.Op.addTag(targetPci, "constantU", str(constantU))
-		core.Op.addTag(targetPci, "purpose", str(purpose))
+		attr.addTag(targetPci, "constantU", str(constantU))
+		attr.addTag(targetPci, "purpose", str(purpose))
 		targetPci.parameter = u
 		con(crvShape+".local", targetPci+".inputCurve")
 

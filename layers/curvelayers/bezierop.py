@@ -67,19 +67,20 @@ class BezierOp(LayerOp):
 			retro = False if val is self.controls[0] else True
 			pro = False if val is self.controls[1] else True
 
-			handlePlugs = self.makeHandles(val, pro, retro)
+			handlePlugs = self.makeHandles(val, pro, retro, handles)
 
 
 		self.connectHandles(handles)
 
-	def makeHandles(self, control, pro, retro):
+	def makeHandles(self, control, pro, retro, handles):
 		"""create matrix mults to capture points ahead and behind control"""
 		points = ( (1,0,0), (0,0,0), (-1, 0, 0))
 		for i, val in (pro, True, retro):
-			if i:
+			if val:
 				pmm = ECA("pointMatrixMult")
 				pmm.con(control.world, pmm+".inMatrix")
-
+				pmm.set("inPoint", points[i])
+				handles.append(pmm+".output")
 
 
 	def connectHandles(self, pointPlugs):
@@ -101,6 +102,7 @@ class BezierOp(LayerOp):
 		ctrl = control.FkControl(self.opName + "_startCtrl",
 		                              layers=1,
 		                              controlType=self.settings["controlType"])
+		ctrl.first
 		self.controls.append(ctrl)
 		return ctrl
 

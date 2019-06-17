@@ -1,12 +1,12 @@
 # smaller widgets contained on ui tiles to avoid attribute editors
 from PySide2 import QtCore, QtWidgets, QtGui
+from edRig.tilepile.ui2.textedit import CodeEditor
 import random
 
-
 # node widgets are ported from nodeGraphQt, but i basically wrote half of them anyway
-class _NodeGroubBox(QtWidgets.QGroupBox):
+class _NodeGroupBox(QtWidgets.QGroupBox):
 	def __init__(self, label, parent=None):
-		super(_NodeGroubBox, self).__init__(parent)
+		super(_NodeGroupBox, self).__init__(parent)
 		margin = (0, 0, 0, 0)
 		padding_top = '14px'
 		if label == '':
@@ -113,7 +113,7 @@ class NameTagWidget(NodeBaseWidget):
 		self.line.updateGeometry()
 		#self.line.setReadOnly(False)
 		self.line.editingFinished.connect(self._value_changed)
-		#group = _NodeGroubBox(label)
+		#group = _NodeGroupBox(label)
 		#group.add_node_widget(self.line)
 		self.setWidget(self.line)
 
@@ -160,7 +160,7 @@ class NodeComboBox(NodeBaseWidget):
 		# list_view.setStyleSheet(STYLE_QLISTVIEW)
 		self._combo.setView(list_view)
 		self._combo.clearFocus()
-		group = _NodeGroubBox(label)
+		group = _NodeGroupBox(label)
 		group.add_node_widget(self._combo)
 
 		self.setWidget(group)
@@ -216,7 +216,7 @@ class NodeLineEdit(NodeBaseWidget):
 		self._ledit.setAlignment(QtCore.Qt.AlignLeft)
 		self._ledit.editingFinished.connect(self._value_changed)
 		self._ledit.clearFocus()
-		group = _NodeGroubBox(label)
+		group = _NodeGroupBox(label)
 		group.add_node_widget(self._ledit)
 		self.setWidget(group)
 		self.text = text
@@ -240,6 +240,32 @@ class NodeLineEdit(NodeBaseWidget):
 		print "setting text box value to {}".format(text)
 		self._ledit.setText(text)
 
+class NodeTextEdit(NodeBaseWidget):
+	"""text edit widget for more involved code callbacks"""
+
+	def __init__(self, parent=None, name="", label="", text=""):
+		super(NodeTextEdit, self).__init__(parent, name, label)
+		self.textEdit = CodeEditor()
+		group = _NodeGroupBox(label)
+		group.add_node_widget(self.textEdit)
+		self.setWidget(self.textEdit)
+		self.value = text
+
+	@property
+	def type(self):
+		return "TextEditNodeWidget"
+
+	@property
+	def widget(self):
+		return self.textEdit
+	
+	@property
+	def value(self):
+		return str(self.textEdit.text())
+	@value.setter
+	def value(self, val):
+		self.textEdit.setText(val)
+
 
 class NodeCheckBox(NodeBaseWidget):
 	"""
@@ -256,7 +282,7 @@ class NodeCheckBox(NodeBaseWidget):
 		font.setPointSize(11)
 		self._cbox.setFont(font)
 		self._cbox.stateChanged.connect(self._value_changed)
-		group = _NodeGroubBox(label)
+		group = _NodeGroupBox(label)
 		group.add_node_widget(self._cbox)
 		self.setWidget(group)
 		self.text = text
@@ -346,7 +372,7 @@ class NodeIntSpinbox(NodeBaseWidget):
 		font.setPointSize(11)
 		self._field.setFont(font)
 		self._field.valueChanged.connect(self._value_changed)
-		group = _NodeGroubBox(label)
+		group = _NodeGroupBox(label)
 		group.add_node_widget(self._field)
 		self.setWidget(group)
 		self.value = value

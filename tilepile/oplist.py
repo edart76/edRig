@@ -7,7 +7,7 @@
 # from edRig.layers.misclayers import *
 import pprint
 from edRig.layers import pointlayers, \
-	jointlayers, curvelayers, surfacelayers, misclayers
+	curvelayers, surfacelayers, misclayers
 
 from edRig.pipeline import safeLoadModule
 
@@ -22,21 +22,9 @@ print "opList imported"
 
 class OpList(object):
 
-	# ops = [
-	# 	#0D
-	# 	controlop.ControlOp, ikop.IkOp,
-	# 	#1D
-	# 	JointCurveOp, #VariableFkOp,
-	# 	BezierOp,
-	# 	#2D
-	# 	SkinOp,
-	# 	#misc
-	# 	ImportDrivenOp, ImportDriverOp, PythonOp,
-	# ]
-
 	opPackages = [
 		pointlayers,
-		jointlayers,
+		#jointlayers,
 		curvelayers,
 		surfacelayers,
 		misclayers

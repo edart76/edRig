@@ -268,29 +268,21 @@ def itersubclasses(cls, _seen=None):
 			for sub in itersubclasses(sub, _seen):
 				yield sub
 
-def iterSubModuleNames(package=None, path=None, fullPath=True):
+def iterSubModuleNames(package=None, path=None, fullPath=True, debug=False):
 	"""yields names of all modules in package - DOES NOT import them"""
 	names = []
 	if not path:
-		# path = inspect.getfile(package)
-		# if path.endswith("__init__.py"):
-		# 	path = path.replace("\__init__.py", "")
-		# path = package.__file__.replace("\\", "\\\\")
-		# #path = package.__path__
 		loader = pkgutil.get_loader(package)
 		if not loader.is_package(loader.fullname):
 			names.append(package.__name__)
 			return names
 
-
 		path = [loader.filename]
 
-		print("path {}".format(path))
+		if debug: print("path {}".format(path))
 
-	#print(package.__name__)
-	#print([i for i in pkgutil.iter_modules([path])])
 	for loader, module_name, is_pkg in pkgutil.walk_packages(path):
-		print("module name {}".format(module_name))
+		if debug: print("module name {}".format(module_name))
 
 		names.append(module_name)
 	if fullPath:

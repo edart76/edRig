@@ -1,31 +1,11 @@
-# layers working with 2d surfaces
-from edRig.core import ECN, con
-from edRig import core, transform, attrio, control, curve
-from maya import cmds
-#from edRig.layers.base import LayerOp
+
 from edRig.tilepile.ops.layer import LayerOp
-import edRig.layers.base
-from edRig.layers import datatypes
+from edRig.layers.surfacelayers import MeshOp
+
+from maya import cmds
 import maya.api.OpenMaya as om
-import random
 
-class SurfaceOp(LayerOp):
-	GPUable = False
-
-	pass
-
-class MeshOp(SurfaceOp):
-	"""create and remember tech meshes"""
-
-	def defineAttrs(self):
-		self.addInput(name="input0D", dataType="0D",
-		               desc="input transform for mesh")
-		self.addOutput(name="output2D", dataType="2D",
-		               desc="output created mesh")
-
-
-
-class SkinOp(SurfaceOp):
+class SkinOp(MeshOp):
 	"""creates a skincluster on a mesh and saves the weights
 	in future should work for other dimensions, but that gets tricky
 	this sounds like the easiest thing in the world but it's actually
@@ -42,12 +22,12 @@ class SkinOp(SurfaceOp):
 
 	def __init__(self, name):
 		super(SkinOp, self).__init__(name=name)
-		# self.addInputWithAction(suffix="_in", datatype="nD",
-		#                         desc="additional driver of the skincluster")
+	# self.addInputWithAction(suffix="_in", datatype="nD",
+	#                         desc="additional driver of the skincluster")
 
 	def defineAttrs(self):
 		self.addOutput(name="outSurface", dataType="2D",
-		              desc="output from skincluster")
+		               desc="output from skincluster")
 
 		self.addInput(name="inSurface", dataType="2D",
 		              desc="surface to use for skincluster")
@@ -89,10 +69,10 @@ class SkinOp(SurfaceOp):
 		print "self.skin is {}".format(self.skin)
 
 
-		# above line will do whatever conversion it has to and create a new
-		# shape node as active - use this to make the skin
-		# worry about GPU chaining later
-		# worry about it in abject terror
+	# above line will do whatever conversion it has to and create a new
+	# shape node as active - use this to make the skin
+	# worry about GPU chaining later
+	# worry about it in abject terror
 
 	def getLiveInfluences(self):
 		"""unpacks the node's inputs and converts each to joints"""
@@ -120,7 +100,7 @@ class SkinOp(SurfaceOp):
 	requiring interpolation SHOULD be those within influence object. The test is
 	simple - if a normal ray from anywhere on the object passes close to the point,
 	that point is considered within the influence.
-	
+
 	actual skincluster node indices considered malleable - the indices don't need to be
 	reapplied in the right order, but every influence's weights should be 
 	associated with it when stored
@@ -132,11 +112,5 @@ class SkinOp(SurfaceOp):
 		"""makes an empty skincluster on target shape"""
 		temp = cmds.createNode("joint")
 		return cmds.skinCluster(temp, target)
-
-
-
-
-
-
 
 

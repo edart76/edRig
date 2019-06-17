@@ -273,9 +273,29 @@ class Op(MayaReal):
 		raise NotImplementedError("op class {} DOES NOT override defineAttrs, please fix".format(
 			self.__class__.__name__))
 
+
+	### handy settings methods
 	def defineSettings(self):
 		"""override with op specifics"""
 		pass
+
+	def addSetting(self, parent=None, entryName=None, value=None,
+	               options=None, min=None, max=None):
+		"""dummy to get args in pycharm :("""
+		pass
+
+	def addMemorySpaceSetting(self, parent=None):
+		"""specific to give uniform option to method
+		of recalling xform from memory"""
+		self.addSetting(parent=parent, entryName="memorySpace", value="local",
+		                options=("local", "world"))
+
+	def addBoolSetting(self, entryName=None, parent=None, value=True):
+		self.addSetting(parent=parent, entryName=entryName, value=value,
+		                options=(True, False))
+
+
+
 
 	def exposeNode(self, node, parent=None, entryName="node"):
 		"""CRUCIAL aspect of rigging system - allows exposing individual
