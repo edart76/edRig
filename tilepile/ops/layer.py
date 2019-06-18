@@ -136,12 +136,27 @@ class LayerOp(Op):
 	def remember(self, infoName=None, infoType=None, nodes=None, **kwargs):
 		"""apply saved data if it exists, create it if not
 		just a bit of recreational industrial espionage"""
+
+		# support for remembering compound data
+		if kwargs.get("compound"):
+			"""we expect dict of 
+			{"infoName" : {"infoType" : ["attr", "xform"],
+							"nodes" : [nodes] },
+				"otherInfoName" : {etc} }
+			"""
+			for k, v in kwargs.pop("compound").iteritems():
+				self.remember(infoName=k,
+				              infoType=v["infoType"],
+				              nodes=v["nodes"],
+				              **kwargs)
+				return True
+
 		if infoName in self.memory.infoNames():
 			if infoType in self.memory.infoTypes(infoName):
 				print ""
 				print "RECALLING from remember"
 				self.memory.setNodes(infoName, nodes)
-				self.memory.recall(infoName, infoType)
+				self.memory.recall(infoName, infoType, **kwargs)
 			else:
 				print "infoType {} not found in memory {}".format(infoType,
 				                                                  self.memory.infoTypes(infoName))
@@ -150,6 +165,8 @@ class LayerOp(Op):
 			                                                  self.memory.infoNames())
 		# self.memory.setNodes(infoName, nodes)
 		self.memory.remember(infoName, infoType, nodes, **kwargs)
+
+
 
 	"""EVENTUALLY make this a live link, so every time something is read from
 	memory object, it's read from the file, and vice versa

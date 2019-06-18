@@ -36,6 +36,10 @@ class Globals(object):
 		"solvers" : {
 			"at" : "message",
 			"multi" : True,
+		},
+		"materials": {
+			"at" : "string",
+			"multi" : True,
 		}
 		}
 

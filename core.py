@@ -20,11 +20,7 @@ def isPlug(target):
 	if not isNode(target):
 		return False
 	plug = ".".join(target.split(".")[1:])
-	# print ""
-	# print "plug is " + plug
-	if plug in cmds.listAttr(node):
-		return True
-	return False
+	return plug in cmds.listAttr(node)
 
 def makeList(test):
 	if not isinstance(test, list):

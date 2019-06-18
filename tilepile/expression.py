@@ -9,13 +9,30 @@ from node_calculator import core as noca # big oofs in chat
 if it fails, including proper path to entry
 evaluation and conditions for success will only be known in real context - 
 there could be support for doing pure abstract lookups in a purely abstract setting,
-but for now not necessary"""
+but for now not necessary
+
+variables are accessed via $var syntax, just for consistency
+no that's disgusting
+via (var) syntax"""
 
 class AbstractEvaluator(object):
 	"""base class for abstract-level expression execution"""
+
+
 	def __init__(self, graph, node=None):
+		""":param graph : AbstractGraph"""
 		self.graph = graph # expressions at least need graph to evaluate
 		self.node = node # node is nifty, but not required
+
+		self.globalVars = {
+			"asset" : self.graph.asset,
+			"name" : self.node.nodeName,
+		}
+
+	def getGlobalVar(self, varString):
+		"""expects variable with $sign attached"""
+		var = varString[1:]
+		return self.globalVars[var]
 
 	@staticmethod
 	def stripWhitespace(string=""):
@@ -45,7 +62,6 @@ class MayaEvaluator(AbstractEvaluator):
 			# assume it's all live
 
 			result = "" # output plug or result to
-
 			success = self.applyExpressionOutput(endTarget, result)
 			return success
 		except:
@@ -59,6 +75,9 @@ class MayaEvaluator(AbstractEvaluator):
 
 # change based on program environment
 EVALUATOR = MayaEvaluator
+
+
+
 
 """there isn't really a better way than node calculator to set up simple expressions driving nodes;
 it does mean some serious string processing to get some usable python out of it before

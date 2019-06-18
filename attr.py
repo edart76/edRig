@@ -1,6 +1,5 @@
 # lib for adding and modifying attributes
 import random
-from edRig import core # can't import log :(
 from maya import cmds
 import maya.api.OpenMaya as om
 
@@ -10,6 +9,18 @@ dimTypes = {
 	"2D" : ("nurbsSurface", "mesh")
 }
 
+def isNode(target):
+	"""copied to avoid dependency"""
+	return cmds.objExists(target)
+
+def isPlug(target):
+	"""returns true for format pCube1.translateX"""
+	node = target.split(".")[0]
+	if not isNode(target):
+		return False
+	plug = ".".join(target.split(".")[1:])
+	return plug in cmds.listAttr(node)
+
 def getMPlug(plugName):
 	sel = om.MSelectionList()
 	sel.add(plugName)
@@ -18,6 +29,7 @@ def getMPlug(plugName):
 def con(a, b, f=True):
 	"""let's try this again"""
 	cmds.connectAttr(a, b, f=f)
+	"""upgrade to om if speed becomes painful"""
 
 def conOrSet(a, b, f=True):
 	"""connects plug to b if a is a plug,
@@ -31,29 +43,12 @@ def conOrSet(a, b, f=True):
 
 def breakConnections(target, source=True, dest=True):
 	"""ed smash"""
-	if core.isNode(target):
+	if isNode(target):
 		for i in cmds.listAttr(target):
 			breakConnections(target+"."+i, source, dest)
-	if core.isPlug(target):
+	if isPlug(target):
 		for i in cmds.listConnections(target, plugs=True, s=source, d=dest):
 			cmds.disconnectAttr(target, i)
-
-def isNode(target):
-	if "." in target:
-		return False
-	return cmds.objExists(target)
-
-def isPlug(target):
-	"""returns true for format pCube1.translateX"""
-	node = target.split(".")[0]
-	if not isNode(target):
-		return False
-	plug = ".".join(target.split(".")[1:])
-	# print ""
-	# print "plug is " + plug
-	if plug in cmds.listAttr(node):
-		return True
-	return False
 
 def processAttrNames(attr, node=None, asPlug=False, asAttr=True):
 	"""absolute definite way of getting node.attr vs attr from any string"""
@@ -113,7 +108,7 @@ def getDictFromTags(tagNode):
 			returnDict.update({tagName : tagContent})
 	return returnDict
 
-def listWithTagContent(searchNodes = [], searchTag="", searchContent=""):
+def listWithTagContent(searchNodes=None, searchTag="", searchContent=""):
 	found = []
 	for i in searchNodes:
 		searchList = cmds.listAttr(i, string="*_tag")
@@ -271,7 +266,7 @@ def getEnumValue(plug):
 def getImmediateNeighbours(target, source=True, dest=True, wantPlug=False):
 	"""returns nodes connected immediately downstream of plug, or all of node"""
 	nodeList = []
-	if core.isNode(target):
+	if isNode(target):
 		for i in cmds.listAttr(target):
 			nodeList += getImmediateNeighbours(i)
 	else:

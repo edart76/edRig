@@ -258,7 +258,7 @@ class NodeTextEdit(NodeBaseWidget):
 	@property
 	def widget(self):
 		return self.textEdit
-	
+
 	@property
 	def value(self):
 		return str(self.textEdit.text())

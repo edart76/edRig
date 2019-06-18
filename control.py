@@ -2,7 +2,7 @@
 from edRig import CURRENT_PATH
 from edRig.core import ECN, con
 from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import attr, transform, pipeline
+from edRig import attr, transform, pipeline, material, beauty
 
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -14,7 +14,7 @@ controlLibPath = CURRENT_PATH + r'\data\ctrls\ctrlLibraryv02.ma'
 
 validTypes = ["tet", "sphere", "dodec"]
 
-class Control(object):
+class OldControl(object):
 	#base class for all forms of control
 	def __init__(self, name, type="tet"):
 		self.name = name
@@ -74,7 +74,7 @@ class Control(object):
 	#     self.name = value
 
 
-class FkControl(Control):
+class Control(object):
 	# base for all controls whose physical location doesn't matter
 	"""control dag structure is this: # contributes to output
 	entry: organisation
@@ -87,10 +87,12 @@ class FkControl(Control):
 		localOutput: locator for use as point datatype
 			"""
 
+	indexColours = ["none", "black"]
+
 	types = ("curve", "surface")
 
-	def __init__(self, name=None, layers=1, controlType="curve"):
-		#super(FkControl, self).__init__(name)
+	def __init__(self, name=None, layers=1, controlType="curve",
+	             colour=(0,120,256) ):
 		if not controlType in self.types:
 			print "control type {} is invalid".format(controlType)
 			controlType = "curve"
@@ -98,10 +100,24 @@ class FkControl(Control):
 		self.name = name
 		self.spareInputs = {} # name, node
 		self.layers = [None] * layers # absoluteNodes
+		self.colour = beauty.getColour(colour)
 		self.makeHierarchy()
 		if layers:
 			self.connectProxies()
 			self.connectOutput()
+
+		self.makeBeautiful(self.colour)
+
+	def makeBeautiful(self, colour):
+		"""pretty"""
+		if self.controlType == "curve":
+			for i in self.layers:
+				beauty.setColour(i, colour)
+		elif self.controlType == "surface":
+			controlMat = material.getUiShader(colour)
+			for i in self.layers:
+				controlMat.applyTo(i)
+
 
 	def makeHierarchy(self):
 		"""creates uniform hierarchy, according to plan following class"""
@@ -156,7 +172,6 @@ class FkControl(Control):
 		"""imperative to do more here, this is just a stopgap until a callback system
 		is worked out
 		there will be no parallelism with this yet"""
-
 		pass
 
 	def connectOutput(self):
@@ -173,8 +188,7 @@ class FkControl(Control):
 		"""make a proper visual representation at origin"""
 		# for now just a circle
 		ctrl = self.makeShape(name)
-		print "ctrl {}".format(ctrl)
-		print "parent {}".format(parent)
+
 		if parent:
 			cmds.parent(ctrl, parent)
 		return ctrl
@@ -216,11 +230,34 @@ class FkControl(Control):
 		"""returns first layer"""
 		return self.layers[0]
 
+class FkControl(Control):
+	"""shell for inheriting main control"""
+
 class TileControl(Control):
-	"""literally just a square"""
+	"""literally just a square
+	use to hold attributes,
+	under no circumstances for driving motion directly"""
+	
+	# def __init__(self, name=None, co):
+	# 	super(TileControl, self).__init__()
+
+	def makeSquare(self, name=None):
+		""""""
+		name = name or self.name
+		return AbsoluteNode(cmds.polyPlane(n=name, ch=False, sx=1, sy=0)[0])
+
+	def makeHierarchy(self):
+		"""make a square and make a group"""
+		self.root = ECA("transform", name=self.name+"_control")
+		self.square = self.makeSquare()
+		self.square.parentTo(self.root)
+
+
 
 	"""include methods for adding tile to group of other tiles
 	this may result in unpredictable arrangements, which is nice"""
+
+
 
 class RampControl(Control):
 	"""live ramp control in the scene connected to remapvalue network

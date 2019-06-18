@@ -33,8 +33,17 @@ class SkinOp(MeshOp):
 		              desc="surface to use for skincluster")
 		self.addInput(name="inverseSpace", dataType="0D",
 		              desc="(optional) parent space of influence, to make skin local")
-		self.addInput(name="influence0_in", dataType="nD",
+		self.addInput(name="influence_in", dataType="nD", hType="array",
 		              desc="driver of the skincluster")
+
+	def defineSettings(self):
+		"""ooh boy"""
+		# first the path to the weight file to use
+		self.addSetting(entryName="weightPath",
+		                value="(assetpath)/assemblyData/weights/(opName)")
+		# every op has only one file for storing weights
+		# later with images maps are saved as different channels
+
 
 
 	def refreshIo(self, controller=None, attrChanged=None):
@@ -46,8 +55,8 @@ class SkinOp(MeshOp):
 	# 	pass
 	# no plan for skincluster
 
-	def run(self):
-		"""this is the first time i've used the run stage
+	def execute(self):
+		"""
 		get inputs and surfaces as correct representations
 		make skincluster
 		remember weights of individual influences in sequence
@@ -60,9 +69,9 @@ class SkinOp(MeshOp):
 		# APPARENTLY, ngSkinTools has full io support including layers.
 		# if masks are too tricky, pursue this
 
-		targetData = self.getInput("inSurface").value
-		newData = targetData.newStage("{}_skin".format(self.opName))
-		targetMesh = newData.asMesh() # aka "asSkinnable"
+		inMeshPlug = self.getInput("inSurface").plug
+		targetMesh = self.ECA("mesh", n=self.opName+"_proxy")
+
 		self.liveInfs = self.getLiveInfluences()
 
 		self.skin = self.makeSkin(targetMesh)
@@ -110,7 +119,7 @@ class SkinOp(MeshOp):
 
 	def makeSkin(self, target):
 		"""makes an empty skincluster on target shape"""
-		temp = cmds.createNode("joint")
+		temp = cmds.createNode("joint", n=self.opName+"_identity")
 		return cmds.skinCluster(temp, target)
 
 

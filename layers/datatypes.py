@@ -2,7 +2,6 @@ import edRig.node
 from edRig import core, transform
 import edRig.curve as libcurve
 import edRig.transform as libtf
-from edRig.layers import base
 from maya import cmds
 import maya.api.OpenMaya as om
 from collections import OrderedDict

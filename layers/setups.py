@@ -87,11 +87,8 @@ class Memory(object):
 
 	def remember(self, infoName, infoType, nodes=None, **kwargs):
 		"""add information to op's memory if none exists
-		we remember lists here"""
-		# print ""
-		# print "REMEMBER"
-		# print "current infoNames are {}, infoTypes".format(self.infoNames())
-		# print "infoName is {}, infoType is {}".format(infoName, infoType)
+		we remember lists here
+		main entrypoint"""
 
 		# multi memory support
 		if isinstance(infoType, list):
@@ -120,7 +117,7 @@ class Memory(object):
 
 
 
-	def recall(self, infoName, infoType="all"):
+	def recall(self, infoName, infoType="all", **kwargs):
 		"""retrieve saved info AND APPLY IT """
 		if not infoType in self.infoKinds and infoType != "all":
 			raise RuntimeError("infoType {} is not recognised".format(infoType))
@@ -134,7 +131,8 @@ class Memory(object):
 		else:
 			# return self._storage[infoName][infoType]
 			self._applyInfo(infoName, infoType,
-			                target=self.nodesFromInfoName(infoName))
+			                target=self.nodesFromInfoName(infoName),
+			                **kwargs)
 
 	def refresh(self, infoName="", infoType="", *args, **kwargs):
 		"""updates existing memory with info from scene
@@ -215,14 +213,16 @@ class Memory(object):
 
 		elif infoType == "xform":
 			# speed is not yet of the essence
-			returnDict["translate"] = cmds.xform(target, q=True, ws=True, t=True)
-			returnDict["rotate"] = cmds.xform(target, q=True, ws=True, ro=True)
-			returnDict["scale"] = cmds.xform(target, q=True, ws=True, s=True)
+			for space, truth in zip(["world", "local"], (True, False)):
+				returnDict[space]["translate"] = cmds.xform(target, q=True, ws=truth, t=True)
+				returnDict[space]["rotate"] = cmds.xform(target, q=True, ws=truth, ro=True)
+				returnDict[space]["scale"] = cmds.xform(target, q=True, ws=truth, s=True)
 			if "jointMode" in kwargs and "jointMode":
 				for ax in "XYZ":
 					jointOrient = cmds.getAttr(target + ".jointOrient" + ax)
 					returnDict["jointOrient" + ax] = jointOrient
 				returnDict["rotateOrder"] = cmds.getAttr(target + ".rotateOrder")
+
 
 		elif infoType == "weight":
 			# woah there
@@ -238,19 +238,17 @@ class Memory(object):
 		#print "gathered goss is {}".format(returnDict)
 		return returnDict
 
-	def _applyInfo(self, infoName, infoType, target=None):
+	def _applyInfo(self, infoName, infoType, target=None, **kwargs):
 		allInfo = self.infoFromInfoName(infoName)
-		# print "applying infoName {} infoType {} to target {}".format(
-		# 	infoName, infoType, target)
-		# target = allInfo["node"]
+
+		space = kwargs.get("space") or "world"
+
 		if not isinstance(target, list):
 			index = self.indexFromNode(infoName, target)
 			info = [allInfo[infoType][index]]
 			target = [target]
 		else:
 			info = allInfo[infoType]
-
-
 
 		#print "info to apply is {}".format(info)
 		# it's really, really for the best if you just work by sequence
@@ -263,9 +261,9 @@ class Memory(object):
 					cmds.setAttr(target + "." + k, v)
 
 			elif infoType == "xform":
-				cmds.xform(target, ws=True, t=(info["translate"]))
-				cmds.xform(target, ws=True, ro=info["rotate"])
-				cmds.xform(target, ws=True, s=info["scale"])
+				cmds.xform(target, ws=True, t=(info[space]["translate"]))
+				cmds.xform(target, ws=True, ro=info[space]["rotate"])
+				cmds.xform(target, ws=True, s=info[space]["scale"])
 
 			elif infoType == "weight":
 				# nope
@@ -314,7 +312,8 @@ class Memory(object):
 		"""in case special types need special templates"""
 		typeDict = {
 			"attr": [],
-			"xform": [],  # worldspace transforms
+			"xform": {"local" : [],
+			          "world" : []},  # worldspace transforms
 			"weight": [],
 			"shape": [],
 		}

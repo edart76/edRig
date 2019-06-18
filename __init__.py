@@ -15,4 +15,5 @@ but also a common material library"""
 
 Env = EnvironmentSettings()
 
-log = print
+def log(message, **kwargs):
+	print(message)
