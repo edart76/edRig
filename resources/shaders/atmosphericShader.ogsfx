@@ -1,0 +1,10 @@
+/*
+this wrapper file will include the main atmos shader
+and define its inputs
+*/
+
+#define OGSFX 1
+
+#define HIDE_OGSFX_UNIFORMS 0
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 1

@@ -1,0 +1,228 @@
+//-
+// Copyright 2016 Autodesk, Inc.  All rights reserved.
+//
+// Use of this software is subject to the terms of the Autodesk license agreement
+// provided at the time of installation or download, or which otherwise
+// accompanies this software in either electronic or hard copy form.
+//+
+
+//
+// This is a simple effect for particle sprites.
+//
+
+uniform texture2D map
+<
+	string UIName = "Sprite Texture";
+	string UIWidget = "FilePicker";
+	string ResourceType = "2D";
+	string ResourceName = "";
+>;
+
+uniform sampler2D SAMP_MMMLWWW = sampler_state
+{ 
+	Texture = <map>; 
+	TEXTURE_MIN_FILTER = LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform mat4 WorldIT : worldinversetranspose;
+uniform mat4 World : world;
+uniform mat4 WorldViewProj : worldviewprojection;
+uniform mat4 Projection : projection; 
+uniform mat4 ProjectionInverse : projectioninverse; 
+uniform mat4 ViewProjectionInverse : viewprojectioninverse; 
+uniform mat4 ViewInverse : viewinverse; 
+
+
+// Vertex Shader
+attribute vertexInS
+{
+	vec3 Pm : POSITION;
+	vec3 Nm : NORMAL;
+	vec4 sprite : TEXCOORD0;
+	vec2 UV : TEXCOORD1;
+};
+
+attribute vertexOutS
+{
+	vec3 Nw : TEXCOORD0;
+	vec3 Vw : TEXCOORD1;
+	vec2 UV : TEXCOORD2;
+	vec4 sprite : TEXCOORD3;
+	vec3 Pm : TEXCOORD4;
+	vec3 Pw : TEXCOORD5;
+};
+
+GLSLShader ShaderVertex
+{
+	void main()
+	{
+		vec3 worldCameraPosition = vec3(ViewInverse[0][3],
+										ViewInverse[1][3],
+										ViewInverse[2][3]);
+
+		vsOUT.Nw = ( WorldIT * vec4(Nm, 0.0) ).xyz;
+		vsOUT.UV = vec2(UV.x, 1.0 - UV.y);
+		vsOUT.Pm = Pm;
+		vsOUT.Pw = ( World * vec4(Pm, 1.0) ).xyz;
+		vsOUT.Vw = worldCameraPosition - vsOUT.Pw;
+		vsOUT.sprite = sprite;
+
+		gl_Position = WorldViewProj * vec4(Pm, 1.0);
+	}
+}
+
+
+// Geometry Shader
+attribute geometryInS
+{
+	vec3 Nw : TEXCOORD0; 
+	vec3 Vw : TEXCOORD1; 
+	vec2 UV : TEXCOORD2; 
+	vec4 sprite : TEXCOORD3; 
+	vec3 Pm : TEXCOORD4; 
+	vec3 Pw : TEXCOORD5; 
+};
+
+GLSLShader GEO_ShaderIOHelpersDeclaration
+{
+#geometryshader
+	layout (points) in; 
+	layout (triangle_strip, max_vertices = 4) out; 
+
+	struct GEO_OUT_struct
+	{
+		vec3 Nw;
+		vec3 Vw;
+		vec2 UV;
+		vec4 sprite;
+		vec3 Pm;
+		vec3 Pw;
+		vec4 Pc;
+	};
+
+	GEO_OUT_struct copyFromGEO_IN( int GEO_index )
+	{
+		GEO_OUT_struct outS;
+		outS.Nw = gsIN[GEO_index].Nw; 
+		outS.Vw = gsIN[GEO_index].Vw; 
+		outS.UV = gsIN[GEO_index].UV; 
+		outS.sprite = gsIN[GEO_index].sprite; 
+		outS.Pm = gsIN[GEO_index].Pm; 
+		outS.Pw = gsIN[GEO_index].Pw; 
+		outS.Pc = gl_in[GEO_index].gl_Position;
+		return outS;
+	}
+
+	void EmitGeoStruct( GEO_OUT_struct outS ) 
+	{
+		gsOUT.Nw = outS.Nw; 
+		gsOUT.Vw = outS.Vw; 
+		gsOUT.UV = outS.UV; 
+		gsOUT.sprite = outS.sprite; 
+		gsOUT.Pm = outS.Pm; 
+		gl_Position = outS.Pc;
+		EmitVertex();
+	}
+#endshader
+}
+
+GLSLShader ShaderGeometry
+{
+	const mat4x2 quadPosition = mat4x2(
+		 0.5,  0.5,
+		-0.5,  0.5,
+		 0.5, -0.5,
+		-0.5, -0.5);
+
+	void main()
+	{
+		GEO_OUT_struct outS = copyFromGEO_IN(0); 
+		vec2 spriteScale = outS.sprite.xy; 
+    	float spriteTwist = radians( -outS.sprite.z ); 
+ 
+    	vec3 Cz = normalize( mul( ProjectionInverse, outS.Pc ).xyz ); 
+    	vec3 Cy = vec3( 0.0f, 1.0f, 0.0f ); 
+    	vec3 Cx = normalize( cross( Cz, Cy ) ); 
+		Cy = normalize( cross( Cx, Cz ) ); 
+ 
+		// Rotate around Cz axis with specified twisting angle. 
+		float sinTheta = sin( spriteTwist * 0.5f ); 
+		float cosTheta = cos( spriteTwist * 0.5f ); 
+		vec4 q = vec4( Cz * sinTheta, cosTheta ); 
+		mat4x4 qq = mat4x4( q.x * q, q.y * q, q.z * q, q.w * q ); 
+		mat4x4 rot = mat4x4( 
+			1-2*(qq[1][1]+qq[2][2]), 2*(qq[0][1]-qq[2][3]), 2*(qq[0][2]+qq[1][3]), 0, 
+			2*(qq[0][1]+qq[2][3]), 1-2*(qq[0][0]+qq[2][2]), 2*(qq[1][2]-qq[0][3]), 0, 
+			2*(qq[0][2]-qq[1][3]), 2*(qq[1][2]+qq[0][3]), 1-2*(qq[0][0]+qq[1][1]), 0, 
+			0, 0, 0, 1 ); 
+ 
+		mat4x4 tm = Projection * transpose(rot); 
+		vec4 Cxc = mul( tm, vec4( Cx, 0.0f ) ); 
+		vec4 Cyc = mul( tm, vec4( Cy, 0.0f ) ); 
+ 
+		outS.Nw = outS.Vw; 
+ 
+		vec2 halfPixel = vec2( 0.5f, 0.5f ); 
+
+		vec3 worldCameraPosition = vec3(ViewInverse[0][3],
+										ViewInverse[1][3],
+										ViewInverse[2][3]);
+ 
+		for( int i = 0; i < 4; ++i ) 
+		{ 
+			vec2 scale = spriteScale * quadPosition[i]; 
+			outS.Pc = gl_in[0].gl_Position + Cxc * scale.x + Cyc * scale.y; 
+			outS.Pw = (mul( ViewProjectionInverse, outS.Pc )).xyz; 
+			outS.Vw = worldCameraPosition - mul( ViewProjectionInverse, outS.Pc ).xyz; 
+			outS.UV = quadPosition[i] + halfPixel; 
+			EmitGeoStruct( outS ); 
+		} 
+
+		EndPrimitive(); 
+	}
+}
+
+
+// Pixel Shader
+attribute pixelInS
+{
+	vec3 Nw : TEXCOORD0; 
+	vec3 Vw : TEXCOORD1; 
+	vec2 UV : TEXCOORD2; 
+	vec4 sprite : TEXCOORD3; 
+	vec3 Pm : TEXCOORD4; 
+	vec3 Pw : TEXCOORD5; 
+};
+
+attribute pixelOutS
+{
+	vec4 colorOut : COLOR0;
+};
+
+GLSLShader ShaderPixel
+{
+	void main()
+	{
+		vec4 color = texture(SAMP_MMMLWWW, psIN.UV);
+		colorOut = vec4(color.rgb, 1.0) * color.a ;
+	}
+}
+
+
+technique Main
+<
+	string Transparency = "Transparent";
+	string customSemantics = "TEXCOORD0=spritePP";
+>
+{
+	pass P0
+	{
+		VertexShader (in vertexInS, out vertexOutS vsOUT) = ShaderVertex;
+		GeometryShader (in geometryInS gsIN , out pixelInS gsOUT) = ShaderGeometry;
+		PixelShader (in pixelInS psIN, out pixelOutS) = ShaderPixel;
+	}
+}

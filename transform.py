@@ -1,6 +1,6 @@
 # move stuff around
 import edRig.node
-from edRig import core
+from edRig import core, attr
 from core import ECN, con
 from edRig.node import AbsoluteNode, ECA
 import maya.cmds as cmds
@@ -323,6 +323,14 @@ def multMatrixPlugs(plugs, name="matMult"):
 	for i, val in enumerate(plugs):
 		cmds.connectAttr(val, node+".matrixIn[{}]".format(i))
 	return node + ".matrixSum"
+
+def aimToVector(transform, vector):
+	aim = ECA("aimConstraint")
+	aim.conOrSet(vector, aim+".target[0].targetTranslate")
+	aim.con(aim+".constraintRotate", transform+".rotate")
+
+
+
 
 
 

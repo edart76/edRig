@@ -1,0 +1,97 @@
+//**************************************************************************/
+// Copyright (c) 2015 Autodesk, Inc.
+// All rights reserved.
+// 
+// These coded instructions, statements, and computer programs contain
+// unpublished proprietary information written by Autodesk, Inc., and are
+// protected by Federal copyright law. They may not be disclosed to third
+// parties or copied or duplicated in any form, in whole or in part, without
+// the prior written consent of Autodesk, Inc.
+//**************************************************************************/
+
+// Geometry shader that convert a line to a rectangle (2 triangles)
+// For input/output user variables you will need to define GS_FATLINE_EMIT_USERDATA(index)
+// so that the geomtry shader can emit your data for new geometry
+
+uniform vec2 gsFatLineScreenSize : ViewportPixelSize <string UIWidget = "None"; >;
+uniform vec2 gsFatLineWidth <string UIWidget = "None"; > = {1, 1};
+
+GLSLShader GS_FatLine
+{
+	layout (lines) in;
+	layout (triangle_strip, max_vertices = 4) out;
+
+	struct GEO_OUT_struct
+	{
+		vec4 gsPosition;
+		int gsPrimitiveID;
+		int gsIndex;
+	};
+
+	GEO_OUT_struct readGeoStructIn(int index)
+	{
+		GEO_OUT_struct outS;
+		outS.gsPosition = gl_in[index].gl_Position;
+		outS.gsPrimitiveID = gl_PrimitiveIDIn;
+		outS.gsIndex = index;
+
+		return outS;
+	}
+
+	void EmitGeoStruct(GEO_OUT_struct outS)
+	{
+		gl_Position = outS.gsPosition;
+		gl_PrimitiveID = outS.gsPrimitiveID;
+
+#ifdef GS_FATLINE_EMIT_USERDATA
+		GS_FATLINE_EMIT_USERDATA(outS.gsIndex)
+#endif
+
+		EmitVertex();
+	}
+
+	void main()
+	{
+		GEO_OUT_struct out0 = readGeoStructIn(0);
+		GEO_OUT_struct out1 = readGeoStructIn(1);
+
+		vec4 Pc0 = out0.gsPosition;
+		vec4 Pc1 = out1.gsPosition;
+
+		float depthPriority = 0.001;
+		Pc0.z -= depthPriority;
+		Pc1.z -= depthPriority;
+
+		vec3 aline = Pc0.xyz / Pc0.w - Pc1.xyz / Pc1.w;
+		float len = length(aline);
+		aline /= len;
+		vec3 norm = vec3(0,0,1.0);
+		vec3 ortho = cross(normalize(aline - dot(aline, norm) * norm), norm);
+		float extlen = gsFatLineWidth.x / sqrt(aline.x*aline.x*gsFatLineScreenSize.x*gsFatLineScreenSize.x + aline.y*aline.y*gsFatLineScreenSize.y*gsFatLineScreenSize.y);
+		float lambda = extlen / len;
+		float lambdaN = -lambda;
+		float lambdaC = (Pc0.w * lambdaN) / ((Pc0.w * lambdaN) + Pc1.w * (1 - lambdaN));
+		lambdaC = lambdaC > 0 ? -1.0e3f : lambdaC;
+		vec4 ext0 = (1 - lambdaC) * Pc0 + lambdaC * Pc1;
+		out0.gsPosition = ext0;
+		vec3 scale = vec3(1, 1, 1);
+		scale.xy = vec2((out0.gsPosition.w) / gsFatLineScreenSize.x, (out0.gsPosition.w) / gsFatLineScreenSize.y);
+		ortho *= gsFatLineWidth.y;
+		out0.gsPosition.xyz += ortho * scale;
+		EmitGeoStruct( out0 );
+		out0.gsPosition.xyz -= (ortho * 2) * scale;
+		EmitGeoStruct( out0 );
+
+		lambdaN = 1 + lambda;
+		lambdaC = (Pc0.w * lambdaN) / ((Pc0.w * lambdaN) + Pc1.w * (1 - lambdaN));
+		lambdaC = lambdaC < 0 ? 1.0e3f : lambdaC;
+		vec4 ext1 = (1 - lambdaC) * Pc0 + lambdaC * Pc1; out1.gsPosition = ext1;
+		scale.xy = vec2((out1.gsPosition.w) / gsFatLineScreenSize.x, (out1.gsPosition.w) / gsFatLineScreenSize.y);
+		out1.gsPosition.xyz += ortho * scale;
+		EmitGeoStruct( out1 );
+		out1.gsPosition.xyz -= (ortho * 2) * scale;
+		EmitGeoStruct( out1 );
+		EndPrimitive();
+	}
+}
+

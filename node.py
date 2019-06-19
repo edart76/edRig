@@ -276,6 +276,11 @@ class AbsoluteNode(str):
 		"""tribulations"""
 		attr.con(sourcePlug, destPlug, f=True)
 
+	@staticmethod
+	def conOrSet(a, b, f=True):
+		"""tribulations"""
+		attr.conOrSet(a, b, f)
+
 	def driveWith(self, attrName, driverPlug):
 		attr.con(driverPlug, self() + "." + attrName)
 

@@ -1,0 +1,679 @@
+//**************************************************************************/
+// Copyright (c) 2015 Autodesk, Inc.
+// All rights reserved.
+// 
+// These coded instructions, statements, and computer programs contain
+// unpublished proprietary information written by Autodesk, Inc., and are
+// protected by Federal copyright law. They may not be disclosed to third
+// parties or copied or duplicated in any form, in whole or in part, without
+// the prior written consent of Autodesk, Inc.
+//**************************************************************************/
+
+#define PI 3.14
+
+// World transformation.
+uniform mat4 gWXf : World;
+
+uniform mat4 viewInv : ViewInverse; 
+
+// World-view-projection transformation.
+uniform mat4 gWVPXf : WorldViewProjection;
+
+// World-view transformation.
+//uniform mat4 gWVXf : WorldView;
+
+// The offset of the current tile, relative to the full image.  This is (0.0, 0.0) when not tiling.
+//uniform vec2 gTileOffset : TileOffset;
+
+// The scale of the current tile, relative to the full image.  This is (1.0, 1.0) when not tiling.
+//uniform vec2 gTileScale : TileScale;
+
+uniform float Tmh : Time <string UIWidget = "None"; >;
+
+
+
+uniform float WaveAmplitude <
+ string UIName = "Wave Amplitude"; 
+ > = 3.0;
+
+uniform float TransparencyStd <
+ string UIName = "Liquid Transparency"; 
+ > = 0.0;
+ 
+uniform float texScale <
+ string UIName = "Height map scale factor"; 
+ > = 1.0f;
+ 
+uniform float waterSpeed  <
+ string UIName = "Water speed"; 
+ > = 0.016f;
+ 
+uniform vec3 DiffuseColor : Diffuse
+<
+	string UIGroup = "Diffuse";
+	string UIName = "Diffuse Color";
+	string UIWidget = "ColorPicker";
+	int UIOrder = 203;
+> = {0.0f, 0.5f, 1.0f };
+
+
+uniform texture2D gHeightMap  <
+    string ResourceName = "SeaHeightMap.jpg";
+    string ResourceType = "2D";
+    string UIName = "Sea Height Map";
+	int mipmaplevels = 0;
+>;
+
+uniform texture2D gSeaNormalMap  <
+    string ResourceName = "SeaNormalMap.jpg";
+    string ResourceType = "2D";
+    string UIName = "Sea Normal Map";
+	int mipmaplevels = 0;
+>;
+
+
+uniform sampler2D gHeightMapSamp = sampler_state
+{
+    texture = <gHeightMap>;
+};
+
+uniform sampler2D gSeaNormalMapSamp = sampler_state
+{
+    texture = <gSeaNormalMap>;
+};
+
+//------------------------------------
+// Lighting
+//------------------------------------
+uniform float rimFresnelMin
+<
+	string UIGroup = "Lighting";
+	string UIWidget = "Slider";
+	float UIMin = 0.0;
+	float UIMax = 1.0;
+	float UIStep = 0.001;
+	string UIName = "Rim Light Min";
+	int UIOrder = 60;
+> = 0.8;
+
+uniform float rimFresnelMax
+<
+	string UIGroup = "Lighting";
+	string UIWidget = "Slider";
+	float UIMin = 0.0;
+	float UIMax = 1.0;
+	float UIStep = 0.001;
+	string UIName = "Rim Light Max";
+	int UIOrder = 61;
+> = 1.0;
+
+uniform float rimBrightness
+<
+	string UIGroup = "Lighting";
+	string UIWidget = "Slider";
+	float UIMin = 0.0;
+	float UISoftMax = 10.0;
+	float UIMax = 100000.0;
+	float UIStep = 0.001;
+	string UIName = "Rim Light Brightness";
+	int UIOrder = 62;
+> = 0.0;
+
+uniform vec3 SpecularColor : Specular
+<
+	string UIGroup = "Specular";
+	string UIName = "Specular Color";
+	string UIWidget = "ColorPicker";
+	int UIOrder = 404;
+> = {1.0f, 1.0f, 1.0f };
+
+uniform float SpecPower
+<
+	string UIGroup = "Specular";
+	string UIWidget = "Slider";
+	float UIMin = 0.0;	// 0 for anisotropic
+	float UISoftMax = 100.0;
+	float UIMax = 1000000;
+	float UIStep = 0.01;
+	string UIName = "Specular Power";
+	int UIOrder = 405;
+> = 20.0;
+
+
+// ---------------------------------------------
+// Light 0 GROUP
+// ---------------------------------------------
+// This value is controlled by Maya to tell us if a light should be calculated
+// For example the artist may disable a light in the scene, or choose to see only the selected light
+// This flag allows Maya to tell our shader not to contribute this light into the lighting
+uniform bool light0Enable : LIGHTENABLE
+<
+	string Object = "Light 0";	// UI Group for lights, auto-closed
+	string UIName = "Enable Light 0";
+	int UIOrder = 20;
+	> = false;	// maya manages lights itself and defaults to no lights
+
+
+// follows LightParameterInfo::ELightType
+// spot = 2, point = 3, directional = 4, ambient = 5,
+uniform int light0Type : LIGHTTYPE
+<
+	string Object = "Light 0";
+	string UIName = "Light 0 Type";
+	string UIFieldNames ="None:Default:Spot:Point:Directional:Ambient";
+	int UIOrder = 21;
+	float UIMin = 0;
+	float UIMax = 5;
+	float UIStep = 1;
+> = 2;	// default to spot so the cone angle etc work when "Use Shader Settings" option is used
+
+uniform vec3 light0Pos : POSITION 
+< 
+	string Object = "Light 0";
+	string UIName = "Light 0 Position"; 
+	string Space = "World"; 
+	int UIOrder = 22;
+> = {100.0f, 100.0f, 100.0f}; 
+
+uniform vec3 light0Color : LIGHTCOLOR 
+<
+	string Object = "Light 0";
+	string UIName = "Light 0 Color"; 
+	string UIWidget = "Color"; 
+	int UIOrder = 23;
+> = { 1.0f, 1.0f, 1.0f};
+
+uniform float light0Intensity : LIGHTINTENSITY 
+<
+	string Object = "Light 0";
+	string UIName = "Light 0 Intensity"; 
+	float UIMin = 0.0;
+	float UIMax = 10;
+	float UIStep = 0.01;
+	int UIOrder = 24;
+> = { 1.0f };
+
+uniform vec3 light0Dir : DIRECTION 
+< 
+	string Object = "Light 0";
+	string UIName = "Light 0 Direction"; 
+	string Space = "World"; 
+	int UIOrder = 25;
+> = {100.0f, 100.0f, 100.0f}; 
+
+
+uniform float light0ConeAngle : HOTSPOT // In radians
+<
+	string Object = "Light 0";
+	string UIName = "Light 0 Cone Angle"; 
+	float UIMin = 0;
+	float UIMax = PI/2;
+	int UIOrder = 26;
+> = { 0.46f };
+
+uniform float light0FallOff : FALLOFF // In radians. Sould be HIGHER then cone angle or lighted area will invert
+<
+	string Object = "Light 0";
+	string UIName = "Light 0 Penumbra Angle"; 
+	float UIMin = 0;
+	float UIMax = PI/2;
+	int UIOrder = 27;
+> = { 0.7f };
+
+uniform float light0AttenScale : DECAYRATE
+<
+	string Object = "Light 0";
+	string UIName = "Light 0 Decay";
+	float UIMin = 0.0;
+	float UIMax = 20.0;
+	float UIStep = 0.01;
+	int UIOrder = 28;
+> = {0.0};
+
+uniform mat4 light0Matrix : SHADOWMAPMATRIX		
+< 
+	string Object = "Light 0";
+	string UIWidget = "None"; 
+>;
+
+uniform int DiffuseModel
+<
+	string UIGroup = "Diffuse";
+	string UIName = "Diffuse Model";
+	string UIFieldNames ="Lambert:Soften Diffuse (Hair)";
+	float UIMin = 0;
+	float UIMax = 1;
+	float UIStep = 1;
+	int UIOrder = 198;
+> = 0;
+
+// Calculate a light:
+struct lightOut
+{
+	float Specular;
+	vec3 Color;
+};
+
+// Vertex shader input structure.
+attribute VS_INPUT
+{
+    vec3 in_position : POSITION;
+	vec3 in_tangent : TANGENT; 
+	vec3 in_color0 : COLOR0;
+}
+
+// Vertex shader output structure.
+attribute VS_TO_PS
+{
+    // The vertex position in clip space.
+    vec4 HPos : SV_Position;
+		
+	vec3 worldNormal   	: NORMAL;
+	vec4 worldTangent 	: TANGENT; 
+	
+	vec3 worldPosition : TEXCOORD3;
+	vec4 amCol : COLOR;
+
+	vec3 col_col0 : COLOR;
+}
+
+attribute pixelOut 
+{
+    vec4 colorOut:COLOR0;
+}
+
+// Vertex shader.
+GLSLShader VS
+{
+    void main()
+    {		
+		vec4 INP = vec4(in_position, 1.0f);
+		//the normal value is read from the .dds in the range [0,1]. We need the normal components
+        //to be in the range [-1,1]
+		vec3 normalCorrector = vec3(0.5,0.5,0.5);
+		
+		vec2 inTex = INP.xz;
+		vec2 t1 = 0.1*inTex*texScale * 0.8 + vec2(0.0f, -waterSpeed * 0.6) * Tmh;
+		vec2 t2 = 0.1*inTex*texScale      +  vec2(0.0f, -waterSpeed)       * Tmh;
+		vec2 t3 = 0.1*inTex*texScale * 1.3 + vec2(0.0f, -waterSpeed * 1.3) * Tmh;
+		vec3 vDisp1 = texture2D(gHeightMapSamp, t1).xyz;
+		vec3 vDisp2 = texture2D(gHeightMapSamp, t2).xyz;
+		vec3 vDisp3 = texture2D(gHeightMapSamp, t3).xyz;
+		float vDisp = 1.1 * WaveAmplitude * (vDisp1.x  -0.5 )
+				   + 0.9 * WaveAmplitude * (vDisp2.x -0.5)
+				   + 0.8 * WaveAmplitude * (vDisp3.x -0.5);
+		//TODO: try to include gSeaNormalMap texture in gHeightMap texture			   
+		vec3 vNormal1 = texture2D(gSeaNormalMapSamp, t1).xyz;
+		vec3 vNormal2 = texture2D(gSeaNormalMapSamp, t2).xyz;
+		vec3 vNormal3 = texture2D(gSeaNormalMapSamp, t3).xyz;
+		vec3 vNormalTotal = vNormal1 - normalCorrector + vNormal2 - normalCorrector + vNormal3 - normalCorrector;
+		vNormalTotal = normalize(vNormalTotal);
+		
+		if(in_position.y > 0)
+		{
+			INP.y += (vDisp);
+		}
+		
+		vsOut.HPos = gWVPXf * INP;
+		gl_Position = vsOut.HPos;
+		
+		vec4 worldPos = gWXf * INP;
+		vsOut.worldPosition.xyz = worldPos.xyz;
+  
+		//Out.texCoord0 = In.texCoord0;
+  
+		vsOut.worldNormal = (gWXf * vec4(vNormalTotal,0.0)).xyz;
+		vsOut.worldTangent = normalize( gWXf * vec4(in_tangent,0.0) );
+		vsOut.amCol = vec4(vNormalTotal, vDisp);
+		vsOut.col_col0 = in_color0;
+    }
+}
+
+// Pixel shader for normal visualization.
+GLSLShader PS_Normal
+{
+    void main()
+    {
+        vec4 color;
+		color = vec4(psIn.amCol.xyz * 0.5 + vec3(0.5,0.5,0.5) ,1.0);
+
+#if GL_ES
+        gl_FragColor = color;
+#else
+        colorOut = color;
+#endif
+    }
+}
+
+//Pixel Shader to show waves
+GLSLShader PS_Wave
+{
+    //Useful Functions
+
+	// Spot light cone
+	float lightConeangle(float coneAngle, float coneFalloff, vec3 lightVec, vec3 lightDir) 
+	{ 
+		// the cone falloff should be equal or bigger then the coneAngle or the light inverts
+		// this is added to make manually tweaking the spot settings easier.
+		if (coneFalloff < coneAngle)
+			coneFalloff = coneAngle;
+
+		float LdotDir = dot(normalize(lightVec), lightDir); 
+
+		// cheaper cone, no fall-off control would be:
+		// float cone = pow(saturate(LdotDir), 1 / coneAngle); 
+
+		// higher quality cone (more expensive):
+		float cone = smoothstep( cos(coneFalloff), cos(coneAngle), LdotDir);
+
+		return cone; 
+	} 
+	
+	lightOut CalculateLight	(	bool lightEnable, int lightType, float lightAtten, vec3 lightPos, vec3 vertWorldPos, 
+							vec3 lightColor, float lightIntensity, vec3 lightDir, float lightConeAngle, float lightFallOff, mat4 lightViewPrjMatrix, 
+							vec3 vertexNormal, vec3 normal, vec3 diffuseColorIn, 
+							vec3 eyeVec, float roughness,	vec3 specularColorIn, vec3 thickness, float softenMask, 
+							float gammaCorrection, float rim, float glossiness, float opacity, vec3 ambientOcclusion, vec4 anisotropicDir )
+	{
+		lightOut OUT;
+
+		OUT.Specular = 0.0;
+		OUT.Color = vec3(0,0,0);
+
+		if (lightEnable)
+		{
+			// For Maya, flip the lightDir:
+			lightDir = -lightDir;
+
+			// Ambient light does no diffuse, specular shading or shadow casting.
+			// Because it does equal shading from all directions to the object, we will also not have it do any translucency.
+			bool isAmbientLight = (lightType == 5);
+			if (isAmbientLight)
+			{
+				OUT.Color = diffuseColorIn * lightColor * lightIntensity;
+				// Ambient Occlusion (and sometimes Lightmap) should affect the contribution of the ambient light:
+				OUT.Color.rgb *= ambientOcclusion;
+				return OUT;
+			}
+
+			// directional light has no position, so we use lightDir instead
+			bool isDirectionalLight = (lightType == 4);
+			vec3 lightVec = lerp(lightPos - vertWorldPos, lightDir, float(isDirectionalLight));
+
+			vec3 L = normalize(lightVec);	
+
+			// Diffuse:
+			vec3 diffuseColor = vec3(0,0,0);
+			if (DiffuseModel == 0)	// Lambert:
+			{
+				diffuseColor = abs(dot(normal, L)) * diffuseColorIn;
+			}
+			else if (DiffuseModel == 1) // (hair/fur):
+			{
+				/// lerp to shift the shadow boundary for a softer look:
+				diffuseColor = clamp( lerp(0.25, 1.0, dot(normal, L) ), 0.0, 1.0 ) * diffuseColorIn;
+			}
+
+			// Rim Light:
+			float rimUnit = rim * clamp(dot(normal, -L), 0.0, 1.0);
+			vec3 rimColor = vec3(rimUnit, rimUnit, rimUnit);	 
+
+			// Specular:
+			vec3 specularColor = vec3(0,0,0);
+
+			// BLINN
+			{
+				// Phong:
+				// vec3 R = -reflect(L, normal); 
+				// float RdotV = saturate(dot(R,eyeVec));
+				// specularColor = (pow(RdotV, glossiness) * specularColorIn);
+
+				vec3 H = normalize(L + eyeVec); // half angle
+				float NdotH = abs(dot(normal, H));
+				specularColor = specularColorIn * pow(NdotH, glossiness);
+				specularColor *= abs( dot(normal, L) );	// prevent spec leak on back side of model
+			}
+			
+
+			// Light Attenuation:
+			bool enableAttenuation = lightAtten > 0.0001f;
+			float attenuation = 1.0f;
+			if (!isDirectionalLight)	// directional lights do not support attenuation, skip calculation
+			{
+				attenuation = lerp(1.0, 1 / pow(length(lightVec), lightAtten), enableAttenuation);
+			}
+
+			// compensate diffuse and specular color with various light settings:
+			specularColor *= (lightColor * lightIntensity * attenuation);
+			diffuseColor *= (lightColor * lightIntensity * attenuation);
+
+			// Spot light Cone Angle:
+			if (lightType == 2)
+			{
+				float angle = lightConeangle(lightConeAngle, lightFallOff, lightVec, lightDir);
+				diffuseColor *= angle;
+				specularColor *= angle;
+			}
+
+			// Add specular and rim light on top of final output color
+			// multiply OUT.Color with opacity since we are using a pre-multiplied alpha render state
+			// if we don't do this, the rim may have halo's around it when the object is fully transparent
+			OUT.Color += diffuseColor;
+			OUT.Color *= opacity;
+
+			OUT.Color += specularColor + rimColor;
+
+			// Output specular and rim for opacity:
+			OUT.Specular = dot(clamp(specularColor, 0.0, 1.0), vec3(0.3f, 0.6f, 0.1f)) + rimColor.r;
+
+
+		} // end if light enabled
+
+		return OUT;
+	}
+
+	//the pixel shader
+    void main()
+    {
+        vec4 color;
+		vec3 N = psIn.worldNormal.xyz;
+		vec3 Nw = N;
+		vec3 V = normalize( viewInv[3].xyz - psIn.worldPosition.xyz );
+		
+		float roughness = 0;
+		vec3 specularColorIn = vec3(0.0,0.0,0.0);
+		vec3 thickness = vec3(0.0,0.0,0.0);
+		float softenMask = 0;
+		float gammaCorrection = 0;
+		float rim = clamp((clamp(1.0f - dot(N, V),0.0, 1.0)-rimFresnelMin)/(max(rimFresnelMax, rimFresnelMin)  - rimFresnelMin),0.0, 1.0);
+			rim *= rimBrightness;	
+		float glossiness = max(1.0, SpecPower);
+		float opacity = 1.0f-TransparencyStd;
+		vec3 ambientOcclusion = vec3(1,1,1);
+		vec4 anisotropicDir = vec4(1.0,1.0,1.0,1.0);
+		
+		// light 0:
+		lightOut light0 = CalculateLight(	light0Enable, light0Type, light0AttenScale, light0Pos, psIn.worldPosition.xyz, 
+											light0Color, light0Intensity, light0Dir, light0ConeAngle, light0FallOff, light0Matrix, 
+											 Nw, N, DiffuseColor, V, roughness, SpecularColor,
+											thickness, softenMask, gammaCorrection, rim, glossiness, opacity, ambientOcclusion, anisotropicDir );
+		
+		vec3 lightTotal =  light0.Color;
+		
+		lightTotal += DiffuseColor;//* diffuseIBLcolor * DiffuseIBLIntensity * opacity;
+		float specTotal = light0.Specular;
+		
+		float transparency = (specTotal) + opacity;
+		transparency = clamp(transparency, 0.0, 1.0);	// keep 0-1 range
+		
+		
+		color = vec4(lightTotal,transparency);  
+
+#if GL_ES
+        gl_FragColor = color;
+#else
+        colorOut = color;
+#endif
+    }
+}
+
+#include "PS_HWSelection.ogsfh"
+
+#define PS_SOLIDCOLOR_FALLBACKCOLOR \
+		vec4(psIn.col_col0, 1)
+#include "PS_SolidColor.ogsfh"
+
+#define GS_FATLINE_EMIT_USERDATA(index) \
+		gsOut.HPos = gsIn[index].HPos; \
+		gsOut.worldNormal = gsIn[index].worldNormal; \
+		gsOut.worldTangent = gsIn[index].worldTangent; \
+		gsOut.worldPosition = gsIn[index].worldPosition; \
+		gsOut.amCol = gsIn[index].amCol; \
+		gsOut.col_col0 = gsIn[index].col_col0;
+#include "GS_FatLine.ogsfh"
+
+#define GS_FATPOINT_EMIT_USERDATA(index) \
+		gsOut.HPos = gsIn[index].HPos; \
+		gsOut.worldNormal = gsIn[index].worldNormal; \
+		gsOut.worldTangent = gsIn[index].worldTangent; \
+		gsOut.worldPosition = gsIn[index].worldPosition; \
+		gsOut.amCol = gsIn[index].amCol; \
+		gsOut.col_col0 = gsIn[index].col_col0;
+#include "GS_FatPoint.ogsfh"
+
+
+// Techniques.
+technique Main
+<
+//tell Maya to support transparency for this technique
+string Transparency = "Transparent";
+
+// Enlarge BBox to follow displacement -- prevents the object to be discarded when moved at the edge of the viewport
+float extraScale = 5.0;
+
+// Disable consolidation -- the displacement uses the World matrix which is modified when the consolidation is active
+string handlesConsolidatedGeometry = "false";
+>
+{
+    pass pNormal
+    {
+        VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+        PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_Wave;
+    }
+}
+
+technique NormalView
+<
+//We do not need transparency for this technique
+string Transparency = "Opaque";
+
+// Enlarge BBox to follow displacement -- prevents the object to be discarded when moved at the edge of the viewport
+float extraScale = 5.0;
+
+// Disable consolidation -- the displacement uses the World matrix which is modified when the consolidation is active
+string handlesConsolidatedGeometry = "false";
+>
+{
+    pass pNormal
+    {
+        VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+        PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_Normal;
+    }
+}
+
+technique NormalView_Selection
+<
+//We do not need transparency for this technique
+string Transparency = "Opaque";
+
+// Use the effect to also render non material items (ie. wireframe) so they will follow the displacement
+string overridesNonMaterialItems = "true";
+
+// Enlarge BBox to follow displacement -- prevents the object to be discarded when moved at the edge of the viewport or during selection
+float extraScale = 5.0;
+
+// Disable consolidation -- the displacement uses the World matrix which is modified when the consolidation is active
+string handlesConsolidatedGeometry = "false";
+>
+{
+    pass pNormal
+    {
+        VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+        PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_Normal;
+    }
+
+	//////////////////////////////////////
+	// Passes to draw components (wireframe, vertices ...)
+
+	pass pNonMaterialItems
+	<
+		// This pass will be used to render overrided non material items
+		string drawContext = "nonMaterialItemsPass";
+	>
+	{
+		VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+		PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_SolidColor;
+	}
+
+	pass pNonMaterialItemsFatLine
+	<
+		// This pass will be used to render overrided non material items as fat line
+		string drawContext = "nonMaterialItemsPass";
+		string primitiveFilter = "fatLine";
+	>
+	{
+		VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+		GeometryShader (in VS_TO_PS gsIn, out VS_TO_PS gsOut) = GS_FatLine;
+		PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_SolidColor;
+	}
+
+	pass pNonMaterialItemsFatPoint
+	<
+		// This pass will be used to render overrided non material items as fat point
+		string drawContext = "nonMaterialItemsPass";
+		string primitiveFilter = "fatPoint";
+	>
+	{
+		VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+		GeometryShader (in VS_TO_PS gsIn, out VS_TO_PS gsOut) = GS_FatPoint;
+		PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_SolidColor;
+	}
+
+	//////////////////////////////////////
+	// Passes to perform the selection on components
+
+	pass pNonMaterialItemsSelection
+	<
+		// This pass will be used for selection of overrided non material items
+		string drawContext = "selectionPass";
+	>
+	{
+		VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+		PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_HWSelection;
+	}
+
+	pass pNonMaterialItemsSelectionFatLine
+	<
+		// This pass will be used for selection of overrided non material items as fat line
+		string drawContext = "selectionPass";
+		string primitiveFilter = "fatLine";
+	>
+	{
+		VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+		GeometryShader (in VS_TO_PS gsIn, out VS_TO_PS gsOut) = GS_FatLine;
+		PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_HWSelection;
+	}
+
+	pass pNonMaterialItemsSelectionFatPoint
+	<
+		// This pass will be used for selection of overrided non material items as fat point
+		string drawContext = "selectionPass";
+		string primitiveFilter = "fatPoint";
+	>
+	{
+		VertexShader (in VS_INPUT, out VS_TO_PS vsOut) = VS;
+		GeometryShader (in VS_TO_PS gsIn, out VS_TO_PS gsOut) = GS_FatPoint;
+		PixelShader (in VS_TO_PS psIn, out pixelOut) = PS_HWSelection;
+	}
+}
+

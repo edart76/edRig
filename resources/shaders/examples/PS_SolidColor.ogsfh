@@ -1,0 +1,36 @@
+//**************************************************************************/
+// Copyright (c) 2015 Autodesk, Inc.
+// All rights reserved.
+// 
+// These coded instructions, statements, and computer programs contain
+// unpublished proprietary information written by Autodesk, Inc., and are
+// protected by Federal copyright law. They may not be disclosed to third
+// parties or copied or duplicated in any form, in whole or in part, without
+// the prior written consent of Autodesk, Inc.
+//**************************************************************************/
+
+// Simple pixel shader that renders as geometry with a solid color
+
+uniform vec4 gsSolidColor <string UIWidget = "None"; > = {0, 0, 0, 1};
+uniform bool gsValidSolidColor <string UIWidget = "None"; > = true;
+
+GLSLShader PS_SolidColor
+{
+    void main()
+    {
+		vec4 color = gsSolidColor;
+
+#ifdef PS_SOLIDCOLOR_FALLBACKCOLOR
+		if( !gsValidSolidColor ) {
+			color = PS_SOLIDCOLOR_FALLBACKCOLOR;
+		}
+#endif
+
+#if GL_ES
+        gl_FragColor = color;
+#else
+        colorOut = color;
+#endif
+    }
+}
+
