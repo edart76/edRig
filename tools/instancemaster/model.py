@@ -7,6 +7,18 @@ from edRig.node import AbsoluteNode, ECA
 from PySide2 import QtCore
 from edRig.layers.setups import InvokedNode
 
+from edRig.tilepile.abstractgraph import AbstractGraph, AbstractGraphExecutionManager
+from edRig.tilepile.abstractnode import AbstractNode, AbstractAttr
+from edRig.tilepile.abstractedge import AbstractEdge
+"""no way can i actually do this
+graph does not execute
+or does it lol
+
+fuck it yes i will build a node graph out of model instances
+"""
+
+
+
 """
 SO
 to start, imagine random group in scene, with transforms, pivot, everything
@@ -36,109 +48,57 @@ instances can never directly be masters
 in constructing a complex object, a new master will be created for every stage of its
 combination
 """
-#
-# class InstanceMasterObject(object):
-# 	"""defines access for global and instance offsets"""
-#
-# 	def __init__(self, target, model, name=None, setup=True):
-# 		"""associates object with target maya dag node"""
-# 		self.name = name or "new_IMobject"
-# 		self.model = model
-# 		self.realNode = AbsoluteNode(target)
-#
-# 		self.realParent = cmds.listRelatives(target, parent=True)
-# 		self.globalOffset = None
-# 		self.instanceOffset = None
-# 		self.isMaster = False
-# 		self.isInstance = False # both CANNOT be true
-# 		self.network = None
-#
-# 		if setup:
-# 			self.setup()
-# 		else:
-# 			self.regenerate()
-#
-# 	def setup(self):
-# 		"""run on creation of instance, not regeneration"""
-# 		attr.addTag(self.realNode, "InstanceMasterObject")
-# 		# network nodes used to show relationship in graph and regenerate
-# 		self.network = ECA("network", self.name+"_network")
-# 		self.makeNetwork()
-#
-# 	def regenerate(self):
-# 		test = attr.getImmediateNeighbours(self.realNode+".InstanceMasterObject_tag")
-# 		self.network = [i for i in test if "network" in i][0]
-#
-# 	def makeOffsets(self):
-# 		"""creates new groups above target, with global offset matched to target"""
-# 		self.globalOffset = ECA("transform", self.name+"globalOffset")
-# 		self.instanceOffset = ECA("transform", self.name + "instanceOffset")
-# 		cmds.parent(self.instanceOffset, self.globalOffset)
-# 		transform.matchXforms(source=self.realNode, target=self.globalOffset)
-#
-# 		# maybe move these - insert groups
-# 		if self.realParent:
-# 			cmds.parent(self.globalOffset, self.realParent)
-# 		cmds.parent(self.realNode, self.instanceOffset)
-#
-# 		cmds.connectAttr(self.globalOffset+".message", self.network+".globalOffset")
-#
-# 	def makeNetwork(self):
-# 		attr.addTag(self.network, "InstanceMasterObject")
-# 		attr.addAttr(self.network, attrName="globalOffset", attrType="string")
-# 		attr.addAttr(self.network, attrName="instanceNode", attrType="string")
-#
-# 		cmds.connectAttr(self.realNode+".InstanceMasterObject_tag",
-# 		                 self.network+".instanceNode")
-#
-#
-#
-# class MasterItem(InstanceMasterObject):
-# 	"""object for static master instances"""
-# 	def __init__(self, target, model, name=None):
-# 		super(MasterItem, self).__init__(target, model, name)
-# 		self.isMaster = True
-# 		#attr.addTag(self.realNode, "IM_master")
-# 		SceneInstanceModel.tagAsMaster(self.realNode, self.name)
-# 		# self.children = [] # lists only instances of this specific master
-#
-# 	def makeInstance(self, name):
-# 		"""called after operation has been verified"""
-# 		dummyMarker = ECA("transform", "newMaster_"+name+"_dummy")
-# 		transform.matchXforms(source=self.globalOffset, target=dummyMarker)
-# 		newInstance = self.makeInstance(name=self.name+"_newInstance")
-#
-# 	@property
-# 	def children(self):
-# 		networks = attr.getImmediateFuture(self.network+".children")
-# 		networks = [i[0] for i in networks] # get nodes from tuples
-# 		return [self.model.objectFromNetwork(i) for i in networks]
-#
-#
-# 	def makeNetwork(self):
-# 		super(MasterItem, self).makeNetwork()
-# 		attr.addAttr(self.network, attrType="string", attrName="children")
-#
-# 	def makeInstance(self, name="newInstance"):
-# 		"""splits off a new instance of this master"""
-# 		newGlobal = cmds.instance(self.realNode, name=name)
-#
-#
-#
-#
-#
-#
-#
-# class InstanceItem(InstanceMasterObject):
-# 	"""wrapper for traversing instance tree"""
-# 	def __init__(self, target, parent):
-# 		super(InstanceItem, self).__init__(target)
-# 		self.parent = parent
-#
-# 	def makeNetwork(self):
-# 		"""uses master's network"""
-# 		pass
-#
+
+class InstanceGraph(AbstractGraph):
+	"""i run this place
+	this is only to store and track the instance structure in scene"""
+
+	def __init__(self, name="InstanceGraph"):
+		super(InstanceGraph, self).__init__(name=name)
+		pass # whatever
+
+	def initGraph(self):
+		"""do nothing for now"""
+		pass
+
+	def serialise(self):
+		"""create a node in the scene to hold the string info"""
+
+	@staticmethod
+	def fromDict(regen):
+		"""read back string info from scene"""
+
+class MasterNode(AbstractNode):
+	"""tracks its own name, and its relationship in hierarchy,
+	and all instances that DIRECTLY depend on it
+	that's it"""
+	
+	def __init__(self, graph, name=None, rootTf=None):
+		"""pass root (individual offset group) above component you want to instance"""
+		super(MasterNode, self).__init__(graph, name)
+		self.rootTf = rootTf
+
+		self.addInput("reliesUpon")
+		self.addOutput("supports")
+
+	def getInstances(self):
+		"""crawl string connections FROM rootTf TO instance rootTfs"""
+		future = attr.getImmediateFuture(self.rootTf+".instances") # returns node, plug
+		return [ i[0] for i in future]
+
+	def addInstance(self, instanceName):
+		"""create new instance from rootTf, add an attribute to it, make string connection"""
+		newTf = cmds.duplicate(self.rootTf, n=instanceName, instanceLeaf=True)
+		attr.makeStringConnection(self.rootTf, newTf,
+		                          startName="instances", endName="master")
+		return newTf
+
+
+	def initSettings(self):
+		pass
+	def makeReal(self, realInstance):
+		pass
+
 
 class SceneInstanceModel(object):
 	"""tracks supported instances in the maya scene"""
@@ -230,8 +190,29 @@ class SceneInstanceModel(object):
 
 
 	def refreshInstanceFromMaster(self, instance, master):
-		"""repopulates an instance with its master copy"""
+		"""repopulates an instance with its master copy
+		relies on the master already being refreshed if it contains
+		instances - this must be run from hierarchy leaves upwards"""
 		instParent = cmds.listRelatives(instance)
+
+	def getRefreshOrder(self, refreshList=None):
+		"""consider simple diamond-ish pattern
+				   / - masterB
+		masterA -<              \
+				   \ ----------- masterC
+
+		we need only check if nodes have been refreshed at all -
+		at outset mark all as dirty
+
+		refresh masterA -> look for all nodes it contains
+							-> if not dirty, refresh those
+
+		sorted
+		"""
+
+
+
+
 
 
 	@staticmethod

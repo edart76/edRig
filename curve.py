@@ -241,8 +241,10 @@ def getClosestU(curve, tf):
 	#print "u curve is {}".format(curve)
 	dummy = None
 	if core.isPlug(curve): # create dummy shape node
-		curve = ECA("nurbsCurve", "dummyCrv")
+		dummyCurve = ECA("nurbsCurve", "dummyCrv")
 		dummy = True
+		curve.con(curve, dummyCurve.inShape)
+		curve = dummyCurve
 	curveFn = curveFnFrom(curve)
 	tfPos = cmds.xform(tf, q=True, ws=True, t=True)
 	point = om.MPoint(*tfPos)
@@ -263,8 +265,13 @@ def pciAtU(crvShape, u=0.1, percentage=True,
 	# if it's constant, at the same u, it's compatible
 	# if it's not constant, at the same U for a different purpose,
 
-	connectedPcis = cmds.listConnections(crvShape+".local", d=True, s=False,
-		type="pointOnCurveInfo")
+	if attr.isPlug(crvShape):
+		connectedAll = attr.getImmediateFuture(crvShape)
+		connectedPcis = [i for i in connectedAll
+		                 if cmds.nodeType(i) == "pointOnCurveInfo"]
+	else:
+		connectedPcis = cmds.listConnections(crvShape+".local", d=True, s=False,
+			type="pointOnCurveInfo")
 	testPcis = []
 	targetPci = ""
 	if connectedPcis:
@@ -295,7 +302,10 @@ def pciAtU(crvShape, u=0.1, percentage=True,
 		attr.addTag(targetPci, "constantU", str(constantU))
 		attr.addTag(targetPci, "purpose", str(purpose))
 		targetPci.parameter = u
-		con(crvShape+".local", targetPci+".inputCurve")
+		if attr.isPlug(crvShape):
+			con(crvShape, targetPci+".inputCurve")
+		else:
+			con(crvShape+".local", targetPci+".inputCurve")
 
 	return targetPci
 
@@ -323,33 +333,49 @@ def matrixAtU(crv, u=0.5, percentage=True):
 
 def liveMatrixAtU(crvShape, u=0.5, constantU=True, purpose="anyPurpose",
                   upCurve=None):
+	"""plug-agnostic since we call pciAtU"""
 	data = {}
 	pci = pciAtU(crvShape, u=u, constantU=constantU, purpose=purpose)
+
 	mat = ECA("4x4", "matAtU")
 	vec = ECA("vp", "biNormal", "cross")
+
 	con(pci+".normalizedTangentX", mat+".in00")
 	con(pci+".normalizedTangentY", mat+".in01")
 	con(pci+".normalizedTangentZ", mat+".in02")
-	mat.in03 = 0
-	con(pci+".normalizedNormalX", mat+".in10")
-	con(pci+".normalizedNormalY", mat+".in11")
-	con(pci+".normalizedNormalZ", mat+".in12")
-	mat.in13 = 0
+	mat.set("in03", 0)
 
+	if upCurve:
+		"""use upcurve vector instead of flaky normal"""
+		if not attr.isPlug(upCurve):
+			upCurve = upCurve+".local"
+		upPci = pciAtU(upCurve, u=u, constantU=constantU,
+		               purpose=purpose)
+		upVec = plug.vecFromTo(pci+".position", upPci+".position")
+		for ax, i in zip("XYZ", (0,1,2)):
+			con(upVec+"ax", mat+".in1{}".format(i) )
+			con(upVec, vec + ".input2")
+
+	else:
+		con(pci+".normalizedNormalX", mat+".in10")
+		con(pci+".normalizedNormalY", mat+".in11")
+		con(pci+".normalizedNormalZ", mat+".in12")
+		con(pci + ".normalizedNormal", vec + ".input2")
+
+	mat.set("in13", 0)
 	con(pci+".normalizedTangent", vec+".input1")
-	con(pci+".normalizedNormal", vec+".input2")
 
 	con(vec+".outputX", mat+".in20")
 	con(vec+".outputY", mat+".in21")
 	con(vec+".outputZ", mat+".in22")
-	mat.in23 = 0
+	mat.set("in23", 0)
 
 	con(pci+".positionX", mat+".in30")
 	con(pci+".positionY", mat+".in31")
 	con(pci+".positionZ", mat+".in32")
-	mat.in33 = 1
+	mat.set("in33", 0)
 
-	data["mat"] = mat
+	data["mat"] = AbsoluteNode(mat)
 	data["vec"] = vec
 	data["pci"] = pci
 	return data

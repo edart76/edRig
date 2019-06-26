@@ -11,7 +11,8 @@ from edRig.structures import ActionItem
 import pprint
 
 class AbstractAbstractGraph(type):
-	"""metaclass for the abstract graph in case we need it"""
+	"""metaclass for the abstract graph in case we need it
+	we DO need a way to initialise graphs without actual tesserae stuff"""
 
 class ExecutionPath(object):
 	"""class describing a sequential path through the graph"""
@@ -150,15 +151,14 @@ class AbstractGraph(object):
 		self.selectedNodes = []
 		self.nodeSets = {}
 
-		# register real classes that nodes can represent
-		self.realClasses = ValidList.ops
 		self.registeredNodes = {} # dict of className : class
-		self.registerNodeClasses()
+
+		self.initGraph()
 
 		self.state = "neutral"
 		"""used to check if execution is in progress; prevents any change to topology
 		if it is. states are neutral, executing, (routing, for massive graphs?)"""
-		self._asset = TempAsset # maybe?
+
 
 		# signals
 		self.sync = Signal()
@@ -167,6 +167,15 @@ class AbstractGraph(object):
 		self.nodeChanged = Signal()
 		self.nodeSetsChanged = Signal()
 		self.wireSignals()
+
+	def initGraph(self):
+		"""override for specific implementations"""
+
+		# register real classes that nodes can represent
+		self.realClasses = ValidList.ops
+		self.registerNodeClasses()
+		self._asset = TempAsset # maybe?
+
 
 	def log(self, message):
 		print message

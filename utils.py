@@ -7,13 +7,17 @@ from edRig import curve, transform, mesh, surface, attr, control
 import time
 
 
-def getMatrixPlugFromPlug(fromPlug):
+def getMatrixPlugFromPlug(fromPlug, closestPoint=None, upCurvePlug=None):
 	"""WHERE DO I PUT THIS"""
 	plugType = attr.plugType(fromPlug)
 	if plugType == "matrix":
 		return fromPlug
-	elif plugType == "nurbsCurve":
-		pciCtrl = control.TileControl()
+	elif plugType == "nurbsCurve" or plugType == "bezierCurve":
+		u = curve.getClosestU(fromPlug, closestPoint)
+		mat = curve.liveMatrixAtU(fromPlug, u=u, constantU=True,
+		                           purpose="getPoint", upCurve=upCurvePlug)["mat"]
+		return mat+".output"
+		#pciCtrl = control.TileControl()
 
 
 # rotate transform around axis vector with quaternion

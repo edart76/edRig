@@ -42,6 +42,14 @@ def plugAdd(*args):
 def plugAverage(*args):
 	"""gets average of plugs"""
 
+def plugDistance(a, b=None):
+	"""return euclidean distance between positions"""
+	distance = ECA("distanceBetween")
+	distance.conOrSet(a, distance+".point1")
+	if b:
+		distance.conOrSet(b, distance+".point2")
+	return distance+".distance"
+
 
 def reversePlug(plug):
 	"""returns 1 - plug"""

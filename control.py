@@ -2,7 +2,7 @@
 from edRig import CURRENT_PATH
 from edRig.core import ECN, con
 from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import attr, transform, pipeline, material, beauty
+from edRig import attr, transform, pipeline, material, beauty, plug
 
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -263,6 +263,30 @@ class RampControl(Control):
 	"""live ramp control in the scene connected to remapvalue network
 	probably the most disco thing I've done at framestore"""
 	pass
+
+class ProximityControl(Control):
+	"""for making a network of physically-linked positions
+	representing values and interpolating between them"""
+
+	def __init__(self, name="proximityCtrl", knots=None, numberOutputs=2):
+		"""currently only a linear distance function is used
+		:param knots : dict of {knotName : knotValue}
+		currently only floats supported"""
+		self.knots = knots or {"knot" : 1.0}
+		self.knotCtrls = []
+		for k, v in self.knots.iteritems():
+			self.knotCtrls.append(self.makeSphere(name=k))
+
+		self.outputs = [self.makeSphere() for i in range(numberOutputs)]
+
+	def makeSphere(self, name=None):
+		name = name or "sphere"
+		return AbsoluteNode(cmds.sphere(n=name)[0])
+
+	def makeHierarchy(self):
+		self.root = self.uiRoot = ECA(
+			"transform", name=self.name+"_domain")
+
 
 
 """new approach - uniform ctrl grp hierarchy:

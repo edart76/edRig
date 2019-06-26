@@ -293,9 +293,12 @@ class AbsoluteNode(str):
 		"""sets value of node's own attr"""
 		attr.setAttr(self() + "." + attrName, val, **kwargs)
 
-	def getShapeLayer(self, name="newLayer", local=True):
-		"""returns live instance of shape"""
-		parentObj = self.transform.MObject
+	def getShapeLayer(self, name="newLayer", local=True, newTf=True):
+		"""returns live instance of shape
+		should probably not live in our master object of everything"""
+		parent = ECA("transform", n=name) if newTf else \
+			self.transform.MObject
+		parentObj = parent.MObject
 		newShape = self.shapeFn.copy(self.MObject, parentObj)
 		newNode = AbsoluteNode.fromMObject(newShape)
 		self.con(self.outLocal, newNode.inShape)

@@ -1,9 +1,11 @@
 from __future__ import print_function
 from maya import cmds
 from edRig import deformer, AbsoluteNode, ECA
+from edRig.tools.ui.setup import UiTool
+from edRig.lib.python import getUserInput
 
 #### deformers
-
+@UiTool
 def addSelectedToDeformer(sel):
 	"""check through selection to see if there are deformers
 	if not get deformer in first geo history and use that"""
@@ -30,6 +32,19 @@ def addSelectedToDeformer(sel):
 	targetDeformer = targetDeformer[0]
 	for i in [n for n in sel if not deformer.isDeformer(n)]:
 		deformer.addToDeformer(i, targetDeformer)
+
+#### shape stuff
+@UiTool
+def makeShapeLayer(sel):
+	"""create new layer drawing from target shape"""
+	if not sel:
+		print("nothing selected")
+		return
+	name = getUserInput("name new layer") or "newLayer"
+	sel = [AbsoluteNode(i).shape for i in sel][0]
+	return sel.getShapeLayer(name=name)
+
+
 
 #### dynamics
 

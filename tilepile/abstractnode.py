@@ -99,18 +99,9 @@ class AbstractNode(object):
 		#self.real.setAbstract(self)
 
 
-		# settings
-		self.settings = AbstractTree(self.__class__.__name__+"_settings", None)
-		self.evaluator = self.evaluatorClass(graph=self.graph, node=self)
+		self.initSettings()
 
-
-		# real interface
-		self.real = None
-		if realInstance:
-			real = realInstance
-		else:
-			real = self.instantiateReal(name=self.nodeName)
-		self.setRealInstance(real)
+		self.makeReal(realInstance)
 
 		# ui stuff
 		self.pos = [0,0]
@@ -119,6 +110,17 @@ class AbstractNode(object):
 		# colour-changing nodes could be done if you make this a property
 
 		pass
+
+	def makeReal(self, realInstance):
+		"""creates and or binds real instance to abstract"""
+		# real interface
+		self.real = None
+		if realInstance:
+			real = realInstance
+		else:
+			real = self.instantiateReal(name=self.nodeName)
+		self.setRealInstance(real)
+
 
 	def wireSignals(self):
 		"""sets up signal hierarchy"""
@@ -143,7 +145,11 @@ class AbstractNode(object):
 	def onConnectionsChanged(self, *args, **kwargs):
 		pass
 
-
+	def initSettings(self):
+		"""putting here as temp, this all needs restructuring"""
+		# settings
+		self.settings = AbstractTree(self.__class__.__name__+"_settings", None)
+		self.evaluator = self.evaluatorClass(graph=self.graph, node=self)
 
 	def setState(self, state):
 		if state not in self.states:

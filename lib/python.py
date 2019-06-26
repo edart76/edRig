@@ -6,6 +6,22 @@ from collections import OrderedDict
 import string
 from edRig import naming
 
+class Decorator(object):
+	"""base decorator class for functions
+	to be assigned ui buttons"""
+
+	def __init__(self, func, *args, **kwargs):
+		self.func = func
+		self.args = args
+		self.kwargs = kwargs
+
+	def __call__(self, *args, **kwargs):
+		raise NotImplementedError
+
+def getUserInput(prompt=None):
+	prompt = prompt or "user input"
+	return raw_input(prompt=prompt)
+
 # thank you code recipe 576925
 def caller():
 	"""whatever called this"""

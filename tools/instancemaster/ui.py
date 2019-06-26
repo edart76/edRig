@@ -1,8 +1,5 @@
-# ui for instanceMaster
-# left is list of all leaf instances
-# right is tree view of instances contained in selected
-# get lists, lookup, new instance and master updates working
-# then allow splitting of instances from the tree view
+"""ui for InstanceMaster"""
+
 from PySide2 import QtWidgets, QtCore
 import shiboken2
 import maya.OpenMayaUI as omui

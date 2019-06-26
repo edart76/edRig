@@ -1,6 +1,6 @@
 from maya import cmds
 
-from edRig import transform
+from edRig import transform, utils
 from edRig.layers.pointlayers import PointLayerOp
 
 
@@ -36,17 +36,24 @@ class IkOp(PointLayerOp):
 		self.handleDriver = self.ECA("transform", self.opName+"_handleDriver")
 		self.poleDriver = self.ECA("transform", self.opName+"_poleDriver")
 
-
 		memoryNames = ["base", "mid", "end"]
 		joints = [self.base, self.mid, self.end]
 
-		# match to inputs, then remember position
-		for name, joint in zip(memoryNames, joints):
-			plug = self.getInput(name).plug
-			matchMat = transform.matrixFromPlug(plug)
-			transform.matchMatrix(joint, matchMat)
+		"""new design pattern - remember worldspace position,
+		constrain offset group, parent target,
+		remember local space if necessary"""
 
-			self.remember(infoName=name, infoType="xform")
+		baseOffset = self.ECA("transform", self.opName+"_baseOffset")
+
+
+
+		# # match to inputs, then remember position
+		# for name, joint in zip(memoryNames, joints):
+		# 	plug = self.getInput(name).plug
+		# 	matchMat = transform.matrixFromPlug(plug)
+		# 	transform.matchMatrix(joint, matchMat)
+		#
+		# 	self.remember(infoName=name, infoType="xform")
 
 		# parent up ik like a basic boi
 		cmds.parent(self.end, self.mid)
