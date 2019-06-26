@@ -26,24 +26,46 @@ class IkOp(PointLayerOp):
 		self.addOutput(name="tangent", dataType="0D",
 		               desc="tangent point at ik hinge")
 
-	def execute(self):
-		"""once op settings are working, this will include mode to switch
-		to fully trig-based ik"""
-		self.base = self.ECA("joint", self.opName+"_ikBase")
+	def buildNodes(self):
+		"""make all necessary nodes for ik"""
+		self.base = self.ECA("joint", self.opName + "_ikBase")
 		self.mid = self.ECA("joint", self.opName + "_ikMid")
 		self.end = self.ECA("joint", self.opName + "_ikEnd")
 
-		self.handleDriver = self.ECA("transform", self.opName+"_handleDriver")
-		self.poleDriver = self.ECA("transform", self.opName+"_poleDriver")
+		self.handleDriver = self.ECA("transform", self.opName + "_handleDriver")
+		self.poleDriver = self.ECA("transform", self.opName + "_poleDriver")
 
-		memoryNames = ["base", "mid", "end"]
-		joints = [self.base, self.mid, self.end]
+		self.baseOffset = self.ECA("transform", self.opName+"_baseOffset")
+
+	def setupBase(self):
+		"""get point using recalled base position"""
+		self.constrainToInput("base", target=self.baseOffset,
+		                      closestPoint=self.base)
+		self.base.parentTo(self.baseOffset)
+
+	def execute(self):
+		"""once op settings are working, this will include mode to switch
+		to fully trig-based ik"""
+		#self.relative = self.settings["relative"]
+		self.relative = False
+
+		self.buildNodes()
+
+		memoryNames = ["base", "mid", "end", "pv"]
+		joints = [self.base, self.mid, self.end, self.poleDriver]
+
+		self.initPositions(memoryNames, joints)
 
 		"""new design pattern - remember worldspace position,
 		constrain offset group, parent target,
 		remember local space if necessary"""
 
-		baseOffset = self.ECA("transform", self.opName+"_baseOffset")
+		self.remember(infoName="base", infoType="xform", relative=None,
+		              nodes=self.base)
+
+		self.setupBase()
+
+		self.setupChain()
 
 
 
@@ -79,11 +101,20 @@ class IkOp(PointLayerOp):
 		cmds.connectAttr(self.mid+".worldMatrix[0]",
 		                 self.getOutput("mid").plug)
 
-	def makePoleMarker(self):
-		"""creates a transform at optimal range for being a pole"""
 
 	def makeIk(self):
 		"""creates an ik handle through joints"""
 		name = self.opName+"_hdl"
 		hdl = cmds.ikHandle(n=name, sj=self.base, ee=self.end, sol="ikRPsolver")
 		return hdl
+
+
+	def initPositions(self, names, joints):
+		"""try to match joints to input points, if op is built for first"""
+		memoryNames = ["base", "mid", "end"]
+		joints = [self.base, self.mid, self.end]
+		for joint, name in zip(joints, memoryNames):
+			try:
+				transform.matchMatrix(joint, self.getInput(name).plug)
+			except:
+				pass

@@ -1,6 +1,6 @@
 # ops to be main stages, able to be blended in a control chain
 from edRig.tilepile.ops.op import Op
-from edRig import core, attrio
+from edRig import core, attrio, utils, transform
 from edRig.layers.setups import Memory, OpAttrItem
 from edRig.structures import ActionItem
 import functools, inspect
@@ -9,7 +9,8 @@ import pprint
 from collections import OrderedDict
 
 class LayerOp(Op):
-	"""base class for sequential operations that make up a rig"""
+	"""base class for sequential operations that make up a rig
+	very definitely maya-focused"""
 
 	outputs = {}
 	extras = {}  # use with caution
@@ -133,7 +134,8 @@ class LayerOp(Op):
 				self.memory.refresh(infoName=k, infoType=i)
 		self.saveOutMemory()
 
-	def remember(self, infoName=None, infoType=None, nodes=None, **kwargs):
+	def remember(self, infoName=None, infoType=None, nodes=None,
+	             relative=None, **kwargs):
 		"""apply saved data if it exists, create it if not
 		just a bit of recreational industrial espionage"""
 
@@ -148,8 +150,12 @@ class LayerOp(Op):
 				self.remember(infoName=k,
 				              infoType=v["infoType"],
 				              nodes=v["nodes"],
+				              relative=v.get("relative"),
 				              **kwargs)
 				return True
+
+		"""relative left None to ignore - otherwise specify transform or matrix
+		plug to remember and recall only in local space"""
 
 		if infoName in self.memory.infoNames():
 			if infoType in self.memory.infoTypes(infoName):
@@ -201,6 +207,17 @@ class LayerOp(Op):
 			start = self.ECA("nurbsCurve", name+"_starter_"+d).shape
 			self.remember(infoName=name, infoType="shape", nodes=start)
 		return start
+
+	def constrainToInput(self, inputName=None, plug=None,
+	                     target=None, closestPoint=None):
+		"""get point using recalled base position"""
+		sourcePlug = self.getInput(inputName).plug if inputName \
+			else plug
+		basePlug = utils.getMatrixPlugFromPlug(
+			fromPlug=sourcePlug,
+			closestPoint=closestPoint)
+		transform.decomposeMatrixPlug(basePlug, target=target)
+
 
 	# serialisation and regeneration
 	def serialise(self):
