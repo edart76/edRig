@@ -6,7 +6,7 @@ class UiTool(Decorator):
 	to be assigned ui buttons"""
 
 	def __init__(self, func, *args, **kwargs):
-		super(Decorator, self).__init__(func, *args, **kwargs)
+		super(UiTool, self).__init__(func, *args, **kwargs)
 
 	def __call__(self, *args, **kwargs):
 		return self.func(*args, **kwargs)

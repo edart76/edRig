@@ -444,22 +444,14 @@ def isEqual(x, y, tolerance=0.0001):
 
 def MObjectFrom(node):
 	# get the MObject from anything
-	# print "getting MObject"
 	sel = om.MSelectionList()
-	# print "sel is {}".format(sel)
-	# print "object node is {}".format(node)
 	sel.add(node)
 	ref = sel.getDependNode(0)
-	#print "ref is {}".format(ref)
-	# ref is now MObject referring to node,
-	# regardless if dag
 	return ref
 
 def stringFromMObject(obj):
 	"""opposite, retrieves string name"""
-	sel = om.MSelectionList()
-	sel.add(obj)
-	return sel.getSelectionStrings(0)[0]
+	return om.MFnDagNode(obj).fullPathName()
 
 def MFnTransformFrom(dag):
 	# is this a transform or already an MObject?

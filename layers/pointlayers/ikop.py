@@ -43,6 +43,12 @@ class IkOp(PointLayerOp):
 		                      closestPoint=self.base)
 		self.base.parentTo(self.baseOffset)
 
+	def setupChain(self):
+		"""make intermediate joints"""
+		# parent up ik like a basic boi
+		self.end.parentTo(self.mid)
+		self.mid.parentTo(self.base)
+
 	def execute(self):
 		"""once op settings are working, this will include mode to switch
 		to fully trig-based ik"""
@@ -60,26 +66,15 @@ class IkOp(PointLayerOp):
 		constrain offset group, parent target,
 		remember local space if necessary"""
 
-		self.remember(infoName="base", infoType="xform", relative=None,
-		              nodes=self.base)
+		for name, joint in zip(memoryNames, joints):
+			self.remember(infoName=name, infoType="xform", relative=None,
+		              nodes=joint)
 
 		self.setupBase()
-
 		self.setupChain()
 
 
 
-		# # match to inputs, then remember position
-		# for name, joint in zip(memoryNames, joints):
-		# 	plug = self.getInput(name).plug
-		# 	matchMat = transform.matrixFromPlug(plug)
-		# 	transform.matchMatrix(joint, matchMat)
-		#
-		# 	self.remember(infoName=name, infoType="xform")
-
-		# parent up ik like a basic boi
-		cmds.parent(self.end, self.mid)
-		cmds.parent(self.mid, self.base)
 
 		# make pole marker
 		self.poleMarker = self.makePoleMarker()

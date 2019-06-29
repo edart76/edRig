@@ -1,4 +1,6 @@
 """AbsoluteNode and object-style nod wrappers"""
+import weakref, ctypes
+
 from maya import cmds
 import maya.api.OpenMaya as om
 
@@ -20,6 +22,8 @@ def invokeNode(name="", type="", parent="", func=None):
 
 
 class AbsoluteNode(str):
+#class AbsoluteNode(object):
+
 	# DON'T LOSE YOUR WAAAAY
 
 	allInfo = {
@@ -37,9 +41,12 @@ class AbsoluteNode(str):
 	defaultAttrs = {}
 	# override with {"nodeState" : 1} etc
 
-	nodeType = None
+	_isDag = False
 
-	def __new__(cls, node):
+	def __new__(cls, node, ):
+		"""nota bene: strings are immutable. thus to update the
+		string value of absoluteNode, we must return a NEW
+		AbsoluteNode every time it changes"""
 		# this is the stripped down fast version of pymel
 		# print "type node is {}".format(type(node))
 		# print "node is {}".format(node)
@@ -56,33 +63,43 @@ class AbsoluteNode(str):
 		absolute.node = node
 		if not cmds.objExists(node):
 			print "{} DOES NOT EXIST - YER OFF THE MAP".format(node)
-			absolute.refreshPath = absolute.returnBasicNode
+			#absolute.refreshPath = absolute.returnBasicNode
 			return absolute
 		obj = MObjectFrom(node)
 		absolute.setMObject(obj)
 
-		# set custom nodeinfo
-		absolute.nodeInfo = cls.allInfo.get(cls.nodeType)
+		absolute._shape = None
+		absolute._transform = None
 
 		# metaprogramming for fun and profit
 		# cmds.select(clear=True)
 		return absolute
 
 	def setMObject(cls, obj):
-		cls.MObject = obj
+		cls.MObject = obj # not weakref-able :(
 		cls.MFnDependency = om.MFnDependencyNode(cls.MObject)
 		cls._shapeFn = None
 		cls.MDagPath = None
 		# check if it's dag or just dependency
 		if cls.MObject.hasFn(107):  # MFn.kDagNode
+			#print "assigning dag node"
+			cls._isDag = True
 			cls.MDagPath = om.MDagPath.getAPathTo(cls.MObject)
 			cls.MFnDagNode = om.MFnDagNode(cls.MObject)
-			cls.refreshPath = cls.refreshDagPath
+			#cls.refreshPath = cls.refreshDagPath
 			if cls.MObject.hasFn(110):  # MFnTransform
 				cls.MFnTransform = om.MFnTransform(cls.MObject)
 
 		elif cls.MObject.hasFn(4):  # dependency
-			cls.refreshPath = cls.returnDepNode
+			#print "assigning basic node"
+			#cls.refreshPath = cls.returnDepNode
+			pass
+
+	def refreshPath(self):
+		if self._isDag:
+			return self.refreshDagPath()
+		else:
+			return self.refreshPath()
 
 	## refreshing mechanism
 	def __str__(self):
@@ -91,25 +108,42 @@ class AbsoluteNode(str):
 			if isinstance(self.node, list):
 				self.node = self.node[0]
 		except:
+			print "refreshPath encountered error"
 			self.node = self.MFnDependency.absoluteName()
-		return self.node
+		#print "str self "+self.node
+		return str.__new__(str, self.node)
 
 	"""for repeated operations this will incur a penalty in speed
 	consider leaving the call function explicitly to refresh the path"""
 
 	def __repr__(self):
-		return self.__str__()
+		"""never called apparently"""
+		name = self.__str__()
+		print "repr self " + name
+		return name
 
 	def __call__(self, *args, **kwargs):
 		self.refreshPath()
-		return self.node
+		return str(self)
+
+	"""self object not behaving as it should
+	need to return this AbsoluteNode instance, while still having the 
+	string value of the new name"""
+
+	def __add__(self, other):
+		return self() + other
+	def __iadd__(self, other):
+		return self() + other
+
 
 	def refreshDagPath(self):
-		self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
+		#self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
 		self.node = self.MFnDagNode.fullPathName()
+		return self.node
 
 	def returnDepNode(self):
 		self.node = self.MFnDependency.name()
+		return self.node
 
 	def returnBasicNode(self):
 		return self.node
@@ -120,6 +154,8 @@ class AbsoluteNode(str):
 	@name.setter
 	def name(self, value):
 		self.MFnDependency.setName(value)
+		#cmds.rename(self(), value)
+		self()
 
 	# i've got no strings, so i have fn
 
@@ -160,19 +196,22 @@ class AbsoluteNode(str):
 	def shape(self):
 		"""this feels like a bad idea"""
 		if self.isShape():
-			return self
-		else:
-			return AbsoluteNode(shapeFrom(self))
+			return self()
+		elif not self._shape:
+			self._shape = AbsoluteNode( shapeFrom( self() ) )
+		return self._shape
 
 	@property
 	def transform(self):
 		if self.isTransform():
-			return self
-		else:
-			return AbsoluteNode(tfFrom(self))
+			return self()
+		elif not self._transform:
+			self._transform = AbsoluteNode( tfFrom( self() ) )
+		return self._transform
 
 	@property
 	def parent(self):
+		"""replace with api call"""
 		test = cmds.listRelatives(self, parent=True)
 		return AbsoluteNode(test[0]) if test else None
 
@@ -182,7 +221,8 @@ class AbsoluteNode(str):
 		return [AbsoluteNode(i) for i in test] if test else []
 
 	def parentTo(self, targetParent, *args, **kwargs):
-		"""reparents node under target dag"""
+		"""reparents node under target dag
+		replace with api call"""
 		if not self.isDag():
 			return
 		cmds.parent(self, targetParent, *args, **kwargs)
@@ -228,17 +268,27 @@ class AbsoluteNode(str):
 		return om.MPoint(self.MFnTransform.translation(om.MSpace.kWorld))
 
 	@property
+	def nodeInfo(self):
+		"""return specific info for node class"""
+		# this should be overwritten by specific subclasses
+		return self.allInfo[self.nodeType]
+
+	@property
 	def outWorld(self):
 		"""do a procedural thing here to help custom declaration of node info"""
-		return self + "." + self.nodeInfo["outWorld"]
+		return self() + "." + self.nodeInfo.get("outWorld")
 
 	@property
 	def outLocal(self):
-		return self + "." + self.nodeInfo["outLocal"]
+		return self() + "." + self.nodeInfo.get("outLocal")
 
 	@property
 	def inShape(self):
-		return self + "." + self.nodeInfo["inShape"]
+		#print "inShape self {}".format(self)
+		#print "inshape nodeInfo {}".format(self.nodeInfo)
+		plug = "{}.{}".format(self, self.nodeInfo.get("inShape") )
+		#print "inShape plug {}".format(plug)
+		return plug
 
 	def TRS(self, *args):
 		"""returns unrolled transform attrs
@@ -301,7 +351,24 @@ class AbsoluteNode(str):
 		parentObj = parent.MObject
 		newShape = self.shapeFn.copy(self.MObject, parentObj)
 		newNode = AbsoluteNode.fromMObject(newShape)
+		newNode.name = name+"Shape"
+
+		print "new {}, {}".format(newNode, newNode.inShape)
+
 		self.con(self.outLocal, newNode.inShape)
+		print "shadingEngine {}".format(self.shadingEngine)
+		newNode.connectToShader(self.shadingEngine)
+		return newNode
+
+	def connectToShader(self, shader):
+		"""takes shadingEngine and connects shape"""
+		self.con(self+".instObjGroups[0]", shader+".dagSetMembers")
+
+	@property
+	def shadingEngine(self):
+		"""returns connected shadingEngine node"""
+		if self.isShape():
+			return attr.getImmediateFuture(self+".instObjGroups[0]")[0]
 
 	@classmethod
 	def create(cls, name=None, n=None, *args, **kwargs):

@@ -11,15 +11,23 @@ dimTypes = {
 
 def isNode(target):
 	"""copied to avoid dependency"""
+	if "." in target: return False
 	return cmds.objExists(target)
 
 def isPlug(target):
 	"""returns true for format pCube1.translateX"""
-	node = target.split(".")[0]
-	if not isNode(target):
-		return False
-	plug = ".".join(target.split(".")[1:])
-	return plug in cmds.listAttr(node)
+	if not "." in target: return False
+	return cmds.objExists(target)
+
+def plugHType(plug):
+	"""returns either leaf, array or compound"""
+	node, attr = plug.split(".")
+	if not cmds.attributeQuery(attr, node=node, multi=True):
+		return "leaf"
+	found = cmds.attributeQuery(attr, node=node, listChildren=True)
+	if found: return "compound"
+	else: return "array"
+
 
 def getMPlug(plugName):
 	sel = om.MSelectionList()
@@ -28,7 +36,16 @@ def getMPlug(plugName):
 
 def con(a, b, f=True):
 	"""let's try this again"""
-	cmds.connectAttr(a, b, f=f)
+	source = a
+	print "plugtype {}".format(plugHType(b))
+	if plugHType(b) == "array":
+		dest = getNextAvailableIndex(b)
+	elif plugHType(b) == "compound":
+		for i in unrollPlug(b):
+			con(a, i, f)
+	else: dest = b
+	print "source {} dest {}".format(source, dest)
+	cmds.connectAttr(source, dest, f=f)
 	"""upgrade to om if speed becomes painful"""
 
 def conOrSet(a, b, f=True):
@@ -223,16 +240,25 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 	if not attrValue:
 		cmds.setAttr(targetPlug, **kwargs)
 
+	op = kwargs.get("relative")
+	if op:
+		"""increment attr value rather than set it"""
+		print "setting relative"
+		operators = ("+", "-", "*", "/")
+		operator = op if op in operators else "+"
+		base = getAttr(targetPlug)
+		attrValue = eval("{} {} {}".format(base, operator, attrValue) )
+		kwargs.pop("relative")
+
 	elif isinstance(attrValue, basestring):
 		# check for enum:
 		#print "plug type is {}".format(plugType(targetPlug))
 		if plugType(targetPlug) == "enum":
 			setEnumFromString(targetPlug, attrValue)
-		else:
-			cmds.setAttr(targetPlug, attrValue, type="string")
+		else: cmds.setAttr(targetPlug, attrValue, type="string")
+		return
 
-	else:
-		cmds.setAttr(targetPlug, attrValue, **kwargs)
+	cmds.setAttr(targetPlug, attrValue, **kwargs)
 
 def setAttrsFromDict(attrDict, node=None):
 	"""expects dict of format {"attr" : value}"""
@@ -267,13 +293,20 @@ def getImmediateNeighbours(target, source=True, dest=True, wantPlug=False):
 	"""returns nodes connected immediately downstream of plug, or all of node"""
 	nodeList = []
 	if isNode(target):
+		print "node target {}".format(target)
 		for i in cmds.listAttr(target):
 			nodeList += getImmediateNeighbours(i)
 	else:
-		plugs = cmds.listConnections(target, plugs=True, source=source, dest=dest)
+		plugs = cmds.listConnections(target, plugs=True, source=source,
+		                             destination=dest)
 		for i in plugs:
 			nodeList.append((i.split(".")[0], i)) #node, plug
-	return nodeList
+
+	if wantPlug:	found = [i[1] for i in nodeList if isPlug(i[1])]
+	else:	found = [i[0] for i in nodeList if isNode(i[0])]
+	#else: found = nodeList
+
+	return found
 
 def getDrivingPlug(plug):
 	plugs = cmds.listConnections(plug, plugs=True, source=True, dest=False)
@@ -281,12 +314,13 @@ def getDrivingPlug(plug):
 		return []
 	return [i for i in plugs if i != plug][0]
 
-def getImmediateFuture(target):
-	return getImmediateNeighbours(target, source=False, dest=True)
+def getImmediateFuture(target, wantPlug=False):
+	return getImmediateNeighbours(target, source=False, dest=True,
+	                              wantPlug=wantPlug)
 
-
-def getImmediatePast(target):
-	return getImmediateNeighbours(target, source=True, dest=False)
+def getImmediatePast(target, wantPlug=False):
+	return getImmediateNeighbours(target, source=True, dest=False,
+	                              wantPlug=wantPlug)
 
 def makeMutualConnection(startNode, endNode, attrType="string",
                          startName="start", startContent=None,
@@ -324,7 +358,7 @@ def getTransformPlugs(node, t=True, r=True, s=True):
 			plugs.append(node + "." + i + n)
 	return plugs
 
-def unrollPlug(plug, returnLen=3):
+def unrollPlug(plug, returnLen=-1):
 	"""unrolls compound plug, and either curtails or fills in None up to length"""
 
 def getNextAvailableIndex(arrayPlug):

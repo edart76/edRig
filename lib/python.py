@@ -18,9 +18,15 @@ class Decorator(object):
 	def __call__(self, *args, **kwargs):
 		raise NotImplementedError
 
-def getUserInput(prompt=None):
+def getUserInput(prompt=None, default="eyyy"):
 	prompt = prompt or "user input"
-	return raw_input(prompt=prompt)
+	try:
+		name = raw_input(prompt)
+	except EOFError:
+		# nothing entered
+		print("nothing entered, defaulting")
+		name = default
+	return name
 
 # thank you code recipe 576925
 def caller():

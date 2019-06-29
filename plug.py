@@ -57,3 +57,10 @@ def reversePlug(plug):
 	attr.con(plug, rev+".inputX")
 	return rev+".outputX"
 
+def periodicSignalFromPlug(plug, period=1.0, amplitude=1.0,
+                           profile="linear"):
+	"""creates a repeating 0-1 signal from float plug using
+	animCurve node"""
+	profiles = ("linear", "sine", "cosine", "tan")
+	curve = ECA("animCurveUU")
+

@@ -41,8 +41,17 @@ def makeShapeLayer(sel):
 		print("nothing selected")
 		return
 	name = getUserInput("name new layer") or "newLayer"
-	sel = [AbsoluteNode(i).shape for i in sel][0]
-	return sel.getShapeLayer(name=name)
+	#print( name )
+	sel = [AbsoluteNode(i).shape for i in sel]
+	sel = [i for i in sel if i.isShape()]
+	shapes = [i.getShapeLayer(name=name) for i in sel]
+	#print("type shapes {}, {}".format( type( shapes[0]), shapes[0] ) )
+	for i in shapes:
+		print("type i {}".format(type(i)))
+		print("i transform {}".format(i.transform))
+		i.transform.set("translateZ", 1, relative=True)
+	return shapes
+
 
 
 
