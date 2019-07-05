@@ -1,11 +1,11 @@
 
-from edRig.tilepile.ops.layer import LayerOp
+from edRig.tesserae.ops.layer import LayerOp
 from maya import cmds
 
 
 class ImportOp(LayerOp):
 	"""imports items from the live scene and organises them
-	in tilepile system. it wouldn't be too hard to make this
+	in tesserae system. it wouldn't be too hard to make this
 	update in real time, but that's not the goal here"""
 	def __init__(self, name="ImportDrivenOp"):
 		super(ImportOp, self).__init__(name)
@@ -64,7 +64,7 @@ class ImportOp(LayerOp):
 			self.log("name supplied for new import is already an input")
 			return
 		new = self.addInput(name=attrName, dataType="string", hType="dummy",
-		                     desc="imports these items from the scene as tilepile objects",
+		                     desc="imports these items from the scene as tesserae objects",
 		                    default=value)
 		#new.value = value
 		return new

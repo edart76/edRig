@@ -1,5 +1,5 @@
 
-from edRig.tilepile.ops.layer import LayerOp
+from edRig.tesserae.ops.layer import LayerOp
 from edRig.layers.surfacelayers import MeshOp
 
 from maya import cmds

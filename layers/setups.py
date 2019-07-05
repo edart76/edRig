@@ -8,7 +8,7 @@ from edRig.structures import SafeDict, AttrItem
 
 from edRig import core, attrio, mesh, curve, surface
 from edRig.node import AbsoluteNode, ECA
-#from edRig.tilepile.ops.op import Op
+#from edRig.tesserae.ops.op import Op
 from edRig.layers import Env
 import copy
 from maya import cmds

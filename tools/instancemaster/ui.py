@@ -4,7 +4,7 @@ from PySide2 import QtWidgets, QtCore
 import shiboken2
 import maya.OpenMayaUI as omui
 from edRig.tools.instancemaster.model import SceneInstanceModel
-from edRig.tilepile.ui2.lib import ContextMenu
+from edRig.tesserae.ui2.lib import ContextMenu
 from edRig.structures import ActionItem
 
 def show():

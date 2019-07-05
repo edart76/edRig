@@ -1,4 +1,4 @@
-from edRig.tilepile.ops.layer import LayerOp
+from edRig.tesserae.ops.layer import LayerOp
 
 class MeshOp(LayerOp):
 	"""create and remember tech meshes"""

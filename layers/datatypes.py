@@ -7,7 +7,7 @@ import maya.api.OpenMaya as om
 from collections import OrderedDict
 from edRig.core import shortUUID, randomWord
 from edRig.node import AbsoluteNode, invokeNode
-from edRig.tilepile.ops.op import Op
+from edRig.tesserae.ops.op import Op
 from edRig.layers import Env
 
 

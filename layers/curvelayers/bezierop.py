@@ -1,5 +1,5 @@
 from edRig.node import AbsoluteNode, ECA
-from edRig.tilepile.ops.layer import LayerOp
+from edRig.tesserae.ops.layer import LayerOp
 from edRig import utils, control, curve
 
 

@@ -1,9 +1,9 @@
 
 import maya.cmds as cmds
 import edRig.core as core
-# tilepile is here to save our souls
+# tesserae is here to save our souls
 from edRig.core import con, ECN
-from edRig.tilepile.ops.layer import LayerOp
+from edRig.tesserae.ops.layer import LayerOp
 
 class VariableFkOp(LayerOp):
 	# wahey

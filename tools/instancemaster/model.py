@@ -7,9 +7,9 @@ from edRig.node import AbsoluteNode, ECA
 from PySide2 import QtCore
 from edRig.layers.setups import InvokedNode
 
-from edRig.tilepile.abstractgraph import AbstractGraph, AbstractGraphExecutionManager
-from edRig.tilepile.abstractnode import AbstractNode, AbstractAttr
-from edRig.tilepile.abstractedge import AbstractEdge
+from edRig.tesserae.abstractgraph import AbstractGraph, AbstractGraphExecutionManager
+from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
+from edRig.tesserae.abstractedge import AbstractEdge
 """no way can i actually do this
 graph does not execute
 or does it lol

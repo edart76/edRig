@@ -1,6 +1,6 @@
 from PySide2 import QtWidgets, QtGui, QtCore
 
-from edRig.tilepile.ui2.lib import MyDockingUI, dock_window
+from edRig.tesserae.ui2.lib import MyDockingUI, dock_window
 
 from edRig import core, deformer
 

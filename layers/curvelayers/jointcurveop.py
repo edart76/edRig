@@ -3,7 +3,7 @@ import edRig.node
 from edRig.core import ECN, con
 from edRig import core, transform, attrio, control, curve
 from maya import cmds
-from edRig.tilepile.ops.layer import LayerOp
+from edRig.tesserae.ops.layer import LayerOp
 from edRig.layers.datatypes import Point, Curve, DimFn
 import maya.api.OpenMaya as om
 import random

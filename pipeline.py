@@ -437,7 +437,7 @@ def assetFromName(name):
 def reloadEdRig(tesserae=True):
 	"""force reload all edRig packages
 	if not tesserae, will try not to crash tesserae"""
-	protecc = {"tesserae" : ("layers", "tilepile")}
+	protecc = {"tesserae" : ("layers", "tesserae")}
 	import sys
 	for i in sys.modules.keys():
 		if "edRig" in i:

@@ -99,7 +99,7 @@ class AbsoluteNode(str):
 		if self._isDag:
 			return self.refreshDagPath()
 		else:
-			return self.refreshPath()
+			return self.returnDepNode()
 
 	## refreshing mechanism
 	def __str__(self):
@@ -251,7 +251,7 @@ class AbsoluteNode(str):
 
 	def delete(self, full=True):
 		"""deletes maya node, and by default deletes entire openmaya framework around it
-		tilepile is very unstable, and i think this might be why"""
+		tesserae is very unstable, and i think this might be why"""
 		self()
 		name = self.node
 		self.MObject = None
