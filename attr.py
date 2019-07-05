@@ -44,7 +44,7 @@ def con(a, b, f=True):
 		for i in unrollPlug(b):
 			con(a, i, f)
 	else: dest = b
-	print "source {} dest {}".format(source, dest)
+	#print "source {} dest {}".format(source, dest)
 	cmds.connectAttr(source, dest, f=f)
 	"""upgrade to om if speed becomes painful"""
 
