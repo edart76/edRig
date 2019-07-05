@@ -1,4 +1,5 @@
 # literacy is important
+"""deprecated, switch to pipeline functions"""
 import io
 import maya.cmds as cmds
 import ast

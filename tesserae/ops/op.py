@@ -91,6 +91,7 @@ class Op(MayaReal):
 	persistCategories = ["opIo"]
 
 	def tidy(*args, **kwargs):
+		"""decorator to tidy dag nodes under this op's group"""
 		# print "outer args are {}, {}".format(args, kwargs)
 		# direct arguments to decorator
 		category = kwargs.get("category", "main")
@@ -294,9 +295,6 @@ class Op(MayaReal):
 		self.addSetting(parent=parent, entryName=entryName, value=value,
 		                options=(True, False))
 
-
-
-
 	def exposeNode(self, node, parent=None, entryName="node"):
 		"""CRUCIAL aspect of rigging system - allows exposing individual
 		nodes AND ATTRIBUTES in the graph, to be driven by expressions or
@@ -467,7 +465,8 @@ class Op(MayaReal):
 
 
 	def makeOpIoNodeAttrs(self, node, attrItem, parentItem=None):
-		""":param node: AbsoluteNode
+		""" populates opIo network nodes procedurally from op attr hierarchy
+		:param node: AbsoluteNode
 		:param attrItem : AbstractAttr
 		:param parentItem : attrItem"""
 		#for i in attrItem.getAllChildren(): # get all leaves maybe?

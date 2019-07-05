@@ -62,12 +62,15 @@ class AbstractNode(object):
 		cls.realClass = realClass
 
 	def __init__(self, graph, name=None, realInstance=None):
+		"""this is where the spaghetti begins"""
 		self.real = None
 		self.nodeName = name or self.defaultName + shortUUID(2)
 
 		self.uid = shortUUID(8)
 		self.graph = graph
 		self.state = "neutral"
+
+		"""initialise attribute hierarchy"""
 		self.inputRoot = AbstractAttr(node=self, role="input", dataType="null",
 		                              hType="root", name="inputRoot")
 		self.outputRoot = AbstractAttr(node=self, role="output", dataType="null",
@@ -89,7 +92,7 @@ class AbstractNode(object):
 
 		self.index = None # execution order index
 
-		# self.actions = ActionList()
+		"""right click actions for ui"""
 		self.actions = {}
 		self.addAction(actionItem=ActionItem(execDict={"func" : self.setApproved},
 		                                     name="set approved"))
@@ -428,7 +431,7 @@ class AbstractNode(object):
 
 	def getExecActions(self):
 		"""this is kind of a mess - allows executing specific nodes to specific
-		stages"""
+		stages - although we currently only use one"""
 		actions = {}
 		for i, val in enumerate(self.executionStages()):
 			actionDict = {"func" : self.execToStage, "args" : [i]}
@@ -440,6 +443,7 @@ class AbstractNode(object):
 		with current version"""
 		newReal = self.real.fromDict(self.real.serialise())
 		self.setRealInstance(newReal)
+		self.sync()
 
 	# graph io
 	def checkDataFileExists(self):
@@ -458,6 +462,8 @@ class AbstractNode(object):
 		pass
 
 	def saveOutData(self, infoName="info", data={}):
+		"""there needs to be an option to save info directly to
+		graph file - currently every abstractNode has an individual datafile"""
 		# golly gee willakers
 		print "abstract saving data " + infoName
 		self.checkDataFileExists()
@@ -524,6 +530,7 @@ class AbstractNode(object):
 
 	@staticmethod
 	def generateAbstractClass(realClass):
+		"""generates a new abstractNode class bound to target real class"""
 		realClassName = realClass.__name__
 		abstractClass = type(realClassName, (AbstractNode,),
 		                     {"realClass": realClass})
@@ -535,11 +542,6 @@ class AbstractNode(object):
 		self.inputRoot.delete()
 		self.outputRoot.delete()
 		self.real.delete()
-
-	# def showGuides(self):
-	# 	"""test"""
-	# 	print ""
-	# 	print "ABSTRACT SHOWGUIDES"
 
 
 class AbstractAttr(AttrItem):

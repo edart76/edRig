@@ -46,10 +46,10 @@ class AbsoluteNode(str):
 	def __new__(cls, node, ):
 		"""nota bene: strings are immutable. thus to update the
 		string value of absoluteNode, we must return a NEW
-		AbsoluteNode every time it changes"""
+		AbsoluteNode every time it changes
+		no that's dumb"""
 		# this is the stripped down fast version of pymel
-		# print "type node is {}".format(type(node))
-		# print "node is {}".format(node)
+
 		if isinstance(node, AbsoluteNode):
 			return node
 		elif isinstance(node, list):
@@ -134,6 +134,10 @@ class AbsoluteNode(str):
 		return self() + other
 	def __iadd__(self, other):
 		return self() + other
+	def __len__(self):
+		return len( self() )
+	def __getitem__(self, item):
+		return self().__getitem__(i)
 
 
 	def refreshDagPath(self):

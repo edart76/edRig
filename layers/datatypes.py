@@ -1,3 +1,8 @@
+""" this is the remnant of a totally failed experiment
+originally this was an idea to treat points, curves and surfaces totally
+agnostically in code and in maya, but it quickly became far too complex,
+and it never actually worked.
+we still maintain the principle in the structure of the system today"""
 import edRig.node
 from edRig import core, transform
 import edRig.curve as libcurve

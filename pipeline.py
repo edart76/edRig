@@ -1,4 +1,6 @@
 # functions for manipulation of pipeline folder structures
+"""all the file management and asset stuff is very very shaky
+it's probably not ready for use outside of helping manage tesserae"""
 import os, sys, importlib, pprint, io, tempfile
 from edRig import ROOT_PATH, COMMON_PATH
 from maya import cmds # hurts but there's no point in a separate module yet

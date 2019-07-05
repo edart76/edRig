@@ -10,6 +10,8 @@ from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
 import pprint
 
+# Env log needs total overhaul but it's not a priority right now
+
 class AbstractAbstractGraph(type):
 	"""metaclass for the abstract graph in case we need it
 	we DO need a way to initialise graphs without actual tesserae stuff"""
@@ -142,6 +144,8 @@ class AbstractGraph(object):
 				"node" : AbstractNode,
 				"feeding" : set() # list of nodes fed by outputs
 				"fedBy" : set(), # same but backwards
+				}
+			}
 
 		this is intended for very quick and easy traversal of the graph
 		tuples of nodes and attrs stored by edges
@@ -310,8 +314,8 @@ class AbstractGraph(object):
 		# WITH TOPOLOGY OF COURSE
 
 		# two nodes are disconnected if the whole sets of their edges are disjoint
-		print "source feeding is {}".format(sourceNode.feeding)
-		print "source fedBy is {}".format(sourceNode.fedBy)
+		# print "source feeding is {}".format(sourceNode.feeding)
+		# print "source fedBy is {}".format(sourceNode.fedBy)
 		if sourceNode.edges.isdisjoint(destNode.edges):
 			print "sets are disjoint"
 			sourceEntry = self.getNode(sourceNode, True)
@@ -339,21 +343,26 @@ class AbstractGraph(object):
 
 	### CONNECTIVITY AND TOPOLOGY ###
 	def getNodesInHistory(self, node, entries=True):
+		"""returns all preceding nodes"""
 		return self.getInlineNodes(node, history=True,
 		                           future=False, entries=entries)
 
 	def getNodesInFuture(self, node, entries=True):
+		"""returns all proceeding nodes"""
 		return self.getInlineNodes(node, history=False,
 		                           future=True, entries=entries)
 
 	def getCombinedHistory(self, nodes, entries=False):
+		"""returns common history between a set of nodes"""
 		history = set()
 		for i in nodes:
 			history = history.union(i.history)
 		if not entries:
 			return history
+		""" real talk: I don't know what entries flag does"""
 
 	def getCombinedFuture(self, nodes, entries=False):
+		"""returns common future between a set of nodes"""
 		future = set()
 		for i in nodes:
 			future = future.union(i.future)
@@ -361,9 +370,9 @@ class AbstractGraph(object):
 			return future
 
 	def getInlineNodes(self, node, history=True, future=True, entries=False):
-		"""gets nodes directly in the path of selected node
+		"""gets all nodes directly in the path of selected node
 		forwards and backwards is handy way of working out islands"""
-		print "node is {}".format(node)
+		#print "node is {}".format(node)
 		inline = set()
 		node = self.getNode(node, entry=True)
 		for n, k, in zip([history, future], ["fedBy", "feeding"]):
@@ -380,7 +389,7 @@ class AbstractGraph(object):
 		else:
 			return [i["node"] for i in inline]
 
-	def getContainedEdges(self, nodes=[]):
+	def getContainedEdges(self, nodes=None):
 		"""get edges entirely contained in a set of nodes"""
 		nodes = self.getNodesBetween(nodes, include=False)
 		edges = set()
