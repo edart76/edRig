@@ -2,7 +2,9 @@
 sick of it breaking"""
 
 from edRig import AbsoluteNode, ECA
+from edRig.tests import test
 
+@test
 def testAbsoluteNode():
 	"""tests the live refresh capability"""
 	parent = ECA("joint", n="parent")
@@ -14,4 +16,6 @@ def testAbsoluteNode():
 	child.parentTo(parent)
 
 	print "parent is " + parent + ", child is " + child
+	print "format parent is {}, child is {}".format(parent, child)
+
 

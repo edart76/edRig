@@ -151,3 +151,7 @@ def listAllNodes():
 	"""all alphabetically"""
 	return cmds.ls("*", recursive=True)
 
+def newScene():
+	"""forces new maya scene"""
+	cmds.file(new=True, f=True)
+
