@@ -155,3 +155,10 @@ def newScene():
 	"""forces new maya scene"""
 	cmds.file(new=True, f=True)
 
+
+def alembicExport(targetSets=None, startFrame=None, endFrame=None):
+	"""exports AND TAGS geometry from the target sets,
+	or from every set contained in alembic_geo
+	start and end frame default to scene timeline"""
+
+
