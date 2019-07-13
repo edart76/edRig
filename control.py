@@ -210,6 +210,16 @@ class Control(object):
 		"""turns everything bright yellow"""
 		pass
 
+	def makeStatic(self):
+		"""insert inverse offset group just above control
+		not used in base class"""
+
+		staticTf = ECA("transform", n=self.name+"_static")
+		#staticTf.parentTo(self.first.parent, r=True)
+		transform.decomposeMatrixPlug( self.first+".inverseMatrix",
+		                               staticTf)
+		self.first.parentTo(staticTf)
+		return staticTf
 
 	@property
 	def outputPlug(self):
@@ -229,6 +239,28 @@ class Control(object):
 	def first(self):
 		"""returns first layer"""
 		return self.layers[0]
+
+class ParametricControl(Control):
+	"""controls sliding on curves or surfaces"""
+
+	def __init__(self, name=None, layers=1,
+	             controlType="sphere", colour=(0,0,1),
+	             domainShape=None, auxShapeA=None, auxShapeB=None,
+	             parametreScale=(10.0, 10.0, 10.0),
+	             ):
+		"""domainShape is shape on which control moves
+		auxShapes may be used in certain curve configurations"""
+		super(ParametricControl, self).__init__(name, layers,
+		                                        controlType, colour)
+
+	def makeHierarchy(self):
+		"""we assume the same transform as the domain shapes
+		shape
+			|- control"""
+		ui = self.makeShape(self.name)
+		ui.parentTo()
+
+
 
 class FkControl(Control):
 	"""shell for inheriting main control"""

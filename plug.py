@@ -64,3 +64,8 @@ def periodicSignalFromPlug(plug, period=1.0, amplitude=1.0,
 	profiles = ("linear", "sine", "cosine", "tan")
 	curve = ECA("animCurveUU")
 
+def invertMatrixPlug(plug):
+	"""returns an inverse matrix plug"""
+
+
+

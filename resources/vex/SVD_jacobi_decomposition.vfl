@@ -1,0 +1,226 @@
+function float[] M_trans(float A[]; int m; int n)
+{
+    float temp;
+    float At[];
+    for(int i=0; i<m; i++)
+    {
+        for(int j=0; j<n; j++)
+        {
+            At[j*m+i] = A[i*n+j];
+        }
+    }
+    return At;
+}
+
+function float[] M_mult(float A[]; float B[]; int m; int n; int l)
+{
+    float C[];
+    for(int i=0; i<m; i++)
+    {
+        int count=0;
+        for(int j=0; j<n; j++)
+        {
+            float r = A[i*n+j];
+            if(r != 0)
+            {
+                for(int k=0; k<l; k++)
+                {
+                    C[i*l+k] += r*B[j*l+k];
+                }
+            }
+            else
+            {
+                count++;
+            }
+            if(count == n-1)
+            {
+                for(int k=0; k<l; k++)
+                {
+                    C[i*l+k] = 0;
+                }
+            }
+        }
+    }
+    return C;
+}
+
+function float M_col_len2(float A[]; int m; int n; int col)
+{
+    float len=0;
+    for(int i=0; i<m; i++)
+    {
+        len += A[i*n+col]*A[i*n+col];
+    }
+    return len;
+}
+
+void orthogonal(float A[]; float V[]; int m; int n; float precision)
+{
+    for(int col1=0; col1<n-1; col1++)
+    {
+        float len1 = M_col_len2(A, m, n, col1);
+        for(int col2=col1+1; col2<n; col2++)
+        {
+            float len2 = M_col_len2(A, m, n, col2);
+            float dot = 0;
+            for(int i=0; i<m; i++)
+            {
+                dot += A[i*n+col1]*A[i*n+col2];
+            }
+            if(abs(dot) <= precision) continue;
+            if(len1 < len2)
+            {
+                float temp;
+                for(int i=0; i<m; i++)
+                {
+                    temp = A[i*n+col1];
+                    A[i*n+col1] = A[i*n+col2];
+                    A[i*n+col2] = temp;
+                }
+                for(int i=0; i<n; i++)
+                {
+                    temp = V[i*n+col1];
+                    V[i*n+col1] = V[i*n+col2];
+                    V[i*n+col2] = temp;
+                }
+                temp = len2;
+                len2 = len1;
+                len1 = temp;
+            }
+
+            float lendif = len1-len2;
+            float tao;
+            float tg;
+            if(abs(lendif) <= precision)
+                tg = 1;
+            else
+            {
+                tao = (lendif)/(2*dot);
+                tg = sign(tao)/(abs(tao)+sqrt(1+tao*tao));
+            }
+            float cos = 1/sqrt(1+tg*tg);
+            float sin = tg*cos;
+
+            /*
+            //another way to compute
+            float lendif = len1-len2;
+            float tao;
+            float theta;
+            if(abs(lendif) <= precision)
+                theta = $PI/4;
+            else
+            {
+                tao = 2*dot/(lendif);
+                theta = atan(tao)/2;
+            }
+
+            float cos = cos(theta);
+            float sin = sin(theta);
+            */
+
+            for(int i=0; i<m; i++)
+            {
+                 float c1 = cos*A[i*n+col1]+sin*A[i*n+col2];
+                 float c2 = cos*A[i*n+col2]-sin*A[i*n+col1];
+                 A[i*n+col1] = c1;
+                 A[i*n+col2] = c2;
+            }
+            for(int i=0; i<n; i++)
+            {
+                 float c1 = cos*V[i*n+col1]+sin*V[i*n+col2];
+                 float c2 = cos*V[i*n+col2]-sin*V[i*n+col1];
+                 V[i*n+col1] = c1;
+                 V[i*n+col2] = c2;
+            }
+        }
+    }
+
+}
+
+int hestens_jacobi(float A[]; float V[]; float U[]; float S[]; float nullSpace[];
+float leftNullSpace[]; int m; int n; float precision; int maxiters; int computeLeftNullspace)
+{
+    int rank = 0;
+    int count = 0;
+    resize(U,0);
+    resize(V,0);
+    resize(S,0);
+    resize(nullSpace,0);
+    resize(leftNullSpace,0);
+    float tempU[] = A;
+    float tempV[];
+    if(computeLeftNullspace == 0 || computeLeftNullspace == 1)
+    {
+        for(int i=0; i<n; i++)
+        {
+            tempV[i*n+i] = 1;
+        }
+        while(count <= maxiters)
+        {
+            orthogonal(tempU,tempV,m,n,precision);
+            count++;
+        }
+        rank = 0;
+        while(rank < n)
+        {
+            float s = sqrt(M_col_len2(tempU,m,n,rank));
+            if(s <= precision) break;
+            S[rank] = s;
+            rank++;
+        }
+        for(int j=0; j<rank; j++)
+        {
+            for(int i=0; i<m; i++)
+            {
+                U[i*rank+j] = tempU[i*n+j]/S[j];
+            }
+        }
+        if(n != rank)
+        {
+            for(int j=0; j<rank; j++)
+            {
+                for(int i=0; i<n; i++)
+                {
+                    V[i*rank+j] = tempV[i*n+j];
+                }
+            }
+            for(int j=rank; j<n; j++)
+            {
+                for(int i=0; i<n; i++)
+                {
+                    nullSpace[i*(n-rank)+j-rank] = tempV[i*n+j];
+                }
+            }
+        }
+        else V = tempV;
+
+        if(computeLeftNullspace == 1 && rank != m)
+        {
+            resize(tempU,0);
+            for(int i=0; i<m; i++)
+            {
+                tempU[i*m+i] = 1;
+            }
+            float At[] = M_trans(A,m,n);
+            float AAt[] = M_mult(A,At,m,n,m);
+            count = 0;
+            while(count <= maxiters)
+            {
+                orthogonal(AAt,tempU,m,m,precision);
+                count++;
+            }
+            for(int j=rank; j<m; j++)
+            {
+                for(int i=0; i<m; i++)
+                {
+                    leftNullSpace[i*(m-rank)+j-rank] = tempU[i*m+j];
+                }
+            }
+        }
+    }
+
+    return rank;
+}
+
+
+i@rank = hestens_jacobi(f[]@A, f[]@V, f[]@U, f[]@S, f[]@nullSpace, f[]@leftNullSpace, i@m, i@n, 0.00001,20,1);
