@@ -252,13 +252,43 @@ class ParametricControl(Control):
 		auxShapes may be used in certain curve configurations"""
 		super(ParametricControl, self).__init__(name, layers,
 		                                        controlType, colour)
+		self.domainShape = domainShape
+		self.parametreScale = parametreScale
 
 	def makeHierarchy(self):
 		"""we assume the same transform as the domain shapes
-		shape
-			|- control"""
+		shapeTf
+			|- shape
+			|- ctrl static grp
+				|- ctrl"""
 		ui = self.makeShape(self.name)
-		ui.parentTo()
+		self.layers[0] = ui
+		static = self.makeStatic()
+
+
+		mult = ECA("multMatrix", n=self.name+"_mult")
+		ui.con(ui+".inverseMatrix", mult+".matrixIn[0]")
+
+
+		shapemat = self.getShapeMatrix()
+		mult.con(shapemat, mult+".matrixIn[1]")
+		transform.decomposeMatrixPlug(mult+".matrixSum", static)
+
+	def getShapeMatrix(self):
+		""""""
+
+	def makeStatic(self):
+		"""remove complex operations"""
+		static = ECA("transform", n=self.name+"_static")
+		static.parentTo(self.domainShape.transform)
+		self.first.parentTo(static)
+		return static
+
+
+
+
+
+
 
 
 
