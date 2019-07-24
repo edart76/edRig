@@ -158,6 +158,12 @@ class Nucleus(AbsoluteNode):
 		"""adds target nDynamics node to solver
 		not really much point in trying to hack this apart, it's pretty closed"""
 
+def attachDynamicCurves():
+	pass
+
+def weldCVs(shapeA):
+	pass
+
 def makeCurveDynamic(targetCurve,
                      live=True, timeInput="time1.outTime",
                      nucleus=None, tidyGrp=None,
