@@ -73,6 +73,10 @@ class AbsoluteNode(str):
 
 		# metaprogramming for fun and profit
 		# cmds.select(clear=True)
+
+		# callbacks attached to node, to delete on node deletion
+		absolute.callbacks = []
+
 		return absolute
 
 	def setMObject(cls, obj):
@@ -343,9 +347,20 @@ class AbsoluteNode(str):
 		"""set attribute directly"""
 		attr.setAttr(plug, value)
 
-	def set(self, attrName, val, **kwargs):
-		"""sets value of node's own attr"""
-		attr.setAttr(self() + "." + attrName, val, **kwargs)
+	def set(self, attrName=None, val=None, multi=None, **kwargs):
+		"""sets value of node's own attr
+		REFACTOR to catalogue MPlugs and set them directly"""
+		if isinstance(multi, dict):
+			attr.setAttrsFromDict(multi, node=self())
+		else:
+			attr.setAttr(self() + "." + attrName, val, **kwargs)
+
+	def getMPlug(self, plugName):
+		"""return MPlug object"""
+		if plugName not in self.attrs():
+			raise RuntimeError("plug {} not found in attrs {}".format(
+				plugName, self.attrs() ) )
+		return self.MFnDependency.findPlug(plugName, False)
 
 	def getShapeLayer(self, name="newLayer", local=True, newTf=True):
 		"""returns live instance of shape

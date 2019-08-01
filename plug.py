@@ -1,9 +1,11 @@
 """operations working on plugs as live operation components"""
-
+import math
 from maya import cmds
 import maya.api.OpenMaya as om
+import maya.api.OpenMayaAnim as oma
 from edRig import core, attr
 from edRig.node import ECA, AbsoluteNode, PlugObject
+
 
 def conOrSet(driver, driven):
 	"""if EITHER is a static value, the opposite will be set as a plug"""
@@ -66,6 +68,37 @@ def periodicSignalFromPlug(plug, period=1.0, amplitude=1.0,
 
 def invertMatrixPlug(plug):
 	"""returns an inverse matrix plug"""
+
+def trigPlug(plug, mode="sine", res=30, inputDegrees=True):
+	"""remap a plug through a trigonometric function"""
+	modes = {"sine" : math.sin,
+	         "cosine" : math.cos,
+	         "tangent" : math.tan,
+	         "arcsine" : math.asin,
+	         "arccosine" : math.acos,
+	         "arctangent" : math.atan}
+
+	crv = ECA("animCurveUU")
+	func = modes[mode]
+	fn = oma.MFnAnimCurve(crv.MObject)
+	if mode in ("sine", "cosine", "tangent"):
+		domain = 180.0
+	else:		domain = 1.0
+
+	step = domain / float(res)
+	for i in range(res + 1):
+		lookup = step * i
+		value = func( math.radians(lookup) )
+		fn.addKey(lookup, value)
+	crv.set("preInfinity", 3)
+	crv.set("postInfinity", 3)
+	crv.con(plug, crv+".input")
+	return plug + ".output"
+
+
+
+
+
 
 
 

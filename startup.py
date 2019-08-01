@@ -1,7 +1,7 @@
 """holds callback functions for when maya is opened or closed"""
 
 from edRig.node import AbsoluteNode, ECA
-from edRig import pipeline, attr
+from edRig import pipeline, attr, callback
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
 import maya.OpenMaya as omOld # the things we do for rigging
@@ -31,48 +31,98 @@ def makeCodeNode():
 	# is scrubbing
 	codeNode = None
 	if cmds.objExists("CodeNode"):
-		#codeNode = AbsoluteNode("CodeNode")
-		pass
-	else:
-		codeNode = ECA("network", name="CodeNode")
-		# isPlaying attr
-		attr.addAttr(codeNode, attrName="isPlaying", attrType="bool")
-		# isTimeChanging attr
-		attr.addAttr(codeNode, attrName="isTimeChanging", attrType="bool")
-		# isScrubbing attr
-		attr.addAttr(codeNode, attrName="isScrubbing", attrType="bool")
+		codeNode = AbsoluteNode("CodeNode")
+		return
 
-		# sub = ECA("pma", "CodeNodeSubtract", "-")
-		# cmds.connectAttr(codeNode+".isTimeChanging", sub+".input1X")
-		# cmds.connectAttr(codeNode+".isPlaying", sub+".input2X")
-		# cmds.connectAttr(sub+".outputX", codeNode+".isScrubbing")
-		# connectAttr doesn't work reliably at this stage of scene build
+	codeNode = ECA("network", name="CodeNode")
+
+	attr.addAttr(codeNode, attrName="isPlaying", attrType="bool")
+	attr.addAttr(codeNode, attrName="isTimeChanging", attrType="bool")
+	attr.addAttr(codeNode, attrName="isScrubbing", attrType="bool")
+
+	# attr to toggle live playback
+	attr.addAttr(codeNode, attrName="livePlayback", attrType="bool",
+	             keyable=True )
+	attr.addAttr(codeNode, attrName="liveCallbackId", attrType="string",
+	             keyable=False )
+
+	# get plugs for faster updates
+	playingPlug = codeNode.getMPlug("isPlaying")
+	timeChangingPlug = codeNode.getMPlug("isTimeChanging")
+	scrubbingPlug = codeNode.getMPlug("isScrubbing")
+	livePlug = codeNode.getMPlug("livePlayback")
+	liveIdPlug = codeNode.getMPlug("liveCallbackId")
 
 
-	# isPlaying
-	conditions = ("playingBack", # this is scrubbing
-	              "playingBackAuto",
-	              "playblasting"
-	              )
 	def setIsPlaying(*args, **kwargs):
-		# playingState = any(om.MConditionMessage.getConditionState(i)
-		#                    for i in conditions)
 		playingState = oma.MAnimControl.isPlaying()
-		cmds.setAttr(codeNode+".isPlaying", playingState)
+		#cmds.setAttr(codeNode+".isPlaying", playingState)
+		playingPlug.setBool(playingState)
 		pass
 	# isTimeChanging
 	def setIsTimeChanging(*args, **kwargs):
 		changingState = (oma.MAnimControl.isPlaying() or
 			oma.MAnimControl.isScrubbing())
-		cmds.setAttr(codeNode+".isTimeChanging", changingState)
+		#cmds.setAttr(codeNode+".isTimeChanging", changingState)
+		timeChangingPlug.setBool(changingState)
 	#isScrubbing
 	def setIsScrubbing(*args, **kwargs):
 		changingState = oma.MAnimControl.isScrubbing()
-		cmds.setAttr(codeNode+".isScrubbing", changingState)
+		#cmds.setAttr(codeNode+".isScrubbing", changingState)
+		scrubbingPlug.setBool(changingState)
+
+	def updateCodeNode(*args, **kwargs):
+		"""place all updates in a single callback"""
+		setIsPlaying()
+		setIsTimeChanging()
+		setIsScrubbing()
+
+	updateId = om.MDGMessage.addTimeChangeCallback(updateCodeNode)
+
+	def updatePlaybackPlug(*args, **kwargs):
+		"""called when playbackPlug is manually changed"""
+		state = livePlug.asBool()
+		if state:
+			addLiveCallback(codeNode)
+		else:
+			removeLiveCallback(codeNode)
+		print state
+
+	def addLiveCallback(node, timeStep=1):
+		id = om.MTimerMessage.addTimerCallback(
+			timeStep, incrementLiveTime)
+		# node.set("liveCallbackId", id)
+		liveIdPlug.setString(str(id))
+		pass
+
+	def removeLiveCallback(node):
+		id = int(liveIdPlug.asString())
+		if not id:
+			return
+		om.MTimerMessage.removeCallback(id)
+		liveIdPlug.setString("0")
+		pass
+
+	def incrementLiveTime(*args, **kwargs):
+		"""this is main function called to update solvers, dynamics etc
+		called as part of mTimerMessage
+		passed: ( time since last running in seconds,
+			time taken to execute in seconds,
+			userData)"""
+		print "args {}".format(args)
+
+
+
+
+	liveId = callback.addCallbackOnPlugChanged(
+		codeNode+".livePlayback", updatePlaybackPlug)
+
+
+
 	# for i in conditions:
-	om.MDGMessage.addTimeChangeCallback(setIsPlaying)
-	om.MDGMessage.addTimeChangeCallback(setIsTimeChanging)
-	om.MDGMessage.addTimeChangeCallback(setIsScrubbing)
+	# om.MDGMessage.addTimeChangeCallback(setIsPlaying)
+	# om.MDGMessage.addTimeChangeCallback(setIsTimeChanging)
+	# om.MDGMessage.addTimeChangeCallback(setIsScrubbing)
 	# this modest amount of callbacks gives 315 fps in an empty scene
 	# i think we'll be fine
 
