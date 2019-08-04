@@ -14,6 +14,12 @@ def isThisMaya():
 def isNode(target):
 	return cmds.objExists(target)
 
+def getMObject(node):
+	sel = om.MSelectionList()
+	sel.add(node)
+	return sel.getDependNode(0)
+
+
 def isPlug(target):
 	"""returns true for format pCube1.translateX"""
 	node = target.split(".")[0]

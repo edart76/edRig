@@ -45,6 +45,12 @@ def makeCodeNode():
 	             keyable=True )
 	attr.addAttr(codeNode, attrName="liveCallbackId", attrType="string",
 	             keyable=False )
+	attr.addAttr(codeNode, attrName="liveTime", attrType="long", dv=1,
+	             keyable=True)
+
+	# plug for tracking solvers
+	attr.addAttr(codeNode, attrName="solvers", attrType="message")
+	attr.addAttr(codeNode, attrName="dt", attrType="float")
 
 	# get plugs for faster updates
 	playingPlug = codeNode.getMPlug("isPlaying")
@@ -52,6 +58,11 @@ def makeCodeNode():
 	scrubbingPlug = codeNode.getMPlug("isScrubbing")
 	livePlug = codeNode.getMPlug("livePlayback")
 	liveIdPlug = codeNode.getMPlug("liveCallbackId")
+	liveTimePlug = codeNode.getMPlug("liveTime")
+	solverPlug = codeNode.getMPlug("solvers")
+	dtPlug = codeNode.getMPlug("dt")
+
+
 
 
 	def setIsPlaying(*args, **kwargs):
@@ -82,13 +93,17 @@ def makeCodeNode():
 	def updatePlaybackPlug(*args, **kwargs):
 		"""called when playbackPlug is manually changed"""
 		state = livePlug.asBool()
+		currentId = int(liveIdPlug.asString() or "0")
 		if state:
-			addLiveCallback(codeNode)
+			# do we already have an id active?
+			if currentId:	pass
+			else:	addLiveCallback(codeNode)
 		else:
 			removeLiveCallback(codeNode)
 		print state
 
-	def addLiveCallback(node, timeStep=1):
+	def addLiveCallback(node, timeStep=0.1):
+		liveTimePlug.setInt(1)
 		id = om.MTimerMessage.addTimerCallback(
 			timeStep, incrementLiveTime)
 		# node.set("liveCallbackId", id)
@@ -96,7 +111,7 @@ def makeCodeNode():
 		pass
 
 	def removeLiveCallback(node):
-		id = int(liveIdPlug.asString())
+		id = int(liveIdPlug.asString() or "0")
 		if not id:
 			return
 		om.MTimerMessage.removeCallback(id)
@@ -110,12 +125,18 @@ def makeCodeNode():
 			time taken to execute in seconds,
 			userData)"""
 		print "args {}".format(args)
+		liveTimePlug.setInt( liveTimePlug.asInt() + 1)
+		dtPlug.setFloat( args[0] )
 
+	def overrideLiveTime(*args, **kwargs):
+		"""override live time when actual playback begins"""
+		removeLiveCallback(codeNode)
 
-
-
+	# print "condition args {}".format(args)
 	liveId = callback.addCallbackOnPlugChanged(
 		codeNode+".livePlayback", updatePlaybackPlug)
+	overrideId = om.MConditionMessage.addConditionCallback(
+		"playingBack", overrideLiveTime)
 
 
 
@@ -183,106 +204,21 @@ def mainStartup():
 	# ECA("transform", name="mainStartup")
 	# om.MSceneMessage.addStringArrayCallback(
 	# 	om.MSceneMessage.kAfterPluginLoad, callbackDelayed) # works
-	om.MSceneMessage.addCheckCallback(
-		om.MSceneMessage.kBeforeSaveCheck, beforeSaveCheck)
-	om.MSceneMessage.addCheckCallback(
-		om.MSceneMessage.kBeforeOpenCheck, beforeOpenCheck)
-
-	om.MSceneMessage.addCallback(
-		om.MSceneMessage.kAfterSave, afterSave)
-
-	om.MSceneMessage.addCallback(
-		om.MSceneMessage.kAfterOpen, afterOpen)
-
-	om.MSceneMessage.addCallback(
-		om.MSceneMessage.kBeforeNew, beforeNew)
-	om.MSceneMessage.addCallback(
-		om.MSceneMessage.kAfterNew, afterNew)
+	# om.MSceneMessage.addCheckCallback(
+	# 	om.MSceneMessage.kBeforeSaveCheck, beforeSaveCheck)
+	# om.MSceneMessage.addCheckCallback(
+	# 	om.MSceneMessage.kBeforeOpenCheck, beforeOpenCheck)
+	#
+	# om.MSceneMessage.addCallback(
+	# 	om.MSceneMessage.kAfterSave, afterSave)
+	#
+	# om.MSceneMessage.addCallback(
+	# 	om.MSceneMessage.kAfterOpen, afterOpen)
+	#
+	# om.MSceneMessage.addCallback(
+	# 	om.MSceneMessage.kBeforeNew, beforeNew)
+	# om.MSceneMessage.addCallback(
+	# 	om.MSceneMessage.kAfterNew, afterNew)
 
 	setupViewport()
 	pass
-
-"""conditionNames:
-(u'newing', u'playingBack', u'playingBackAuto', 
-u'recording', u'deleteAllCondition', u'timeChangeTemp', 
-u'SomethingSelected', u'autoKeyframeState', u'delete', 
-u'deleteUndo', u'deleteRedo', u'isCurrentRenderLayerChanging', 
-u'isApplyingMemberOverride', u'BatchMode', u'MayaInitialized', 
-u'readingFile', u'ImageUIExists', u'BaseMayaExists', 
-u'AnimationExists', u'PolyCoreExists', u'RenderingExists', 
-u'BaseUIExists', u'flushingScene', u'GoButtonEnabled', 
-u'ManipsExists', u'MayaCreatorExists', u'ModelExists', 
-u'SubdivExists', u'PolygonsExists', u'PolyTextureExists', 
-u'DynamicsExists', u'DatabaseUIExists', u'KinematicsExists', 
-u'NurbsExists', u'DeformersExists', u'busy', u'UndoAvailable', 
-u'RedoAvailable', u'opening', u'writingFile', u'postSceneCallbacks', 
-u'readingReferenceFile', u'OpenMayaExists', u'alwaysWriteReferenced', 
-u'playblasting', u'DimensionsExists', u'ClipEditorExists', u'AnimationUIExists', 
-u'ModelUIExists', u'DynamicsUIExists', u'RenderingUIExists', u'ExplorerExists', 
-u'PolygonsUIExists', u'DeformersUIExists', u'KinematicsUIExists', 
-u'SubdivUIExists', u'NurbsUIExists', u'SurfaceUIExists', u'softSelectOptions', 
-u'panZoomEnabled', u'playbackIconsCondition', u'hotkeyListChange', 
-u'TimeEditorExists', u'nexHUDCondition')
-
-	eventNames:
-(u'dbTraceChanged', u'linearUnitChanged', u'timeUnitChanged', 
-u'angularUnitChanged', u'Undo', u'undoSupressed', u'Redo', 
-u'customEvaluatorChanged', u'serialExecutorFallback', u'timeChanged', 
-u'currentContainerChange', u'quitApplication', u'idleHigh', u'idle', 
-u'idleVeryLow', u'RecentCommandChanged', u'ToolChanged', u'PostToolChanged', 
-u'ToolDirtyChanged', u'ToolSettingsChanged', u'tabletModeChanged', 
-u'DisplayRGBColorChanged', u'animLayerRebuild', u'animLayerRefresh', 
-u'animLayerAnimationChanged', u'animLayerLockChanged', u'animLayerBaseLockChanged', 
-u'animLayerGhostChanged', u'cteEventKeyingTargetForClipChanged', 
-u'cteEventKeyingTargetForLayerChanged', u'cteEventKeyingTargetForInvalidChanged', 
-u'teClipAdded', u'teClipModified', u'teClipRemoved', u'teCompositionAdded', 
-u'teCompositionRemoved', u'teCompositionActiveChanged', u'teCompositionNameChanged', 
-u'teMuteChanged', u'cameraChange', u'cameraDisplayAttributesChange', 
-u'SelectionChanged', u'PreSelectionChangedTriggered', u'LiveListChanged', 
-u'ActiveViewChanged', u'SelectModeChanged', u'SelectTypeChanged', 
-u'SelectPreferenceChanged', u'DisplayPreferenceChanged', u'DagObjectCreated',
- u'transformLockChange', u'renderLayerManagerChange', u'renderLayerChange', 
- u'displayLayerManagerChange', u'displayLayerAdded', u'displayLayerDeleted', 
- u'displayLayerVisibilityChanged', u'displayLayerChange', u'renderPassChange', 
- u'renderPassSetChange', u'renderPassSetMembershipChange', 
- u'passContributionMapChange', u'DisplayColorChanged', u'lightLinkingChanged',
-u'lightLinkingChangedNonSG', u'UvTileProxyDirtyChangeTrigger', 
-u'preferredRendererChanged', u'polyTopoSymmetryValidChanged', 
-u'SceneSegmentChanged', u'PostSceneSegmentChanged', u'SequencerActiveShotChanged', 
-u'ColorIndexChanged', u'deleteAll', u'NameChanged', 
-u'symmetricModellingOptionsChanged', u'softSelectOptionsChanged', u'SetModified', 
-u'xformConstraintOptionsChanged', u'metadataVisualStatusChanged', u'undoXformCmd',
- u'redoXformCmd', u'freezeOptionsChanged', u'linearToleranceChanged', 
- u'angularToleranceChanged', u'nurbsToPolygonsPrefsChanged', 
- u'nurbsCurveRebuildPrefsChanged', u'constructionHistoryChanged', 
- u'threadCountChanged', u'SceneSaved', u'NewSceneOpened', u'SceneOpened', 
-u'SceneImported', u'PreFileNewOrOpened', u'PreFileNew', u'PreFileOpened', 
-u'PostSceneRead', u'workspaceChanged', u'nurbsToSubdivPrefsChanged', 
-u'PolyUVSetChanged', u'PolyUVSetDeleted', u'selectionConstraintsChanged', 
-u'startColorPerVertexTool', u'stopColorPerVertexTool', u'start3dPaintTool', 
-u'stop3dPaintTool', u'DragRelease', u'ModelPanelSetFocus', 
-u'modelEditorChanged', u'MenuModeChanged', u'gridDisplayChanged', 
-u'interactionStyleChanged', u'axisAtOriginChanged', u'CurveRGBColorChanged', 
-u'SelectPriorityChanged', u'snapModeChanged', u'activeHandleChanged', 
-u'ChannelBoxLabelSelected', u'texWindowEditorImageBaseColorChanged', 
-u'texWindowEditorCheckerDensityChanged', u'texWindowEditorCheckerDisplayChanged', 
-u'texWindowEditorDisplaySolidMapChanged', u'texWindowEditorShowup', 
-u'texWindowEditorClose', u'colorMgtOCIORulesEnabledChanged', 
-u'colorMgtUserPrefsChanged', u'RenderSetupSelectionChanged', 
-u'colorMgtEnabledChanged', u'colorMgtConfigFileEnableChanged', 
-u'colorMgtConfigFilePathChanged', u'colorMgtConfigChanged', 
-u'colorMgtWorkingSpaceChanged', u'colorMgtPrefsViewTransformChanged', 
-u'colorMgtPrefsReloaded', u'colorMgtOutputChanged', 
-u'colorMgtPlayblastOutputChanged', u'colorMgtRefreshed', u'selectionPipelineChanged', 
-u'playbackRangeChanged', u'playbackSpeedChanged', u'playbackModeChanged', 
-u'playbackRangeSliderChanged', u'glFrameTrigger', u'currentSoundNodeChanged', 
-u'graphEditorChanged', u'graphEditorParamCurveSelected', 
-u'graphEditorOutlinerHighlightChanged', u'graphEditorOutlinerListChanged', 
-u'EditModeChanged', u'RenderViewCameraChanged', u'texScaleContextOptionsChanged', 
-u'texRotateContextOptionsChanged', u'texMoveContextOptionsChanged', 
-u'polyCutUVSteadyStrokeChanged', u'polyCutUVEventTexEditorCheckerDisplayChanged', 
-u'polyCutUVShowTextureBordersChanged', u'polyCutUVShowUVShellColoringChanged', 
-u'shapeEditorTreeviewSelectionChanged', u'poseEditorTreeviewSelectionChanged',
- u'sculptMeshCacheBlendShapeListChanged', u'sculptMeshCacheCloneSourceChanged', 
-u'RebuildUIValues', u'cteEventClipEditModeChanged', u'teEditorPrefsChanged')
-"""

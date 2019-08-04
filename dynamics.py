@@ -2,28 +2,37 @@
 from maya import cmds
 
 from edRig.node import AbsoluteNode, ECA
-from edRig import attr, naming, plug, scene, callback
+from edRig import attr, naming, plug, scene, callback, core
 
 def makeSolverCell(name):
 	""" create a pair of nodes to recycle values from previous frame
 	currently only float value and only cmds
 	this can be so much more beautiful """
 	sink = cmds.createNode("network", n=name+"Solver_frameEnd")
-	sinkObj = getMObject(sink)
-	cmds.addAttr(sink, ln="frameOutValue")
+	sinkObj = core.getMObject(sink)
+	cmds.addAttr(sink, ln="currentFrameValue")
 	cmds.addAttr(sink, dt="string", ln="frameSource")
 
 	source = cmds.createNode("network", n=name+"Solver_frameStart")
 	cmds.addAttr(source, ln="prevFrameValue")
 	cmds.addAttr(source, dt="string", ln="frameSink")
+	cmds.addAttr(source, ln="dt")
 	cmds.connectAttr(source+".frameSink", sink+".frameSource")
 
-	def updateCell():
-		cmds.setAttr( source + ".prevFrameValue",
-		              cmds.getAttr( sink + ".frameOutValue"))
+	# used to update solvers live
+	cmds.addAttr(source, dt="message", ln="updateSource")
 
+	try:
+		cmds.connectAttr("CodeNode.dt", source+".dt")
+		cmds.connectAttr("CodeNode.solvers", source+".updateSource")
+	except:
+		pass
 
 	return source, sink
+
+def updateCell(source, sink):
+	cmds.setAttr( source + ".prevFrameValue",
+	              cmds.getAttr( sink + ".currentFrameValue"))
 
 
 
