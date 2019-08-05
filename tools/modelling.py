@@ -1,6 +1,6 @@
 from __future__ import print_function
 from maya import cmds
-from edRig import deformer, AbsoluteNode, ECA
+from edRig import deformer, AbsoluteNode, ECA, dynamics, muscle
 from edRig.tools.ui.setup import UiTool
 from edRig.lib.python import getUserInput
 
@@ -60,3 +60,10 @@ def makeShapeLayer(sel):
 def makeCurveDynamic(sel):
 	"""allows modelling using tension and collision
 	expose tether controls for both ends if curve is not closed"""
+
+def makeMuscleCurve(sel):
+	"""creates a muscle curve from target, following source live by default"""
+	if not sel:
+		return
+	sel = [AbsoluteNode(i) for i in sel]
+	muscle.MuscleCurve.create(sel)

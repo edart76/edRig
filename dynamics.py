@@ -180,11 +180,17 @@ class Nucleus(AbsoluteNode):
 	def create(cls, name="newNucleus", timeInput="time1.outTime"):
 		# make new nucleus, disable it by default when scrubbing
 		node = super(Nucleus, cls).create(name)
-		node.con("time1.outTime", node+".currentTime")
-		node.con(plug.reversePlug("CodeNode.isScrubbing"),
-		         node+".enable")
-		scene.SceneGlobals.addNucleus(node)
+		node.con(timeInput, node+".currentTime")
+		# node.con(plug.reversePlug("CodeNode.isScrubbing"),
+		#          node+".enable")
+		# scene.SceneGlobals.addNucleus(node)
 		return node
+
+	@staticmethod
+	def getNucleus(search=""):
+		"""when you just need to make stuff jiggle"""
+		result = cmds.ls(search) or cmds.ls(type="nucleus")
+		return result
 
 	def addElement(self, elementNode):
 		"""adds target nDynamics node to solver
@@ -210,6 +216,7 @@ def makeCurveDynamic(targetCurve,
 
 	system = NHair.create(n=name+"_system")
 	system.connectToNucleus(nucleus)
+	return system
 
 
 

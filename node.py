@@ -265,7 +265,8 @@ class AbsoluteNode(str):
 		self.MObject = None
 		cmds.delete(name)
 
-	@property
+	#@property
+	# @classmethod
 	def nodeType(self):
 		"""returns string name of node type - "joint", "transform", etc"""
 		return cmds.nodeType(self.node)
@@ -279,7 +280,7 @@ class AbsoluteNode(str):
 	def nodeInfo(self):
 		"""return specific info for node class"""
 		# this should be overwritten by specific subclasses
-		return self.allInfo[self.nodeType]
+		return self.allInfo[self.nodeType()]
 
 	@property
 	def outWorld(self):
@@ -392,8 +393,9 @@ class AbsoluteNode(str):
 	@classmethod
 	def create(cls, name=None, n=None, *args, **kwargs):
 		"""any subsequent wrapper class will create its own node type"""
-		nodeType = cls.nodeType or cls.__name__
-		nodeType = nodeType[0].lower() + nodeType[1:]
+		# nodeTypeStr = cls.nodeType() or cls.__name__
+		nodeTypeStr = cls.__name__
+		nodeType = nodeTypeStr[0].lower() + nodeTypeStr[1:]
 		name = name or n or "eyy"
 		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
 		return node

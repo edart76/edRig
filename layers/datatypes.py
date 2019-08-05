@@ -179,7 +179,7 @@ class Point(Datatype):
 
 	def asJoint(self):
 		"""converts to a joint in local space"""
-		if self.active.nodeType == "joint":
+		if self.active.nodeType() == "joint":
 			return self.active
 		joint = self.ECA("joint", name=self.stageName+"_point_asJoint")
 		cmds.parent(joint, self.spaceGrp)

@@ -1,5 +1,5 @@
 from edRig import AbsoluteNode, ECA
-from edRig.dynamics import Nucleus
+from edRig.dynamics import Nucleus, NHair, makeCurveDynamic
 
 class MuscleCurve(object):
 	"""dynamic curve making relative motions according to changes in length
@@ -8,9 +8,18 @@ class MuscleCurve(object):
 	def __init__(self, inputPlug, refPlug):
 		pass
 
+	@staticmethod
+	def create(baseCrv, nucleus=None,
+	           timeInput="time1.outTime",
+	           name="testMuscle"
+	           ):
+		hair = makeCurveDynamic(baseCrv, live=True, timeInput=timeInput,
+		                 nucleus=nucleus, name=name)
+		return hair
+
 
 """
-these muscles will communicate the drive and tenacity of the people we create
+these muscles will communicate the drive and soul of the people we create
 they need to be good.
 activation value is determined by multiple factors:
 	- derivative of change in muscle length
