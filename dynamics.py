@@ -95,6 +95,11 @@ class NDynamicsElement(AbsoluteNode):
 	def outLocal(self):
 		pass
 
+	@property
+	def outputLocalShape(self):
+		test = attr.getImmediateFuture(self.outLocal)
+		if test: return AbsoluteNode(test[0])
+
 
 
 class NHair(NDynamicsElement):
@@ -138,6 +143,11 @@ class NHair(NDynamicsElement):
 
 	"""currently one follicle/hair system per dynamic curve - 
 	later if this is too slow investigate multiple follicles per hair system"""
+
+	def constrainComponentToComponent(self, ptA, systemB, ptB):
+		""" help me
+		components normally of format 'curveA.cv[2]'
+		so here are ints. only cvs for now"""
 
 	@property
 	def inputShapePlug(self):

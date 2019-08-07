@@ -1,6 +1,8 @@
-"""low-level library for parsing colour tuples"""
+"""low-level library for parsing colour tuples
+and generally improving user experience in a maya scene"""
 from maya import cmds
 from edRig import attr
+import math
 
 colourPresets = {
 	"red" : (256, 0, 0),
@@ -30,4 +32,10 @@ class Colour(object):
 	def getTertiaryComplement(self, a=True, b=False):
 		pass
 
-
+def getUsableScale(boundingObject, factor=1.0):
+	"""scales joint to be usable based on a certain bounding box"""
+	bounds = cmds.exactWorldBoundingBox(boundingObject)
+	size = math.sqrt( pow( bounds[3] - bounds[0], 2) +
+	                  pow(bounds[4] - bounds[1], 2) +
+	                  pow(bounds[5] - bounds[2], 2) )
+	return size * factor

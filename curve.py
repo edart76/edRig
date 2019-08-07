@@ -13,9 +13,7 @@ sceneScale = 1
 class NurbsCurve(AbsoluteNode):
 	"""is this a mistake"""
 
-	@classmethod
-	def create(cls, name=None, n=None, *args, **kwargs):
-		pass
+
 
 def isCurve(node):
 	if core.isType(node, "nurbsCurve") or core.isType(node, "bezierCurve"):
@@ -101,24 +99,42 @@ def matchCurve(base, target):
 		#     cmds.setAttr("{}.controlPoints[{}].{}Value".format(base, i, ax),
 		#     targetCvs[i][index])
 
+def getLengthRatio(crv, uFraction):
+	"""retrieve arc length ratio"""
+	fn = AbsoluteNode(crv).shapeFn
+	return uFraction
+
+
 
 #attach transform to curve
-def curveRivet(dag, crv, uVal, upCrv=None, upSpace="world", top=True, rotX=True,
-	constantU=True, purpose="anyPurpose", noCycle=True):
+def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
+               upSpace="world", top=True, rotX=True,
+               byLength=True,
+               constantU=True, purpose="anyPurpose", noCycle=True):
 	"""purpose parametre allows reuse of point on curve nodes"""
 
-	if noCycle:
-		"""we're going to be using this a lot - use network nodes to hold control"""
-		ctrl = ECN("network", name="{}-{}-pciCtrl".format(dag, uVal))
-		cmds.addAttr(ctrl, ln="uVal", at="double", min=0, dv=uVal, k=True)
-		ctrlPlug = ctrl+".uVal"
-	else:
-		cmds.addAttr(dag, ln="uVal", at="double", min=0, dv=uVal, k=True)
-		ctrlPlug = dag + ".uVal"
-	pci = ECN("pci", "{}-{}-pci".format(dag, uVal))
-	con(crv+".local", pci+".inputCurve")
-	con(pci+".position", dag+".translate")
-	con(ctrlPlug, pci+".parameter")
+	#pci = ECA("pci", "{}-{}-pci".format(dag, uVal))
+	pci = pciAtU( crvShape=crv, u=uVal, percentage=top,
+	             local=True, constantU=constantU,
+	             purpose=purpose )
+	con(pci + ".position", dag + ".translate")
+
+	if byLength and top:
+		"""retrieve a ratio which is correct for the curve length"""
+
+
+
+	cmds.setAttr(pci + ".parameter", uVal)
+	if not constantU:
+		if noCycle:
+			"""we're going to be using this a lot - use network nodes to hold control"""
+			ctrl = ECN("network", name="{}-{}-pciCtrl".format(dag, uVal))
+			cmds.addAttr(ctrl, ln="uVal", at="double", min=0, dv=uVal, k=True)
+			ctrlPlug = ctrl+".uVal"
+		else:
+			cmds.addAttr(dag, ln="uVal", at="double", min=0, dv=uVal, k=True)
+			ctrlPlug = dag + ".uVal"
+		con(ctrlPlug, pci+".parameter")
 
 	cmds.setAttr(pci+".turnOnPercentage", top)
 
@@ -139,6 +155,12 @@ def curveRivet(dag, crv, uVal, upCrv=None, upSpace="world", top=True, rotX=True,
 		cmds.setAttr(aim+".worldUpType", 3) #vector up
 		upVec = plug.vecFromTo( upPci+".position", pci+".position")
 		con(upVec, aim+".upVector")
+
+	elif upDag:
+		""" use provided transform as up vector """
+		con(upDag + ".worldMatrix[0]", aim+".worldUpMatrix")
+		cmds.setAttr(aim+".worldUpType", 1) # object up
+
 	else:
 		# just use the normal of the point node
 		#cmds.setAttr(aim+".worldUpType", 4) #fucking nothing
@@ -260,10 +282,11 @@ def getLiveNearestPoint(curve, tf):
 
 def pciAtU(crvShape, u=0.1, percentage=True,
 	local=True, constantU=True, purpose="anyPurpose"):
+	""" low level function to produce a point on a curve """
 	# if there's an alias thing in python i want to call this pikachu
 	# check for other pcis attached to the curve to avoid unnecessary usage
 	# if it's constant, at the same u, it's compatible
-	# if it's not constant, at the same U for a different purpose,
+	# if it's not constant, at the same U for a different purpose, not
 
 	if attr.isPlug(crvShape):
 		connectedAll = attr.getImmediateFuture(crvShape)
@@ -279,12 +302,12 @@ def pciAtU(crvShape, u=0.1, percentage=True,
 			if cmds.getAttr(i+".parameter") == u:
 				testPcis.append(i)
 				break
-	print "testPcis is {}".format(testPcis)
+	#print "testPcis is {}".format(testPcis)
 	if testPcis:
 		for i in testPcis:
 			constantTest = attr.getTag(i, tagName="constantU")
 			# constantTest = core.Op.getTag(i, tagName = "constantU")
-			print "test is {}".format(constantTest)
+			#print "test is {}".format(constantTest)
 			if constantU:
 				if constantTest == "True":
 					targetPci = i
@@ -295,13 +318,13 @@ def pciAtU(crvShape, u=0.1, percentage=True,
 				if constantTest == "False" and purposeTest == purpose:
 					targetPci = i
 					break
-	print "target pci is {}".format(targetPci)
+	#print "target pci is {}".format(targetPci)
 
 	if not targetPci:
-		targetPci = nodule(ECN("pci", "pointOn_{}_at{}u".format(crvShape, str(u))))
+		targetPci = ECN("pci", "pointOn_{}_at{}u".format(crvShape, str(u)))
 		attr.addTag(targetPci, "constantU", str(constantU))
 		attr.addTag(targetPci, "purpose", str(purpose))
-		targetPci.parameter = u
+		cmds.setAttr(targetPci + ".parameter", u)
 		if attr.isPlug(crvShape):
 			con(crvShape, targetPci+".inputCurve")
 		else:
