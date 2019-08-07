@@ -71,11 +71,13 @@ class NDynamicsElement(AbsoluteNode):
 
 		self.con(self+".startState",
 		         nucleus+".inputActiveStart[{}]".format(newIndex))
-		self.con(self + ".startState",
-		         nucleus + ".inputActiveStart[{}]".format(newIndex))
+		self.con(self + ".currentState",
+		         nucleus + ".inputActive[{}]".format(newIndex))
 
 		attr.makeMutualConnection(nucleus, self, attrType="message",
 		                          startName="elements", endName="nucleus")
+		# no reason for a component to diverge from nucleus time
+		nucleus.con(nucleus + ".currentTime", self + ".currentTime")
 
 	@property
 	def nucleus(self):
@@ -99,18 +101,20 @@ class NHair(NDynamicsElement):
 	"""wiggly willy
 	points to hairSystem, not follicle"""
 
-	nodeType = "hairSystem"
-	follicle = None
+	_nodeType = "hairSystem"
+	# follicle = None
 
 	def __init__(self, *args, **kwargs):
 		super(NHair, self).__init__(*args, **kwargs)
 		self.hairSystem = None
+		# self._follicle = None
 
 	
 	def connectToNucleus(self, nucleus):
 		"""nHair unfortunately needs a separate follicle node
 		to actually compute. sucks man."""
 		super(NHair, self).connectToNucleus(nucleus)
+		self.set( "active", 1)
 
 	def connectInputShape(self, shapePlug, spacePlug=None):
 		"""follicles are the worst"""
@@ -148,7 +152,8 @@ class NHair(NDynamicsElement):
 	@property
 	def follicle(self):
 		"""look up connected follicle node"""
-		return AbsoluteNode(attr.getImmediateFuture(self+".outputHair[0]")[0])
+		test = attr.getImmediateFuture(self+".outputHair[0]")
+		if test: return AbsoluteNode(test[0])
 
 	@property
 	def follicles(self):
@@ -159,6 +164,7 @@ set up a chain of connected nParticles"""
 
 class NCollider(NDynamicsElement):
 	"""collision meshes"""
+	_nodeType = "nRigid"
 
 	def connectToNucleus(self, nucleus):
 		self.con(nucleus+".startFrame", self+".startFrame")
@@ -184,7 +190,7 @@ class Nucleus(AbsoluteNode):
 		# node.con(plug.reversePlug("CodeNode.isScrubbing"),
 		#          node+".enable")
 		# scene.SceneGlobals.addNucleus(node)
-		return node
+		return cls(node)
 
 	@staticmethod
 	def getNucleus(search=""):
@@ -205,17 +211,23 @@ def weldCVs(shapeA):
 def makeCurveDynamic(targetCurve,
                      live=True, timeInput="time1.outTime",
                      nucleus=None, tidyGrp=None,
-                     name=""):
+                     name="", staticRest=True):
 	"""the better version"""
 	nucleus = nucleus or Nucleus.create(timeInput=timeInput)
 	tidyGrp = tidyGrp or ECA("transform", n="dynamicsGrp")
 
 	targetCurve = AbsoluteNode(targetCurve).shape
 	if not live:
-		targetCurve = targetCurve.copy(name=name+"_static")
+		targetCurve = targetCurve.copy(name=name+"_static", children=True)
 
 	system = NHair.create(n=name+"_system")
 	system.connectToNucleus(nucleus)
+
+	outCrv = targetCurve.copy(name+"_output", children=True)
+	system.connectInputShape( shapePlug=targetCurve.shape.outLocal)
+	system.con( system.outLocal, outCrv.shape.inShape)
+
+
 	return system
 
 

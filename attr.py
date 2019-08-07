@@ -22,11 +22,14 @@ def isPlug(target):
 def plugHType(plug):
 	"""returns either leaf, array or compound"""
 	node, attr = plug.split(".")
-	if not cmds.attributeQuery(attr, node=node, multi=True):
-		return "leaf"
-	found = cmds.attributeQuery(attr, node=node, listChildren=True)
-	if found: return "compound"
-	else: return "array"
+	#print "node {}, attr {}".format(node, attr)
+	# if not cmds.attributeQuery(attr, node=node, multi=True):
+	# 	return "leaf"
+	# found = cmds.attributeQuery(attr, node=node, listChildren=True)
+	# if found: return "compound"
+	# else: return "array"  # too complex, too much obfuscation
+
+	return "leaf"
 
 
 def getMPlug(plugName):
@@ -37,7 +40,7 @@ def getMPlug(plugName):
 def con(a, b, f=True):
 	"""let's try this again"""
 	source = a
-	print "plugtype {}".format(plugHType(b))
+	#print "plugtype {}".format(plugHType(b))
 	if plugHType(b) == "array":
 		dest = getNextAvailableIndex(b)
 	elif plugHType(b) == "compound":
@@ -299,6 +302,8 @@ def getImmediateNeighbours(target, source=True, dest=True, wantPlug=False):
 	else:
 		plugs = cmds.listConnections(target, plugs=True, source=source,
 		                             destination=dest)
+		if not plugs:
+			return []
 		for i in plugs:
 			nodeList.append((i.split(".")[0], i)) #node, plug
 

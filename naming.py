@@ -21,3 +21,6 @@ def incrementName(name, currentNames=None):
 		return incrementName(name, currentNames)
 	print "found name is {}".format(name)
 	return name
+
+def camelCase(name):
+	return name[0].lower() + name[1:]

@@ -5,7 +5,7 @@ from maya import cmds
 import maya.api.OpenMaya as om
 
 from edRig.core import MObjectFrom, shapeFrom, tfFrom, stringFromMObject, ECN
-from edRig import attr
+from edRig import attr, naming
 
 def invokeNode(name="", type="", parent="", func=None):
 	# print "core invokeNode looking for {}".format(name)
@@ -35,6 +35,11 @@ class AbsoluteNode(str):
 		"transform" : {
 			"outLocal" : "matrix",
 			"outWorld" : "worldMatrix[0]"
+		},
+		"nurbsCurve" : {
+			"outLocal" : "local",
+			"outWorld" : "worldSpace[0]",
+			"inShape" : "create"
 		}
 	}
 
@@ -42,6 +47,7 @@ class AbsoluteNode(str):
 	# override with {"nodeState" : 1} etc
 
 	_isDag = False
+	_nodeType = None
 
 	def __new__(cls, node, ):
 		"""nota bene: strings are immutable. thus to update the
@@ -54,11 +60,11 @@ class AbsoluteNode(str):
 			return node
 		elif isinstance(node, list):
 			print "node is list"
-			return AbsoluteNode(node[0])
+			return cls(node[0])
 		elif isinstance(node, om.MObject):
-			return AbsoluteNode.fromMObject(node)
+			return cls.fromMObject(node)
 		elif isinstance(node, unicode):
-			return AbsoluteNode(str(node))
+			return cls(str(node))
 		absolute = str.__new__(cls, node)
 		absolute.node = node
 		if not cmds.objExists(node):
@@ -70,6 +76,7 @@ class AbsoluteNode(str):
 
 		absolute._shape = None
 		absolute._transform = None
+		#absolute._nodeType = cmds.nodeType(node)
 
 		# metaprogramming for fun and profit
 		# cmds.select(clear=True)
@@ -141,7 +148,7 @@ class AbsoluteNode(str):
 	def __len__(self):
 		return len( self() )
 	def __getitem__(self, item):
-		return self().__getitem__(i)
+		return self().__getitem__(item)
 
 
 	def refreshDagPath(self):
@@ -204,9 +211,9 @@ class AbsoluteNode(str):
 	def shape(self):
 		"""this feels like a bad idea"""
 		if self.isShape():
-			return self()
+			return self
 		elif not self._shape:
-			self._shape = AbsoluteNode( shapeFrom( self() ) )
+			self._shape = AbsoluteNode( shapeFrom( self ) )
 		return self._shape
 
 	@property
@@ -266,10 +273,19 @@ class AbsoluteNode(str):
 		cmds.delete(name)
 
 	#@property
-	# @classmethod
-	def nodeType(self):
+	@classmethod
+	def nodeType(cls):
 		"""returns string name of node type - "joint", "transform", etc"""
-		return cmds.nodeType(self.node)
+		# first check the class name
+		if naming.camelCase( cls.__name__ ) in cmds.allNodeTypes():
+			return naming.camelCase( cls.__name__ )
+		elif cls._nodeType: return cls._nodeType
+		# return cmds.nodeType(cls.node)
+
+	def _instanceNodeType(self):
+		return cmds.nodeType(self)
+
+
 
 	def worldPos(self, asMPoint=True):
 		"""returns world position as MPoint"""
@@ -280,7 +296,10 @@ class AbsoluteNode(str):
 	def nodeInfo(self):
 		"""return specific info for node class"""
 		# this should be overwritten by specific subclasses
-		return self.allInfo[self.nodeType()]
+		test = self.allInfo.get(self.nodeType())
+		if test: return test
+		else: return self.allInfo.get(self._instanceNodeType())
+
 
 	@property
 	def outWorld(self):
@@ -394,7 +413,8 @@ class AbsoluteNode(str):
 	def create(cls, name=None, n=None, *args, **kwargs):
 		"""any subsequent wrapper class will create its own node type"""
 		# nodeTypeStr = cls.nodeType() or cls.__name__
-		nodeTypeStr = cls.__name__
+		nodeTypeStr = cls.nodeType()
+
 		nodeType = nodeTypeStr[0].lower() + nodeTypeStr[1:]
 		name = name or n or "eyy"
 		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
@@ -405,10 +425,14 @@ class AbsoluteNode(str):
 		if self.defaultAttrs:
 			attr.setAttrsFromDict(self.defaultAttrs, self)
 
-	def copy(self, name=None):
+	def copy(self, name=None, children=False):
 		"""copies node, without copying children"""
 		name = name or self.name+"_copy"
-		node = AbsoluteNode(cmds.duplicate(self(), parentOnly=True, n=name)[0])
+		if children:
+			node = AbsoluteNode(cmds.duplicate(self(), n=name)[0])
+		else:
+			node = AbsoluteNode(cmds.duplicate(
+				self(), parentOnly=True, n=name)[0])
 		if self.isShape():
 			cmds.parent(node, self.parent, r=True, s=True)
 		elif self.isDag():
