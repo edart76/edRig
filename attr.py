@@ -273,6 +273,10 @@ def setEnumFromString(plug, value):
 	node, attr = tokenisePlug(plug)
 	enumString = cmds.attributeQuery(attr, node=node, listEnum=True)[0]
 	enumList = enumString.split(":")
+	if not value in enumList:
+		raise RuntimeError("invalid enum value {} for attr {} \n"
+		                   "valid values are {}".format(
+			value, plug, enumList ))
 	cmds.setAttr(plug, enumList.index(value))
 
 def tokenisePlug(plug):

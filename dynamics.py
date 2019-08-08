@@ -43,7 +43,8 @@ class NDynamicsElement(AbsoluteNode):
 	# 	super(NDynamicsElement, self).__init__(*args, **kwargs)
 	# 	self.nucleus = None
 
-	def connectTime(self, timeSource):
+	def connectTime(self, timeSource=None):
+		timeSource = timeSource or self.defaultTime
 		self.con(timeSource, self+".currentTime")
 
 	def connectInputShape(self, shapePlug, spacePlug=None):
@@ -100,7 +101,29 @@ class NDynamicsElement(AbsoluteNode):
 		test = attr.getImmediateFuture(self.outLocal)
 		if test: return AbsoluteNode(test[0])
 
+	@property
+	def nComponents(self):
+		"""return dict of all connected nComponents, indexed by index """
+		components = {}
+		for i in attr.getImmediateFuture(self + ".nucleusId"):
+			if cmds.nodeType(i) == "nComponent":
+				index = attr.getAttr(i + ".componentIndices[0]")
+				components[index] = i
+				# vulnerable to multiple uninitialised nComponents
+				# don't do that
+		return components
 
+	def connectNComponent(self, index=1):
+		"""creates new nComponent and sets its index correctly"""
+		comp = NComponent.create()
+		self.con(self + ".nucleusId", comp + ".objectId")
+		comp.set("componentType", "point")
+		comp.set("componentIndices[0]", index)
+		return comp
+
+	def getComponent(self, index=1):
+		return self.nComponents.get(index) or \
+		       self.connectNComponent(index)
 
 class NHair(NDynamicsElement):
 	"""wiggly willy
@@ -144,11 +167,6 @@ class NHair(NDynamicsElement):
 	"""currently one follicle/hair system per dynamic curve - 
 	later if this is too slow investigate multiple follicles per hair system"""
 
-	def constrainComponentToComponent(self, ptA, systemB, ptB):
-		""" help me
-		components normally of format 'curveA.cv[2]'
-		so here are ints. only cvs for now"""
-
 	@property
 	def inputShapePlug(self):
 		return self.follicle+".startPosition"
@@ -169,8 +187,56 @@ class NHair(NDynamicsElement):
 	def follicles(self):
 		"""maybe later"""
 
-"""with all the extra complexity and overhead from follicle, it might actually be better to
-set up a chain of connected nParticles"""
+	@staticmethod
+	def fromDynamicCurve(crv):
+		"""returns an NHair object from a dynamic curve"""
+		system = attr.getImmediatePast(crv + ".create")
+		if system:
+			return NHair(system[0])
+
+
+class NComponent(NDynamicsElement):
+	"""our handling of nComponents and nConstraints is actually very sparse
+	at present - one nComponent will represent one point's interaction
+	with one nConstraint
+	once this works, investigate using extra indices of
+	nComponent.componentIndices"""
+
+	""" direct interaction with this class should actually be minimal """
+
+class NConstraint(NDynamicsElement):
+	"""for constraining dynamic elements together"""
+	_nodeType = "dynamicConstraint"
+	methods = ("weld", "spring", "rubberBand")
+	connect = ("nearestPairs", "withinMaxDistance", "componentOrder")
+
+	def constrainElements(self, elementA=None, indexA=0,
+	                      elementB=None, indexB=0, elements=None,
+	                      nucleus=None, timeSource=None,
+	                      method="weld", connect="componentOrder",
+	                      ):
+		"""main method for constraining elements,
+		through any number of methods
+		:param elementA : NDynamicsElement,
+		:param elements : list of tuples [ (NDynamicsElement, index), ]
+		"""
+		compA = elementA.getComponent(index=indexA)
+		compB = elementB.getComponent(index=indexB)
+
+		self.con(compA + ".outComponent", self + ".componentIds[0]")
+		self.con(compB + ".outComponent", self + ".componentIds[1]")
+		self.set("constraintMethod", method)
+		self.set("connectionMethod", connect)
+
+		if nucleus : self.connectToNucleus(nucleus)
+		self.connectTime(timeSource=timeSource)
+
+	def connectToNucleus(self, nucleus):
+		vacant = attr.getNextAvailableIndex(nucleus + ".inputCurrent")
+		self.con("evalCurrent[0]", "{}.inputCurrent[{}]".format(
+			nucleus, vacant))
+		self.con("evalStart[0]", "{}.inputStart[{}]".format(
+			nucleus, vacant	))
 
 class NCollider(NDynamicsElement):
 	"""collision meshes"""

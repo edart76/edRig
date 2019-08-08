@@ -49,6 +49,8 @@ class AbsoluteNode(str):
 	_isDag = False
 	_nodeType = None
 
+	defaultTime = "time1.outTime" # tryin this out
+
 	def __new__(cls, node, ):
 		"""nota bene: strings are immutable. thus to update the
 		string value of absoluteNode, we must return a NEW
@@ -83,6 +85,7 @@ class AbsoluteNode(str):
 
 		# callbacks attached to node, to delete on node deletion
 		absolute.callbacks = []
+		absolute.con = absolute._instanceCon
 
 		return absolute
 
@@ -353,6 +356,16 @@ class AbsoluteNode(str):
 	def con(sourcePlug, destPlug):
 		"""tribulations"""
 		attr.con(sourcePlug, destPlug, f=True)
+
+	def _instanceCon(self, sourcePlug, destPlug):
+		""" im gonna do it """
+		args = (sourcePlug, destPlug)
+		args = [ self + "." + i if not self in i else i for i in args]
+		attr.con(args[0], args[1], f=True)
+
+
+
+
 
 	@staticmethod
 	def conOrSet(a, b, f=True):
