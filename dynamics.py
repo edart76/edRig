@@ -171,6 +171,9 @@ class NHair(NDynamicsElement):
 	def inputShapePlug(self):
 		return self.follicle+".startPosition"
 	@property
+	def inputShape(self):
+		return AbsoluteNode(attr.getImmediatePast(self.inputShapePlug)[0])
+	@property
 	def restShapePlug(self):
 		return self.follicle+".restPosition"
 	@property
@@ -302,11 +305,11 @@ def makeCurveDynamic(targetCurve,
 	outCrv = targetCurve.copy(name+"_output", children=True)
 	system.connectInputShape( shapePlug=targetCurve.shape.outLocal)
 	system.con( system.outLocal, outCrv.shape.inShape)
-
-
 	return system
 
-
+def constrainClosestPoints(systemA, systemB):
+	"""creates weld constraint between nearest CVs"""
+	print "constraining"
 
 
 

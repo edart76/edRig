@@ -164,6 +164,9 @@ goal is to have dict of { vertexIndex : weight }
 for skins just use list or dict of influences, but store
 weights of each influence in the same way
 
+this isn't tom and jerry, so we assume we will have fewer joints in the skin
+than vertices in the mesh
+
 """
 
 class DeformerWrapper(object):

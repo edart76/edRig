@@ -6,6 +6,8 @@ from edRig.node import AbsoluteNode, ECA
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
+import math
+
 # def matchTransforms(target=None, source=None, pos=True, rot=True):
 #     sourceFn = core.MFnTransformFrom(source)
 #     sourceMatFn = sourceFn.transformation()
@@ -328,6 +330,22 @@ def aimToVector(transform, vector):
 	aim = ECA("aimConstraint")
 	aim.conOrSet(vector, aim+".target[0].targetTranslate")
 	aim.con(aim+".constraintRotate", transform+".rotate")
+
+def getClosestPoint(target=(0,0,0), points=None):
+	"""find closest point from selection of tuples"""
+	lowest = 1000.0
+	for i in points:
+		vec = []
+		for n in range(3):
+			vec.append(target[n] - i[n])
+		length = math.sqrt( pow(vec[0], 2) +
+		                    pow(vec[1], 2) +
+		                    pow(vec[2], 2) )
+		if length < lowest:
+			lowest = length
+
+
+
 
 
 

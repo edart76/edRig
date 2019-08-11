@@ -182,6 +182,7 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs)
 	if attrName in cmds.listAttr(target):
 		return target+"."+attrName
 
+	if attrType == "int" : attrType = "long"
 	dtList = ["string", "nurbsCurve"]
 	if attrType in dtList:
 		plug = cmds.addAttr(target, ln=attrName, dt=attrType, **kwargs)
@@ -270,14 +271,24 @@ def setAttrsFromDict(attrDict, node=None):
 		setAttr(plug, v)
 
 def setEnumFromString(plug, value):
+	"""usually the index of an enum entry, """
 	node, attr = tokenisePlug(plug)
-	enumString = cmds.attributeQuery(attr, node=node, listEnum=True)[0]
-	enumList = enumString.split(":")
+	enumList = getEnumEntries(node, attr)
 	if not value in enumList:
 		raise RuntimeError("invalid enum value {} for attr {} \n"
 		                   "valid values are {}".format(
 			value, plug, enumList ))
 	cmds.setAttr(plug, enumList.index(value))
+
+def getEnumEntries(node, attr):
+	""" there are terrible things here """
+	enumString = cmds.attributeQuery(attr, node=node, listEnum=True)[0]
+	enumList = enumString.split(":")
+	for i, n in enumerate(enumList):
+		if "=" in n: # the horrors
+			enumList[i] = n.split("=")[0]
+	enumList = [ i[0].lower() + i[1:] for i in enumList]
+	return enumList
 
 def tokenisePlug(plug):
 	"""atomic to get node and attr from plug"""

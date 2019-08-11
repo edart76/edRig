@@ -288,9 +288,11 @@ def debug(var):
 
 
 
-def ECN(kind, name, parent=None, *args, **kwargs):
+def ECN(kind, name="", parent=None, *args, **kwargs):
 	# node creation without carpal conflagration
 	# short for EdCreateNode
+
+	if not name: name = kind
 
 	if kind == "pma":
 		node = cmds.createNode("plusMinusAverage", n=name)

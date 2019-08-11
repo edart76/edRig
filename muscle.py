@@ -1,4 +1,4 @@
-from edRig import AbsoluteNode, ECA, curve, beauty
+from edRig import AbsoluteNode, ECA, curve, beauty, attr
 from edRig.dynamics import Nucleus, NHair, makeCurveDynamic
 
 
@@ -30,9 +30,25 @@ class MuscleCurve(object):
 		                 nucleus=nucleus, name=name)
 		muscle = MuscleCurve(hair, jointRes=jointRes,
 		                     name=name)
+		muscle.setup()
 		muscle.makeJoints()
 
 		return muscle
+
+	def setup(self):
+		"""creates all internal systems for muscle"""
+		baseRebuild = ECA("rebuildCurve")
+		baseShapePlug = attr.getImmediatePast(
+			self.hair.inputShapePlug, wantPlug=True	)[0]
+		baseRebuild.con(baseShapePlug, "inputCurve" )
+		baseRebuild.set("degree", 1) # linear
+		baseRebuild.con("outputCurve", self.hair.inputShapePlug)
+
+		ctrl = AbsoluteNode( self.hair.outputLocalShape.transform )
+		spanPlug = ctrl.addAttr(attrName="baseSpans", attrType="int", dv=4)
+		ctrl.con(spanPlug, baseRebuild + ".spans")
+
+
 
 	def makeJoints(self, res=None):
 		"""create joints on muscle curve"""

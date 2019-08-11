@@ -360,12 +360,15 @@ class AbsoluteNode(str):
 	def _instanceCon(self, sourcePlug, destPlug):
 		""" im gonna do it """
 		args = (sourcePlug, destPlug)
-		args = [ self + "." + i if not self in i else i for i in args]
-		attr.con(args[0], args[1], f=True)
-
-
-
-
+		conargs = []
+		for i in args:
+			if not "." in i:
+				c = self + "." + i
+			elif not cmds.objExists(i.split(".")[0]):
+				c = self + "." + i
+			else: c = i
+			conargs.append(c)
+		attr.con(conargs[0], conargs[1], f=True)
 
 	@staticmethod
 	def conOrSet(a, b, f=True):
@@ -387,6 +390,9 @@ class AbsoluteNode(str):
 			attr.setAttrsFromDict(multi, node=self())
 		else:
 			attr.setAttr(self() + "." + attrName, val, **kwargs)
+
+	def addAttr(self, **kwargs):
+		return attr.addAttr(self(), **kwargs)
 
 	def getMPlug(self, plugName):
 		"""return MPlug object"""

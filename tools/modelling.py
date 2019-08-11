@@ -67,3 +67,15 @@ def makeMuscleCurve(sel):
 		return
 	sel = [AbsoluteNode(i) for i in sel]
 	muscle.MuscleCurve.create(sel)
+
+def constrainDynamicCurves(sel):
+	"""create dynamic constraint between any two points of two curves"""
+	if not sel: return
+	if len(sel) != 2:
+		raise RuntimeError("select two dynamic curves' cvs")
+
+
+	# sel = [AbsoluteNode(i) for i in sel]
+	# sel = [dynamics.NHair.fromDynamicCurve(i) for i in sel]
+	# dynamics.constrainClosestPoints(sel[0], sel[1])
+
