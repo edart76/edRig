@@ -237,7 +237,8 @@ class Control(object):
 		return [i.shape for i in self.layers]
 	@property
 	def first(self):
-		"""returns first layer"""
+		"""returns first layer
+		:returns AbsoluteNode"""
 		return self.layers[0]
 
 class ParametricControl(Control):
@@ -300,8 +301,10 @@ class TileControl(Control):
 	use to hold attributes,
 	under no circumstances for driving motion directly"""
 	
-	# def __init__(self, name=None, co):
-	# 	super(TileControl, self).__init__()
+	def __init__(self, name, colour=(56, 120, 256) ):
+		super(TileControl, self).__init__(name=name, layers=1,
+		                                  controlType="surface",
+		                                  colour=colour)
 
 	def makeSquare(self, name=None):
 		""""""
@@ -313,6 +316,11 @@ class TileControl(Control):
 		self.root = ECA("transform", name=self.name+"_control")
 		self.square = self.makeSquare()
 		self.square.parentTo(self.root)
+		self.layers[0] = self.square
+
+
+
+
 
 
 

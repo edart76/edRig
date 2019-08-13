@@ -225,6 +225,13 @@ def makeAttrsFromDict(node, attrDict, parent=None):
 			kwargs = {nk : nv for nk, nv in v.iteritems() if nk != "dt"}
 			addAttr(node, attrName=k, attrType=v["dt"], parent=parent, **kwargs)
 
+def copyAttr(targetPlug, targetNode):
+	"""currently for use only with simple attributes"""
+	mPlug = getMPlug(targetPlug)
+	print mPlug.attribute().apiType()
+	print mPlug.copy()
+
+
 
 INTERFACE_ATTRS = { # attribute templates for io network nodes
 	"0D" : {"dt" : "matrix"},

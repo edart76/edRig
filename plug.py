@@ -69,6 +69,15 @@ def periodicSignalFromPlug(plug, period=1.0, amplitude=1.0,
 def invertMatrixPlug(plug):
 	"""returns an inverse matrix plug"""
 
+def blendFloatPlugs(plugList=None, blender=None, name="blendPlugs"):
+	"""blends float plugs together"""
+	blend = ECA("blendTwoAttr", n=name)
+	for i, val in enumerate(plugList):
+		conOrSet(val, blend + ".input[{}]".format(i) )
+	conOrSet(blender, blend + ".blender")
+	return blend + ".output"
+
+
 def trigPlug(plug, mode="sine", res=30, inputDegrees=True):
 	"""remap a plug through a trigonometric function"""
 	modes = {"sine" : math.sin,
@@ -95,6 +104,39 @@ def trigPlug(plug, mode="sine", res=30, inputDegrees=True):
 	crv.con(plug, crv+".input")
 	return plug + ".output"
 
+
+class RampPlug(object):
+	"""don't you love underscores and capital letters
+	called thus:
+	ramp = RampPlug(myAnnoyingString)
+	setAttr(ramp.point(0).value, 5.0)
+	to be fair, if these are special-cased in maya, why not here"""
+
+	class _Point(object):
+		def __init__(self, root, index):
+			self.root = root
+			self.index = index
+
+		@property
+		def _base(self):
+			return "{}[{}].{}_".format(
+				self.root, self.index, self.root	)
+
+		@property
+		def value(self):
+			return self._base + "FloatValue"
+		@property
+		def position(self):
+			return self._base + "Position"
+		@property
+		def interpolation(self):
+			return self._base + "Interp"
+
+	def __init__(self, rootPlug):
+		self.root = rootPlug
+
+	def point(self, id):
+		return self._Point(self.root, id)
 
 
 

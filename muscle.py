@@ -1,4 +1,5 @@
-from edRig import AbsoluteNode, ECA, curve, beauty, attr
+from edRig import AbsoluteNode, ECA, curve, beauty, attr, \
+	control, plug, transform
 from edRig.dynamics import Nucleus, NHair, makeCurveDynamic
 
 
@@ -17,6 +18,7 @@ class MuscleCurve(object):
 		self.hair = hair
 		self.jointRes = jointRes
 		self.name = name
+		self.collider = collisionRigid
 		pass
 
 	@staticmethod
@@ -32,8 +34,59 @@ class MuscleCurve(object):
 		                     name=name)
 		muscle.setup()
 		muscle.makeJoints()
+		muscle.makeControl()
 
 		return muscle
+
+	def makeControl(self):
+		"""create control attributes"""
+		self.ctrl = control.TileControl(name=self.name,
+		                                colour=(56, 120, 256) )
+		node = AbsoluteNode(self.ctrl.first)
+
+		# set up muscle attributes
+		# activation
+		active = node.addAttr(attrName="activation", attrType="float", min=0, max=1, dv=0)
+		length = node.addAttr(attrName="tensedLength", attrType="float", min=0, dv=1)
+		restStretch = node.addAttr(attrName="restStretchResistance", attrType="float",
+		                            min=1.0, dv=10)
+		tenseStretch = node.addAttr(attrName="tenseStretchResistance", attrType="float",
+		                            min=1.0, dv=100)
+		# curve attributes
+		baseSpans = node.addAttr(attrName="baseSpans", attrType="int", dv=5)
+
+		# get activation value
+		activePlug = self.computeActivation(userInput=active)
+
+		# plug to show final activation for debugging
+		crvTf = self.hair.outputLocalShape.transform
+		activationDisplay = crvTf.addAttr(attrName="activation",
+		                                  attrType="float")
+		crvTf.con(activePlug, activationDisplay)
+
+		# dynamic computation
+		constant = ECA("addDoubleLinear", n="constant")
+		constant.set("input1", 1)
+
+		# stretch resistance
+		stretchPlug = plug.blendFloatPlugs(
+			plugList=[restStretch, tenseStretch],
+			blender=activePlug,
+			name=self.name + "_stretchResist")
+		node.con(stretchPlug, self.hair + ".stretchResistance")
+
+		lengthPlug = plug.blendFloatPlugs(
+			plugList=[constant + ".input1", length],
+			blender=activePlug, name=self.name + "_targetLength" )
+		node.con(lengthPlug, self.hair + ".restLengthScale")
+
+		# connect basic curve stuff
+		node.con(baseSpans, self.baseRebuild + ".spans")
+
+	def computeActivation(self, userInput=""):
+		"""computes activation value for muscle, based on loads of stuff"""
+		return userInput
+
 
 	def setup(self):
 		"""creates all internal systems for muscle"""
@@ -43,11 +96,21 @@ class MuscleCurve(object):
 		baseRebuild.con(baseShapePlug, "inputCurve" )
 		baseRebuild.set("degree", 1) # linear
 		baseRebuild.con("outputCurve", self.hair.inputShapePlug)
+		self.baseRebuild = baseRebuild
 
-		ctrl = AbsoluteNode( self.hair.outputLocalShape.transform )
-		spanPlug = ctrl.addAttr(attrName="baseSpans", attrType="int", dv=4)
-		ctrl.con(spanPlug, baseRebuild + ".spans")
+	def makeCurveSwollness(self, activationPlug):
+		"""computes the clump width scale for curve p u m p
+		bias - param at which thickness is greatest
+		max - maximum thickness at full activation
+		min - guess
+		bulgeSpread - lateral shape of bulge along curve
+		bulgeFactor - not used. how much second points inherit bulge.
+			this is already enough control.
+		"""
+		bias = 0.5
 
+
+	"""layers are dynamic collision -> naive bulge"""
 
 
 	def makeJoints(self, res=None):
