@@ -388,8 +388,10 @@ class AbsoluteNode(str):
 		REFACTOR to catalogue MPlugs and set them directly"""
 		if isinstance(multi, dict):
 			attr.setAttrsFromDict(multi, node=self())
-		else:
-			attr.setAttr(self() + "." + attrName, val, **kwargs)
+			return
+		if not self() in attrName :
+			attrName = self() + "." + attrName
+		attr.setAttr(attrName, val, **kwargs)
 
 	def addAttr(self, **kwargs):
 		return attr.addAttr(self(), **kwargs)

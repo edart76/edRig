@@ -165,10 +165,12 @@ def afterOpen(*args, **kwargs):
 	clearCallbacks()
 	print "sceneName is " + sceneName
 	#pipeline.makeBogus(sceneName)
-	makeCodeNode()
+	#makeCodeNode()
+	pass
 
 def afterNew(*args, **kwargs):
-	makeCodeNode()
+	#makeCodeNode()
+	pass
 
 
 

@@ -110,13 +110,15 @@ class Control(object):
 
 	def makeBeautiful(self, colour):
 		"""pretty"""
-		if self.controlType == "curve":
-			for i in self.layers:
-				beauty.setColour(i, colour)
-		elif self.controlType == "surface":
+		if self.controlType == "surface":
 			controlMat = material.getUiShader(colour)
-			for i in self.layers:
-				controlMat.applyTo(i)
+		for i in self.layers:
+			beauty.setColour(i, colour)
+			if self.controlType == "surface":
+				try:
+					controlMat.applyTo(i)
+				except:
+					pass
 
 
 	def makeHierarchy(self):
@@ -317,6 +319,10 @@ class TileControl(Control):
 		self.square = self.makeSquare()
 		self.square.parentTo(self.root)
 		self.layers[0] = self.square
+		self.worldOutput = self.square
+
+	def connectOutput(self):
+		pass
 
 
 

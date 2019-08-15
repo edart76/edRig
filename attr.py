@@ -55,8 +55,10 @@ def conOrSet(a, b, f=True):
 	"""connects plug to b if a is a plug,
 	sets static value if not"""
 	if isPlug(a):
+		print "conOrSet first value {} is not a plug".format(a)
 		con(a, b, f)
 	else:
+		print "conOrSet found attrValue a {}, b {}".format(a, b)
 		setAttr(b, attrValue=a)
 
 # def getChildren(plug)
@@ -267,6 +269,12 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 		if plugType(targetPlug) == "enum":
 			setEnumFromString(targetPlug, attrValue)
 		else: cmds.setAttr(targetPlug, attrValue, type="string")
+		return
+
+
+	elif isinstance(attrValue, (tuple, list)):
+		"""try everything"""
+		cmds.setAttr(targetPlug, *attrValue)
 		return
 
 	cmds.setAttr(targetPlug, attrValue, **kwargs)

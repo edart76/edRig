@@ -9,11 +9,12 @@ class MuscleCurve(object):
 
 	# solvers to transfer muscle deformation to mesh
 	transferSolvers = ("joints", "wire")
-	upSolvers = ("target", "surfaceNormal")
+	upSolvers = ("ctrlPos", "surfaceNormal")
 
 	def __init__(self, hair, name="newMuscle",
 	             collisionRigid=None,
-	             jointRes=5):
+	             jointRes=5,
+	             upSolver=""):
 		"""initialise with base hair system governing muscle behaviour"""
 		self.hair = hair
 		self.jointRes = jointRes
@@ -24,14 +25,16 @@ class MuscleCurve(object):
 	@staticmethod
 	def create(baseCrv, nucleus=None,
 	           jointRes=5,
-	           upSolver=None,
+	           upSolver="ctrlPos",
 	           timeInput="time1.outTime",
 	           name="testMuscle",
+	           upSurface=None,
 	           ):
+		"""upSolver governs upvector for joints - """
 		hair = makeCurveDynamic(baseCrv, live=True, timeInput=timeInput,
 		                 nucleus=nucleus, name=name)
 		muscle = MuscleCurve(hair, jointRes=jointRes,
-		                     name=name)
+		                     name=name, upSolver=upSolver)
 		muscle.setup()
 		muscle.makeJoints()
 		muscle.makeControl()
@@ -71,8 +74,7 @@ class MuscleCurve(object):
 		# stretch resistance
 		stretchPlug = plug.blendFloatPlugs(
 			plugList=[restStretch, tenseStretch],
-			blender=activePlug,
-			name=self.name + "_stretchResist")
+			blender=activePlug,	name=self.name + "_stretchResist")
 		node.con(stretchPlug, self.hair + ".stretchResistance")
 
 		lengthPlug = plug.blendFloatPlugs(
@@ -82,6 +84,10 @@ class MuscleCurve(object):
 
 		# connect basic curve stuff
 		node.con(baseSpans, self.baseRebuild + ".spans")
+
+		# constrain to curve
+		curve.curveRivet(self.ctrl.root, crvTf, uVal=0.5,
+		                 )
 
 	def computeActivation(self, userInput=""):
 		"""computes activation value for muscle, based on loads of stuff"""
@@ -108,9 +114,13 @@ class MuscleCurve(object):
 			this is already enough control.
 		"""
 		bias = 0.5
+		swellCurve = self.hair.outputLocalShape.shape.getShapeLayer()
 
 
 	"""layers are dynamic collision -> naive bulge"""
+
+	def makeJointHenchness(self, activationPlug):
+		"""how much should joints scale during activation"""
 
 
 	def makeJoints(self, res=None):

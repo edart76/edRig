@@ -9,10 +9,13 @@ colourPresets = {
 	"blue" : (0, 256, 0),
 }
 
-def getColour(colour=(), normalise=False):
+def getColour(colour=None, normalise=False):
 	"""if i see a default colour control i'm gonna flip"""
 	if isinstance(colour, basestring):
 		colour = colourPresets.get(colour) or (60,60, 256)
+	elif isinstance(colour, tuple):
+		colour = list(colour)
+
 	if normalise:
 		for i, val in enumerate(colour):
 			colour[i] = val / 256.0

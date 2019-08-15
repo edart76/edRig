@@ -9,6 +9,7 @@ matPrefs = {
 	"roughness" : "oof",
 	"metalness" : "mtl",
 	"emissive" : "ems",
+	"subsurface" : "sss",
 	"anisotropy" : "iso",
 	"iridescence" : "iri"
 }

@@ -9,18 +9,7 @@ from edRig.node import ECA, AbsoluteNode, PlugObject
 
 def conOrSet(driver, driven):
 	"""if EITHER is a static value, the opposite will be set as a plug"""
-	args = (driver, driven)
-	plugs = [core.isPlug(i) for i in args]
-	if not any(plugs):
-		raise RuntimeError("no plugs passed to conOrSet {}, {}".format(
-			driver, driven))
-	if all(plugs):
-		attr.con(driver, driven)
-
-	else:
-		# lol
-		val, plug = (args[i] if plugs[0] else args[not i] for i in plugs)
-		attr.setAttr(plug, attrValue=val)
+	attr.conOrSet(driver, driven)
 
 def vecFromTo(startPlug, endPlug):
 	"""get vector between two plugs"""
@@ -72,9 +61,10 @@ def invertMatrixPlug(plug):
 def blendFloatPlugs(plugList=None, blender=None, name="blendPlugs"):
 	"""blends float plugs together"""
 	blend = ECA("blendTwoAttr", n=name)
+	print "plugList {}".format(plugList)
 	for i, val in enumerate(plugList):
 		conOrSet(val, blend + ".input[{}]".format(i) )
-	conOrSet(blender, blend + ".blender")
+	conOrSet(blender, blend + ".attributesBlender")
 	return blend + ".output"
 
 
