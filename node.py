@@ -265,7 +265,13 @@ class AbsoluteNode(str):
 
 	def hide(self):
 		if self.isDag():
-			cmds.hide(self)
+			cmds.hide(self())
+
+	def show(self):
+		if self.isDag():
+			cmds.showHidden(self())
+
+
 
 	def delete(self, full=True):
 		"""deletes maya node, and by default deletes entire openmaya framework around it
@@ -393,8 +399,15 @@ class AbsoluteNode(str):
 			attrName = self() + "." + attrName
 		attr.setAttr(attrName, val, **kwargs)
 
-	def addAttr(self, **kwargs):
-		return attr.addAttr(self(), **kwargs)
+	def get(self, attrName=None, **kwargs):
+		"""duplication rip"""
+		if not self() in attrName:
+			attrName = self() + "." + attrName
+		print "getting {}".format(attrName)
+		return attr.getAttr(attrName, **kwargs)
+
+	def addAttr(self, keyable=True, **kwargs):
+		return attr.addAttr(self(), keyable=True, **kwargs)
 
 	def getMPlug(self, plugName):
 		"""return MPlug object"""

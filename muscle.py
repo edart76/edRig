@@ -15,7 +15,8 @@ class MuscleCurve(object):
 	             collisionRigid=None,
 	             jointRes=5,
 	             upSolver=""):
-		"""initialise with base hair system governing muscle behaviour"""
+		"""initialise with base hair system governing muscle behaviour
+		:param NHair hair: """
 		self.hair = hair
 		self.jointRes = jointRes
 		self.name = name
@@ -35,9 +36,9 @@ class MuscleCurve(object):
 		                 nucleus=nucleus, name=name)
 		muscle = MuscleCurve(hair, jointRes=jointRes,
 		                     name=name, upSolver=upSolver)
+		muscle.makeControl()
 		muscle.setup()
 		muscle.makeJoints()
-		muscle.makeControl()
 
 		return muscle
 
@@ -46,11 +47,28 @@ class MuscleCurve(object):
 		self.ctrl = control.TileControl(name=self.name,
 		                                colour=(56, 120, 256) )
 		node = AbsoluteNode(self.ctrl.first)
+		print "inputShape {}".format(self.hair.inputShape)
+		baseTf = self.hair.inputShape.transform
+		self.ctrl.root.parentTo(baseTf)
+
+		crvDag = ECA("transform")
+		curve.curveRivet(crvDag, self.hair.inputShape, 0.5)
+		#transform.matchMatrix(crvDag, self.ctrl.first)
+		transform.matchXforms(self.ctrl.root, crvDag)
+		transform.zeroTransforms(self.ctrl.root)
+
+		scale = beauty.getUsableScale(self.hair.outputLocalShape, factor=0.1)
+		self.ctrl.first.set("scale", scale)
+		self.ctrl.first.set("translateY", -scale)
+
+		crvDag.delete()
 
 		# set up muscle attributes
 		# activation
+		baseLength = curve.arcLength(self.hair.outputLocalShape)
 		active = node.addAttr(attrName="activation", attrType="float", min=0, max=1, dv=0)
-		length = node.addAttr(attrName="tensedLength", attrType="float", min=0, dv=1)
+		length = node.addAttr(attrName="tensedLength", attrType="float",
+		                      min=0, dv=baseLength / 3.0)
 		restStretch = node.addAttr(attrName="restStretchResistance", attrType="float",
 		                            min=1.0, dv=10)
 		tenseStretch = node.addAttr(attrName="tenseStretchResistance", attrType="float",
@@ -82,12 +100,17 @@ class MuscleCurve(object):
 			blender=activePlug, name=self.name + "_targetLength" )
 		node.con(lengthPlug, self.hair + ".restLengthScale")
 
-		# connect basic curve stuff
-		node.con(baseSpans, self.baseRebuild + ".spans")
+
 
 		# constrain to curve
-		curve.curveRivet(self.ctrl.root, crvTf, uVal=0.5,
-		                 )
+		pci = curve.curveRivet(self.ctrl.root, baseTf, uVal=0.5, )
+
+		basePos = plug.vectorMatrixMultiply(
+			vector=self.ctrl.first + ".translate",
+		    matrix=self.ctrl.root + ".matrix",
+			normalise=False)
+		self.ctrlVector = plug.vecFromTo(pci + ".position",
+		                                 basePos)
 
 	def computeActivation(self, userInput=""):
 		"""computes activation value for muscle, based on loads of stuff"""
@@ -96,13 +119,22 @@ class MuscleCurve(object):
 
 	def setup(self):
 		"""creates all internal systems for muscle"""
-		baseRebuild = ECA("rebuildCurve")
-		baseShapePlug = attr.getImmediatePast(
-			self.hair.inputShapePlug, wantPlug=True	)[0]
-		baseRebuild.con(baseShapePlug, "inputCurve" )
-		baseRebuild.set("degree", 1) # linear
-		baseRebuild.con("outputCurve", self.hair.inputShapePlug)
-		self.baseRebuild = baseRebuild
+		# baseRebuild = ECA("rebuildCurve")
+		# baseShapePlug = attr.getImmediatePast(
+		# 	self.hair.inputShapePlug, wantPlug=True	)[0]
+		# baseRebuild.con(baseShapePlug, "inputCurve" )
+		# baseRebuild.set("degree", 1) # linear
+		# baseRebuild.con("outputCurve", self.hair.inputShapePlug)
+		# self.baseRebuild = baseRebuild
+		# # connect basic curve stuff
+		# # connect basic curve stuff
+		# self.ctrl.first.con(self.ctrl.first + ".baseSpans",
+		#                    self.baseRebuild + ".spans")
+
+		# hair settings
+		self.hair.follicle.set("startDirection", 1) # input curve
+		self.hair.follicle.set("pointLock", 2) # no point locking
+
 
 	def makeCurveSwollness(self, activationPlug):
 		"""computes the clump width scale for curve p u m p
@@ -136,7 +168,7 @@ class MuscleCurve(object):
 			                              factor=0.1)
 			joint.set("radius", scale)
 			curve.curveRivet(joint, self.hair.outputLocalShape,
-			                 u, )
+			                 u, upVectorSource=self.ctrlVector )
 
 	@staticmethod
 	def fromCurve(crv):

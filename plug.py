@@ -4,7 +4,8 @@ from maya import cmds
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
 from edRig import core, attr
-from edRig.node import ECA, AbsoluteNode, PlugObject
+from edRig.node import ECA, AbsoluteNode, PlugObject, ECN
+
 
 
 def conOrSet(driver, driven):
@@ -61,11 +62,20 @@ def invertMatrixPlug(plug):
 def blendFloatPlugs(plugList=None, blender=None, name="blendPlugs"):
 	"""blends float plugs together"""
 	blend = ECA("blendTwoAttr", n=name)
-	print "plugList {}".format(plugList)
+	#print "plugList {}".format(plugList)
 	for i, val in enumerate(plugList):
 		conOrSet(val, blend + ".input[{}]".format(i) )
 	conOrSet(blender, blend + ".attributesBlender")
 	return blend + ".output"
+
+def vectorMatrixMultiply(vector=None, matrix=None, normalise=False,
+                         name="vectorMatrixMult"):
+	node = ECN("vectorProduct", n=name)
+	conOrSet(vector, node + ".input1", )
+	conOrSet( matrix, node + ".matrix",)
+	conOrSet( normalise, node + ".normalizeOutput",)
+	attr.setAttr( node + ".operation", "point Matrix Product")
+	return node + ".output"
 
 
 def trigPlug(plug, mode="sine", res=30, inputDegrees=True):
@@ -93,6 +103,7 @@ def trigPlug(plug, mode="sine", res=30, inputDegrees=True):
 	crv.set("postInfinity", 3)
 	crv.con(plug, crv+".input")
 	return plug + ".output"
+
 
 
 class RampPlug(object):

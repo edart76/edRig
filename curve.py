@@ -109,7 +109,7 @@ def getLengthRatio(crv, uFraction):
 #attach transform to curve
 def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
                upSpace="world", top=True, rotX=True,
-               byLength=True,
+               byLength=True, upVectorSource=None,
                constantU=True, purpose="anyPurpose", noCycle=True):
 	"""purpose parametre allows reuse of point on curve nodes"""
 
@@ -161,12 +161,16 @@ def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
 		con(upDag + ".worldMatrix[0]", aim+".worldUpMatrix")
 		cmds.setAttr(aim+".worldUpType", 1) # object up
 
+	elif upVectorSource:
+		""" use provided tuple or plug as up vector """
+		attr.setAttr(aim + ".worldUpType", "vector")
+		attr.conOrSet(upVectorSource, aim + ".worldUpVector")
+
 	else:
 		# just use the normal of the point node
-		#cmds.setAttr(aim+".worldUpType", 4) #fucking nothing
-		cmds.setAttr(aim+".worldUpType", 3)
-		cmds.setAttr(aim+".constraintRotateOrder", 2)
-		con(pci+".normalizedNormal", aim+".upVector")
+		attr.setAttr(aim+".worldUpType", "vector")
+		attr.setAttr(aim+".constraintRotateOrder", 2)
+		con(pci+".normalizedNormal", aim+".worldUpVector")
 		#con(pci+".normal", aim+".upVector")
 
 	if rotX:
@@ -178,8 +182,7 @@ def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
 	# if we want to get rid of constraints, you can do compose/decompose
 	# matrix, but i think here they're fine
 	# returns new reference to dag
-	return dag
-
+	return pci
 
 
 #create nurbs curve through arbitrary points
@@ -258,6 +261,12 @@ def curveFnFrom(curve):
 	curveFn = om.MFnNurbsCurve(MObject)
 	# Return result
 	return curveFn
+
+def arcLength(curve):
+	if isinstance(curve, AbsoluteNode):
+		return curve.shape.shapeFn.length()
+	else:
+		return cmds.arcLen(curve, ch=False)
 
 def getClosestU(curve, tf):
 	#print "u curve is {}".format(curve)

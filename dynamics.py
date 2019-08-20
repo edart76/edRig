@@ -2,7 +2,9 @@
 from maya import cmds
 
 from edRig.node import AbsoluteNode, ECA
+import time
 from edRig import attr, naming, plug, scene, callback, core
+
 
 def makeSolverCell(name):
 	""" create a pair of nodes to recycle values from previous frame
@@ -65,6 +67,7 @@ class NDynamicsElement(AbsoluteNode):
 	def connectToNucleus(self, nucleus):
 		"""connect up all the fiddly mel stuff"""
 		# how many things are already connected?
+		nucleus = Nucleus(nucleus)
 		newIndex = cmds.getAttr(nucleus+".inputActive", size=True)
 		self.con(nucleus+".startFrame", self+".startFrame")
 		self.con(nucleus+".outputObjects[{}]".format(newIndex),
@@ -78,7 +81,13 @@ class NDynamicsElement(AbsoluteNode):
 		attr.makeMutualConnection(nucleus, self, attrType="message",
 		                          startName="elements", endName="nucleus")
 		# no reason for a component to diverge from nucleus time
-		nucleus.con(nucleus + ".currentTime", self + ".currentTime")
+		# nucleus.con(nucleus + ".currentTime", self + ".currentTime")
+		# DO NOT DO THIS passing time through a nucleus crashes without fail
+		self.con(attr.getImmediatePast( nucleus + ".currentTime", wantPlug=True)[0],
+		         self + ".currentTime" )
+		# self.con( "time1.outTime", self + ".currentTime" )
+		nucleus.kick()
+
 
 	@property
 	def nucleus(self):
@@ -124,6 +133,7 @@ class NDynamicsElement(AbsoluteNode):
 	def getComponent(self, index=1):
 		return self.nComponents.get(index) or \
 		       self.connectNComponent(index)
+
 
 class NHair(NDynamicsElement):
 	"""wiggly willy
@@ -277,9 +287,42 @@ class Nucleus(AbsoluteNode):
 		result = cmds.ls(search) or cmds.ls(type="nucleus")
 		return result
 
+	@property
+	def timeInput(self):
+		"""return driving plug of T I M E """
+		return attr.getImmediatePast(self() + ".currentTime", wantPlug=True)
+
 	def addElement(self, elementNode):
 		"""adds target nDynamics node to solver
 		not really much point in trying to hack this apart, it's pretty closed"""
+
+	def kick(self):
+		"""disconnects time and jitters current time a bit -
+		latest attempt to avoid rabid crashing"""
+		source = attr.getImmediatePast( self + ".currentTime", wantPlug=True )[0]
+		# print "source {}".format(source)
+		#attr.breakConnections(self + ".currentTime")
+		current = cmds.currentTime(q=True)
+		start = self.get("startFrame")
+		cmds.currentTime(start)
+
+		#self.con(source, self +
+		#cmds.dgdirty(a=True)
+		cmds.currentTime( start + 1 )
+		cmds.currentTime( start + 2 )
+
+		cmds.play(state=True, forward=True)
+		# cmds.pause(sec=5)
+		# time.sleep(5)
+		cmds.play(state=False)
+		# cmds.pause(sec=5)
+		# time.sleep(2)
+		cmds.currentTime( start )
+
+
+
+
+
 
 def attachDynamicCurves():
 	pass

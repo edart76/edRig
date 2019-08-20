@@ -16,17 +16,28 @@ def isNode(target):
 
 def isPlug(target):
 	"""returns true for format pCube1.translateX"""
+	if not isinstance(target, basestring): return False
 	if not "." in target: return False
 	return cmds.objExists(target)
 
 def plugHType(plug):
 	"""returns either leaf, array or compound"""
-	node, attr = plug.split(".")
-	#print "node {}, attr {}".format(node, attr)
+	node, attr = tokenisePlug(plug)
+	# querying on common scale attr gives multi false, children list
+
+	try:
+		found = cmds.attributeQuery(attr, node=node, listChildren=True)
+		if found: return "compound"
+	except:
+		pass
+
+	if "[" in plug:
+		return "leaf"
+	return "leaf"
+	# print "node {}, attr {}".format(node, attr)
 	# if not cmds.attributeQuery(attr, node=node, multi=True):
 	# 	return "leaf"
-	# found = cmds.attributeQuery(attr, node=node, listChildren=True)
-	# if found: return "compound"
+
 	# else: return "array"  # too complex, too much obfuscation
 
 	return "leaf"
@@ -43,6 +54,10 @@ def con(a, b, f=True):
 	#print "plugtype {}".format(plugHType(b))
 	if plugHType(b) == "array":
 		dest = getNextAvailableIndex(b)
+
+	elif plugHType(a) == "compound" and plugHType(b) == "compound" :
+		dest = b
+
 	elif plugHType(b) == "compound":
 		for i in unrollPlug(b):
 			con(a, i, f)
@@ -55,10 +70,8 @@ def conOrSet(a, b, f=True):
 	"""connects plug to b if a is a plug,
 	sets static value if not"""
 	if isPlug(a):
-		print "conOrSet first value {} is not a plug".format(a)
 		con(a, b, f)
 	else:
-		print "conOrSet found attrValue a {}, b {}".format(a, b)
 		setAttr(b, attrValue=a)
 
 # def getChildren(plug)
@@ -69,21 +82,14 @@ def breakConnections(target, source=True, dest=True):
 		for i in cmds.listAttr(target):
 			breakConnections(target+"."+i, source, dest)
 	if isPlug(target):
-		for i in cmds.listConnections(target, plugs=True, s=source, d=dest):
-			cmds.disconnectAttr(target, i)
+		test = cmds.listConnections(target, plugs=True, s=source, d=dest)
+		if test:
+			for i in test:
+				try:
+					cmds.disconnectAttr(target, i)
+				except:
+					cmds.disconnectAttr(i, target)
 
-def processAttrNames(attr, node=None, asPlug=False, asAttr=True):
-	"""absolute definite way of getting node.attr vs attr from any string"""
-	returnList = []
-	if asPlug:
-		if node + "." in attr:
-			returnList.append(attr)
-		else:
-			returnList.append(node+"."+attr)
-	elif asAttr:
-		if node+"." in attr:
-			returnList.append("".join(attr.split(".")[:-1]))
-	return returnList
 
 # functions for using string attributes like keys in dictionary
 def addTag(tagNode, tagName, tagContent=None, tagSuffix=False):
@@ -228,7 +234,9 @@ def makeAttrsFromDict(node, attrDict, parent=None):
 			addAttr(node, attrName=k, attrType=v["dt"], parent=parent, **kwargs)
 
 def copyAttr(targetPlug, targetNode):
-	"""currently for use only with simple attributes"""
+	"""currently for use only with simple attributes
+	intended to allow shuffling of attributes out of a network
+	on to controls"""
 	mPlug = getMPlug(targetPlug)
 	print mPlug.attribute().apiType()
 	print mPlug.copy()
@@ -253,6 +261,11 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 	if not attrValue:
 		cmds.setAttr(targetPlug, **kwargs)
 
+	if not isPlug(targetPlug):
+		raise RuntimeError("target plug {} does not exist".format(targetPlug))
+
+	#print "plug {} hType {}".format(targetPlug, plugHType(targetPlug) )
+
 	op = kwargs.get("relative")
 	if op:
 		"""increment attr value rather than set it"""
@@ -271,13 +284,19 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 		else: cmds.setAttr(targetPlug, attrValue, type="string")
 		return
 
+	elif plugHType(targetPlug) == "compound":
+		if isinstance(attrValue, (tuple, list)):
+			"""try everything"""
+			cmds.setAttr(targetPlug, *attrValue)
+			return
 
-	elif isinstance(attrValue, (tuple, list)):
-		"""try everything"""
-		cmds.setAttr(targetPlug, *attrValue)
+		targets = unrollPlug(targetPlug)
+		for i in targets:
+			setAttr(i, attrValue=attrValue)
 		return
 
-	cmds.setAttr(targetPlug, attrValue, **kwargs)
+	else:
+		cmds.setAttr(targetPlug, attrValue, **kwargs)
 
 def setAttrsFromDict(attrDict, node=None):
 	"""expects dict of format {"attr" : value}"""
@@ -307,10 +326,10 @@ def getEnumEntries(node, attr):
 
 def tokenisePlug(plug):
 	"""atomic to get node and attr from plug"""
-	print ""
+	#print ""
 	attr = ".".join(plug.split(".")[1:])
 	node = plug.split(".")[0]
-	print "node is {}, attr is {}".format(node, attr)
+	#print "node is {}, attr is {}".format(node, attr)
 	return node, attr
 
 def plugType(plug):
@@ -394,11 +413,20 @@ def getTransformPlugs(node, t=True, r=True, s=True):
 	return plugs
 
 def unrollPlug(plug, returnLen=-1):
-	"""unrolls compound plug, and either curtails or fills in None up to length"""
+	"""unrolls compound plug returning list of its children,
+	and either curtails or fills in None up to length"""
+	if not plugHType(plug) == "compound" :
+		return [plug]
+	node, attr = tokenisePlug(plug)
+	foundAttrs = cmds.attributeQuery(attr, node=node, listChildren=True)
+	found = [node + "." + i for i in foundAttrs]
+	return found
 
 def getNextAvailableIndex(arrayPlug):
 	"""gets the first free index for an array attribute"""
 	length = cmds.getAttr(arrayPlug, size=True)
+	if arrayPlug[-1] == "]" :
+		arrayPlug = "[".join( arrayPlug.split("[") )
 	return arrayPlug+"[{}]".format(length)
 
 

@@ -240,7 +240,7 @@ class Control(object):
 	@property
 	def first(self):
 		"""returns first layer
-		:returns AbsoluteNode"""
+		:return AbsoluteNode"""
 		return self.layers[0]
 
 class ParametricControl(Control):
