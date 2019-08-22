@@ -1,6 +1,7 @@
 from edRig import AbsoluteNode, ECA, curve, beauty, attr, \
 	control, plug, transform
 from edRig.dynamics import Nucleus, NHair, makeCurveDynamic
+from edRig.scene import TidyManager
 
 
 class MuscleCurve(object):
@@ -36,9 +37,11 @@ class MuscleCurve(object):
 		                 nucleus=nucleus, name=name)
 		muscle = MuscleCurve(hair, jointRes=jointRes,
 		                     name=name, upSolver=upSolver)
-		muscle.makeControl()
-		muscle.setup()
-		muscle.makeJoints()
+
+		with TidyManager(name+"_grp"):
+			muscle.makeControl()
+			muscle.setup()
+			muscle.makeJoints()
 
 		return muscle
 
@@ -112,6 +115,15 @@ class MuscleCurve(object):
 		self.ctrlVector = plug.vecFromTo(pci + ".position",
 		                                 basePos)
 
+		# other hair attributes
+		plugs = (self.hair.follicle + ".pointLock",
+		         self.hair + ".damp",
+		         self.hair + ".bendResistance",
+		         )
+		for i in plugs:
+			attr.copyAttr(i, self.ctrl.first)
+
+
 	def computeActivation(self, userInput=""):
 		"""computes activation value for muscle, based on loads of stuff"""
 		return userInput
@@ -133,7 +145,12 @@ class MuscleCurve(object):
 
 		# hair settings
 		self.hair.follicle.set("startDirection", 1) # input curve
-		self.hair.follicle.set("pointLock", 2) # no point locking
+		self.hair.follicle.set("restPose", 3) # from curve
+		self.hair.set("collisionFlag", 1) # vertex
+		self.hair.set("selfCollisionFlag", 1) # vertex
+		# self.hair.set("ignoreSolverGravity", 1)
+		# self.hair.set("ignoreSolverWind", 1)
+		pass
 
 
 	def makeCurveSwollness(self, activationPlug):

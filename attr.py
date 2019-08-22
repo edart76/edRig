@@ -233,13 +233,30 @@ def makeAttrsFromDict(node, attrDict, parent=None):
 			kwargs = {nk : nv for nk, nv in v.iteritems() if nk != "dt"}
 			addAttr(node, attrName=k, attrType=v["dt"], parent=parent, **kwargs)
 
-def copyAttr(targetPlug, targetNode):
+def copyAttr(sourcePlug, targetNode, newName=None, driveOriginal=True):
 	"""currently for use only with simple attributes
 	intended to allow shuffling of attributes out of a network
-	on to controls"""
-	mPlug = getMPlug(targetPlug)
-	print mPlug.attribute().apiType()
-	print mPlug.copy()
+	on to controls
+	copyAttr( someRandomNode.selector, ctrl, newName=parametreA ) """
+	sourceNode, sourceAttr = tokenisePlug(sourcePlug)
+	cmds.copyAttr( sourceNode, targetNode,
+	               attribute=[sourceAttr], values=True)
+	if newName:
+		renameAttr(targetNode + "." + sourceAttr, newName)
+	else: newName = sourceAttr
+	plug = targetNode + "." + newName
+	setAttr(plug, channelBox=True, keyable=True)
+	if driveOriginal:
+		con(targetNode + "." + newName, sourcePlug)
+	return targetNode + "." + newName
+
+
+def renameAttr(targetPlug, newName="newAttr"):
+	cmds.renameAttr(targetPlug, newName)
+	node, attr = tokenisePlug(targetPlug)
+	return node + "." + newName
+
+
 
 
 

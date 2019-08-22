@@ -1,8 +1,56 @@
 # operations for listing, grouping, adding to sets etc
 from maya import cmds
 from edRig.node import ECA, AbsoluteNode, invokeNode
-from edRig import attr
+from edRig import attr, core
 import maya.api.OpenMaya as om
+import traceback
+
+
+class TidyManager(object):
+	"""manage execution of ops"""
+	excludeList = [
+		"tilePile",
+	]
+	def __init__(self, tidyGrp, excludeList=None):
+		""":param string : tidyGrp"""
+
+		self.tidyGrp = tidyGrp
+		self.beforeSet = None
+		self.afterSet = None
+		if excludeList: self.excludeList = excludeList
+
+	def __enter__(self):
+		self.beforeSet = set(listAllNodes())
+		self.dag = invokeNode(self.tidyGrp, type="transform")
+		return self
+
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		"""clean up TOP LEVEL maya scene nodes regardless"""
+		self.afterSet = set(listAllNodes())
+		new = self.afterSet - self.beforeSet
+		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()
+		           and not n.parent]
+		newDags = [i for i in newDags if i not in self.excludeList
+		           and not cmds.listRelatives(i, parent=True)]
+
+		for i in new:
+			pass
+		for i in newDags:
+			current = listRelatives(self.dag, ad=True)
+			#print "current {}".format(current)
+			if not i in current:
+				try:
+					cmds.parent(i, self.dag)
+				except:
+					pass
+		# halt execution
+		if exc_type:
+			self.printTraceback(exc_type, exc_val, exc_tb)
+			pass
+
+	@staticmethod
+	def printTraceback(tb_type, tb_val, tb):
+		traceback.print_exception(tb_type, tb_val, tb)
 
 class Globals(object):
 	"""holder for various singleton nodes and values"""

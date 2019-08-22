@@ -481,6 +481,8 @@ def ECA(type, name="", colour=None, *args, **kwargs):
 	return AbsoluteNode(node)
 
 
+
+
 class PlugObject(str):
 	"""small wrapper allowing plug to be returned as priority,
 	and while still accessing the node easily
