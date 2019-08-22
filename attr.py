@@ -176,7 +176,8 @@ def hideAttr(plug):
 def lockAttr(plug):
 	cmds.setAttr(plug, locked=True)
 
-def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs):
+def addAttr(target, attrName="newAttr", attrType="float", parent=None,
+            keyable=True, **kwargs):
 	"""wrapper for more annoying attr types like string
 	returns plug"""
 	if parent:
@@ -193,9 +194,11 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None, **kwargs)
 	if attrType == "int" : attrType = "long"
 	dtList = ["string", "nurbsCurve"]
 	if attrType in dtList:
-		plug = cmds.addAttr(target, ln=attrName, dt=attrType, **kwargs)
+		plug = cmds.addAttr(target, ln=attrName, dt=attrType, keyable=True,
+		                    **kwargs)
 	else:
-		plug = cmds.addAttr(target, ln=attrName, at=attrType, **kwargs)
+		plug = cmds.addAttr(target, ln=attrName, at=attrType, keyable=True,
+		                    **kwargs)
 		# if you know the logic behind at vs dt, please contact me
 	# contact me urgently
 	if parent:
@@ -241,14 +244,20 @@ def copyAttr(sourcePlug, targetNode, newName=None, driveOriginal=True):
 	sourceNode, sourceAttr = tokenisePlug(sourcePlug)
 	cmds.copyAttr( sourceNode, targetNode,
 	               attribute=[sourceAttr], values=True)
-	if newName:
-		renameAttr(targetNode + "." + sourceAttr, newName)
-	else: newName = sourceAttr
-	plug = targetNode + "." + newName
-	setAttr(plug, channelBox=True, keyable=True)
+	# until i get the proper procedural way working
+	if not newName : newName = sourceAttr
+	val = getAttr(sourcePlug)
+	newAttr = addAttr(targetNode, attrName=newName)
+	setAttr(newAttr, val)
 	if driveOriginal:
 		con(targetNode + "." + newName, sourcePlug)
-	return targetNode + "." + newName
+	return newAttr
+	# if newName:
+	# 	renameAttr(targetNode + "." + sourceAttr, newName)
+	# else: newName = sourceAttr
+	# plug = targetNode + "." + newName
+	# setAttr(plug, channelBox=True, keyable=True)
+
 
 
 def renameAttr(targetPlug, newName="newAttr"):
