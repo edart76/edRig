@@ -1,5 +1,5 @@
 """oh hey look it's a legit thing that tech artists do"""
-from edRig import pipeline, attr
+from edRig import pipeline, attr, node, camera, AbsoluteNode, ECA
 from maya import cmds
 
 def renderView(path=None, asset=None,
@@ -21,6 +21,26 @@ def renderView(path=None, asset=None,
 		attr.setAttr("defaultArnoldDriver.pre", path)
 
 		arnoldRender(width, height)
+
+
+
+
+def renderDepth(path=None, asset=None,
+                fileType="png", width=500, height=500,
+                objects=None, camera=None):
+	"""create a samplerInfo depth setup for normalised 0-1 height
+	thank you lewis pickston """
+	sampler = ECA("samplerInfo", n="depthSamplerInfo")
+	rmv = ECA("remapValue", n="depthRemap")
+	material = None
+	# mult = ECA("multiplyDivide")
+	#
+	# mult.set("input1", -1)
+	# sampler.con("pointCamera", mult+".input2")
+	sampler.con("pointCameraZ", rmv + ".inputValue")
+	rmv.con("outColor", material + ".outColor")
+
+
 
 """
 

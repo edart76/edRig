@@ -22,6 +22,10 @@ uniform mat4 gWvpXf : WorldViewProjection < string UIWidget="None"; >;
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewIXf : ViewInverse < string UIWidget="None"; >;
 
+// test calibration attriutes for iris and corneal heights
+uniform float cornealHeightCalibration = 0.2;
+uniform float irisDepthCalibration = 0.1;
+
 
 
 #else
@@ -95,16 +99,16 @@ void main()
     vec3 Nw = normalize((gWorldITXf * vec4(Normal,0.0)).xyz);
     WorldNormal = Nw;
     DCol = vec4(0.5, 0.5, 0.5, 1);
-    vec4 Po = vec4(Position.xyz,1);
-    vec3 Pw = (gWorldXf*Po).xyz;
-    // dear authors of shaders
-    // you are very clever
-    // i get it
-    // now please stop speaking like an assembler
+    vec4 Po = vec4(Position.xyz,1); // local space position
+    vec3 Pw = (gWorldXf*Po).xyz; // world space position
+
     WorldEyeVec = normalize(gViewIXf[3].xyz - Pw);
     vec4 hpos = gWvpXf * Po;
-    ObjPos = vec4(UV.y, UV.x, Po.zw); // what does this do?
-    gl_Position = hpos; // something to do with displacement idk
+    vec4 calibPos = hpos + ((Nw * cornealHeightCalibration), 0.0);
+    //vec4 calibPos = hpos;
+    //ObjPos = vec4(UV.y, UV.x, Po.zw);
+    ObjPos = calibPos; //
+    gl_Position = calibPos; // final vertex position
     UVout = UV;
 }
 
