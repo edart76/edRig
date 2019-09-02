@@ -1,0 +1,67 @@
+// maya-facing front end to super-duper WePresent eye shader
+// we will attempt not to pollute the pure glsl code too much
+// we will closely follow the example brix.ogsfx code for linking
+
+// also literally never done this before - WCGW
+
+//#define VERTEXPATH "eyeShaderVertex.glsl"
+//#define FRAGMENTPATH "eyeShaderFragment.glsl"
+// tragically cannot get this to work
+// brutality it is, then
+
+#define OGSFX 1
+
+// look at this repulsive code
+#define HIDE_OGSFX_UNIFORMS 0
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 1
+
+#include "eyeShaderVertex.glsl"
+#include "eyeShaderFragment.glsl"
+
+// yes, we actually need to micromanage what gets read when
+// so maya doesn't have a seizure when it defines things
+// in the wrong order
+// please god let there be a better way
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 0
+#define HIDE_OGSFX_CODE 1
+
+#include "eyeShaderVertex.glsl"
+#include "eyeShaderFragment.glsl"
+
+//**********
+//	Code handling:
+//
+//	We need to load the vertex stage and fragment stage in two
+//	different GLSLShader blocks in order to specify them in the
+//	technique definition below:
+//
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 0
+
+
+// link main files
+GLSLShader VS {
+#include "eyeShaderVertex.glsl"
+}
+
+
+GLSLShader FS {
+  #include "eyeShaderFragment.glsl"
+}
+
+
+// define technique
+technique Main {
+  pass p0 {
+
+    VertexShader (in appdata, out vertexOutput) = VS;
+
+    PixelShader (in vertexOutput, out fragmentOutput) = FS;
+
+  }
+}

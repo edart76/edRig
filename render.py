@@ -45,7 +45,16 @@ cmds.setAttr("defaultArnoldDriver.ai_translator", "png", type="string")
 cmds.setAttr("defaultArnoldDriver.pre", "file_name", type="string")
 I still don't know what the third and fourth parameters of the arnoldRender() function do.
 
+"""
 
-
+"""'
+ARV options on default arnold render settings node
+AOVs=Z;Test Resolution=100%;Camera=topShape;
+Debug Shading=Disabled;Color Management.Gamma=1;
+Color Management.Exposure=0;Background.BG=BG Color;
+Background.Color=0 0 0;Background.Image=;Background.Scale=1  1;
+Background.Offset=0  0;Background.Apply Color Management=0;
+Foreground.Enable FG=0;Foreground.Image=;Foreground.Scale=1  1;
+Foreground.Offset=0  0;Foreground.Apply Color Management=1;
 
 """

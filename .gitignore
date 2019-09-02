@@ -104,3 +104,11 @@ venv.bak/
 .mypy_cache/
 *.pyc
 *.pyc
+resources/shaders/examples/glutglsl5_2.0/glutglsl.dsp
+resources/shaders/examples/glutglsl5_2.0/glutglsl.dsw
+resources/shaders/examples/glutglsl5_2.0/textfile.cpp
+resources/shaders/examples/glutglsl5_2.0/textfile.h
+resources/shaders/examples/glutglsl5_2.0/ogl3.cpp
+resources/shaders/examples/glutglsl5_2.0/minimal.vert
+resources/shaders/examples/glutglsl5_2.0/minimal.frag
+*.zip
