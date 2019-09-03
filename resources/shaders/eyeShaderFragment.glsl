@@ -14,11 +14,10 @@ as well - please forgive
 
 #if !HIDE_OGSFX_UNIFORMS
 // uniform parametres
-uniform float irisWidth = 0.3;
-uniform float limbalWidth = 0.05;
-uniform float cornealHeight = 0.2;
 
-uniform float irisDepth = 0.1;
+//uniform float cornealHeight = 0.2;
+
+//uniform float irisDepth = 0.1;
 
 
 #endif
@@ -31,6 +30,8 @@ attribute fragmentInput {
 
     vec4 DCol : COLOR0;
     vec2 UVout : COLOR1;
+    vec4 corneaInfo : COLOR2;
+
 
 };
 
@@ -59,8 +60,13 @@ out vec4 colourOut;
 void main()
 {
     vec4 test;
+
+    // unpack cornea parametres
+    float cornealHeight = corneaInfo.x;
+    float irisWidth = corneaInfo.y;
+
     // test radial distance
-    float radius = length( vec2(0.5 - UVout.x, 0.5 - UVout.y) );
+    float radius = length( vec2(0.5 - UVout.x, 0.5 - UVout.y) * 2.0 );
     test = vec4(0.0, radius, 0.0, 1);
     colourOut = test;
 

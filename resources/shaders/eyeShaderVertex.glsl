@@ -23,9 +23,10 @@ uniform mat4 gWvpXf : WorldViewProjection < string UIWidget="None"; >;
 uniform mat4 gViewIXf : ViewInverse < string UIWidget="None"; >;
 
 // test calibration attriutes for iris and corneal heights
-uniform float cornealHeightCalibration = 0.2;
-uniform float irisDepthCalibration = 0.1;
-
+uniform float cornealHeight = 0.2;
+uniform float irisDepth = 0.1;
+uniform float irisWidth = 0.3;
+uniform float limbalWidth = 0.05;
 
 
 #else
@@ -73,10 +74,11 @@ attribute vertexOutput {
 
     vec4 DCol : COLOR0;
     vec2 UVout : COLOR1;
+    vec4 corneaInfo : COLOR2;
 
 };
 
-#else // OGSFX
+#else // not OGSFX
 
 in vec3 Position;
 in vec2 UV;
@@ -94,22 +96,33 @@ out vec2 UVout; // uv space coords
 
 #if !HIDE_OGSFX_CODE // can we actually run the thing?
 
+// if uv coord is more than 0.5 radius from centre,
+// it's the back of the eye
+
+#include "shaderUtils.h"
+
 void main()
 {
     vec3 Nw = normalize((gWorldITXf * vec4(Normal,0.0)).xyz);
     WorldNormal = Nw;
     DCol = vec4(0.5, 0.5, 0.5, 1);
-    vec4 Po = vec4(Position.xyz,1); // local space position
-    vec3 Pw = (gWorldXf*Po).xyz; // world space position
 
+
+    // calibrate corneal bulge
+    float irisParam = clamp( 0.5 - length( vec2(0.5 - UV.x, 0.5 - UV.y) ),
+        0, 1 - irisWidth);
+    float test = fit(irisParam, 0, 1 - irisWidth, 0, 1);
+    vec3 corneaDisplacement = (Normal * -cornealHeight * test);
+    vec4 Po = vec4(Position.xyz + corneaDisplacement, 1); // local space position
+
+    // final worldspace outputs
+    vec3 Pw = (gWorldXf*Po).xyz; // world space position
     WorldEyeVec = normalize(gViewIXf[3].xyz - Pw);
     vec4 hpos = gWvpXf * Po;
-    vec4 calibPos = hpos + ((Nw * cornealHeightCalibration), 0.0);
-    //vec4 calibPos = hpos;
-    //ObjPos = vec4(UV.y, UV.x, Po.zw);
-    ObjPos = calibPos; //
-    gl_Position = calibPos; // final vertex position
+    ObjPos = vec4(UV.y, UV.x, Po.zw);
+    gl_Position = hpos; // final vertex position
     UVout = UV;
+    corneaInfo = vec4(cornealHeight, irisWidth, 0.0, 0.0);
 }
 
 #endif
