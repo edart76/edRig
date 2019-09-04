@@ -22,11 +22,6 @@ uniform mat4 gWvpXf : WorldViewProjection < string UIWidget="None"; >;
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewIXf : ViewInverse < string UIWidget="None"; >;
 
-// test calibration attriutes for iris and corneal heights
-uniform float cornealHeight = 0.2;
-uniform float irisDepth = 0.1;
-uniform float irisWidth = 0.3;
-uniform float limbalWidth = 0.05;
 
 
 #else
@@ -108,11 +103,10 @@ void main()
     DCol = vec4(0.5, 0.5, 0.5, 1);
 
 
-    // calibrate corneal bulge
-    float irisParam = clamp( 0.5 - length( vec2(0.5 - UV.x, 0.5 - UV.y) ),
-        0, 1 - irisWidth);
-    float test = fit(irisParam, 0, 1 - irisWidth, 0, 1);
-    vec3 corneaDisplacement = (Normal * -cornealHeight * test);
+    // we assume starting from spherical mesh - create corneal bulge
+    float uvDist = length( vec2( 0.5 - UV.x, 0.5 - UV.y) );
+    float irisParam = max( ( irisWidth - uvDist ) / irisWidth, 0);
+    vec3 corneaDisplacement = (Normal * cornealHeight * irisParam);
     vec4 Po = vec4(Position.xyz + corneaDisplacement, 1); // local space position
 
     // final worldspace outputs
@@ -126,3 +120,7 @@ void main()
 }
 
 #endif
+ /* notes
+in future consider tessellating sclera around veins in sclera map -
+derive the "vein map" from the blue channel of the normal sclera
+*/

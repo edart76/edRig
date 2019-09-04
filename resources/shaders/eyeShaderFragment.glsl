@@ -8,16 +8,12 @@ as well - please forgive
 
 */
 
-#define PI 3.14159265
-
 #if OGSFX
 
 #if !HIDE_OGSFX_UNIFORMS
 // uniform parametres
 
-//uniform float cornealHeight = 0.2;
-
-//uniform float irisDepth = 0.1;
+// various colour maps
 
 
 #endif
@@ -59,16 +55,39 @@ out vec4 colourOut;
 // main shader function
 void main()
 {
-    vec4 test;
 
     // unpack cornea parametres
     float cornealHeight = corneaInfo.x;
     float irisWidth = corneaInfo.y;
 
-    // test radial distance
-    float radius = length( vec2(0.5 - UVout.x, 0.5 - UVout.y) * 2.0 );
-    test = vec4(0.0, radius, 0.0, 1);
-    colourOut = test;
+    vec2 UV = UVout;
+
+    // reconstruct iris info
+    float uvDist = length( vec2( 0.5 - UV.x, 0.5 - UV.y) );
+    float irisParam = max(irisWidth - uvDist, 0);
+
+
+
+
+    // debug colours
+    float irisBool = step(0.01, irisParam);
+    float pupilBaseBool = step(uvDist, pupilBaseWidth);
+    float pupilDilationBool = step(uvDist, pupilBaseWidth + pupilDilation);
+
+    // final output
+    vec4 debugOut = vec4(pupilDilationBool, irisBool, pupilBaseBool, 1);
+    debugOut = debugOut * float(debugColours);
+    vec4 mainColour = vec4(0.0, irisBool, 0.0, 1);
+    mainColour = mainColour * 1.0 - float(debugColours);
+    colourOut = mainColour + debugOut;
 
 }
 #endif
+
+/* notes
+at the centre of the eye, the pupil should be black for now -
+the base material extending as far as the iris width is pupil
+however, in future some blade runner mirror eyes would be sweet
+within this material in high light, trace back into the eyeball
+
+*/
