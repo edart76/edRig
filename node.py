@@ -43,6 +43,11 @@ class AbsoluteNode(str):
 		}
 	}
 
+	# persistent dict of uid : absoluteNode
+	# used as cache
+	nodeCache = {}
+	# yes I know there can be uid clashes but for now it's fine
+
 	defaultAttrs = {}
 	# override with {"nodeState" : 1} etc
 
@@ -57,6 +62,13 @@ class AbsoluteNode(str):
 		AbsoluteNode every time it changes
 		no that's dumb"""
 		# this is the stripped down fast version of pymel
+
+		# check if absoluteNode already exists for uid
+		uid = cmds.ls(node, uid=1)
+		if not uid: # no node, empty list
+			pass
+		elif uid[0] in cls.nodeCache:
+			return cls.nodeCache[ uid[0] ]
 
 		if isinstance(node, AbsoluteNode):
 			return node
@@ -86,6 +98,9 @@ class AbsoluteNode(str):
 		# callbacks attached to node, to delete on node deletion
 		absolute.callbacks = []
 		absolute.con = absolute._instanceCon
+
+		# add new node to cache
+		cls.nodeCache[ uid[0] ] = absolute
 
 		return absolute
 

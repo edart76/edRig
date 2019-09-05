@@ -20,10 +20,37 @@
 #include "eyeShaderFragment.glsl"
 
 // test defining colour maps outside glsl files
-uniform texture2D CorneaColourMap;
-uniform texture2D IrisColourMap;
+uniform texture2D ScleraDiffuseMap;
+uniform texture2D IrisDiffuseMap;
 uniform texture2D IrisHeightMap;
 
+uniform sampler2D ScleraSampler = sampler_state
+{
+	Texture = <ScleraDiffuseMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+uniform sampler2D IrisHeightSampler = sampler_state
+{
+	Texture = <IrisHeightMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+uniform sampler2D IrisDiffuseSampler = sampler_state
+{
+	Texture = <IrisDiffuseMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
 
 // test defining all uniform params in one place
 // test calibration attriutes for iris and corneal heights

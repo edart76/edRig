@@ -7,9 +7,6 @@ import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
 from maya import cmds
 
-def getConnectedDeformers(target):
-	"""gets all chained deformers since the previous shape node"""
-	shape = core.shapeFrom(target)
 
 def getLiveShapeLayer(target, local=True):
 	"""creates new shape node with direct mesh connection to master"""

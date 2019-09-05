@@ -65,21 +65,38 @@ void main()
     // reconstruct iris info
     float uvDist = length( vec2( 0.5 - UV.x, 0.5 - UV.y) );
     float irisParam = max(irisWidth - uvDist, 0);
+    // how deep is point on limbal ring?
+    float limbalParam = 0.0;
+
+    // pixel location switches
+    float irisBool = step(0.01, irisParam);
+    float pupilBaseBool = step(uvDist, pupilBaseWidth);
+    float limbalBool = 0.0;
+    float pupilDilationBool = step(uvDist, pupilBaseWidth + pupilDilation);
+
+
+    // initialise output colour
+    vec4 mainColour = vec4(0,0,0,1);
+
+    // if pixel lies on sclera
+    vec4 scleraColour = vec4( texture2D(ScleraSampler, UV, 1.0));
 
 
 
 
     // debug colours
-    float irisBool = step(0.01, irisParam);
-    float pupilBaseBool = step(uvDist, pupilBaseWidth);
-    float pupilDilationBool = step(uvDist, pupilBaseWidth + pupilDilation);
+    vec4 debugOut = vec4(pupilDilationBool, irisBool, pupilBaseBool, 0);
+    debugOut = debugOut * float(debugColours);
+
+    // mix contributions
+    mainColour = mix(scleraColour, debugOut, debugColours);
+
 
     // final output
-    vec4 debugOut = vec4(pupilDilationBool, irisBool, pupilBaseBool, 1);
-    debugOut = debugOut * float(debugColours);
-    vec4 mainColour = vec4(0.0, irisBool, 0.0, 1);
-    mainColour = mainColour * 1.0 - float(debugColours);
-    colourOut = mainColour + debugOut;
+
+    // mainColour = mainColour * (1.0 - float(debugColours) );
+    // colourOut = mainColour + debugOut;
+    colourOut = mainColour;
 
 }
 #endif
