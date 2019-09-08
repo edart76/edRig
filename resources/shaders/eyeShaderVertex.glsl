@@ -66,6 +66,7 @@ attribute vertexOutput {
     vec3 WorldNormal    : TEXCOORD1;
     vec3 WorldEyeVec    : TEXCOORD2;
     vec4 ObjPos    : TEXCOORD3;
+    vec3 UvEyeVec : TEXCOORD4;
 
     vec4 DCol : COLOR0;
     vec2 UVout : COLOR1;
@@ -91,10 +92,12 @@ out vec2 UVout; // uv space coords
 
 #if !HIDE_OGSFX_CODE // can we actually run the thing?
 
+// main body of code
+
 // if uv coord is more than 0.5 radius from centre,
 // it's the back of the eye
 
-#include "shaderUtils.h"
+#include "shaderUtils.glsl"
 
 void main()
 {

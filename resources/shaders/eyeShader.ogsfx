@@ -60,8 +60,13 @@ uniform float irisWidth = 0.3;
 uniform float pupilDilation = 0.0;
 uniform float pupilBaseWidth = 0.07;
 uniform float limbalWidth = 0.05;
-uniform bool debugColours = False;
 
+
+// refraction parametres
+uniform float iorBase = 1.2;
+uniform float iorRange = 0.1;
+
+uniform bool debugColours = False;
 
 // yes, we actually need to micromanage what gets read when
 // so maya doesn't have a seizure when it defines things
