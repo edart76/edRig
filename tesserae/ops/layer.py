@@ -1,6 +1,6 @@
 # ops to be main stages, able to be blended in a control chain
 from edRig.tesserae.ops.op import Op
-from edRig import core, attrio, utils, transform
+from edRig import core, attrio, utils, transform, control
 from edRig.layers.setups import Memory, OpAttrItem
 from edRig.structures import ActionItem
 import functools, inspect
@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 class LayerOp(Op):
 	"""base class for sequential operations that make up a rig
-	very definitely maya-focused"""
+	merge back into base op, there's no point keeping them separate yet"""
 
 	outputs = {}
 	extras = {}  # use with caution
@@ -45,15 +45,6 @@ class LayerOp(Op):
 				attrio.renameFile(old=oldDataPath, new=newDataPath)
 			else:
 				self.checkDataFileExists()
-
-	# def plan(self):
-	# 	kSuccess = super(LayerOp, self).plan()
-	# 	self.loadMemory()
-	#
-	# def build(self):
-	# 	kSuccess = super(LayerOp, self).build()
-	# 	self.loadMemory()
-
 
 	@property
 	def dataFilePath(self):
@@ -118,8 +109,6 @@ class LayerOp(Op):
 						"infoType" : i,
 					} }, name=i )
 
-
-
 		return returnDict
 
 	def refreshMemoryAndSave(self, infoName=None, infoType=None):
@@ -139,6 +128,10 @@ class LayerOp(Op):
 		"""apply saved data if it exists, create it if not
 		just a bit of recreational industrial espionage"""
 
+		# support for custom memory behaviour for complex types
+		if isinstance(infoType, control.Control):
+			self.remember( infoName, compound=infoType.memoryInfo())
+
 		# support for remembering compound data
 		if kwargs.get("compound"):
 			"""we expect dict of 
@@ -153,9 +146,17 @@ class LayerOp(Op):
 				              relative=v.get("relative"),
 				              **kwargs)
 				return True
+			""" TO DO 
+			PREFERABLY memory would be adaptible to arbitrary dicts, as any memory
+			saved as compound will be recalled as compound, and it is inelegant to generate
+			multiple top-level headers for the same information
+			however, the current (original) implementation of memory
+			is not the most robust thing in the world, and an adaptive structure is way off
+			"""
 
 		"""relative left None to ignore - otherwise specify transform or matrix
-		plug to remember and recall only in local space"""
+		plug to remember and recall only in local space
+		actually any kind of plug, corresponding to the value being recalled"""
 
 		if infoName in self.memory.infoNames():
 			if infoType in self.memory.infoTypes(infoName):
@@ -179,15 +180,10 @@ class LayerOp(Op):
 	or only update files at start and end of build process"""
 
 	def getAllActions(self):
-		"""super call freaks out for some reason with regen'd objects"""
+		"""super call freaks out for some reason with regen'd objects
+		no it freaked out because reloading edRig deleted all system modules"""
 		base = {}
-		try:
-			# print "type type self is {}".format(type(type(self))) # returns type
-			base = super(LayerOp, self).getAllActions()
-
-		except Exception as e:
-			print "super call experienced error"
-			print "error is {}".format(e)
+		base = super(LayerOp, self).getAllActions()
 
 		try:
 			base.update({"memory": self.memoryActions()})
@@ -217,6 +213,15 @@ class LayerOp(Op):
 			fromPlug=sourcePlug,
 			closestPoint=closestPoint)
 		transform.decomposeMatrixPlug(basePlug, target=target)
+
+	def addControl(self, ctrl=None):
+		"""wrapper for organising control object properly within op
+		 :param ctrl : control.Control"""
+		self.showGuidesStack.append( ctrl.showGuides )
+		self.hideGuidesStack.append( ctrl.hideGuides )
+
+		for i in ctrl.layers:
+			self.addToSet()
 
 
 	# serialisation and regeneration

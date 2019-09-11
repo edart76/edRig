@@ -286,6 +286,11 @@ class AbsoluteNode(str):
 		if self.isDag():
 			cmds.showHidden(self())
 
+	def lock(self, attrs=None):
+		attrs = attrs or self.attrs()
+		for i in attrs:
+			attr.lockAttr(i)
+
 
 
 	def delete(self, full=True):
@@ -496,6 +501,31 @@ def ECA(type, name="", colour=None, *args, **kwargs):
 	return AbsoluteNode(node)
 
 
+class RemapValue(AbsoluteNode):
+	"""wrapper for rempValue nds"""
+	nodeType = "remapValue"
+
+	def getRampInstance(self, name="rampInstance"):
+		"""creates new ramp exactly mirroring master and connects it by message"""
+		newRemap = ECA("remapValue", n=name)
+		for i in range(cmds.getAttr(self+".value", size=True)):
+			attr.con(self+".value[{}]".format(i),
+			         newRemap+".value[{}]".format(i))
+		attr.makeMutualConnection(self, newRemap, attrType="message",
+		                          startName="instances", endName="master")
+		return newRemap
+
+	@property
+	def instances(self):
+		"""look up ramps connected to master by string"""
+		return attr.getImmediateFuture(self+".instances")
+
+class ObjectSet(AbsoluteNode):
+	""" wrapper for adding things to node sets in a sane way """
+
+	def addToSet(self, target):
+		"""why oh why is this so difficult"""
+		cmds.sets( target, e=True, include=self)
 
 
 class PlugObject(str):
@@ -524,25 +554,6 @@ class PlugObject(str):
 		pass
 
 
-
-class RemapValue(AbsoluteNode):
-	"""wrapper for rempValue nds"""
-	nodeType = "remapValue"
-
-	def getRampInstance(self, name="rampInstance"):
-		"""creates new ramp exactly mirroring master and connects it by message"""
-		newRemap = ECA("remapValue", n=name)
-		for i in range(cmds.getAttr(self+".value", size=True)):
-			attr.con(self+".value[{}]".format(i),
-			         newRemap+".value[{}]".format(i))
-		attr.makeMutualConnection(self, newRemap, attrType="message",
-		                          startName="instances", endName="master")
-		return newRemap
-
-	@property
-	def instances(self):
-		"""look up ramps connected to master by string"""
-		return attr.getImmediateFuture(self+".instances")
 
 
 

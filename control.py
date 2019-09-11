@@ -73,6 +73,11 @@ class OldControl(object):
 	#     # for i in cmds.listRelatives(self.tf, children=True, recursive=True):
 	#     self.name = value
 
+class NewControl(object):
+	""" let's try this again """
+	def __init__(self, name=None, layers=1, controlType="curve"):
+		self.layers = [None] * layers # list of absoluteNodes of TRANSFORMS
+
 
 class Control(object):
 	# base for all controls whose physical location doesn't matter
@@ -99,6 +104,7 @@ class Control(object):
 		self.controlType = controlType
 		self.name = name
 		self.spareInputs = {} # name, node
+		self.guide = None # template guide control
 		self.layers = [None] * layers # absoluteNodes
 		self.colour = beauty.getColour(colour)
 		self.makeHierarchy()
@@ -208,9 +214,12 @@ class Control(object):
 			ctrl = cmds.rename(ctrl, name)
 		return AbsoluteNode(ctrl)
 
-	def markAsGuides(self):
+	def showGuides(self):
 		"""turns everything bright yellow"""
 		pass
+
+	def hideGuides(self):
+		"""removes yellow """
 
 	def makeStatic(self):
 		"""insert inverse offset group just above control
@@ -242,6 +251,19 @@ class Control(object):
 		"""returns first layer
 		:return AbsoluteNode"""
 		return self.layers[0]
+
+	def memoryInfo(self):
+		"""return dict formatted for op memory """
+		return {
+			self.name + "ControlShapes" : {
+				"infoType" : ["shape"],
+				"nodes" : [i.shape for i in self.layers]
+			},
+			self.name + "ControlAttrs" : {
+				"infoType" : ["attr", "xform"],
+				"nodes" : self.layers + [self.guide, self.root]
+			}
+		}
 
 class ParametricControl(Control):
 	"""controls sliding on curves or surfaces"""

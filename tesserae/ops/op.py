@@ -196,6 +196,11 @@ class Op(MayaReal):
 		#experimental
 		self.deltaStack = MayaStack()
 
+		# testing stacks of functions to be called automatically
+		# on show / hide guides
+		self.showGuidesStack = []
+		self.hideGuidesStack = []
+
 	def executionManager(self):
 		return OpExecutionManager(self)
 
@@ -289,7 +294,7 @@ class Op(MayaReal):
 		"""specific to give uniform option to method
 		of recalling xform from memory"""
 		self.addSetting(parent=parent, entryName="memorySpace", value="local",
-		                options=("local", "world"))
+		                options=("relative", "absolute"))
 
 	def addBoolSetting(self, entryName=None, parent=None, value=True):
 		self.addSetting(parent=parent, entryName=entryName, value=value,
@@ -342,15 +347,8 @@ class Op(MayaReal):
 		except:
 			pass
 		attr.addTag(tagNode, "opUID", self.uuid)
-
 		# connect all created nodes to the input network node
-		if self.inputNetwork:
-			try:
-				# cmds.connectAttr(self.inputNetwork+".opTag",
-			     #                 tagNode+".opTag")
-				pass
-			except:
-				pass
+		# said the consummate idiot
 
 	def ECN(self, type, name="blankName", cleanup=False, *args):
 		# this is such a good idea
@@ -666,12 +664,19 @@ class Op(MayaReal):
 	def showGuides(self):
 		"""used to allow user direction over op, as a separate process
 		to execution"""
+		for i in self.showGuidesStack:
+			i()
 		return True
 		pass
 
 	@tidy(category="test")
 	def showGuidesWrapper(self):
 		self.showGuides()
+
+	def hideGuides(self):
+		for i in self.hideGuidesStack:
+			i()
+
 
 	def setState(self, state):
 		"""allows real to set abstract state"""
@@ -703,6 +708,8 @@ class Op(MayaReal):
 		all = scene.ls()
 		new = {i for i in all if self.opName == self.getTag(i, "opTag")}
 		return new
+
+
 
 	@property
 	def rigGrp(self):

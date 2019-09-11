@@ -426,7 +426,7 @@ def ECN(kind, name="", parent=None, *args, **kwargs):
 
 	else:
 		# raise RuntimeError("Kind {} is not recognised - please choose an ECN-supported node".format(kind))
-		node = cmds.createNode(kind, n=name)
+		node = cmds.createNode(kind, n=name, ss=True)
 
 	if isinstance(node, list):
 		node = node[0]

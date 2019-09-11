@@ -167,14 +167,18 @@ def tagAsBuilt(node):
 	addAttr(node, attrName=BUILT_ATTR, dv=1, dt="bool")
 
 def isBuilt(node):
+	""" seriously what does this do """
 	return BUILT_ATTR in cmds.listAttr(node)
 
 
-def hideAttr(plug):
-	cmds.setAttr(plug, cb=False)
+def setHidden(plug, state=True):
+	cmds.setAttr(plug, cb=state)
 
-def lockAttr(plug):
-	cmds.setAttr(plug, locked=True)
+def setLocked(plug, state=True):
+	try:
+		cmds.setAttr(plug, locked=state)
+	except:
+		print "unable to lock attr {}".format(plug)
 
 def addAttr(target, attrName="newAttr", attrType="float", parent=None,
             keyable=True, **kwargs):

@@ -6,7 +6,7 @@
 import edRig.node
 from edRig.structures import SafeDict, AttrItem
 
-from edRig import core, attrio, mesh, curve, surface
+from edRig import core, attrio, mesh, curve, surface, attr
 from edRig.node import AbsoluteNode, ECA
 #from edRig.tesserae.ops.op import Op
 from edRig.layers import Env
@@ -195,7 +195,8 @@ class Memory(object):
 			# all of them?
 			if "allAttrs" in kwargs and kwargs["allAttrs"]:
 				attrList = cmds.listAttr(target, settable=True)  # very risky
-			elif kwargs.get("transform") == False:
+			# attr can register transform attrs, but only if directed
+			elif not kwargs.get("transformAttrs"):
 				omitList = ["translate", "rotate", "scale"]
 				baseList = cmds.listAttr(target, cb=True)
 				#attrList = [i for i in baseList if not (any(omitList) in i)]
@@ -207,7 +208,7 @@ class Memory(object):
 			else:
 				attrList = cmds.listAttr(target, cb=True)  # channelbox
 			for i in attrList:
-				returnDict[i] = cmds.getAttr(target + "." + i)
+				returnDict[i] = attr.getAttr(target + "." + i)
 			# we will absolutely need more nuanced handling down the line,
 			# but this is fine for now
 
@@ -238,7 +239,8 @@ class Memory(object):
 		#print "gathered goss is {}".format(returnDict)
 		return returnDict
 
-	def _applyInfo(self, infoName, infoType, target=None, **kwargs):
+	def _applyInfo(self, infoName, infoType, target=None,
+	               relative=None, **kwargs):
 		allInfo = self.infoFromInfoName(infoName)
 
 		space = kwargs.get("space") or "world"
@@ -258,7 +260,7 @@ class Memory(object):
 			if infoType == "attr":
 				for k, v in info.iteritems():
 					#print "setting attr {}.{} to {}".format(target, k, v)
-					cmds.setAttr(target + "." + k, v)
+					attr.setAttr(target + "." + k, v)
 
 			elif infoType == "xform":
 				cmds.xform(target, ws=True, t=(info[space]["translate"]))
