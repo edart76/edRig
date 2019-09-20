@@ -4,7 +4,6 @@ import core as core
 from core import ECN, con
 from edRig.node import AbsoluteNode, ECA
 import maya.api.OpenMaya as om
-from nodule import nodule
 from edRig import attr, plug
 
 sceneScale = 1
