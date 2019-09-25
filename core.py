@@ -486,6 +486,14 @@ def shapeFrom(target):
 	else:
 		return cmds.listRelatives(target, shapes=True)[0]
 
+def makeShape(name, nodeType):
+	"""creates a new shape node and transform,
+	names them correctly, and returns the shape"""
+	shape = cmds.createNode(nodeType, n=name+"Shape")
+	parent = cmds.listRelatives(shape, parent=True)[0]
+	cmds.rename(parent, name)
+	return shape
+
 def tfFrom(target):
 	if "transform" == cmds.nodeType(target):
 		return target

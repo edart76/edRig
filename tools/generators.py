@@ -9,7 +9,7 @@ from edRig.lib.python import getUserInput
 
 from edRig.lib import algorithms
 
-def buildGrayCodePattern(n=4):
+def buildGrayCodePattern(n=4, rowWidth=1.0):
 	""" generates a full cycle of a Gray code, of 'bit depth' n
 	creates a set of square planes """
 
@@ -24,6 +24,7 @@ def buildGrayCodePattern(n=4):
 			cmds.setAttr( plane + ".translateZ", n )
 			if int(byte):
 				cmds.setAttr( plane + ".translateY", 1)
+			cmds.setAttr( plane + ".scaleZ", rowWidth)
 	codeTiles = cmds.polyUnite(planes, ch=0)
 	return codeTiles
 

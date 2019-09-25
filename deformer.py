@@ -1,19 +1,6 @@
 # wrappers for weight io, getting deformers in history, etc
 
-from edRig import core
-from edRig.node import ECA, AbsoluteNode
 from maya import cmds
-
-
-class SkinCluster(AbsoluteNode):
-
-	@property
-	def influenceMap(self):
-		"""return dict of index : influence
-		:returns dict"""
-
-
-
 
 
 def isDeformer(test):
