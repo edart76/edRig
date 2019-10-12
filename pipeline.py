@@ -2,6 +2,8 @@
 """all the file management and asset stuff is very very shaky
 it's probably not ready for use outside of helping manage tesserae"""
 import os, sys, importlib, pprint, io, tempfile
+import re
+
 from edRig import ROOT_PATH, COMMON_PATH
 from maya import cmds # hurts but there's no point in a separate module yet
 
@@ -446,3 +448,55 @@ def reloadEdRig(tesserae=True):
 			if not tesserae and any([n in i for n in protecc["tesserae"]]):
 				continue
 			else:   del sys.modules[i]
+
+
+def getLatestVersions( files, versions=2 ):
+	""" looks through a set of files for those marked as versions
+	returns the latest x number of files
+
+	ONLY SUPPORTS ONE PROJECT PER FOLDER
+	"""
+
+	allVersions = sorted([ isVersion(i) for i in files], reverse=True)
+	versionMap = [ ( i, isVersion(i) ) for i in files ]
+	print "versionMap {}".format(versionMap)
+	#print "allVersions {}".format( allVersions)
+	if not any([ i[1] for i in versionMap ]):
+		return []
+	r = []
+	for n in range( versions ):
+		if len(allVersions) >= n:
+			for f in versionMap:
+				if f[1] == allVersions[0]:
+					r.append( f[0] )
+					versionMap.remove(f)
+
+			allVersions.pop(0)
+	return r
+
+
+def isVersion(fileName):
+	""" run regex (v\W*\w){1} to check for "v001" or similar
+	return the version number or 0 """
+	try:
+		pattern = re.compile( r"(v(\d|\s)*)")
+		reresult = re.findall( pattern, fileName)
+		#print "re result {}".format(reresult)
+		# list of tuples (matchString, index)
+
+		tokens = [ i for i in reresult if i]
+		#print "tokens {}".format(tokens)
+		if not tokens:
+			return 0
+		#
+		# digits = [i for i in tokens[0][0] if i.isdigit()]
+		# print "digits {}".format(digits)
+
+		version = int( "".join( i for i in tokens[0][0] if i.isdigit() ) )
+
+		# print "fileName {}".format(fileName)
+
+		print "version {}".format(version)
+		return version
+	except:
+		return 0
