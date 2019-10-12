@@ -164,6 +164,9 @@ class AbstractGraph(object):
 		if it is. states are neutral, executing, (routing, for massive graphs?)"""
 
 
+		# node internal storage
+		self.nodeMemory = {}
+
 		# signals
 		self.sync = Signal()
 		self.edgesChanged = Signal()
@@ -562,7 +565,8 @@ class AbstractGraph(object):
 
 	def getNode(self, node, entry=False):
 		"""returns an AbstractNode object from
-		an AbstractNode, node name, node UID, or AbstractAttr(?)"""
+		an AbstractNode, node name, node UID, or AbstractAttr(?)
+		:returns AbstractNode"""
 		if isinstance(node, AbstractNode):
 			node = node
 		elif isinstance(node, str):
@@ -626,6 +630,27 @@ class AbstractGraph(object):
 				sets.add(i)
 
 
+	### node memory
+	def getNodeMemoryCell(self, node):
+		""" retrieves or creates key in memory dict of
+		uid : {
+			name : node name,
+			data : node memory """
+
+		uid = self.getNode(node).uid
+		# test = self.nodeMemory.get(uid)
+		# if not test:
+		return self.nodeMemory.get(uid) or self.makeMemoryCell(node)
+
+	def makeMemoryCell(self, node):
+		node = self.getNode(node)
+		cell = {
+			"name" : node.nodeName,
+			"data" : {},
+		}
+		self.nodeMemory[node.uid] = cell
+		return cell
+
 
 	# serialisation and regeneration
 	def serialise(self):
@@ -633,7 +658,8 @@ class AbstractGraph(object):
 		graph = {"nodes" : {},
 		         "edges" : [],
 		         "name" : self.graphName,
-		         "asset" : self.asset.name}
+		         "asset" : self.asset.name,
+		         "memory" : self.nodeMemory}
 		for uid, entry in self.nodeGraph.iteritems():
 			graph["nodes"][uid] = entry["node"].serialise()
 			# don't worry about fedBy and feeding - these will be reconstructed
@@ -664,6 +690,7 @@ class AbstractGraph(object):
 			                 destAttr=newEdge.destAttr, newEdge=newEdge)
 		for k, v in regen["nodeSets"]:
 			newGraph.nodeSets[k] = set([newGraph.getNode(n) for n in v])
+		newGraph.nodeMemory = regen["memory"]
 		return newGraph
 
 	### initial startup when tesserae is run for the first time

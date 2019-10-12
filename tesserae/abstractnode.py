@@ -67,7 +67,7 @@ class AbstractNode(object):
 		self.nodeName = name or self.defaultName + shortUUID(2)
 
 		self.uid = shortUUID(8)
-		self.graph = graph
+		self._graph = graph
 		self.state = "neutral"
 
 		"""initialise attribute hierarchy"""
@@ -113,6 +113,16 @@ class AbstractNode(object):
 		# colour-changing nodes could be done if you make this a property
 
 		pass
+
+	@property
+	def graph(self):
+		""" i can't make tensorflow go away
+		:returns AbstractGraph"""
+		return self._graph
+	@graph.setter
+	def graph(self, val):
+		self._graph = val
+
 
 	def makeReal(self, realInstance):
 		"""creates and or binds real instance to abstract"""
@@ -326,13 +336,14 @@ class AbstractNode(object):
 			                        desc=desc, default=default, *args, **kwargs)
 		return result
 
-	def removeAttr(self, name, role="output"):
+	def removeAttr(self, name, role="output", emit=True):
 		if role == "output":
 			attr = self.getOutput(name=name)
 		else:
 			attr = self.getInput(name=name)
 		attr.parent.removeAttr(name)
-		self.attrsChanged()
+		if emit: # for bulk attribute reordering call signal by hand
+			self.attrsChanged()
 
 	def addInput(self, parent=None, name=None, dataType=None,
 	             hType="leaf", desc="", default=None, attrItem=None,
@@ -388,6 +399,11 @@ class AbstractNode(object):
 		for i in self.outputs:
 			if search in i.name or not search:
 				self.removeAttr(i)
+
+	def clearInputs(self, search=""):
+		for i in self.inputs:
+			if search in i.name or not search:
+				self.removeAttr(i, role="input")
 
 	# settings
 	def addSetting(self, parent=None, entryName=None, value=None,
@@ -455,15 +471,26 @@ class AbstractNode(object):
 			attrio.makeBlankFile(path=self.dataPath)
 			self.dataFileExists = True
 
-	def searchData(self, infoName):
+	def searchData(self, infoName, internal=True):
+		if internal:
+			memoryCell = self.graph.getNodeMemoryCell(self)
+			return memoryCell["data"].get(infoName)
+
 		print "abstract getting data" + infoName
 		self.checkDataFileExists()
 		return attrio.getData(infoName, self.dataPath)
 		pass
 
-	def saveOutData(self, infoName="info", data={}):
-		"""there needs to be an option to save info directly to
-		graph file - currently every abstractNode has an individual datafile"""
+	def saveOutData(self, infoName="info", data=None, internal=True):
+		""" NEW INTERNAL MODE
+		in the interest of not drowning in files, a mechanism for storing all
+		data in one single .tes file
+		"""
+		if internal:
+			memoryCell = self.graph.getNodeMemoryCell(self)
+			memoryCell["data"][infoName] = data
+			return
+
 		# golly gee willakers
 		print "abstract saving data " + infoName
 		self.checkDataFileExists()
