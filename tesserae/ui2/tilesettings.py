@@ -19,7 +19,7 @@ class TileSettings(QtWidgets.QTreeView):
 		""":param tree : AbstractTree"""
 		super(TileSettings, self).__init__(parent)
 		self.setAnimated(True) # attend first to swag
-		self.setAutoExpandDelay(0.5)
+		self.setAutoExpandDelay(0.3)
 
 		self.highlights = {} # dict of tree addresses to highlight
 		self.tree = None
@@ -100,7 +100,8 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		need to fix it"""
 
 class AbstractValueItem(QtGui.QStandardItem):
-	"""overly specific but it's fine"""
+	"""overly specific but it's fine
+	differentiate branch tag from actual value"""
 	def __init__(self, tree):
 		self.tree = tree
 		self.trueType = type(self.tree.value)
@@ -124,6 +125,7 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		self.tree = None
 		self.root = None
 		self.setTree(tree)
+		self.atRoot = False
 
 	def setTree(self, tree):
 		self.tree = tree
@@ -133,8 +135,9 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		#self.buildFromTree(self.tree, parent=self.root)
 		for i in self.tree.root.branches:
 			print "i tree is {}".format(i)
-			# self.buildFromTree(i, parent=self.invisibleRootItem())
-			self.buildFromTree(i, parent=self.root)
+			self.buildFromTree(i, parent=self.invisibleRootItem())
+
+			#self.buildFromTree(i, parent=self.root)
 			pass
 
 	def buildFromTree(self, tree, parent=None):

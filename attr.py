@@ -16,7 +16,10 @@ def isNode(target):
 
 def isPlug(target):
 	"""returns true for format pCube1.translateX"""
-	if not isinstance(target, basestring): return False
+	test = False
+	try:		target = str(target)
+	except:		return False
+
 	if not "." in target: return False
 	return cmds.objExists(target)
 
@@ -291,6 +294,7 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 	if not attrValue:
 		cmds.setAttr(targetPlug, **kwargs)
 
+	print "isPlug {} {}".format(targetPlug, isPlug(targetPlug))
 	if not isPlug(targetPlug):
 		raise RuntimeError("target plug {} does not exist".format(targetPlug))
 

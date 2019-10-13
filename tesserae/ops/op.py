@@ -517,7 +517,7 @@ class Op(MayaReal):
 
 		# set plug value if it's simple
 		if i.isSimple():
-			attr.setAttr(i.plug, i.value)
+			attr.setAttr(i.plug(), i.value)
 
 	@staticmethod
 	def connectInputPlug(attrItem):

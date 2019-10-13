@@ -52,6 +52,38 @@ def outerVars():
 	return callerFrame.f_locals
 
 
+class StringLike(object):
+	""" tried to implement this behaviour enough to merit this
+	DECORATOR for classes having to act like strings in normal operations etc"""
+
+	def __init__(self, c, *args, **kwargs):
+		self.c = c
+
+	def __call__(self, *args, **kwargs):
+		new = self.c.__new__(self.c, *args, **kwargs)
+		self.wireMethods(new)
+
+	def wireMethods(self, c):
+		""" supplant various magic methods to have them draw
+		directly from class' __str__ when called"""
+
+		shuffleMethods = [
+			c.__repr__,
+			c.__len__,
+			c.__iter__,
+			c.__contains__,
+			c.__eq__,
+		] # etc
+
+		for i in shuffleMethods:
+			### now what
+			lambda i : c.__str__().ad
+		# how do you dynamically assign this
+
+
+
+	pass
+
 class Signal(object):
 	def __init__(self):
 		self._functions = WeakSet()

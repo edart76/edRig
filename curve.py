@@ -411,5 +411,5 @@ def liveMatrixAtU(crvShape, u=0.5, constantU=True, purpose="anyPurpose",
 	data["pci"] = pci
 	return data
 
-#def duplicateShape(shape, search="", replace=""):
-# moved to core
+
+
