@@ -1,3 +1,6 @@
+
+from collections import OrderedDict
+
 # container interfacing with the graph - concerned with connections
 from edRig.structures import SafeDict, AttrItem, ActionItem, ActionList
 from edRig.core import shortUUID
@@ -162,6 +165,7 @@ class AbstractNode(object):
 		"""putting here as temp, this all needs restructuring"""
 		# settings
 		self.settings = AbstractTree(self.__class__.__name__+"_settings", None)
+		#self.settings = AbstractTree()
 		self.evaluator = self.evaluatorClass(graph=self.graph, node=self)
 
 	def setState(self, state):
@@ -585,6 +589,29 @@ class AbstractAttr(AttrItem):
 		super(AbstractAttr, self).__init__(*args, **kwargs)
 		self.plug = None
 
+		# default kwargs passed to attributes created through array behaviour
+		self.childKwargs = {
+			"name" : "newAttr",
+			"role" : self.role,
+			"dataType" : "0D",
+			"hType" : "leaf",
+			"desc" : "",
+			"default" : None,
+			"extras" : {},
+			"children" : {} # don't even try
+		}
+		# TECHNICALLY recursion is now possible
+
+	def setChildKwargs(self, name=None, desc="", dataType="0D", default=None,
+	                   extras=None):
+		newKwargs = {}
+		# this is disgusting i know
+		newKwargs["name"] == name or self.childKwargs["name"]
+		# newKwargs["hType"] == hType or self.childKwargs["hType"]
+		newKwargs["desc"] == desc or self.childKwargs["desc"]
+		newKwargs["dataType"] == desc or self.childKwargs["dataType"]
+		self.childKwargs.update(newKwargs)
+
 	def addConnection(self, edge):
 		"""ensures that input attributes will only ever have one incoming
 		connection"""
@@ -615,6 +642,49 @@ class AbstractAttr(AttrItem):
 
 	def addFreeArrayIndex(self, arrayAttr):
 		"""looks at array attr and ensures there is always at least one free index"""
+
+	def matchArrayToSpec(self, spec=None):
+		"""supplied with a desired array of names, will add, remove or
+		rearrange child attributes
+		this is because we can't just delete and regenerate the objects -
+		edge references will be lost
+		:param spec list of dicts:
+		[ { name : "woo", hType : "leaf"}, ]
+		etc
+			"""
+
+		# set operations first
+		nameList = [i["name"] for i in spec]
+		nameSet = set(nameList)
+		childSet = {i.name for i in self.children}
+		excessChildren = childSet - nameSet
+		newNames = nameSet - childSet
+
+		for i in excessChildren:
+			self.removeAttr(i)
+
+		for i in newNames:
+			nameSpec = [n for n in spec if i["name"] == i][0]
+			kwargs = {}
+			# override defaults with only what is defined in spec
+			for k, v in self.childKwargs.iteritems():
+				kwargs[k] = nameSpec.get(k) or v
+				# safer than update
+
+			newAttr = AbstractAttr(**kwargs)
+			self.children.append(newAttr)
+
+		# lastly reorder children to match list
+		newChildren = []
+		for i in nameList:
+			child = self.attrFromName(i)
+			newChildren.append(child)
+		self.children = newChildren
+
+
+
+
+
 
 
 

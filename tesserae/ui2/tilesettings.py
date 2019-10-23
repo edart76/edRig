@@ -2,13 +2,15 @@
 allowing for more granular control"""
 from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.lib.python import Signal, AbstractTree
+from edRig.tesserae.ui2.lib import ContextMenu
 from edRig.tesserae.expression import EVALUATOR
 
 # t i m e _ t o _ h a c k
 
 
 class TileSettings(QtWidgets.QTreeView):
-	"""widget for viewing and editing an AbstractTree"""
+	"""widget for viewing and editing an AbstractTree
+	display values in columns, branches in rows"""
 	highlightKind = {
 		"error" : QtCore.Qt.red,
 		"warning" : QtCore.Qt.yellow,
@@ -21,6 +23,18 @@ class TileSettings(QtWidgets.QTreeView):
 		self.setAnimated(True) # attend first to swag
 		self.setAutoExpandDelay(0.3)
 
+		self.setAcceptDrops(True)
+		self.setDragDropMode(
+			QtWidgets.QAbstractItemView.InternalMove
+		)
+
+		self.menu = ContextMenu(self)
+		self.makeMenu()
+		#self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+		#self.customContextMenuRequested.connect(self.menu.exec_)
+		#self.customContextMenuRequested.connect(self.test)
+
+
 		self.highlights = {} # dict of tree addresses to highlight
 		self.tree = None
 		self.root = None
@@ -32,6 +46,40 @@ class TileSettings(QtWidgets.QTreeView):
 			self.setTree(tree)
 
 		self.initActions()
+
+	def makeMenu(self):
+
+		# root = QtWidgets.QMenu()
+		# copyAction = root.addAction("copy")
+		# pasteAction = root.addAction("paste")
+		self.menu.add_action(func=self.copyEntry)
+
+	def test(self):
+		print "hey"
+
+	def copyEntry(self):
+		print "copying"
+		pass
+	def pasteEntry(self):
+		print "pasting"
+		pass
+
+	# def mousePressEvent(self, *args):
+	# 	print "mouse settings"
+	# 	#super(TileSettings, self).mousePressEvent(*args)
+
+	def contextMenuEvent(self, *args):
+		print "settings context event"
+
+
+	def showMenu(self, *args, **kwargs):
+		return self.menu.exec_(*args, **kwargs)
+
+
+	def dragEnterEvent(self, event):
+		event.accept()
+	def dragMoveEvent(self, event):
+		event.accept()
 
 	def setTree(self, tree):
 		"""associates widget with AbstractTree object"""
@@ -49,23 +97,9 @@ class TileSettings(QtWidgets.QTreeView):
 		colour = QtCore.QColor(self.highlightKind[kind])
 		self.highlights[address] = kind
 
+
 	def initActions(self):
 		"""sets up copy, add, delete etc actions for branch entries"""
-
-	# @staticmethod
-	# def clearQTreeWidget(treeWidget):
-	# 	iterator = QtWidgets.QTreeWidgetItemIterator(treeWidget, QtWidgets.QTreeWidgetItemIterator.All)
-	# 	while iterator.value():
-	# 		iterator.value().takeChildren()
-	# 		iterator += 1
-	# 	i = treeWidget.topLevelItemCount() + 1
-	# 	if i == 0:
-	# 		return
-	# 	# print "original topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
-	# 	while i >= 0:
-	# 		treeWidget.takeTopLevelItem(i)
-	# 		# print "topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
-	# 		i = i - 1
 
 
 class AbstractBranchItem(QtGui.QStandardItem):
@@ -130,12 +164,13 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 	def setTree(self, tree):
 		self.tree = tree
 		self.clear()
-		self.root = AbstractBranchItem(tree.root)
-		self.appendRow(self.root)
+		#self.root = AbstractBranchItem(tree.root)
+		self.root = self.invisibleRootItem()
+		#self.appendRow(self.root)
 		#self.buildFromTree(self.tree, parent=self.root)
 		for i in self.tree.root.branches:
 			print "i tree is {}".format(i)
-			self.buildFromTree(i, parent=self.invisibleRootItem())
+			self.buildFromTree(i, parent=self.root)
 
 			#self.buildFromTree(i, parent=self.root)
 			pass

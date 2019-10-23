@@ -150,8 +150,9 @@ class AbstractView(QtWidgets.QGraphicsView):
 			#self.sendEvent(self, keyEvent)
 			self.keyPressEvent(keyEvent)
 			event.ignore()
-		else:
-			super(AbstractView, self).focusOutEvent(event)
+		#else:
+			#super(AbstractView, self).focusOutEvent(event)
+		super(AbstractView, self).focusOutEvent(event)
 		# works
 
 
@@ -174,11 +175,12 @@ class AbstractView(QtWidgets.QGraphicsView):
 		# 	super(AbstractView, self).contextMenuEvent(event)
 		# except:
 		# 	pass
-
 		self.RMB_state = False
 		self.buildContext()
 		self.contextMenu.exec_(event.globalPos())
-		super(AbstractView, self).contextMenuEvent(event)
+		#super(AbstractView, self).contextMenuEvent(event)
+
+
 
 	def mousePressEvent(self, event):
 		#print "view mouse event"

@@ -100,7 +100,9 @@ class Completer(object):
 		return sorted(self.items)
 
 class AttrItem(object):
-	"""base used to define a tree of connectable attributes"""
+	"""base used to define a tree of connectable attributes
+	consider eventually inheriting from abstractTree
+	"""
 
 	hTypes = ["leaf", "compound", "array", "root", "dummy"]
 
@@ -315,10 +317,11 @@ class AttrItem(object):
 		# THE DOWNSIDE: when messing with live attributes, everything updates live
 		# cannot say when to refresh connections. user must be careful when deleting
 
-	def copyAttr(self):
+	def copyAttr(self, name="new"):
 		"""used by array attrs - make sure connections are clean
 		AND NAMES ARE UNIQUE"""
 		newAttr = copy.deepcopy(self)
+		newAttr.name = name
 		for i in newAttr.getAllChildren():
 			i.connections = []
 		return newAttr
@@ -372,9 +375,9 @@ class AttrItem(object):
 # meta tactics would be sexier, but this is safer
 # always ensure safety before sexiness
 class ActionItem(object):
-	def __init__(self, execDict=None, name="action"):
+	def __init__(self, execDict=None, name=None):
 		self.items = [None] * 3  # func, args, kwargs
-		self._name = name
+		self._name = name or execDict["func"].__name__
 		if not execDict:
 			return
 		# this can just be passed a function

@@ -87,9 +87,9 @@ class TilePileUI(MyDockingUI):
 		self.graphView.onAssetChanged(assetInfos)
 		self.status.updateCurrentAsset(assetInfos[0])
 
-	def keyPressEvent(self, event):
-		print "event is {}".format(event)
-		super(TilePileUI, self).keyPressEvent(event)
+	# def keyPressEvent(self, event):
+	# 	print "event is {}".format(event)
+	# 	super(TilePileUI, self).keyPressEvent(event)
 
 	# def focusInEvent(self, event):
 	# 	print "main focusIn is {}".format(event.reason())

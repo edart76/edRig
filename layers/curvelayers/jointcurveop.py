@@ -25,8 +25,11 @@ class JointCurveOp(SpookyLayerOp):
 	""" this should really just be two separate ops
 	but it's fine
 
-	whichever mode is active is regenerated first, and takes priority
+	active mode is regenerated first, and takes priority
 	in defining the placement of the other
+
+	eventually get rid of count as attribute, rely totally on
+	settings and number of joint entries - for now just get it working
 
 	"""
 
@@ -37,13 +40,6 @@ class JointCurveOp(SpookyLayerOp):
 		self.addInput(name="jointCount", dataType="int",
 		              desc="number of joints to create along curve",
 		              default=4, min=1)
-		# self.addInput(name="prefix", dataType="string",
-		#               desc="base name to assign joints on creation (editable later)",
-		#               default="jointCurve")
-
-		# self.addInput(name="mode", dataType="enum",
-		#               desc="build based on curve or on joints",
-		#               items=["curve", "joints"], default="joints")
 
 		self.addOutput(name="jc", dataType="1D",
 		               desc="static output jointcurve")
@@ -60,6 +56,17 @@ class JointCurveOp(SpookyLayerOp):
 		self.addSetting(entryName="mode", options=("joints", "curve"),
 		                value="joints")
 		self.addSetting(entryName="curve")
+		self.settings["curve"]["degree"].value = 1
+		self.settings["curve"]["closed"].value = 0
+
+		self.addSetting(entryName="joints")
+		for i in range( self.getInput("jointCount").value ):
+			entry = self.settings["joints"][ "joint{}".format(i) ]
+
+
+
+
+
 
 	def refreshSettings(self):
 		"""add a settings entry for every joint"""
@@ -69,7 +76,6 @@ class JointCurveOp(SpookyLayerOp):
 			if not jointEntry:
 
 				jointEntry["crossLock"].value = False
-
 
 
 	def __init__(self, name="JointCurveOp"):
@@ -99,11 +105,6 @@ class JointCurveOp(SpookyLayerOp):
 			self.createCurves()
 			self.matchJointsToCurve()
 
-		#
-		# self.createJoints()
-		# self.createCurves()
-		# self.matchSavedJointInfo()
-		# self.update1D()
 		# self.connectInputs()
 
 		self.memory.setClosed("joints", status=True)
@@ -137,15 +138,17 @@ class JointCurveOp(SpookyLayerOp):
 			self.out1D.addPoint(u, Point)
 		pass
 
+
+
+
+	def updateInputs(self):
+		self.prefix = self.settings["prefix"]
+
 	def connectInputs(self):
 		"""connect space group to parent"""
 		matPlug = point.getPoint(on=self.getInput("parent").plug,
 		               near=self.joints[0])
 		transform.decomposeMatrixPlug(matPlug, target=self.spaceGrp)
-
-
-	def updateInputs(self):
-		self.prefix = self.settings["prefix"]
 
 	def updateOutputs(self):
 		"""transfer output objects to attribute values"""
@@ -161,25 +164,16 @@ class JointCurveOp(SpookyLayerOp):
 		# make joints, parent them
 		jointCount = len(self.jointsToCreate)
 
-		self.joints = []
-		for i in range(jointCount):
-			# create joint with right name
-			pref = self.jointsToCreate[i]["name"]
-			joint = self.ECA("joint", pref + "_planJnt")
-			self.addTag(joint, "jointKeyTag", tagContent=pref)
-
-			self.joints.append(joint)
-			# refit this with scene scale eventually
-			cmds.xform(joint, t=[0, i * 5.0, 0])
+		jointDict = self.settings.get("joints")
+		if not jointDict:
+			return
+		for k, v in jointDict.iteritems():
+			print k, v
 
 
-			if i > 0:
-				cmds.parent(joint, self.joints[i - 1])
 
-		cmds.parent(self.joints[0], self.spaceGrp)
 
-			#self.points.append(Point(node=joint))
-			#self.out1D.addPoint(Point(node=joint))
+
 
 
 

@@ -136,8 +136,11 @@ class ContextMenu(object):
 		# self.rootMenu = menu or QtWidgets.QMenu("Take action:")
 		self.rootMenu = QtWidgets.QMenu("Take action:")
 
-	def exec_(self, pos):
-		self.rootMenu.exec_(pos)
+	def exec_(self, pos=None):
+		"""allows smaller menus to return only the selected action
+		for computation by outer code, or for a subclassed menu
+		to be implemented with more thorough internal computation"""
+		return self.rootMenu.exec_(pos)
 
 	#
 	# def get_menu(self, name):
@@ -149,8 +152,12 @@ class ContextMenu(object):
 	# 		menu = action.menu()
 	# 		return ContextMenu(self.view, menu)
 
-	def add_action(self, action):
+	def add_action(self, action=None, func=None):
 		# action.setShortcutVisibleInContextMenu(True)
+		if func and not action:
+			temp = ActionItem(execDict={"func" : func})
+			action = EmbeddedAction(temp)
+
 		self.rootMenu.addAction(action)
 
 	def add_menu(self, name):
@@ -216,10 +223,11 @@ class ContextMenu(object):
 
 	"""CONTEXT MENU ACTIONS for allowing procedural function execution"""
 
-	def buildMenu(self, menuDict={}, parent=None):
+	def buildMenu(self, menuDict=None, parent=None):
 		"""builds menu recursively from keys in dict
 		currently expects actionItems as leaves"""
 		# print ""
+		menuDict = menuDict or {}
 		for k, v in menuDict.iteritems():
 			#print "k is {}, v is {}".format(k, v)
 			if isinstance(v, dict):

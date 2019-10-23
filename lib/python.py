@@ -127,7 +127,7 @@ class Signal(object):
 class AbstractTree(object):
 	"""fractal tree-like data structure
 	each branch having both name and value"""
-	def __init__(self, name, val):
+	def __init__(self, name=None, val=None):
 		self.name = name
 		self.parent = None
 		self._val = val
