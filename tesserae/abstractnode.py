@@ -606,10 +606,10 @@ class AbstractAttr(AttrItem):
 	                   extras=None):
 		newKwargs = {}
 		# this is disgusting i know
-		newKwargs["name"] == name or self.childKwargs["name"]
+		newKwargs["name"] = name or self.childKwargs["name"]
 		# newKwargs["hType"] == hType or self.childKwargs["hType"]
-		newKwargs["desc"] == desc or self.childKwargs["desc"]
-		newKwargs["dataType"] == desc or self.childKwargs["dataType"]
+		newKwargs["desc"] = desc or self.childKwargs["desc"]
+		newKwargs["dataType"] = desc or self.childKwargs["dataType"]
 		self.childKwargs.update(newKwargs)
 
 	def addConnection(self, edge):

@@ -43,7 +43,16 @@ class TileSettings(QtWidgets.QTreeView):
 		self.actions = {}
 		self.modelObject = None
 		if tree:
-			self.setTree(tree)
+			tree = self.setTree(tree)
+
+		# appearance
+		header = self.header()
+		header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+		header.setStretchLastSection(False)
+		#self.setFirstColumnSpanned(0, self.rootIndex(), True)
+		#header.setSectionResizeMode(5, QtWidgets.QHeaderView.Stretch)
+		self.setUniformRowHeights(True)
+		self.setIndentation(10)
 
 		self.initActions()
 
@@ -90,6 +99,7 @@ class TileSettings(QtWidgets.QTreeView):
 
 		self.modelObject = AbstractTreeModel(tree=self.tree)
 		self.setModel(self.modelObject)
+		return self.modelObject
 
 
 	def addHighlight(self, address, kind):
@@ -110,12 +120,14 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		""":param tree : AbstractTree"""
 		super(AbstractBranchItem, self).__init__(tree.name)
 		self.tree = tree or AbstractTree()
+		self.setColumnCount(1)
+
 		self.icon = tree.extras.get("icon")
 		if self.icon and self.icon in self.ICONS:
 			self.icon = QtGui.QIcon(self.icon)
 
 		# title and value are taken care of by inserting columns
-		self.addValueData()
+		#self.addValueData()
 		
 	def setData(self, value, *args, **kwargs): # sets the NAME of the tree
 		name = self.tree.setName(value)
@@ -129,9 +141,13 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		in future it may be worth handling dicts, lists etc"""
 		# textItem = QtCore.QStandardItem(self.tree.value)
 		textItem = AbstractValueItem(self.tree)
-		self.appendColumn([textItem])
-		"""currently column only shows up below main heading
-		need to fix it"""
+		#self.appendColumn([textItem])
+		self.insertColumn( 1, [textItem])
+		#self.setChild(0, 1, textItem)
+		pass
+		"""although it makes sense conceptually, direct parent/child
+		relation between branch and value items cannot be done,
+		as they must both appear on same row"""
 
 class AbstractValueItem(QtGui.QStandardItem):
 	"""overly specific but it's fine
@@ -142,14 +158,29 @@ class AbstractValueItem(QtGui.QStandardItem):
 		# special treatment for illegal types, hacky for now
 		# if isinstance(tree, (tuple,)):
 		# 	self.tree = str(self.tree)
-		super(AbstractValueItem, self).__init__(str(tree.value))
+		value = self.processValue(self.tree.value)
+
+		super(AbstractValueItem, self).__init__(value)
+
+		# if self.tree.value is None:
+		# 	self.setText("")
+
+	def processValue(self, value):
+		if value is None:
+			return ""
+		return str(value)
+
 	def setData(self, value, *args, **kwargs):
 		"""qt item objects manipulate trees directly, so
 		anything already connected to the tree object signals
 		works properly"""
+		if self.trueType != type(value):
+			self.trueType = type(value)
 		self.tree.value = self.trueType(value)
 		super(AbstractValueItem, self).setData(value, *args, **kwargs)
 
+	# def treeValue(self):
+	# 	return self.tree.value
 
 class AbstractTreeModel(QtGui.QStandardItemModel):
 	"""is this worth it? maybe"""
@@ -160,6 +191,7 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		self.root = None
 		self.setTree(tree)
 		self.atRoot = False
+		self.setHorizontalHeaderLabels(["branch", "value"])
 
 	def setTree(self, tree):
 		self.tree = tree
@@ -169,18 +201,24 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		#self.appendRow(self.root)
 		#self.buildFromTree(self.tree, parent=self.root)
 		for i in self.tree.root.branches:
-			print "i tree is {}".format(i)
+			#print "i tree is {}".format(i)
 			self.buildFromTree(i, parent=self.root)
 
 			#self.buildFromTree(i, parent=self.root)
+
+
 			pass
 
 	def buildFromTree(self, tree, parent=None):
 		""":param tree : AbstractTree"""
-		item = AbstractBranchItem(tree=tree)
-		parent.appendRow(item)
+		branchItem = AbstractBranchItem(tree=tree)
+		textItem = AbstractValueItem(tree)
+
+		parent.appendRow( [branchItem, textItem] )
+		#parent.appendRow( branchItem )
 		for i in tree.branches:
-			self.buildFromTree(i, parent=item)
+			self.buildFromTree(i, parent=branchItem)
+		return branchItem
 
 
 

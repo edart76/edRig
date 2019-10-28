@@ -187,6 +187,8 @@ class AbstractTree(object):
 	def setName(self, name):
 		"""renames and syncs parent's map
 		currently destroys orderedDict order - oh well"""
+		if name == self.name: # we aint even mad
+			return name
 		if self.parent:
 			oldName = self.name
 			name = self.parent.getValidName(name)

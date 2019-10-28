@@ -44,6 +44,14 @@ class JointCurveOp(SpookyLayerOp):
 		self.addOutput(name="jc", dataType="1D",
 		               desc="static output jointcurve")
 
+		# point array
+		array = self.addOutput(name="points", dataType="0D",
+		               hType="array", desc="output points")
+
+		array.setChildKwargs(dataType="0D", desc="output point")
+
+
+
 
 		# dynamic attributes
 		# for i in range(self.getInput("jointCount").value):
@@ -62,6 +70,10 @@ class JointCurveOp(SpookyLayerOp):
 		self.addSetting(entryName="joints")
 		for i in range( self.getInput("jointCount").value ):
 			entry = self.settings["joints"][ "joint{}".format(i) ]
+
+
+	def refreshSettings(self):
+		pass
 
 
 
