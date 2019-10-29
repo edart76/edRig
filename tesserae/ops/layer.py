@@ -1,4 +1,5 @@
 # ops to be main stages, able to be blended in a control chain
+import edRig.pipeline
 from edRig.tesserae.ops.op import Op
 from edRig import core, attrio, utils, transform, control
 from edRig.layers.setups import Memory, OpAttrItem
@@ -41,7 +42,7 @@ class LayerOp(Op):
 			oldDataPath = self.dataFilePath
 			self.opName = newName
 			# check if data exists already
-			if renameData and not attrio.checkFileExists(newDataPath):
+			if renameData and not edRig.pipeline.checkFileExists(newDataPath):
 				attrio.renameFile(old=oldDataPath, new=newDataPath)
 			else:
 				self.checkDataFileExists()
@@ -59,12 +60,12 @@ class LayerOp(Op):
 	def checkDataFileExists(self):
 		if self.abstract:
 			return True
-		if attrio.checkFileExists(self.dataFilePath):
+		if edRig.pipeline.checkFileExists(self.dataFilePath):
 			print "data file for {} exists".format(self.opName)
 			self.dataFileExists = True
 		else:
 			print "data file for {} does not exist, making new one".format(self.opName)
-			attrio.makeBlankFile(path=self.dataFilePath)
+			edRig.pipeline.makeBlankFile(path=self.dataFilePath)
 			self.dataFileExists = True
 
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):

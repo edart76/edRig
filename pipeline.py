@@ -7,11 +7,15 @@ import re
 from edRig import ROOT_PATH, COMMON_PATH
 from maya import cmds # hurts but there's no point in a separate module yet
 
+
 defaultFolders = ["models", "materials", "ref", "assemblyData"] # create these dynamically as required
 defaultFiles = [] # maybe
 coreFolders = ["archive",]
 coreFiles = ["config", "asset", "version",]
 defaultExtensions = [".txt", ".tes", ".json", ".tp"]
+
+dataFolder = "F:/all projects desktop/common/edCode/edRig/data/"
+tempPath = dataFolder + "tempData"
 
 
 class FilePathTree(str):
@@ -215,12 +219,13 @@ def ioinfo(name="", mode="in", info=None, path=None):
 
 	elif mode == "out":
 
-		file = io.open(path, "w+b")
-		# file.write(pprint.pformat(json.dumps(info), indent=3))
-		# #file.write(pprint.pformat(info, indent=3))
-		# file.write(json.dumps(pprint.pformat(info, indent=3)))
-		file.write(pprint.pformat(info, indent=3))
-		file.close()
+		#file = os.open(path, "w+b")
+		with open(path, "w+b") as file:
+			# file.write(pprint.pformat(json.dumps(info), indent=3))
+			# #file.write(pprint.pformat(info, indent=3))
+			# file.write(json.dumps(pprint.pformat(info, indent=3)))
+			file.write(pprint.pformat(info, indent=3))
+			file.close()
 
 	else:
 		raise RuntimeError("no valid mode ('in' or 'out') to ioinfo")
@@ -500,3 +505,25 @@ def isVersion(fileName):
 		return version
 	except:
 		return 0
+
+
+def makeBlankFile(path=tempPath):
+	# just to set things up
+	randomFact = "crocodiles have two aortas"
+	blankDict = {"did you know ": randomFact}
+
+	ioinfo(path=path, mode="out", info=blankDict)
+
+
+def checkJsonSuffix(path):
+	if ".json" in path:
+		path = path.split(".json")[0]
+	return path + ".json"
+
+
+def checkFileExists(filePath):
+	##print "testPath is {}".format(filePath)
+	if os.path.exists(filePath + ".json"):
+		return True
+	else:
+		return False

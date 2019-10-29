@@ -2,6 +2,7 @@
 from collections import OrderedDict
 
 # container interfacing with the graph - concerned with connections
+import edRig.pipeline
 from edRig.structures import SafeDict, AttrItem, ActionItem, ActionList
 from edRig.core import shortUUID
 from edRig import Env, pipeline, attrio
@@ -467,12 +468,12 @@ class AbstractNode(object):
 
 	# graph io
 	def checkDataFileExists(self):
-		if attrio.checkFileExists(self.dataPath):
+		if edRig.pipeline.checkFileExists(self.dataPath):
 			print "data file for {} exists".format(self.nodeName)
 			self.dataFileExists = True
 		else:
 			print "data file for {} does not exist, making new one".format(self.nodeName)
-			attrio.makeBlankFile(path=self.dataPath)
+			edRig.pipeline.makeBlankFile(path=self.dataPath)
 			self.dataFileExists = True
 
 	def searchData(self, infoName, internal=True):

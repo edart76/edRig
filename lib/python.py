@@ -159,11 +159,16 @@ class AbstractTree(object):
 		else:
 			return -1
 
+	def ownIndex(self):
+		if self.parent:
+			return self.parent.index(self.name)
+		else: return -1
+
 	def items(self):
 		return self._map.items()
 
 	def values(self):
-		return self._map.values()
+		return [i for i in self._map.values()]
 
 	@property
 	def branches(self):
@@ -171,7 +176,7 @@ class AbstractTree(object):
 		return self.values()
 
 	def keys(self):
-		return self._map.keys()
+		return [k for k, v in self._map.iteritems()]
 
 	def iteritems(self):
 		return zip([self._map.keys()], [i.value for i in self._map.items()])
@@ -255,18 +260,26 @@ class AbstractTree(object):
 			etc}, {etc}]"""
 		new = AbstractTree(regenDict["name"], regenDict["value"])
 		new.extras = regenDict["extras"]
-		for i in regenDict["children"]:
-			branch = AbstractTree.fromDict(i)
-			new.addChild(branch)
+
+		# regnerate children with correct indices
+		length = len(regenDict["children"])
+		for n in range(length):
+			for i in regenDict["children"]:
+				if not i["?INDEX"] == n:
+					continue
+				branch = AbstractTree.fromDict(i)
+				new.addChild(branch)
 		return new
 
 	def serialise(self):
+		print("key {} index {}".format(self.name, self.ownIndex()))
+		print("keys are {}".format(self.keys()))
 		serial = {
 			"name" : self.name,
 			"value" : self.value,
 			"extras" : self.extras,
-			"children" :
-				[v.serialise() for v in self._map.itervalues()]
+			"children" : [i.serialise() for i in self._map.values()],
+			"?INDEX" : self.ownIndex()
 		}
 		return serial
 

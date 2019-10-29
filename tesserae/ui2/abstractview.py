@@ -1,5 +1,7 @@
 # viewer widget for the abstract view
 from PySide2 import QtCore, QtWidgets, QtGui
+
+import edRig.pipeline
 from edRig.tesserae.ui2.abstractscene import AbstractScene
 from edRig.tesserae.abstractgraph import AbstractGraph
 from edRig.tesserae.ui2.tabsearch import TabSearchWidget
@@ -8,7 +10,7 @@ from edRig.tesserae.ui2.style import *
 from edRig.tesserae.ui2.context import ContextMenu
 from edRig.tesserae.ui2.lib import ConfirmDialogue
 from edRig.structures import ActionItem, ActionList
-from edRig import attrio, pipeline, ROOT_PATH
+from edRig import pipeline, ROOT_PATH
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -630,7 +632,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		print "open file is {}".format(tilePileFile)
 		if not tilePileFile:
 			return
-		serialised = attrio.ioinfo(mode="in", path=tilePileFile)
+		serialised = pipeline.ioinfo(mode="in", path=tilePileFile)
 		#print "loaded data is {}".format(serialised)
 		return serialised
 
@@ -650,9 +652,9 @@ class AbstractView(QtWidgets.QGraphicsView):
 			return
 		print "save as file is {}".format(tilePileFile)
 		#print "save as data is {}".format(saveData) # returns dict type
-		if not attrio.checkFileExists(tilePileFile):
-			attrio.makeBlankFile(path=tilePileFile)
-		attrio.ioinfo(name="testPileSaveAs", mode="out",
+		if not pipeline.checkFileExists(tilePileFile):
+			edRig.pipeline.makeBlankFile(path=tilePileFile)
+		pipeline.ioinfo(name="testPileSaveAs", mode="out",
 		              info=saveData, path=tilePileFile)
 		#self.tilePileFile = tilePileFile
 		self.savePath = tilePileFile

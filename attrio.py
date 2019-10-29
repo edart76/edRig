@@ -3,23 +3,16 @@
 import io
 import maya.cmds as cmds
 import ast
-import edRig.core as core
 from edRig import pipeline
-from edRig.structures import SafeDict
-import json
-import copy
-import inspect
 import pprint
 
 import os
 
+from edRig.pipeline import checkJsonSuffix
+
 dataFolder = "F:/all projects desktop/common/edCode/edRig/data/"
 tempPath = dataFolder + "tempData"
 
-def checkJsonSuffix(path):
-	if ".json" in path:
-		path = path.split(".json")[0]
-	return path + ".json"
 
 # control versioning with a separate system
 def ioinfo(name="", mode="in", info=None, path=tempPath):
@@ -176,17 +169,3 @@ def deleteFile(path):
 	print ""
 
 
-def makeBlankFile(path=tempPath):
-	# just to set things up
-	randomFact = "crocodiles have two aortas"
-	blankDict = {"did you know ": randomFact}
-
-	ioinfo(path=path, mode="out", info=blankDict)
-
-
-def checkFileExists(filePath):
-	print "testPath is {}".format(filePath)
-	if os.path.exists(filePath + ".json"):
-		return True
-	else:
-		return False
