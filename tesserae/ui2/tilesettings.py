@@ -7,7 +7,6 @@ from edRig.tesserae.expression import EVALUATOR
 
 # t i m e _ t o _ h a c k
 
-
 class TileSettings(QtWidgets.QTreeView):
 	"""widget for viewing and editing an AbstractTree
 	display values in columns, branches in rows"""
@@ -53,6 +52,10 @@ class TileSettings(QtWidgets.QTreeView):
 		#header.setSectionResizeMode(5, QtWidgets.QHeaderView.Stretch)
 		self.setUniformRowHeights(True)
 		self.setIndentation(10)
+		self.setAlternatingRowColors(True)
+		self.showDropIndicator()
+
+
 
 		self.initActions()
 

@@ -141,12 +141,14 @@ class AbstractTree(object):
 		self.parent = tree
 		self.valueChanged = tree.valueChanged
 		self.structureChanged = tree.structureChanged
+
 	def addChild(self, branch):
 		if branch.name in self.keys():
 			raise RuntimeError(
 				"cannot add duplicate child of name {}".format(branch.name))
 		self._map[branch.name] = branch
 		branch._setParent(self)
+		self.structureChanged()
 		return branch
 
 	def get(self, lookup, default):
@@ -168,7 +170,7 @@ class AbstractTree(object):
 		return self._map.items()
 
 	def values(self):
-		return [i for i in self._map.values()]
+		return self._map.values()
 
 	@property
 	def branches(self):
@@ -176,10 +178,13 @@ class AbstractTree(object):
 		return self.values()
 
 	def keys(self):
-		return [k for k, v in self._map.iteritems()]
+		return self._map.keys()
 
 	def iteritems(self):
-		return zip([self._map.keys()], [i.value for i in self._map.items()])
+		return zip(self._map.keys(), [i.value for i in self._map.values()])
+
+	def iterBranches(self):
+		return self._map.iteritems()
 
 	def getAddress(self, prev=""):
 		"""returns string path from root to this tree"""
@@ -194,11 +199,18 @@ class AbstractTree(object):
 		currently destroys orderedDict order - oh well"""
 		if name == self.name: # we aint even mad
 			return name
+
+		# we need to preserve order across renaming
 		if self.parent:
+			newDict = OrderedDict()
 			oldName = self.name
 			name = self.parent.getValidName(name)
-			self.parent._map.pop(oldName)
-			self.parent._map[name] = self
+			for k, v in self.parent.iterBranches():
+				if k == oldName:
+					newDict[name] = self
+					continue
+				newDict[k] = v
+			self.parent._map = newDict
 		self.name = name
 		self.structureChanged()
 		return name

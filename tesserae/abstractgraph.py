@@ -192,6 +192,7 @@ class AbstractGraph(object):
 
 	def clearSession(self):
 		self.nodeGraph.clear()
+		self.edges = []
 
 	# signals
 	def onNodeAttrsChanged(self, node):
