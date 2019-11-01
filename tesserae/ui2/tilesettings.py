@@ -7,6 +7,17 @@ from edRig.tesserae.expression import EVALUATOR
 
 # t i m e _ t o _ h a c k
 
+""" I think I've made a mistake with this in giving the main tree object 
+and the treeModel kind of equal priority, updating each other - 
+however, if I were to assume that the model has priority for the duration,
+I would need extra interface infrastructure to interact with it during 
+a node's execution
+
+conceptually, if not technically, it is more elegant to me that direct interaction
+happen only between pure objects: abstractNode, abstractTree, abstractGraph etc,
+and have no 'direct' dependence on a third party
+"""
+
 class TileSettings(QtWidgets.QTreeView):
 	"""widget for viewing and editing an AbstractTree
 	display values in columns, branches in rows"""
@@ -71,9 +82,23 @@ class TileSettings(QtWidgets.QTreeView):
 
 	def copyEntry(self):
 		print "copying"
+		clip = QtGui.QGuiApplication.clipboard()
+
+		"""get mime of all selected objects
+		set to clipboard
+		"""
+
+
 		pass
 	def pasteEntry(self):
 		print "pasting"
+		clip = QtGui.QGuiApplication.clipboard()
+		data = clip.mimeData()
+		""" get selected object or next free index
+		deserialise mime data to tree branches
+		add tree children
+		setTree on the new tree object
+		"""
 		pass
 
 	# def mousePressEvent(self, *args):
@@ -89,9 +114,21 @@ class TileSettings(QtWidgets.QTreeView):
 
 
 	def dragEnterEvent(self, event):
-		event.accept()
+		
+		super(TileSettings, self).dragEnterEvent(event)
+		# event.accept()
+		
+		
 	def dragMoveEvent(self, event):
-		event.accept()
+		
+		super(TileSettings, self).dragMoveEvent(event)
+		# event.accept()
+
+	def keyPressEvent(self, event):
+		
+		super(TileSettings, self).keyPressEvent(event)
+		pass
+
 
 	def setTree(self, tree):
 		"""associates widget with AbstractTree object"""

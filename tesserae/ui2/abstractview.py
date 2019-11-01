@@ -276,7 +276,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 		elif self.RMB_state:
 			pos_x = (event.x() - self._previous_pos.x())
 			zoom = 0.1 if pos_x > 0 else -0.1
-			self._set_viewer_zoom(zoom)
+			#self._set_viewer_zoom(zoom)
+			#self.set_zoom(zoom)
 			# avoid context stuff interfering
 
 
