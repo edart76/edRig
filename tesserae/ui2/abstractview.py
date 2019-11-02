@@ -164,23 +164,17 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 	def contextMenuEvent(self, event):
 		"""i'm really honestly quite sick of this softlocking my program"""
-		# try:
-		# 	self.RMB_state = False
-		# 	self.buildContext()
-		# except:
-		# 	pass
-		# try:
-		# 	self.contextMenu.exec_(event.globalPos())
-		# except:
-		# 	pass
-		# try:
-		# 	super(AbstractView, self).contextMenuEvent(event)
-		# except:
-		# 	pass
+
+		super(AbstractView, self).contextMenuEvent(event)
+
+		# just check in every widget if event has been used
+		if event.isAccepted():
+			return
 		self.RMB_state = False
 		self.buildContext()
 		self.contextMenu.exec_(event.globalPos())
-		#super(AbstractView, self).contextMenuEvent(event)
+		# super(AbstractView, self).contextMenuEvent(event)
+
 
 
 

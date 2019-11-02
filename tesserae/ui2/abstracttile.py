@@ -155,6 +155,10 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		"""you know that feeling when you need a very specific kind of knob"""
 		return self.entries[knobName].knob
 
+	# def contextMenuEvent(self, event):
+	# 	print "tile context event"
+	# 	super(AbstractTile, self).contextMenuEvent(event)
+
 
 	# signal responses
 	def _onNameChange(self, widget, name):

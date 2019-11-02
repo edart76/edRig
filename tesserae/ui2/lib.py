@@ -109,6 +109,11 @@ class ConfirmDialogue(QtWidgets.QMessageBox):
 			return
 
 
+""" this entire action/embeddedAction/context system is AWFUL
+on refactoring, begin with this - convert actionItems to partials,
+and some kind of acgnostic wrapper to remove ambiguity in passing
+embedded or normal actions around """
+
 
 class EmbeddedAction(QtWidgets.QAction):
 	"""the bridge between normal action items and qt"""
@@ -134,7 +139,7 @@ class ContextMenu(object):
 	def __init__(self, view, menu=None):
 		self.view = view
 		# self.rootMenu = menu or QtWidgets.QMenu("Take action:")
-		self.rootMenu = QtWidgets.QMenu("Take action:")
+		self.rootMenu = QtWidgets.QMenu("Take action:", parent=self.view)
 
 	def exec_(self, pos=None):
 		"""allows smaller menus to return only the selected action
@@ -156,9 +161,12 @@ class ContextMenu(object):
 		# action.setShortcutVisibleInContextMenu(True)
 		if func and not action:
 			temp = ActionItem(execDict={"func" : func})
-			action = EmbeddedAction(temp)
+			#action = EmbeddedAction(temp, parent=self.rootMenu)
+			action = temp
+		#action.setText( action.name )
 
-		self.rootMenu.addAction(action)
+		#self.rootMenu.addAction(action)
+		self.addSubAction(action)
 
 	def add_menu(self, name):
 		menu = QtWidgets.QMenu(None, title=name)

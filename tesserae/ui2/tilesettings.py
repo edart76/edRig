@@ -4,11 +4,12 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.lib.python import Signal, AbstractTree
 from edRig.tesserae.ui2.lib import ContextMenu
 from edRig.tesserae.expression import EVALUATOR
+from edRig.structures import ActionItem
 
 # t i m e _ t o _ h a c k
 
 """ I think I've made a mistake with this in giving the main tree object 
-and the treeModel kind of equal priority, updating each other - 
+and the treeModel kind of equal priority, updatbing each other - 
 however, if I were to assume that the model has priority for the duration,
 I would need extra interface infrastructure to interact with it during 
 a node's execution
@@ -39,10 +40,9 @@ class TileSettings(QtWidgets.QTreeView):
 		)
 
 		self.menu = ContextMenu(self)
-		self.makeMenu()
-		#self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-		#self.customContextMenuRequested.connect(self.menu.exec_)
-		#self.customContextMenuRequested.connect(self.test)
+		# self.makeMenu()
+		# self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+		# self.customContextMenuRequested.connect(self.onContextPoint)
 
 
 		self.highlights = {} # dict of tree addresses to highlight
@@ -72,10 +72,13 @@ class TileSettings(QtWidgets.QTreeView):
 
 	def makeMenu(self):
 
-		# root = QtWidgets.QMenu()
-		# copyAction = root.addAction("copy")
-		# pasteAction = root.addAction("paste")
+		self.menu.clearCustomEntries()
+		# actionDict = {"copy" : ActionItem(execDict={ "func" : self.copyEntry}),
+		#               "paste" : ActionItem(execDict={ "func" : self.pasteEntry})}
+		# self.menu.buildMenusFromDict(actionDict)
 		self.menu.add_action(func=self.copyEntry)
+		self.menu.add_action(func=self.pasteEntry)
+
 
 	def test(self):
 		print "hey"
@@ -83,6 +86,19 @@ class TileSettings(QtWidgets.QTreeView):
 	def copyEntry(self):
 		print "copying"
 		clip = QtGui.QGuiApplication.clipboard()
+		indices = self.selectedIndexes() # i hate with passion
+		print "indices {}".format(indices)
+		""" returns a python list of qModelIndices """
+		if not indices:
+			print( "no entries selected" )
+			return
+		index = indices[0] # only copying single entry for now
+		obj = self.modelObject.data( index )
+		print( "obj {}, type {}".format(obj, type(obj)))
+		# only unicode string representation
+		# need standardItem from model index
+		item = self.modelObject.itemFromIndex( index )
+		print( "item {}".format(item))
 
 		"""get mime of all selected objects
 		set to clipboard
@@ -94,6 +110,17 @@ class TileSettings(QtWidgets.QTreeView):
 		print "pasting"
 		clip = QtGui.QGuiApplication.clipboard()
 		data = clip.mimeData()
+		print "mime is {}".format(data)
+
+
+		# self.modelObject.beginInsertRows()
+		# self.modelObject.beginInsertColumns()
+		#
+		# # add new tree stuff
+		#
+		# self.modelObject.endInsertColumns()
+		# self.modelObject.endInsertRows()
+
 		""" get selected object or next free index
 		deserialise mime data to tree branches
 		add tree children
@@ -105,8 +132,28 @@ class TileSettings(QtWidgets.QTreeView):
 	# 	print "mouse settings"
 	# 	#super(TileSettings, self).mousePressEvent(*args)
 
-	def contextMenuEvent(self, *args):
+	def contextMenuEvent(self, event):
 		print "settings context event"
+		self.onContext( event)
+
+	def onContext(self, event):
+		self.makeMenu()
+		menu = self.menu.exec_( event.globalPos() )
+
+	def onContextPoint(self, qPoint):
+		self.makeMenu()
+		menu = self.menu.exec_( self.viewport().mapToGlobal(qPoint) )
+		print "settingsMenu is {}".format(menu)
+
+	# def mousePressEvent(self, event):
+	# 	if event.button() == QtCore.Qt.LeftButton:
+	# 		super(TileSettings, self).mousePressEvent(event)
+	# 		return
+	# 	if event.button == QtCore.Qt.RightButton:
+	# 		self.makeMenu()
+	# 		menu = self.menu.exec_( event.globalPos() )
+	# 		print menu
+
 
 
 	def showMenu(self, *args, **kwargs):
@@ -261,278 +308,3 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		return branchItem
 
 
-
-
-	# def _buildBranches(self, tree, parent=None):
-
-#
-# class DataViewWidget(QtWidgets.QTreeWidget):
-# 	"""widget for viewing an op's data dict
-# 	THIS DOES NOT INTERACT WITH THE FILE SYSTEM
-# 	the op affects the file, this affects the op"""
-#
-# 	# ADD CAPABILITY TO ADD AND REMOVE ENTRIES
-#
-# 	contentChanged = QtCore.Signal()
-# 	resizeWidget = QtCore.Signal()
-# 	op = None
-# 	opData = {}
-#
-# 	def __init__(self, parent=None):
-# 		super(DataViewWidget, self).__init__(parent)
-# 		self.setAnimated(True)  # swag
-# 		self.setAutoExpandDelay(1)
-#
-# 		self.itemChanged.connect(self.contentChanged)
-#
-# 		self.saveButton = QtWidgets.QPushButton(self)
-# 		self.saveButton.setText("save")
-# 		self.saveButton.clicked.connect(self.updateOpData)
-#
-# 	def currentDataAsDict(self):
-# 		print "currentDataAsDict"
-# 		# top = self.topLevelItem(0)
-# 		top = self.invisibleRootItem()
-# 		# print "top is {}".format(top)
-# 		# if not top:
-# 		# return None
-# 		d = {}
-# 		d.clear()
-# 		# d = self.toDict(parent=top)
-# 		self.toDict(parent=top, targetDict=d)
-# 		print "toDict result is {}".format(d)
-# 		return d
-#
-# 	def flags(self, index):
-# 		"""everything is editable"""
-# 		return (QtCore.Qt.ItemIsEnabled |
-# 		        QtCore.Qt.ItemIsSelectable |
-# 		        QtCore.Qt.ItemIsEditable)
-#
-# 	def updateOpData(self):
-# 		print "updateOpData"
-# 		# print "currentOpData is {}".format(self.op.data)
-# 		currentDict = self.currentDataAsDict()
-# 		# print "currentDict is {}".format(currentDict)
-# 		# self.opData = currentDict
-# 		self.op.data.clear()
-# 		# self.op.data = currentDict
-# 		self.op.data.update(currentDict)
-# 		currentDict.clear()
-# 		print "new opData is {}".format(self.op.data)
-# 		self.clearQTreeWidget(self)
-#
-# 	def setOp(self, op=None):
-# 		print ""
-# 		# print "setting op"
-# 		# print "passed op is {}".format(op)
-# 		self.opData.clear()
-# 		if isinstance(op, list):
-# 			op = op[-1]
-# 		print "op is {}".format(op)
-#
-# 		self.op = None
-# 		self.clearQTreeWidget(self)
-# 		# print "current dataview is {}".format(self.currentDataAsDict())
-#
-# 		self.op = op
-# 		self.refresh(self.op.data)
-# 		# print "current dataview is {}".format(self.currentDataAsDict())
-#
-# 	def refresh(self, value={"blank": "dict"}):
-# 		print "refreshing"
-# 		self.clearQTreeWidget(self)
-# 		self.fill_item(self.invisibleRootItem(), value)
-# 		self.expandAll()
-#
-# 	def toDict(self, targetDict={}, parent=None):
-# 		# this bit's all mine, and i'm very proud of it
-# 		# d = OrderedDict()
-# 		# print ""
-# 		if not parent:
-# 			parent = self.invisibleRootItem()
-# 		d = {}
-# 		d.clear()
-# 		if parent.childCount():
-#
-# 			if parent.data(0, 0):
-# 				d[parent.data(0, 0)] = {}
-# 				childDict = d[parent.data(0, 0)]
-# 			else:
-# 				childDict = d
-# 			# d[parent.data(0,0)] = {}
-# 			valList = []
-#
-# 			for i in range(parent.childCount()):
-# 				child = parent.child(i)
-# 				childData = child.data(0, 0)
-# 				print "child data is {}".format(child.data(0, 0))
-# 				if child.childCount():
-# 					# self.toDict(targetDict=d[parent.data(0,0)], parent=child)
-# 					self.toDict(targetDict=childDict, parent=child)
-# 				elif isinstance(childData, list):
-# 					for i in childData:
-# 						self.toDict(targetDict=childDict, parent=child)
-# 				else:
-# 					valList.append(child.data(0, 0))
-# 					if len(valList) == 1:
-# 						valList = valList[0]
-# 					d[parent.data(0, 0)] = valList
-# 					# childDict = valList
-#
-# 		# if isinstance(targetDict, dict):
-# 		targetDict.update(d)
-# 		return targetDict
-#
-# 	def fill_item(self, item, value):
-# 		def new_item(parent, text, val=None):
-# 			child = QtWidgets.QTreeWidgetItem([text])
-# 			child.setFlags((QtCore.Qt.ItemIsEnabled |
-# 			                QtCore.Qt.ItemIsSelectable |
-# 			                QtCore.Qt.ItemIsEditable))
-# 			self.fill_item(child, val)
-# 			parent.addChild(child)
-# 			child.setExpanded(True)
-#
-# 		if value is None:
-# 			return
-# 		elif isinstance(value, dict):
-# 			for key, val in sorted(value.items()):
-# 				new_item(item, str(key), val)
-# 		elif isinstance(value, (list, tuple)):
-# 			for i, val in enumerate(value):
-# 				new_item(item, str(i), val=val)
-# 		# for val in value:
-# 		#     text = (str(val) if not isinstance(val, (dict, list, tuple))
-# 		#             else '[%s]' % type(val).__name__)
-# 		#     new_item(item, text, val=None)
-# 		else:
-# 			new_item(item, str(value))
-#
-# 	def clearQTreeWidget(self, treeWidget):
-# 		iterator = QtWidgets.QTreeWidgetItemIterator(treeWidget, QtWidgets.QTreeWidgetItemIterator.All)
-# 		while iterator.value():
-# 			iterator.value().takeChildren()
-# 			iterator += 1
-# 		i = treeWidget.topLevelItemCount() + 1
-# 		if i == 0:
-# 			return
-# 		# print "original topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
-# 		while i >= 0:
-# 			treeWidget.takeTopLevelItem(i)
-# 			# print "topLevelItemCount is {}".format(treeWidget.topLevelItemCount())
-# 			i = i - 1
-
-
-
-# class TileSettingsWidget(QtWidgets.QGroupBox):
-# 	"""procedural menu shown whenever tile is selected"""
-#
-# 	dataView = None
-# 	vBox = None
-# 	widgets = []
-# 	tile = None
-#
-# 	def __init__(self, parent=None):
-# 		super(TileSettingsWidget, self).__init__(parent)
-# 		self.setTitle("tileOpSettings")
-#
-# 		testDict = {
-# 			"root": {
-# 				"how": "shall",
-# 				"I": {
-# 					"sing": "that",
-# 					"majesty": "which",
-# 					"angles": 2
-# 				},
-# 				"admire": "let",
-# 				"list": ["dust", "in", "dust"]
-# 			}
-# 		}
-# 		self.dataView = dataview.DataViewWidget(self)
-# 		# self.dataView.refresh(testDict)
-# 		self.dataView.expandAll()
-# 		#self.settingsWidg = QtWidgets.QWidget(self)
-# 		self.settingsWidg = None
-# 		self.dataLayout = QtWidgets.QVBoxLayout(self)
-# 		#self.dataLayout.addWidget(self.settingsWidg, stretch=2)
-# 		self.dataLayout.addWidget(self.dataView, stretch=3)
-# 		# self.dataView = dataview.DictionaryTreeDialog(testDict)
-# 		self.setLayout(self.dataLayout)
-#
-# 		# policy = QtWidgets.QSizePolicy()
-# 		# policy.setVerticalStretch(0)
-# 		# #policy.expandingDirections()
-# 		# self.setSizePolicy(policy)
-#
-# 	def updateDataView(self, op=None):
-# 		self.dataView.setOp(op)
-#
-# 	# if connected to another attribute, override with QTextEdit,
-# 	# displaying connected attr name and tile
-# 	# then below settings, small description of tile op
-#
-# 	def refreshTileSettingsUi(self, tiles=None):
-# 		self.tile = tiles[-1]
-# 		if self.dataView:
-# 			print "updating dataview"
-# 			self.updateDataView(self.tile.opInstance)
-# 			#self.vBox.addWidget(self.dataView)
-# 		return
-#
-# 		self.tile = None
-# 		if self.settingsWidg:
-# 			self.settingsWidg.deleteLater()
-# 		print "widgets before clear are {}".format(self.widgets)
-# 		if self.widgets:
-# 			for i in self.widgets:
-# 				self.vBox.removeWidget(i)
-# 				i.deleteLater()
-#
-# 		self.vBox = None
-# 		if self.vBox:
-# 			self.vBox.invalidate()
-# 			self.vBox.deleteLater()
-#
-# 		self.settingsWidg = QtWidgets.QWidget(self)
-# 		#self.vBox = QtWidgets.QVBoxLayout(self)
-#
-# 		# called whenever selected node changes
-# 		# passed a list of all selected tiles, just in case
-# 		# for now just the last is enough
-# 		print ""
-# 		print "passed tiles to ui are {}".format(tiles)
-# 		# self.tile = tiles[-1]
-# 		print "tileOpName is {}".format(self.tile.opInstance.opName)
-# 		self.vBox = QtWidgets.QVBoxLayout(self.settingsWidg)
-# 		self.widgets = []
-# 		# #works
-# 		print "widgets during clear are {}".format(
-# 			self.vBox.count())
-#
-# 		for i in self.tile.opInstance.inputs.keys():
-# 			print "found input {}".format(i)
-# 			attrWidget = AttributeItem(
-# 				parent=self, attrDict=self.tile.opInstance.inputs[i], key=i)
-# 			self.widgets.append(attrWidget)
-# 			self.vBox.addWidget(attrWidget)
-# 			attrWidget.adjustSize()
-# 			attrWidget.attrUpdated.connect(self.propagateValue)
-# 			self.vBox.update()
-#
-# 		print "widgets after clear are {}".format(self.widgets)
-#
-#
-# 		self.vBox.update()
-# 		self.settingsWidg.setLayout(self.vBox)
-# 		self.vBox.update()
-# 		self.settingsWidg.update()
-# 		self.dataLayout.addWidget(self.settingsWidg)
-# 		# don't touch it don't touch it it works don't touch it fuck off don't touch it
-#
-# 	def propagateValue(self, attrName, attrValue):
-# 		# takes string name and unit list of whatever value
-# 		print "propagating value"
-# 		attrValue = attrValue[0]
-# 		print "passed name {} attrValue is {}".format(attrName, attrValue)
-# 		self.tile.opInstance.inputs[attrName]["value"] = attrValue

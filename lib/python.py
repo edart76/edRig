@@ -295,6 +295,13 @@ class AbstractTree(object):
 		}
 		return serial
 
+# test for interfaces with the tree structure
+testTree = AbstractTree("TestRoot")
+testTree["asdf"].value = "firstKey"
+testTree["parent"].value = "nonas"
+testTree["parent"]["childA"].value = 930
+testTree["parent"]["childB"].value = True
+
 def flatten(in_list):
 	"""Flatten a given list recursively.
 	Args: in_list (list or tuple): Can contain scalars, lists or lists of lists.
