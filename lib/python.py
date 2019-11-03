@@ -144,8 +144,11 @@ class AbstractTree(object):
 
 	def addChild(self, branch):
 		if branch.name in self.keys():
-			raise RuntimeError(
-				"cannot add duplicate child of name {}".format(branch.name))
+			print("cannot add duplicate child of name {}".format(branch.name))
+			newName = self.getValidName(branch.name)
+			branch.setName(newName)
+			# raise RuntimeError(
+			# 	"cannot add duplicate child of name {}".format(branch.name))
 		self._map[branch.name] = branch
 		branch._setParent(self)
 		self.structureChanged()
@@ -284,8 +287,8 @@ class AbstractTree(object):
 		return new
 
 	def serialise(self):
-		print("key {} index {}".format(self.name, self.ownIndex()))
-		print("keys are {}".format(self.keys()))
+		# print("key {} index {}".format(self.name, self.ownIndex()))
+		# print("keys are {}".format(self.keys()))
 		serial = {
 			"name" : self.name,
 			"value" : self.value,

@@ -86,19 +86,23 @@ class TileSettings(QtWidgets.QTreeView):
 	def copyEntry(self):
 		print "copying"
 		clip = QtGui.QGuiApplication.clipboard()
-		indices = self.selectedIndexes() # i hate with passion
+		indices = self.selectedIndexes() # i hate
 		print "indices {}".format(indices)
 		""" returns a python list of qModelIndices """
 		if not indices:
 			print( "no entries selected" )
 			return
 		index = indices[0] # only copying single entry for now
-		obj = self.modelObject.data( index )
-		print( "obj {}, type {}".format(obj, type(obj)))
+		# obj = self.modelObject.data( index )
+		# print( "obj {}, type {}".format(obj, type(obj)))
 		# only unicode string representation
 		# need standardItem from model index
-		item = self.modelObject.itemFromIndex( index )
-		print( "item {}".format(item))
+		# item = self.modelObject.itemFromIndex( index )
+		# print( "item {}".format(item))
+
+		mime = self.modelObject.mimeData( [index] )
+		print( "copy mime {}".format(mime.text()))
+		clip.setMimeData(mime)
 
 		"""get mime of all selected objects
 		set to clipboard
@@ -108,9 +112,27 @@ class TileSettings(QtWidgets.QTreeView):
 		pass
 	def pasteEntry(self):
 		print "pasting"
+		indices = self.selectedIndexes() # i strongly hate
+		if not indices:
+			return
+		index = indices[0]
 		clip = QtGui.QGuiApplication.clipboard()
 		data = clip.mimeData()
-		print "mime is {}".format(data)
+		print "mime is {}".format(data.text())
+		regenDict = eval(data.text()) # this is probably extremely dangerous lol
+		pasteTree = AbstractTree.fromDict(regenDict)
+
+		# get parent item of selected index, addChild with abstract tree,
+		# build from tree for items
+		commonParentIndex = index.parent()
+		commonParentItem = self.modelObject.itemFromIndex( commonParentIndex ) \
+		                   or self.modelObject.invisibleRootItem()
+
+		commonParentItem.tree.addChild(pasteTree)
+		self.modelObject.buildFromTree(pasteTree, commonParentItem)
+
+
+
 
 
 		# self.modelObject.beginInsertRows()
@@ -203,11 +225,13 @@ class AbstractBranchItem(QtGui.QStandardItem):
 	"""small wrapper allowing standardItems to take tree objects directly"""
 	ICONS = {}
 
-	def __init__(self, tree):
+	def __init__(self, tree, root=None):
 		""":param tree : AbstractTree"""
 		super(AbstractBranchItem, self).__init__(tree.name)
 		self.tree = tree or AbstractTree()
+		self.root = None # all have a ref to the root
 		self.setColumnCount(1)
+		self.trueType = type(self.tree.name)
 
 		self.icon = tree.extras.get("icon")
 		if self.icon and self.icon in self.ICONS:
@@ -222,6 +246,13 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		# print "kwargs {}".format(kwargs)
 		"""args and kwargs contain nothing useful, or even related to value"""
 		super(AbstractBranchItem, self).setData(name, *args, **kwargs)
+
+	def data(self, role):
+		""" just return branch name
+		data is used when regenerating abstractTree from model"""
+		base = super(AbstractBranchItem, self).data(role)
+		#return self.trueType(base)
+		return base
 
 	def addValueData(self):
 		"""for now this only handles strings
@@ -266,11 +297,16 @@ class AbstractValueItem(QtGui.QStandardItem):
 		self.tree.value = self.trueType(value)
 		super(AbstractValueItem, self).setData(value, *args, **kwargs)
 
-	# def treeValue(self):
-	# 	return self.tree.value
+	def data(self, role):
+		base = super(AbstractValueItem, self).data(role)
+		return base
+
+
+
+
 
 class AbstractTreeModel(QtGui.QStandardItemModel):
-	"""is this worth it? maybe"""
+
 
 	def __init__(self, tree, parent=None):
 		super(AbstractTreeModel, self).__init__(parent)
@@ -280,11 +316,82 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		self.atRoot = False
 		self.setHorizontalHeaderLabels(["branch", "value"])
 
+	# drag and drop support
+	def supportedDropActions(self):
+		return QtCore.Qt.MoveAction
+
+	def mimeTypes(self):
+		""" use built in abstractTree serialisation to reduce
+		entries to plain text, then regenerate them after """
+		types = ["text/plain"]
+		return types
+
+	def mimeData(self, index):
+		item = self.itemFromIndex( index[0] )
+		tree = item.tree
+		text = str(tree.serialise() )
+		mime = QtCore.QMimeData()
+		mime.setText( text )
+		return mime
+
+	def dropMimeData(self, data, action, row, column, parentIndex):
+		if action == QtCore.Qt.IgnoreAction:
+			return True
+		if data.hasText():
+			#text = dict( data.text())
+			mimeText = data.text()
+			print("dropped text is {}".format(mimeText))
+
+			info = eval(mimeText)
+			print("eval'd info is {}".format(info))
+
+			tree = AbstractTree.fromDict(info)
+
+			self.beginInsertRows( parentIndex, row, row )
+			#pointer = parentIndex.internalPointer() # crashes
+			#print( "pointer {}".format(pointer))
+
+			parentItem = self.itemFromIndex( parentIndex )
+			if not parentItem:
+				parentItem = self.invisibleRootItem()
+				parentTree = self.tree.root
+			else:
+				parentTree = parentItem.tree
+			print( "parentItem {}".format(parentItem))
+
+			# rebuild abstract tree from parent downwards,
+			# to take account of order
+			self.buildFromModel(parentItem, parentTree)
+
+			# print("jhgjh")
+			# self.buildFromTree(tree, parentItem)
+			#self.setTree(parentTree.root)
+			print("jkhkjgk")
+			self.endInsertRows()
+
+			# destroy parent tree branches and rebuild from model
+
+			print( "dropped tree value is {}".format( tree.value))
+
+		return True
+
+	def buildFromModel(self, parentItem, parentTree=None):
+		"""rebuilds a section of the abstractTree from the ui model
+		:param parentItem : parent standardItem below which to rebuild"""
+
+		for i in range(parentItem.rowCount()):
+			child = parentItem.child(i)
+			print( "model child is {}".format(child))
+
+
+
+
 	def setTree(self, tree):
 		self.tree = tree
 		self.clear()
 		#self.root = AbstractBranchItem(tree.root)
 		self.root = self.invisibleRootItem()
+		self.root.tree = tree.root
 		#self.appendRow(self.root)
 		#self.buildFromTree(self.tree, parent=self.root)
 		for i in self.tree.root.branches:
@@ -297,8 +404,9 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 			pass
 
 	def buildFromTree(self, tree, parent=None):
-		""":param tree : AbstractTree"""
-		branchItem = AbstractBranchItem(tree=tree)
+		""":param tree : AbstractTree
+		:param parent : AbstractBranchItem below which to build"""
+		branchItem = AbstractBranchItem(tree=tree, root=self.tree.root)
 		textItem = AbstractValueItem(tree)
 
 		parent.appendRow( [branchItem, textItem] )
