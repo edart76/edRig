@@ -1,7 +1,7 @@
 # useful structures finding repeated use in ops and frameworks
 from collections import MutableMapping, OrderedDict
 import os, copy, functools
-from edRig.lib.python import Signal
+from edRig.lib.python import Signal, AbstractTree
 
 # FilePathTree = FilePathTree # back compatibility
 
@@ -40,48 +40,6 @@ class EnvironmentSettings(object):
 		else:
 			print message
 
-class SafeDict(OrderedDict):
-	"""returns None instead of erroring with an incorrect lookup"""
-	def __init__(self, *args, **kwargs):
-		self._storage = dict(*args, **kwargs)
-
-
-	def __getitem__(self, key):
-		if not key in self._storage.keys():
-			return False
-		else:
-			return self._storage[key]
-
-
-	def __setitem__(self, key, value):
-		self._storage[key] = value
-
-	def __delitem__(self, key):
-		del self._storage[key]
-
-	def __iter__(self):
-		return iter(self._storage)
-
-	def __len__(self):
-		return len(self._storage)
-
-	def __repr__(self):
-		return self._storage.__repr__()
-
-class BetterSet(set):
-	"""allows for in-place operations with union, difference
-	also better compatibility with lists?"""
-
-	def union(self, other):
-		self = super(BetterSet, self).union(other)
-		# this is actually difficult
-
-	def pop(self, item):
-		"""whoever made the default behaviour is a lunatic"""
-		self.remove(item)
-		return item
-
-
 class AttributeWrapper(object):
 	"""might be useful idk"""
 
@@ -99,7 +57,7 @@ class Completer(object):
 	def getSorted(self):
 		return sorted(self.items)
 
-class AttrItem(object):
+class AttrItem(AbstractTree):
 	"""base used to define a tree of connectable attributes
 	consider eventually inheriting from abstractTree
 	"""
@@ -109,24 +67,22 @@ class AttrItem(object):
 	def __init__(self, node=None, role="input", dataType="0D",
 	             hType="leaf", name="blankName", desc="", default=None,
 	             *args, **kwargs):
+		super(AttrItem, self).__init__(name=name, val=default)
 		self.node = node
 		self.role = role
 		self.default = default
 		self.children = []
-		self._name = name
 		self._dataType = dataType
 		self._hType = hType  # hierarchy type - leaf, compound, array, root, dummy
-		self._value = None
+
 		self.desc = desc
 		# self.extras = SafeDict(kwargs) # can't account for everything
 		self.extras = kwargs
-		self.parent = None # risky but handy
+
 		self.connections = [] # override with whatever the hell you want
-		self.Env = None
 		self.colour = DataStyle[self.dataType]["colour"]
 
 		self.connectionChanged = Signal()
-		self.valueChanged = Signal()
 		self.childrenChanged = Signal()
 
 	@property
@@ -204,14 +160,14 @@ class AttrItem(object):
 		it's literally just for skinOp"""
 		return self.extras["multi"]
 
-	def addChild(self, newChild):
-		if self.hType == "leaf":
-			raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
-		if not newChild.hType:
-			newChild.hType = "leaf"
-		self.children.append(newChild)
-		newChild.parent = self
-		return newChild
+	# def addChild(self, newChild):
+	# 	if self.hType == "leaf":
+	# 		raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
+	# 	if not newChild.hType:
+	# 		newChild.hType = "leaf"
+	# 	self.children.append(newChild)
+	# 	newChild.parent = self
+	# 	return newChild
 
 	def getChildren(self):
 		if self.isLeaf():
@@ -301,10 +257,8 @@ class AttrItem(object):
 		target = self.attrFromName(name)
 		if not target:
 			warn = "attr {} not found and cannot be removed, skipping".format(name)
-			if self.Env:
-				self.Env.log(warn)
-			else:
-				print warn
+
+			print warn
 			return
 		# what if target has children?
 		for i in target.getChildren():

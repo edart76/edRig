@@ -228,9 +228,7 @@ def curveFromCvs(points, closed=False, deg=3, name="pointCrv",
 			else:
 				con(item, "{}.controlPoints[{}]".format(outCrvShape, i))
 				pass
-	out["tf"] = outCrv
-	out["shape"] = cmds.listRelatives(outCrv, shapes=True)[0]
-	return out
+	return AbsoluteNode(outCrvShape)
 
 def curveBinarySearch(crv, startU, targetLength):
 	#supercede that aim feedback loop in carpal

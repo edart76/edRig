@@ -10,7 +10,7 @@ from edRig.structures import ActionItem
 from edRig.pipeline import safeLoadModule
 from edRig.tesserae.real import MayaReal, MayaStack, MayaDelta, RealAttrInterface
 from edRig.tesserae.lib import GeneralExecutionManager
-from edRig.lib.python import debug, outerVars
+from edRig.lib.python import debug, outerVars, AbstractTree
 from edRig.layers.setups import InvokedNode
 
 class OpExecutionManager(GeneralExecutionManager):
@@ -175,7 +175,7 @@ class Op(MayaReal):
 		self.sync = None
 		self.attrsChanged = None
 		self.attrValueChanged = None
-		self.settings = None
+		self.settings = AbstractTree("proxy")
 		self.evaluator = None
 		self.addSetting = None
 

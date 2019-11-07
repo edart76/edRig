@@ -98,6 +98,10 @@ class RealComponent(object):
 		return [i for i in self.outputs if match in i.name]
 
 	def getOutput(self, name):
+		"""
+		:param name:
+		:return: AbstractAttr
+		"""
 		# print "getting output {}".format(name)
 		# print "current outputs are {}".format(self.outputs)
 		return self.outputRoot.attrFromName(name)

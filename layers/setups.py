@@ -6,7 +6,7 @@
 import edRig.node
 from edRig.structures import SafeDict, AttrItem
 
-from edRig import core, attrio, mesh, curve, surface, attr
+from edRig import core, attrio, mesh, curve, surface, attr, transform
 from edRig.node import AbsoluteNode, ECA
 #from edRig.tesserae.ops.op import Op
 from edRig.layers import Env
@@ -193,7 +193,7 @@ class Memory(object):
 		if infoType == "attr":
 			# gather dict of attribute names and values
 			# all of them?
-			if "allAttrs" in kwargs and kwargs["allAttrs"]:
+			if kwargs.get("allAttrs"):
 				attrList = cmds.listAttr(target, settable=True)  # very risky
 			# attr can register transform attrs, but only if directed
 			elif not kwargs.get("transformAttrs"):
@@ -218,11 +218,17 @@ class Memory(object):
 				returnDict[space]["translate"] = cmds.xform(target, q=True, ws=truth, t=True)
 				returnDict[space]["rotate"] = cmds.xform(target, q=True, ws=truth, ro=True)
 				returnDict[space]["scale"] = cmds.xform(target, q=True, ws=truth, s=True)
-			if "jointMode" in kwargs and "jointMode":
+			if kwargs.get("jointMode"):
 				for ax in "XYZ":
 					jointOrient = cmds.getAttr(target + ".jointOrient" + ax)
 					returnDict["jointOrient" + ax] = jointOrient
 				returnDict["rotateOrder"] = cmds.getAttr(target + ".rotateOrder")
+
+			if kwargs.get("relative"):
+				"""still not sure of the best way to handle this"""
+				mat = transform.MMatrixFromPlug(kwargs["relative"])
+				pass
+
 
 
 		elif infoType == "weight":

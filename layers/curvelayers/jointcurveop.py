@@ -37,9 +37,11 @@ class JointCurveOp(SpookyLayerOp):
 	def defineAttrs(self):
 		self.addInput(name="parent", dataType="nD",
 		              desc="dimensional input; this jointCurve will inherit all parent transformations")
-		self.addInput(name="jointCount", dataType="int",
-		              desc="number of joints to create along curve",
-		              default=4, min=1)
+		""" NB: allowing this as nD implies that all individual points
+		will be driven equally by distortion of the parent space, not just the
+		root point
+		this may at some point change due to difficulty of implementation and
+		redundancy compared to dedicated ops"""
 
 		self.addOutput(name="jc", dataType="1D",
 		               desc="static output jointcurve")
@@ -47,21 +49,12 @@ class JointCurveOp(SpookyLayerOp):
 		# point array
 		array = self.addOutput(name="points", dataType="0D",
 		               hType="array", desc="output points")
-
 		array.setChildKwargs(dataType="0D", desc="output point")
 
 
-
-
-		# dynamic attributes
-		# for i in range(self.getInput("jointCount").value):
-		# 	self.addOutput(name="point{}".format(i), dataType="0D",
-		# 	               desc="individual points on curve", hType="leaf")
-		#self.refreshIo()
-
 	def defineSettings(self):
 		self.addSetting(entryName="prefix", value="c_")
-		self.addSetting(entryName="mode", options=("joints", "curve"),
+		self.addSetting(entryName="priority", options=("joints", "curve"),
 		                value="joints")
 		self.addSetting(entryName="curve")
 		self.settings["curve"]["degree"].value = 1
@@ -71,56 +64,79 @@ class JointCurveOp(SpookyLayerOp):
 		for i in range( self.getInput("jointCount").value ):
 			entry = self.settings["joints"][ "joint{}".format(i) ]
 
+	def matchOutputsToSettings(self):
+		jointTree = self.settings["joints"]
+		outputs = jointTree.keys()
+		pointPlug = self.getOutput("points")
+		specList = [ {"name" : i} for i in outputs]
+		pointPlug.matchArrayToSpec(spec=specList)
 
-	def refreshSettings(self):
-		pass
-
-
-
-
-
-
-	def refreshSettings(self):
-		"""add a settings entry for every joint"""
-		for i in range(self.getInput("jointCount").value):
-			jointName = "joint{}".format(i)
-			jointEntry = self.settings["joints"].get(jointName)
-			if not jointEntry:
-
-				jointEntry["crossLock"].value = False
-
-
-	def __init__(self, name="JointCurveOp"):
-		super(JointCurveOp, self).__init__(name)
-		self.opName = name
-		self.jointsToCreate = {}
-		self.out1D = None
-		self.joints = None
-		self.mainCurve = None
-		self.upCurve = None
-		self.prefix = None
-
-		print "doot doot"
 
 	def execute(self):
-		# set up starter joints - only create controls if stop is true
-		#self.out1D = Curve()
 
-		print "inputs at plan are {}".format(self.inputs)
+		self.prefix = self.settings["prefix"]
+		self.joints = []
+		self.mainCurve, self.upCurve = None, None
 
-		self.updateInputs()
+		self.createJoints()
+		self.createCurves()
 
-		if self.settings["mode"] == "joints":
-			self.createJoints()
+		if self.settings["priority"].value == "joints":
 			self.matchCurvesToJoints()
 		else:
-			self.createCurves()
 			self.matchJointsToCurve()
 
 		# self.connectInputs()
 
 		self.memory.setClosed("joints", status=True)
 		self.updateOutputs()
+
+	""" consider behaviour when adding new joints - 
+	a curve-driven system should seek to preserve original point positions
+	while maintaining equal spacing between transforms
+	in this case, consider adding any new joints in a binary split
+	sort of manner"""
+
+	def createJoints(self):
+		entry = self.settings["joints"]
+		for i, val in enumerate(entry.keys()):
+			joint = self.ECA("joint", name=val)
+			self.joints.append(joint)
+			joint.set("translateY", i * 5)
+			if i :
+				joint.parentTo(self.joints[i - 1])
+		self.remember("joints", nodes=self.joints, infoType="xform")
+		return self.joints
+
+	def createCurves(self):
+		# first main curve
+		points = []
+		upPoints = []
+		degree = self.settings["curve"]
+		# matching to joints on creation is fine, both will be reset later
+		for i in self.joints:
+			points.append(cmds.xform(i, q=True, ws=True, t=True))
+		# first make linear curve
+		linearShape = curve.curveFromCvs(points, deg=1, name=self.prefix+"_crv")
+		self.mainCurve = edRig.node.AbsoluteNode(
+			cmds.rebuildCurve(linearShape, ch=False, degree=degree,
+		                        rebuildType=0, fitRebuild=True)[0])
+		# now create upCurve
+		# we will one day be free of it
+		for i in self.joints:
+			#mat = core.MMatrixFrom(i)
+			mat = om.MMatrix(cmds.getAttr(i+".worldMatrix[0]"))
+			upPoints.append(transform.staticVecMatrixMult(
+				mat, point=(1,0,0), length=1))
+		#self.log("upPoints are {}".format(upPoints))
+		upShape = curve.curveFromCvs(upPoints, deg=1, name=self.prefix+"_upCrv")
+		self.upCurve = edRig.node.AbsoluteNode(
+			cmds.rebuildCurve(upShape, ch=False, degree=degree,
+		    rebuildType=0, fitRebuild=True)[0])
+		cmds.parent([self.mainCurve, self.upCurve], self.spaceGrp)
+
+		self.remember("curve", "shape", nodes=self.upCurve)
+
 
 	#@tidy
 	def showGuides(self):
@@ -131,11 +147,11 @@ class JointCurveOp(SpookyLayerOp):
 
 		pointList = [Point(i) for i in self.joints]
 
-		if self.getInput("mode").value == "joints":
+		if self.settings["priority"].value == "joints":
 			self.matchControlsToJoints()
 			self.out1D.skinToPoints(pointList)
 
-		elif self.getInput("mode").value == "curve":
+		elif self.settings["priority"].value == "curve":
 			for i in pointList:
 				self.out1D.setRivetPoint(i)
 		#	pass
@@ -153,8 +169,6 @@ class JointCurveOp(SpookyLayerOp):
 
 
 
-	def updateInputs(self):
-		self.prefix = self.settings["prefix"]
 
 	def connectInputs(self):
 		"""connect space group to parent"""
@@ -172,57 +186,11 @@ class JointCurveOp(SpookyLayerOp):
 		                 self.getOutput("jc").plug + ".upCurve")
 
 
-	def createJoints(self):
-		# make joints, parent them
-		jointCount = len(self.jointsToCreate)
-
-		jointDict = self.settings.get("joints")
-		if not jointDict:
-			return
-		for k, v in jointDict.iteritems():
-			print k, v
 
 
 
 
 
-
-
-
-	def createCurves(self):
-		# first main curve
-		points = []
-		upPoints = []
-		curveDeg = self.data["curve"]["deg"]
-		curveClosed = self.data["curve"]["closed"]
-		upCurveDeg = self.data["upCurve"]["deg"]
-		upCurveClosed = self.data["upCurve"]["closed"]
-		#curveSpans = self.data["curve"]["spans"]
-		for i in self.joints:
-			points.append(cmds.xform(i, q=True, ws=True, t=True))
-		# first make linear curve
-		linData = curve.curveFromCvs(points, deg=1, name=self.prefix+"_crv")
-		#linearTf = linData["tf"]
-		linearShape = linData["shape"]
-
-		# rebuild in a way that is exactly reproducible every time
-		self.mainCurve = edRig.node.AbsoluteNode(cmds.rebuildCurve(linearShape, ch=False, degree=curveDeg,
-		                                                           rebuildType=0, fitRebuild=True)[0])
-		#self.out1D.setActive(self.mainCurve)
-
-		# now create upCurve
-		for i in self.joints:
-			#mat = core.MMatrixFrom(i)
-			mat = om.MMatrix(cmds.getAttr(i+".worldMatrix[0]"))
-			upPoints.append(transform.staticVecMatrixMult(
-				mat, point=(1,0,0), length=1))
-		#self.log("upPoints are {}".format(upPoints))
-		upData = curve.curveFromCvs(upPoints, deg=1, name=self.prefix+"_upCrv")
-		self.upCurve = edRig.node.AbsoluteNode(cmds.rebuildCurve(upData["shape"], ch=False, degree=upCurveDeg,
-		                                                         rebuildType=0, fitRebuild=True)[0])
-		cmds.parent([self.mainCurve, self.upCurve], self.spaceGrp)
-
-		pass
 
 
 	def freezeJoints(self):
@@ -239,7 +207,7 @@ class JointCurveOp(SpookyLayerOp):
 	def matchSavedJointInfo(self):
 		# wat up now swedes
 		self.remember("joints", "xform", self.joints, jointMode=True)
-		self.remember("joints", "attr", self.joints, transform=False)
+		self.remember("joints", "attr", self.joints, transformAttrs=False)
 		self.remember("curves", "shape", [self.upCurve.shape, self.mainCurve.shape])
 		#print "memory after remember is {}".format(self.memory.serialiseMemory())
 		# self.memory.recall("joints", "attr")

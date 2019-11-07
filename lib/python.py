@@ -128,13 +128,21 @@ class AbstractTree(object):
 	"""fractal tree-like data structure
 	each branch having both name and value"""
 	def __init__(self, name=None, val=None):
-		self.name = name
+		self._name = name
 		self.parent = None
-		self._val = val
+		self._value = val
 		self.valueChanged = Signal()
 		self.structureChanged = Signal()
 		self._map = OrderedDict()
 		self.extras = {}
+
+	@property
+	def name(self):
+		return self._name
+
+	@name.setter
+	def name(self, val):
+		self._name = val
 
 	def _setParent(self, tree):
 		"""sets new abstractTree to be parent"""
@@ -143,6 +151,9 @@ class AbstractTree(object):
 		self.structureChanged = tree.structureChanged
 
 	def addChild(self, branch):
+		if branch in self.branches:
+			print("cannot add existing branch")
+			return branch
 		if branch.name in self.keys():
 			print("cannot add duplicate child of name {}".format(branch.name))
 			newName = self.getValidName(branch.name)
@@ -235,7 +246,7 @@ class AbstractTree(object):
 	def __getitem__(self, address):
 		""" allows lookups of string form "root.branchA.leaf" """
 		if isinstance(address, basestring): # if you look up [""] this will break
-			address = address.split(".")
+			address = address.split(".") # effectively maya attribute syntax
 		if not address: # empty list
 			return self
 		first = address.pop(0)
@@ -260,11 +271,34 @@ class AbstractTree(object):
 
 	@property
 	def value(self):
-		return self._val
+		return self._value
 	@value.setter
 	def value(self, val):
-		self._val = val
+		self._value = val
 		self.valueChanged(self)
+
+	def matchBranchesToSequence(self, sequence,
+	                            create=True, destroy=True):
+		"""reorders, adds or deletes branches as necessary
+		for the current tree's branches to match the target
+		create and destroy govern whether new branches will be
+		created or destroyed
+		created branches are simple branches
+		:type sequence list"""
+		newMap = OrderedDict()
+		for i in sequence:
+			if i in self.keys():
+				newMap[i] = self._map.pop(i)
+			elif create:
+				newBranch = AbstractTree(name=i, value=None)
+				newBranch.parent = self
+				newMap[i] = newBranch
+		for i in self.branches:
+			if destroy:
+				self._map.pop(i.name)
+			else:	newMap[i.name] = i
+		self._map = newMap
+
 
 	@staticmethod
 	def fromDict(regenDict):
