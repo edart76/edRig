@@ -244,7 +244,8 @@ class AbstractTree(object):
 
 
 	def __getitem__(self, address):
-		""" allows lookups of string form "root.branchA.leaf" """
+		""" allows lookups of string form "root.branchA.leaf"
+		:returns AbstractTree"""
 		if isinstance(address, basestring): # if you look up [""] this will break
 			address = address.split(".") # effectively maya attribute syntax
 		if not address: # empty list

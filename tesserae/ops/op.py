@@ -3,9 +3,9 @@ from maya import cmds
 import maya.api.OpenMaya as om
 from edRig.core import ECN, shortUUID
 from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import Env, attrio, scene, attr, transform
+from edRig import Env, attrio, scene, attr, transform, pipeline
 from edRig.tesserae.abstractnode import AbstractAttr
-import random, functools, pprint, copy
+
 from edRig.structures import ActionItem
 from edRig.pipeline import safeLoadModule
 from edRig.tesserae.real import MayaReal, MayaStack, MayaDelta, RealAttrInterface
@@ -609,13 +609,9 @@ class Op(MayaReal):
 
 	# serialisation and regeneration
 	def serialise(self):
-		opDict = {}
-		opDict["NAME"] = self.__name__
-		opDict["CLASS"] = self.__class__.__name__
-		opDict["MODULE"] = self.__class__.__module__
+		opDict = pipeline.saveObjectClass(self) # name, class and module
 		opDict["opName"] = self.opName
-		#copyData = copy.copy(self.data)
-		#opDict["data"] = copyData
+
 		opDict["inputRoot"] = self.inputRoot.serialise()
 		opDict["outputRoot"] = self.outputRoot.serialise()
 		return opDict
@@ -623,19 +619,14 @@ class Op(MayaReal):
 	@staticmethod
 	def fromDict(regenDict, abstract=None):
 		"""regenerates op from dict"""
-		module = regenDict["MODULE"]
-		loadedModule = Op.safeLoadModule(module)
+		opCls = pipeline.loadObjectClass(regenDict)
 		try:
-			opClass = getattr(loadedModule, regenDict["CLASS"])
-			opInstance = opClass(name=regenDict["opName"])
+			opInstance = opCls(name=regenDict["opName"])
 		except Exception as e:
 			print "ERROR in reconstructing op {}".format(regenDict["NAME"])
 			print "error is {}".format(str(e))
 			return None
 
-		#opInstance.opName = regenDict["opName"]
-
-		# print "default inputs are {}".format(opInstance.inputs)
 		if abstract:
 			opInstance.inputRoot = abstract.inputRoot
 			opInstance.outputRoot = abstract.outputRoot

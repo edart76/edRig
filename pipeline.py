@@ -479,7 +479,6 @@ def getLatestVersions( files, versions=2 ):
 			allVersions.pop(0)
 	return r
 
-
 def isVersion(fileName):
 	""" run regex (v\W*\w){1} to check for "v001" or similar
 	return the version number or 0 """
@@ -527,3 +526,40 @@ def checkFileExists(filePath):
 		return True
 	else:
 		return False
+
+def convertRootPath(path, toRelative=False, toAbsolute=False):
+	""" converts a path to or from a relative path to root folder
+	:type path str"""
+	if "ROOT" in path or toAbsolute: # relative
+		return path.replace("ROOT", ROOT_PATH)
+	elif ROOT_PATH in path or toRelative:
+		return path.replace(ROOT_PATH, "ROOT")
+
+
+def saveObjectClass(obj, regenFunc="fromDict", relative=True):
+	""" saves a module and class reference for any object
+	if relative, will return path from root folder"""
+	return {
+		"NAME" : obj.__name__,
+		"CLASS" : obj.__class__.__name__,
+		"MODULE" : convertRootPath( obj.__class__.__module__, toRelative=True ),
+		"regenFunc" : regenFunc
+	}
+
+def loadObjectClass(objData):
+	""" recreates a class object from any known module """
+	for i in ("MODULE", "CLASS"):
+		if not objData.get(i):
+			print("objectData {} has no key {}, cannot reload class".format(objData, i))
+			return None
+
+	module = convertRootPath( objData["MODULE"], toAbsolute=True)
+	loadedModule = safeLoadModule(module)
+	try:
+		newClass = getattr(loadedModule, objData["CLASS"])
+		return newClass
+	except Exception as e:
+		print("ERROR in reloading class {} from module {}")
+		print("has it moved, or module files been shifted?")
+		print( "error is {}".format(str(e)) )
+		return None
