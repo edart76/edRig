@@ -472,7 +472,8 @@ class AbsoluteNode(str):
 
 	@classmethod
 	def create(cls, name=None, n=None, *args, **kwargs):
-		"""any subsequent wrapper class will create its own node type"""
+		"""any subsequent wrapper class will create its own node type
+		:rtype cls"""
 		# nodeTypeStr = cls.nodeType() or cls.__name__
 		nodeTypeStr = cls.nodeType()
 
@@ -518,11 +519,19 @@ class RemapValue(AbsoluteNode):
 	def ramp(self):
 		""":returns rampPlug object
 		:rtype : RampPlug"""
-		return RampPlug(self + ".value")
+		#return RampPlug(self + ".value")
+		return self._ramp
+
+	@classmethod
+	def create(cls, name=None, n=None, *args, **kwargs):
+		remap = super(RemapValue, cls).create(name=None, n=None,
+		                                      *args, **kwargs)
+		remap._ramp = RampPlug(remap + ".value")
 
 
 	def getRampInstance(self, name="rampInstance"):
-		"""creates new ramp exactly mirroring master and connects it by message"""
+		"""creates new ramp exactly mirroring master and connects it by message
+		:rtype RemapValue"""
 		newRemap = ECA("remapValue", n=name)
 		for i in range(cmds.getAttr(self+".value", size=True)):
 			attr.con(self+".value[{}]".format(i),

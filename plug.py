@@ -100,6 +100,16 @@ def blendFloatPlugs(plugList=None, blender=None, name="blendPlugs"):
 	conOrSet(blender, blend + ".attributesBlender")
 	return blend + ".output"
 
+def blendRotationPlugs(a, b=(0,0,0), name="angleBlend"):
+	""" creates an animBlendNodeAdditiveRotation to avoid unit conversions """
+	abnar = ECA("animBlendNodeAdditiveRotation", n=name)
+	conOrSet(a, abnar + ".inputA")
+	conOrSet(b, abnar + ".inputB")
+	# i honestly don't know what the best way is anymore
+	return {"blender" : abnar + ".weightA",
+	        "output" : abnar + ".output"}
+
+
 def vectorMatrixMultiply(vector=None, matrix=None, normalise=False,
                          name="vectorMatrixMult"):
 	node = ECA("vectorProduct", n=name)
@@ -171,6 +181,7 @@ class RampPlug(object):
 		self.points = {}
 
 	def point(self, id):
+		""":rtype : RampPlug._Point"""
 		return self._Point(self.root, id)
 
 

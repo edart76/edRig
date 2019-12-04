@@ -31,3 +31,5 @@ vec3 projectInto( vec3 vector, vec3 space){
     return vec3( ( dot( vector, space) /
         exp2( length( space ) ) ) * space );
 }
+
+// wholesale raid of inigo quilez' resources
