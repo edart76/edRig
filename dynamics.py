@@ -33,6 +33,7 @@ def makeSolverCell(name):
 	return source, sink
 
 def updateCell(source, sink):
+	""" refit with openmaya to avoid direct graph updates """
 	cmds.setAttr( source + ".prevFrameValue",
 	              cmds.getAttr( sink + ".currentFrameValue"))
 
@@ -320,10 +321,6 @@ class Nucleus(AbsoluteNode):
 		cmds.currentTime( start )
 
 
-
-
-
-
 def attachDynamicCurves():
 	pass
 
@@ -355,5 +352,10 @@ def constrainClosestPoints(systemA, systemB):
 	print "constraining"
 
 
+
+def dampPlug(plug, nucleus=None, goalPlug=None):
+	""" pass a plug's value through a dynamic particle,
+	allowing inline insertion of delay, damping etc """
+	""" use in conjunction with plug limits to eliminate overshoot"""
 
 

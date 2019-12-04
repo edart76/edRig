@@ -276,6 +276,12 @@ class DeformerWrapper(object):
 		pass
 
 
+"""
+
+cmds.addAttr( ln="testArray", dt="doubleArray")
+cmds.makePaintable("pSphere1.testArray", attrType="doubleArray")
+
+"""
 
 
 

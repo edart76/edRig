@@ -3,8 +3,8 @@ import math
 from maya import cmds
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
-from edRig import core, attr
-from edRig.node import ECA, AbsoluteNode, PlugObject, ECN
+from edRig import core, attr, ECA
+#from edRig.node import ECA,PlugObject
 
 
 
@@ -21,6 +21,23 @@ def vecFromTo(startPlug, endPlug):
 	vec.con(startPlug, vec+".input3D[1]")
 	return vec+".output3D"
 
+def dividePlug(numerator, divisor):
+	mdv = ECA("multiplyDivide", n="divide_{}_by_{}_".format(numerator, divisor))
+	mdv.conOrSet(numerator, mdv + ".input1")
+	mdv.conOrSet(divisor, mdv + ".input2")
+	mdv.set("operation", 2)
+	return mdv + ".output"
+
+def multPlugs(*plugs):
+	"""multiplies all plugs - optimise to multDoubleLinear here if possible"""
+	a = plugs[0]
+	for i in plugs[1:]:
+		#mult = ECA("multiplyDivide")
+		mult = ECA("mdl")
+		mult.conOrSet(a, mult + ".input1")
+		mult.conOrSet(i, mult + ".input2")
+		a = mult + ".output"
+	return a
 
 def plugCondition(val1, val2, operation="greaterThan"):
 	"""compares conditions"""
@@ -41,6 +58,21 @@ def plugDistance(a, b=None):
 	if b:
 		distance.conOrSet(b, distance+".point2")
 	return distance+".distance"
+
+def setPlugLimits(plug, min=None, max=None):
+	""" still not sure on triple plugs """
+	for i in [n for n in (min, max)if n]:
+		cnd = ECA("condition")
+		if i == min:
+			cnd.set("operation", 2)
+		conOrSet(plug, cnd + ".firstTerm")
+		conOrSet(plug, cnd + ".colorIfFalse")
+		conOrSet(i, cnd + ".colorIfTrue")
+		conOrSet(i, cnd + ".secondTerm")
+		plug = cnd + "outColor"
+	return plug
+
+
 
 
 def reversePlug(plug):
@@ -70,7 +102,7 @@ def blendFloatPlugs(plugList=None, blender=None, name="blendPlugs"):
 
 def vectorMatrixMultiply(vector=None, matrix=None, normalise=False,
                          name="vectorMatrixMult"):
-	node = ECN("vectorProduct", n=name)
+	node = ECA("vectorProduct", n=name)
 	conOrSet(vector, node + ".input1", )
 	conOrSet( matrix, node + ".matrix",)
 	conOrSet( normalise, node + ".normalizeOutput",)
@@ -107,7 +139,7 @@ def trigPlug(plug, mode="sine", res=30, inputDegrees=True):
 
 
 class RampPlug(object):
-	"""don't you love underscores and capital letters
+	"""don't you love underscores and capital letters?
 	called thus:
 	ramp = RampPlug(myAnnoyingString)
 	setAttr(ramp.point(0).value, 5.0)
@@ -134,10 +166,14 @@ class RampPlug(object):
 			return self._base + "Interp"
 
 	def __init__(self, rootPlug):
+		"""root is remapValue"""
 		self.root = rootPlug
+		self.points = {}
 
 	def point(self, id):
 		return self._Point(self.root, id)
+
+
 
 
 

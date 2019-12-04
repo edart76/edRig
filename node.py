@@ -7,6 +7,13 @@ import maya.api.OpenMaya as om
 from edRig.core import MObjectFrom, shapeFrom, tfFrom, stringFromMObject, ECN
 from edRig import attr, naming
 
+
+# TMP HAAAACK
+from edRig.plug import RampPlug
+# until the core is restructured
+
+
+
 def invokeNode(name="", type="", parent="", func=None):
 	# print "core invokeNode looking for {}".format(name)
 	if cmds.objExists(name):
@@ -504,6 +511,15 @@ def ECA(type, name="", colour=None, *args, **kwargs):
 class RemapValue(AbsoluteNode):
 	"""wrapper for rempValue nds"""
 	nodeType = "remapValue"
+
+	attrs = ["inputMin", "inputMax", "inputValue", "outValue"]
+
+	@property
+	def ramp(self):
+		""":returns rampPlug object
+		:rtype : RampPlug"""
+		return RampPlug(self + ".value")
+
 
 	def getRampInstance(self, name="rampInstance"):
 		"""creates new ramp exactly mirroring master and connects it by message"""
