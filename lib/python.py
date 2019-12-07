@@ -54,11 +54,11 @@ def outerVars():
 
 class StringLikeMeta(type):
 
-	"""hopefully a more efficient 'mutable string' than doing directly that
+	"""hopefully a more efficient 'mutable string' than doing directly that -
 	works on an internal _base string, which is free to change
 
-	leaving all the weird and wonderful method shuffling here for curiosity,
-	in the end I just overrode the methods one by one manually."""
+	leaving all the weird and wonderful attempts at method shuffling here
+	for curiosity, in the end I just overrode them one by one manually"""
 
 	stringMethods = ['__add__', '__contains__',
 	                 '__delslice__', '__doc__', '__eq__',
@@ -78,14 +78,11 @@ class StringLikeMeta(type):
 	# def __call__(cls, *args, **kwargs):
 	# 	new = super(StringLikeMeta, cls).__call__(*args, **kwargs)
 	# 	for i in StringLikeMeta.stringMethods:
-	# 		#print(new.__dict__)
 	# 		if i in str.__dict__:
 	# 			new.__dict__[i] = str.__dict__[i]
-	# 			print(i, str.__dict__[i])
 	# 			new.__dict__[i] = lambda *args, **kwargs : \
 	# 				str.__dict__[i](*args, **kwargs)
 	#
-	# 	print(new.__dict__)
 	# 	return new
 
 class StringLike(object):
@@ -104,7 +101,7 @@ class StringLike(object):
 	@property
 	def value(self):
 		""" sets internal string directly, for subclass use """
-		return str(self._base) # guard against unicode
+		return str(self._base)
 	@value.setter
 	def value(self, val):
 		""" :rtype : str """
@@ -115,18 +112,14 @@ class StringLike(object):
 		return self._base.__getattribute__(item)
 
 	def __getattribute__(self, item):
-		#print("getattribute called, item {}".format(item))
 		try:
 			return object.__getattribute__(self, item)
 		except:
 			return str.__getattribute__(self._base, item)
 
 	def __repr__(self):
-		# print("repr called")
-		#return self._base
 		return self.__str__()
 	def __str__(self):
-		#print("str called")
 		return self._base
 
 	# string magic methods -------------
