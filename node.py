@@ -7,9 +7,12 @@ import maya.api.OpenMaya as om
 from edRig.core import MObjectFrom, shapeFrom, tfFrom, stringFromMObject, ECN
 from edRig import attr, naming
 
+# saviour
+from edRig.lib.python import StringLike
+
 
 # TMP HAAAACK
-from edRig.plug import RampPlug
+#from edRig.plug import RampPlug
 # until the core is restructured
 
 
@@ -28,9 +31,9 @@ def invokeNode(name="", type="", parent="", func=None):
 	return node
 
 
-class AbsoluteNode(str):
+#class AbsoluteNode(str):
 #class AbsoluteNode(object):
-
+class AbsoluteNode(StringLike):
 	# DON'T LOSE YOUR WAAAAY
 
 	allInfo = {
@@ -50,25 +53,22 @@ class AbsoluteNode(str):
 		}
 	}
 
-	# persistent dict of uid : absoluteNode
-	# used as cache
+	# persistent dict of uid : absoluteNode, used as cache
 	nodeCache = {}
 	# yes I know there can be uid clashes but for now it's fine
 
 	defaultAttrs = {}
 	# override with {"nodeState" : 1} etc
 
-	_isDag = False
 	_nodeType = None
 
 	defaultTime = "time1.outTime" # tryin this out
 
-	def __new__(cls, node, ):
-		"""nota bene: strings are immutable. thus to update the
-		string value of absoluteNode, we must return a NEW
-		AbsoluteNode every time it changes
-		no that's dumb"""
-		# this is the stripped down fast version of pymel
+
+
+	def __new__(cls, node ):
+		""" new mechanism now used only to check validity and cache -
+		  no more string shenanigans """
 
 		# check if absoluteNode already exists for uid
 		uid = cmds.ls(node, uid=1)
@@ -86,24 +86,9 @@ class AbsoluteNode(str):
 			return cls.fromMObject(node)
 		elif isinstance(node, unicode):
 			return cls(str(node))
-		absolute = str.__new__(cls, node)
-		absolute.node = node
-		if not cmds.objExists(node):
-			print "{} DOES NOT EXIST - YER OFF THE MAP".format(node)
-			#absolute.refreshPath = absolute.returnBasicNode
-			return absolute
-		obj = MObjectFrom(node)
-		absolute.setMObject(obj)
 
-		absolute._shape = None
-		absolute._transform = None
-		#absolute._nodeType = cmds.nodeType(node)
-
-		# metaprogramming for fun and profit
-		# cmds.select(clear=True)
-
-		# callbacks attached to node, to delete on node deletion
-		absolute.callbacks = []
+		#absolute = str.__new__(cls, node)
+		absolute = super(AbsoluteNode, cls).__new__(cls)
 		absolute.con = absolute._instanceCon
 
 		# add new node to cache
@@ -111,22 +96,55 @@ class AbsoluteNode(str):
 
 		return absolute
 
-	def setMObject(cls, obj):
-		cls.MObject = obj # not weakref-able :(
-		cls.MFnDependency = om.MFnDependencyNode(cls.MObject)
-		cls._shapeFn = None
-		cls.MDagPath = None
-		# check if it's dag or just dependency
-		if cls.MObject.hasFn(107):  # MFn.kDagNode
-			#print "assigning dag node"
-			cls._isDag = True
-			cls.MDagPath = om.MDagPath.getAPathTo(cls.MObject)
-			cls.MFnDagNode = om.MFnDagNode(cls.MObject)
-			#cls.refreshPath = cls.refreshDagPath
-			if cls.MObject.hasFn(110):  # MFnTransform
-				cls.MFnTransform = om.MFnTransform(cls.MObject)
 
-		elif cls.MObject.hasFn(4):  # dependency
+	def __init__(self, node=""):
+		super(AbsoluteNode, self).__init__(base=node)
+
+		self.MObject = None
+		self.MFnDependency = None
+		self.MDagPath = None
+		self.MFnDagNode = None
+		self.MFnTransform = None
+
+		self._isDag = False
+		self._shapeFn = None
+		self._shape = None
+		self._transform = None
+
+		obj = MObjectFrom(node)
+		if obj:
+			self.setMObject(obj)
+
+
+		# absolute._nodeType = cmds.nodeType(node)
+
+		# callbacks attached to node, to delete on node deletion
+		self.callbacks = []
+
+	@property
+	def node(self):
+		"""not used internally, but can be more intuitive than 'value' """
+		return self.value
+	@node.setter
+	def node(self, val):
+		self.value = val
+
+	def setMObject(self, obj):
+		self.MObject = obj # not weakref-able :(
+		self.MFnDependency = om.MFnDependencyNode(obj)
+		self._shapeFn = None
+		self.MDagPath = None
+		# check if it's dag or just dependency
+		if self.MObject.hasFn(107):  # MFn.kDagNode
+			#print "assigning dag node"
+			self._isDag = True
+			self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
+			self.MFnDagNode = om.MFnDagNode(self.MObject)
+			#cls.refreshPath = cls.refreshDagPath
+			if self.MObject.hasFn(110):  # MFnTransform
+				self.MFnTransform = om.MFnTransform(self.MObject)
+
+		elif self.MObject.hasFn(4):  # dependency
 			#print "assigning basic node"
 			#cls.refreshPath = cls.returnDepNode
 			pass
@@ -139,54 +157,36 @@ class AbsoluteNode(str):
 
 	## refreshing mechanism
 	def __str__(self):
-		try:
-			self.refreshPath()
-			if isinstance(self.node, list):
-				self.node = self.node[0]
-		except:
-			print "refreshPath encountered error"
-			self.node = self.MFnDependency.absoluteName()
-		#print "str self "+self.node
-		return str.__new__(str, self.node)
+		self.refreshPath()
+		return super(AbsoluteNode, self).__str__()
 
 	"""for repeated operations this will incur a penalty in speed
 	consider leaving the call function explicitly to refresh the path"""
 
-	def __repr__(self):
-		"""never called apparently"""
-		name = self.__str__()
-		print "repr self " + name
-		return name
-
 	def __call__(self, *args, **kwargs):
 		self.refreshPath()
-		return str(self)
+		return self.value
+
+
 
 	"""self object not behaving as it should
 	need to return this AbsoluteNode instance, while still having the 
 	string value of the new name"""
 
-	def __add__(self, other):
-		return self() + other
-	def __iadd__(self, other):
-		return self() + other
-	def __len__(self):
-		return len( self() )
-	def __getitem__(self, item):
-		return self().__getitem__(item)
-
 
 	def refreshDagPath(self):
 		#self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
-		self.node = self.MFnDagNode.fullPathName()
-		return self.node
+		self.value = self.MFnDagNode.fullPathName()[1:]
+		""" leading | was being annoying"""
+		return self.value
 
 	def returnDepNode(self):
-		self.node = self.MFnDependency.name()
-		return self.node
+		self.value = self.MFnDependency.name()
+		return self.value
 
 	def returnBasicNode(self):
-		return self.node
+		""" shrug """
+		return self.value
 
 	@property
 	def name(self):
@@ -265,7 +265,7 @@ class AbsoluteNode(str):
 		replace with api call"""
 		if not self.isDag():
 			return
-		cmds.parent(self, targetParent, *args, **kwargs)
+		cmds.parent(self(), str(targetParent), *args, **kwargs)
 
 
 	def isTransform(self):

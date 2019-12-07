@@ -104,7 +104,7 @@ class StringLike(object):
 	@property
 	def value(self):
 		""" sets internal string directly, for subclass use """
-		return self._base
+		return str(self._base) # guard against unicode
 	@value.setter
 	def value(self, val):
 		""" :rtype : str """
