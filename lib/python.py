@@ -52,37 +52,139 @@ def outerVars():
 	return callerFrame.f_locals
 
 
+class StringLikeMeta(type):
+
+	"""hopefully a more efficient 'mutable string' than doing directly that
+	works on an internal _base string, which is free to change
+
+	leaving all the weird and wonderful method shuffling here for curiosity,
+	in the end I just overrode the methods one by one manually."""
+
+	stringMethods = ['__add__', '__contains__',
+	                 '__delslice__', '__doc__', '__eq__',
+	                 '__format__', '__ge__', '__getitem__', #'__hash__',
+	                 '__getslice__', '__gt__', '__iadd__', '__imul__',
+	                 '__iter__', '__le__', '__len__', '__lt__',
+	                 '__mul__', '__ne__', '__new__', '__reduce__',
+	                 '__reduce_ex__', '__repr__', '__reversed__', '__rmul__',
+	                 #'__setattr__', #'__setitem__', #'__setslice__',
+	                 ]
+
+	def __new__(mcs, *args, **kwargs):
+		new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
+
+		return new
+	
+	# def __call__(cls, *args, **kwargs):
+	# 	new = super(StringLikeMeta, cls).__call__(*args, **kwargs)
+	# 	for i in StringLikeMeta.stringMethods:
+	# 		#print(new.__dict__)
+	# 		if i in str.__dict__:
+	# 			new.__dict__[i] = str.__dict__[i]
+	# 			print(i, str.__dict__[i])
+	# 			new.__dict__[i] = lambda *args, **kwargs : \
+	# 				str.__dict__[i](*args, **kwargs)
+	#
+	# 	print(new.__dict__)
+	# 	return new
+
 class StringLike(object):
-	""" tried to implement this behaviour enough to merit this
-	DECORATOR for classes having to act like strings in normal operations etc"""
+	""" a proper, usable user string
+	intelligent maya nodes, maya plugs, self-formatting email addresses
+	we can do it"""
 
-	def __init__(self, c, *args, **kwargs):
-		self.c = c
+	__metaclass__ = StringLikeMeta
 
-	def __call__(self, *args, **kwargs):
-		new = self.c.__new__(self.c, *args, **kwargs)
-		self.wireMethods(new)
+	_base = ""
 
-	def wireMethods(self, c):
-		""" supplant various magic methods to have them draw
-		directly from class' __str__ when called"""
+	def __init__(self, base=""):
+		self._base = base
 
-		shuffleMethods = [
-			c.__repr__,
-			c.__len__,
-			c.__iter__,
-			c.__contains__,
-			c.__eq__,
-		] # etc
-
-		for i in shuffleMethods:
-			### now what
-			lambda i : c.__str__().ad
-		# how do you dynamically assign this
+	# basic interface for core _base object ---
+	@property
+	def value(self):
+		""" sets internal string directly, for subclass use """
+		return self._base
+	@value.setter
+	def value(self, val):
+		""" :rtype : str """
+		self._base = val
 
 
+	def __getattr__(self, item):
+		return self._base.__getattribute__(item)
 
-	pass
+	def __getattribute__(self, item):
+		#print("getattribute called, item {}".format(item))
+		try:
+			return object.__getattribute__(self, item)
+		except:
+			return str.__getattribute__(self._base, item)
+
+	def __repr__(self):
+		# print("repr called")
+		#return self._base
+		return self.__str__()
+	def __str__(self):
+		#print("str called")
+		return self._base
+
+	# string magic methods -------------
+	def __add__(self, other):
+		return str.__add__(self.value, other)
+	def __contains__(self, item):
+		return str.__contains__(self.value, item)
+	def __delslice__(self, i, j):
+		return str.__delslice__(self.base, i, j)
+	def __eq__(self, other):
+		return str.__eq__(self.value, other)
+	def __format__(self, format_spec):
+		return str.__format__(self.value, format_spec)
+	def __ge__(self, other):
+		return str.__ge__(self.value, other)
+	def __getitem__(self, item):
+		return str.__getitem__(self.value, item)
+	def __getslice__(self, start, stop):
+		return str.__getslice__(self.value, start, stop)
+	def __gt__(self, other):
+		return str.__gt__(self.value, other)
+	def __iadd__(self, other):
+		self.value = self.value + other
+		return self.value
+	def __imul__(self, other):
+		self.value = self.value * other
+		return self.value
+	def __iter__(self):
+		return str.__iter__(self.value)
+	def __le__(self, other):
+		return str.__le__(self.value, other)
+	def __len__(self):
+		return len(self.value)
+	def __lt__(self, other):
+		return str.__lt__(self.value, other)
+	def __mul__(self, other):
+		return str.__mul__(self.value, other)
+	def __ne__(self, other):
+		return str.__ne__(self.value, other)
+	def __reversed__(self):
+		return reversed(self.value)
+	def __rmul__(self, other):
+		return str.__rmul__(self.value, other)
+
+
+# if __name__ == '__main__':
+# 	st = "woo"
+# 	test = StringLike(st)
+# 	ok = test.split("w")
+# 	test.abc = "lksdf"
+# 	print( test.__dict__)
+# 	#print( test.__add__(test._base, "hee"))
+# 	print(dir(ok))
+# 	print(ok)
+# 	print(test)
+# 	print( "oo" in test )
+# 	print(test + "tete")
+
 
 class Signal(object):
 	def __init__(self):

@@ -4,25 +4,38 @@ from edRig.lib.python import AbstractTree
 
 """ so it turns out this is really hard """
 
-class Delta(object):
+class Transformation(object):
+	""" any mapping which modifies, or transforms,
+	a base state, returning the product of
+	base and transformation"""
 
 	OBJ_CLASS = None
 
 	def __init__(self, obj):
 		self._obj = obj
+
+	def transformed(self):
+		""" :returns result of transformation on object
+		:rtype : self.OBJ_CLASS"""
+		raise NotImplementedError
+
+	def __getattr__(self, item):
+		return self._obj.__getattr__(item)
+
+class Delta(Transformation):
+
+	def __init__(self, obj):
+		super(Delta, self).__init__(obj)
 		self.mask = {
 			"added" : {},
 			"modified" : {},
 			"removed" : {}
 		}
 
-	def transformed(self):
-		raise NotImplementedError()
-
 	@property
 	def obj(self):
 		""" defines type of returned object """
-		return self.obj
+		return self._obj
 
 
 class ListDelta(Delta):

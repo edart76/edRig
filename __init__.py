@@ -2,8 +2,14 @@ from __future__ import print_function
 from edRig.structures import EnvironmentSettings
 import sys, os
 
-from edRig.node import AbsoluteNode, ECA
-from edRig.attr import con
+try:
+	from maya import cmds
+	from edRig.node import AbsoluteNode, ECA
+	from edRig.attr import con
+	pass
+except :
+	print("this is not maya")
+	pass
 
 sys.dont_write_bytecode = True
 ROOT_PATH = "F:" + "/" + "all_projects_desktop"
