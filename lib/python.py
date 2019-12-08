@@ -53,11 +53,9 @@ def outerVars():
 	return callerFrame.f_locals
 
 
-#class StringLikeMeta(ABCMeta):
 class StringLikeMeta(str):
-#class StringLikeMeta(type):
 
-	#__metaclass__ = ABCMeta
+	__metaclass__ = ABCMeta
 
 	"""hopefully a more efficient 'mutable string' than doing directly that -
 	works on an internal _base string, which is free to change
@@ -75,12 +73,6 @@ class StringLikeMeta(str):
 	                 #'__setattr__', #'__setitem__', #'__setslice__',
 	                 ]
 
-	# def __init__(cls, *args, **kwargs):
-	# 	super(StringLikeMeta, cls).__init__(cls)
-		# cls.register(str)
-		# cls.register(basestring)
-
-
 
 	#def __new__(mcs, *args, **kwargs):
 	def __new__(mcs, base):
@@ -88,7 +80,6 @@ class StringLikeMeta(str):
 		#new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
 		#new = super(StringLikeMeta, mcs).__new__(mcs)
 		new = str.__new__(mcs, base)
-		#StringLikeMeta.register(new, str)
 		#StringLikeMeta.register(new, str)
 
 		return new
@@ -105,18 +96,11 @@ class StringLikeMeta(str):
 	#
 	 	return new
 
-#StringLikeMeta.register(str)
 
-#class StringLike(object):
 class StringLike(StringLikeMeta):
-#class StringLike: # old-style?
 	""" a proper, usable user string
 	intelligent maya nodes, maya plugs, self-formatting email addresses
 	we can do it"""
-
-	#__metaclass__ = StringLikeMeta
-
-	#_base = ""
 
 	def __init__(self, base=""):
 		self._base = base
@@ -189,16 +173,12 @@ class StringLike(StringLikeMeta):
 		return str.__rmul__(self.value, other)
 
 
-
 if __name__ == '__main__':
 
 	print StringLike
 	#print type(StringLike)
 
-	#StringLike.register(str)
-	#print( inspect.getmembers(str) )
 	#assert issubclass(str, StringLike)
-	#assert isinstance("gfdg", StringLike)
 	test = StringLike("test")
 	assert isinstance("this is a string", str)
 	assert isinstance(test, str)
