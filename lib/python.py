@@ -1,10 +1,11 @@
 """general lib for nifty python things like decorators and debugs"""
-from __future__ import print_function
+#from __future__ import print_function
 import inspect,importlib, pprint, pkgutil
 from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
-import string
-from edRig import naming
+from abc import ABCMeta
+
+#from edRig import naming
 
 class Decorator(object):
 	"""base decorator class for functions
@@ -52,7 +53,11 @@ def outerVars():
 	return callerFrame.f_locals
 
 
-class StringLikeMeta(type):
+#class StringLikeMeta(ABCMeta):
+class StringLikeMeta(str):
+#class StringLikeMeta(type):
+
+	#__metaclass__ = ABCMeta
 
 	"""hopefully a more efficient 'mutable string' than doing directly that -
 	works on an internal _base string, which is free to change
@@ -70,29 +75,48 @@ class StringLikeMeta(type):
 	                 #'__setattr__', #'__setitem__', #'__setslice__',
 	                 ]
 
-	def __new__(mcs, *args, **kwargs):
-		new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
+	# def __init__(cls, *args, **kwargs):
+	# 	super(StringLikeMeta, cls).__init__(cls)
+		# cls.register(str)
+		# cls.register(basestring)
+
+
+
+	#def __new__(mcs, *args, **kwargs):
+	def __new__(mcs, base):
+
+		#new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
+		#new = super(StringLikeMeta, mcs).__new__(mcs)
+		new = str.__new__(mcs, base)
+		#StringLikeMeta.register(new, str)
+		#StringLikeMeta.register(new, str)
 
 		return new
 	
-	# def __call__(cls, *args, **kwargs):
-	# 	new = super(StringLikeMeta, cls).__call__(*args, **kwargs)
+	def __call__(cls, *args, **kwargs):
+		#cls.register(basestring)
+		new = super(StringLikeMeta, cls).__call__(*args, **kwargs)
+		#StringLikeMeta.register(cls, str)
 	# 	for i in StringLikeMeta.stringMethods:
 	# 		if i in str.__dict__:
 	# 			new.__dict__[i] = str.__dict__[i]
 	# 			new.__dict__[i] = lambda *args, **kwargs : \
 	# 				str.__dict__[i](*args, **kwargs)
 	#
-	# 	return new
+	 	return new
 
-class StringLike(object):
+#StringLikeMeta.register(str)
+
+#class StringLike(object):
+class StringLike(StringLikeMeta):
+#class StringLike: # old-style?
 	""" a proper, usable user string
 	intelligent maya nodes, maya plugs, self-formatting email addresses
 	we can do it"""
 
-	__metaclass__ = StringLikeMeta
+	#__metaclass__ = StringLikeMeta
 
-	_base = ""
+	#_base = ""
 
 	def __init__(self, base=""):
 		self._base = base
@@ -165,18 +189,26 @@ class StringLike(object):
 		return str.__rmul__(self.value, other)
 
 
-# if __name__ == '__main__':
-# 	st = "woo"
-# 	test = StringLike(st)
-# 	ok = test.split("w")
-# 	test.abc = "lksdf"
-# 	print( test.__dict__)
-# 	#print( test.__add__(test._base, "hee"))
-# 	print(dir(ok))
-# 	print(ok)
-# 	print(test)
-# 	print( "oo" in test )
-# 	print(test + "tete")
+
+if __name__ == '__main__':
+
+	print StringLike
+	#print type(StringLike)
+
+	#StringLike.register(str)
+	#print( inspect.getmembers(str) )
+	#assert issubclass(str, StringLike)
+	#assert isinstance("gfdg", StringLike)
+	test = StringLike("test")
+	assert isinstance("this is a string", str)
+	assert isinstance(test, str)
+	print("jhgf" + test)
+	#print(True)
+	print(test.value)
+	print(test)
+	test.value = "eyyy"
+	print test
+	print test + "ei"
 
 
 class Signal(object):
@@ -435,6 +467,165 @@ testTree["parent"].value = "nonas"
 testTree["parent"]["childA"].value = 930
 testTree["parent"]["childB"].value = True
 
+
+#### REFERENCE IMPLEMENTATION BY LUMA ####
+
+NOT_PROXY_WRAPPED = ['__new__', '__getattribute__', '__getattr__', '__setattr__',
+					 '__class__', '__weakref__', '__subclasshook__',
+					 '__reduce_ex__', '__reduce__', '__dict__', '__sizeof__',
+					 '__module__', '__init__', '__doc__']
+
+def proxyClass(cls, classname, dataAttrName=None, dataFuncName=None,
+			   remove=(), makeDefaultInit = False, sourceIsImmutable=True,
+			   module=None):
+	"""
+	This function will generate a proxy class which keeps the internal data separate from the wrapped class. This
+	is useful for emulating immutable types such as str and tuple, while using mutable data.  Be aware that changing data
+	will break hashing.  not sure the best solution to this, but a good approach would be to subclass your proxy and implement
+	a valid __hash__ method.
+	:Parameters:
+	cls : `type`
+		The class to wrap
+	classname : `string`
+		The name to give the resulting proxy class
+	dataAttrName : `string`
+		The name of an attribute on which an instance of the wrapped class will
+		be stored.
+		Either dataAttrname or dataFuncName must be given, but not both.
+	dataFuncName : `string`
+		The name of an attribute on which reside a function, which takes no
+		arguments, and when called, will return an instance of the wrapped
+		class.
+		Either dataAttrname or dataFuncName must be given, but not both.
+	remove : `string` iterable
+		An iterable of name of attributes which should NOT be wrapped.
+		Note that certain attributes will never be wrapped - the list of
+		such items is found in the NOT_PROXY_WRAPPED constant.
+	makeDefaultInit : `bool`
+		If True and dataAttrName is True, then a 'default' __init__ function
+		will be created, which creates an instance of the wrapped class, and
+		assigns it to the dataAttr. Defaults to False
+		If dataAttrName is False, does nothing
+	sourceIsImmutable : `bool`
+		This parameter is included only for backwards compatibility - it is
+		ignored.
+	:rtype: `type`
+	"""
+
+	assert not (dataAttrName and dataFuncName), 'Cannot use attribute and function for data storage. Choose one or the other.'
+
+	if dataAttrName:
+		class ProxyAttribute(object):
+
+			def __init__(self, name):
+				self.name = name
+
+			def __get__(self, proxyInst, proxyClass):
+				if proxyInst is None:
+					return getattr(cls, self.name)
+				else:
+					return getattr(getattr(proxyInst, dataAttrName),
+								   self.name)
+
+		def _methodWrapper(method):
+			def wrapper(self, *args, **kwargs):
+				return method(getattr(self, dataAttrName), *args, **kwargs)
+
+			wrapper.__doc__ = method.__doc__
+			wrapper.__name__ = method.__name__
+			return wrapper
+
+	elif dataFuncName:
+		class ProxyAttribute(object):
+
+			def __init__(self, name):
+				self.name = name
+
+			def __get__(self, proxyInst, proxyClass):
+				if proxyInst is None:
+					return getattr(cls, self.name)
+				else:
+					return getattr(getattr(proxyInst, dataFuncName)(),
+								   self.name)
+
+		def _methodWrapper(method):
+			# print method
+			#@functools.wraps(f)
+			def wrapper(self, *args, **kwargs):
+				return method(getattr(self, dataFuncName)(), *args, **kwargs)
+
+			wrapper.__doc__ = method.__doc__
+			wrapper.__name__ = method.__name__
+			return wrapper
+	else:
+		raise TypeError, 'Must specify either a dataAttrName or a dataFuncName'
+
+	class Proxy(object):
+		# make a default __init__ which sets the dataAttr...
+		# if __init__ is in remove, or dataFuncName given,
+		# user must supply own __init__, and set the dataAttr/dataFunc
+		# themselves
+		if makeDefaultInit and dataAttrName:
+			def __init__(self, *args, **kwargs):
+				# We may wrap __setattr__, so don't use 'our' __setattr__!
+				object.__setattr__(self, dataAttrName, cls(*args, **kwargs))
+
+		# For 'type' objects, you can't set the __doc__ outside of
+		# the class definition, so do it here:
+		if '__doc__' not in remove:
+			__doc__ = cls.__doc__
+
+	remove = set(remove)
+	remove.update(NOT_PROXY_WRAPPED)
+	#remove = [ '__init__', '__getattribute__', '__getattr__'] + remove
+	for attrName, attrValue in inspect.getmembers(cls):
+		if attrName not in remove:
+			# We wrap methods using _methodWrapper, because if someone does
+			#    unboundMethod = MyProxyClass.method
+			# ...they should be able to call unboundMethod with an instance
+			# of MyProxyClass as they expect (as opposed to an instance of
+			# the wrapped class, which is what you would need to do if
+			# we used ProxyAttribute)
+
+			# ...the stuff with the cls.__dict__ is just to check
+			# we don't have a classmethod - since it's a data descriptor,
+			# we have to go through the class dict...
+			if ((inspect.ismethoddescriptor(attrValue) or
+				 inspect.ismethod(attrValue)) and
+				not isinstance(cls.__dict__.get(attrName, None),
+							   (classmethod, staticmethod))):
+				try:
+					setattr(Proxy, attrName, _methodWrapper(attrValue))
+				except AttributeError:
+					print "proxyClass: error adding proxy method %s.%s" % (classname, attrName)
+			else:
+				try:
+					setattr(Proxy, attrName, ProxyAttribute(attrName))
+				except AttributeError:
+					print "proxyClass: error adding proxy attribute %s.%s" % (classname, attrName)
+
+	Proxy.__name__ = classname
+	if module is not None:
+		Proxy.__module__ = module
+	return Proxy
+
+
+# Note - for backwards compatibility reasons, PyNodes still inherit from
+# ProxyUnicode, even though we are now discouraging their use 'like strings',
+# and ProxyUnicode itself has now had so many methods removed from it that
+# it's no longer really a good proxy for unicode.
+
+# NOTE: This may move back to core.general, depending on whether the __getitem__ bug was fixed in 2009, since we'll have to do a version switch there
+# ProxyUnicode = proxyClass( unicode, 'ProxyUnicode', dataFuncName='name', remove=['__getitem__', 'translate']) # 2009 Beta 2.1 has issues with passing classes with __getitem__
+ProxyUnicode = proxyClass(unicode, 'ProxyUnicode', module=__name__, dataFuncName='name',
+						  remove=['__doc__', '__getslice__', '__contains__', '__len__',
+								  '__mod__', '__rmod__', '__mul__', '__rmod__', '__rmul__',  # reserved for higher levels
+								  'expandtabs', 'translate', 'decode', 'encode', 'splitlines',
+								  'capitalize', 'swapcase', 'title',
+								  'isalnum', 'isalpha', 'isdigit', 'isspace', 'istitle',
+								  'zfill'])
+
+
 def flatten(in_list):
 	"""Flatten a given list recursively.
 	Args: in_list (list or tuple): Can contain scalars, lists or lists of lists.
@@ -513,7 +704,7 @@ def iterSubModuleNames(package=None, path=None, fullPath=True, debug=False):
 def safeLoadModule(mod, logFunction=None):
 	"""takes string name of module
 	DEPRECATED, use lib/python/safeLoadModule"""
-	logFunction = logFunction or print
+	logFunction = logFunction# or print
 	module = None
 	try:
 		module = importlib.import_module(mod)

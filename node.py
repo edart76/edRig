@@ -88,7 +88,7 @@ class AbsoluteNode(StringLike):
 			return cls(str(node))
 
 		#absolute = str.__new__(cls, node)
-		absolute = super(AbsoluteNode, cls).__new__(cls)
+		absolute = super(AbsoluteNode, cls).__new__(cls, node)
 		absolute.con = absolute._instanceCon
 
 		# add new node to cache

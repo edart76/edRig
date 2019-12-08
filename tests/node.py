@@ -15,6 +15,10 @@ def testStringLike():
 	baseLike = StringLike( base=base)
 	print baseLike
 
+	print( "isinstance baseLike string : {}".format(isinstance(baseLike, str)))
+	#assert isinstance("test", str)
+	#assert  isinstance(baseLike, str)
+
 	"""------- NOTA BENE --------"""
 	print baseLike + base # THIS WORKS - calls __add__ of stringLike
 	print base + baseLike # THIS DOES NOT - calls __add__ of STRING
