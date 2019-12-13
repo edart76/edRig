@@ -1,4 +1,5 @@
 # layers working with transforms, hierarchy, point data, joints
+from __future__ import division, print_function
 import edRig.node
 from edRig.core import ECN, con
 from edRig import core, transform, attrio, control, curve, point, ECA
@@ -18,7 +19,7 @@ class SpookyLayerOp(LayerOp):
 	# ops for working with spooky skeletons
 	def __init__(self, name):
 		super(SpookyLayerOp, self).__init__(name)
-		print "doot"
+		print( "doot")
 
 
 class JointCurveOp(SpookyLayerOp):
@@ -64,6 +65,7 @@ class JointCurveOp(SpookyLayerOp):
 		for i in range( self.getInput("jointCount").value ):
 			entry = self.settings["joints"][ "joint{}".format(i) ]
 
+
 	def matchOutputsToSettings(self):
 		jointTree = self.settings["joints"]
 		outputs = jointTree.keys()
@@ -74,6 +76,7 @@ class JointCurveOp(SpookyLayerOp):
 
 	def execute(self):
 
+
 		self.prefix = self.settings["prefix"]
 		self.joints = []
 		self.mainCurve, self.upCurve = None, None
@@ -82,7 +85,7 @@ class JointCurveOp(SpookyLayerOp):
 		self.createCurves()
 
 		if self.settings["priority"].value == "joints":
-			self.matchCurvesToJoints()
+			self.matchCurveToJoints()
 		else:
 			self.matchJointsToCurve()
 
@@ -95,7 +98,26 @@ class JointCurveOp(SpookyLayerOp):
 	a curve-driven system should seek to preserve original point positions
 	while maintaining equal spacing between transforms
 	in this case, consider adding any new joints in a binary split
-	sort of manner"""
+	sort of manner
+	
+	ie for an original number of joints n, being increased to n + 1,
+	the position of each joint n should vary minimally
+	
+	"""
+
+	def matchJointsToCurve(self):
+		""" match joints to curve and upCurve"""
+
+		n = len( self.joints )
+		for i in range( n ):
+			u = 1.0 / (n - 1) * i
+
+
+
+		pass
+
+	def matchCurveToJoints(self):
+		""" match curve and regenerate upCurve to joints"""
 
 	def createJoints(self):
 		entry = self.settings["joints"]
@@ -140,7 +162,7 @@ class JointCurveOp(SpookyLayerOp):
 
 	#@tidy
 	def showGuides(self):
-		print "running jointCurve planStop"
+		print("running jointCurve planStop")
 		#print "inputMode is {}".format(self.inputs["mode"]["value"])
 		self.memory.setClosed("joints", status=False)
 		self.memory.setClosed("curves", status=False)

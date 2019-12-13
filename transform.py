@@ -305,18 +305,22 @@ def zeroTransforms(node):
 	cmds.makeIdentity(node, apply=False)
 	return node
 
-def decomposeMatrixPlug(plug, target=None):
+def unpackTRS(t, r, s):
+	""" gets translate, rotate, scale as strings from booleans """
+	attrs = {"translate" : t, "rotate" : r, "scale" : s}
+	return [k for k, v in attrs.items() if k]
+
+def decomposeMatrixPlug(plug, target=None, t=1, r=1, s=1):
 	"""basic atomic decomposition"""
-	print "plug is {}".format(plug)
 	decomp = ECA("decomposeMatrix", "decomposeMat"+plug)
 	cmds.connectAttr(plug, decomp+".inputMatrix")
 
 	if target: # hopefully a dag
 		target = AbsoluteNode(target)
-		for i in ["translate", "rotate", "scale"]:
+		for i in unpackTRS(t, r, s):
 			for n in "XYZ":
 				cmds.connectAttr(decomp+".output"+i.capitalize()+n,
-				                 target+"."+i+n)
+				                 target+"."+i+n, f=1)
 	return decomp
 
 def multMatrixPlugs(plugs, name="matMult"):
@@ -330,6 +334,7 @@ def aimToVector(transform, vector):
 	aim = ECA("aimConstraint")
 	aim.conOrSet(vector, aim+".target[0].targetTranslate")
 	aim.con(aim+".constraintRotate", transform+".rotate")
+	return aim
 
 def getClosestPoint(target=(0,0,0), points=None):
 	"""find closest point from selection of tuples"""

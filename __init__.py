@@ -4,6 +4,7 @@ import sys, os
 
 try:
 	from maya import cmds
+	import maya.api.OpenMaya as om
 	from edRig.node import AbsoluteNode, ECA
 	from edRig.attr import con
 	pass
@@ -19,7 +20,6 @@ CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 containing rigging files like control shape libraries, any templates you want,
 but also a common material library"""
 
-Env = EnvironmentSettings()
 
 def log(message, **kwargs):
 	print(message)
