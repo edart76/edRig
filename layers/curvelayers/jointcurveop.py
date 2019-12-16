@@ -76,7 +76,6 @@ class JointCurveOp(SpookyLayerOp):
 
 	def execute(self):
 
-
 		self.prefix = self.settings["prefix"]
 		self.joints = []
 		self.mainCurve, self.upCurve = None, None
@@ -103,6 +102,9 @@ class JointCurveOp(SpookyLayerOp):
 	ie for an original number of joints n, being increased to n + 1,
 	the position of each joint n should vary minimally
 	
+	i'm sick of agonising over it - two modes are totally independent of
+	each other
+	
 	"""
 
 	def matchJointsToCurve(self):
@@ -111,13 +113,15 @@ class JointCurveOp(SpookyLayerOp):
 		n = len( self.joints )
 		for i in range( n ):
 			u = 1.0 / (n - 1) * i
-
-
+			jntMat = curve.liveMatrixAtU( self.mainCurve, u=u,
+			                              constantU=0, upCurve=self.upCurve)
+			transform.decomposeMatrixPlug(self.joints[i])
 
 		pass
 
 	def matchCurveToJoints(self):
-		""" match curve and regenerate upCurve to joints"""
+		""" match curve and regenerate upCurve to joints """
+		pass
 
 	def createJoints(self):
 		entry = self.settings["joints"]
@@ -146,7 +150,6 @@ class JointCurveOp(SpookyLayerOp):
 		# now create upCurve
 		# we will one day be free of it
 		for i in self.joints:
-			#mat = core.MMatrixFrom(i)
 			mat = om.MMatrix(cmds.getAttr(i+".worldMatrix[0]"))
 			upPoints.append(transform.staticVecMatrixMult(
 				mat, point=(1,0,0), length=1))
@@ -162,20 +165,29 @@ class JointCurveOp(SpookyLayerOp):
 
 	#@tidy
 	def showGuides(self):
-		print("running jointCurve planStop")
 		#print "inputMode is {}".format(self.inputs["mode"]["value"])
 		self.memory.setClosed("joints", status=False)
 		self.memory.setClosed("curves", status=False)
 
-		pointList = [Point(i) for i in self.joints]
+		# pointList = [Point(i) for i in self.joints]
+		pointList = self.joints
 
 		if self.settings["priority"].value == "joints":
 			self.matchControlsToJoints()
-			self.out1D.skinToPoints(pointList)
+			#self.out1D.skinToPoints(pointList)
+			skinToPoints(pointList, curve=self.mainCurve,
+			             name="mainCurveGuide")
+			skinToPoints(pointList, curve=self.upCurve,
+			             name="upCurveGuide")
 
 		elif self.settings["priority"].value == "curve":
 			for i in pointList:
-				self.out1D.setRivetPoint(i)
+				#self.out1D.setRivetPoint(i)
+				u = curve.getClosestU(self.mainCurve, tf=i.transform)
+				curve.curveRivet(
+					point, self.mainCurve.shape, u,
+					upCrv=self.upCurve.shape)
+				return u
 		#	pass
 		return 1
 
@@ -187,9 +199,6 @@ class JointCurveOp(SpookyLayerOp):
 			point = Point(i)
 			self.out1D.addPoint(u, Point)
 		pass
-
-
-
 
 
 	def connectInputs(self):
@@ -208,19 +217,9 @@ class JointCurveOp(SpookyLayerOp):
 		                 self.getOutput("jc").plug + ".upCurve")
 
 
-
-
-
-
-
-
-
 	def freezeJoints(self):
-		#print self.joints
 		for i in self.joints:
-			#print i
 			for ax in "XYZ":
-				#print i + ".rotate" + ax
 				core.breakConnections(i + ".rotate" + ax)
 				core.breakConnections(i + ".translate" + ax)
 		for i in self.joints:
@@ -290,3 +289,16 @@ class JointCurveOp(SpookyLayerOp):
 				# self.jntCtrls[i] = cmds.parent(self.jntCtrls[i].tf, self.jntCtrls[i-1].tf)[0]
 				self.jntCtrls[i].reparentUnder(self.jntCtrls[i - 1].tf)
 		pass
+
+# lib functions --------
+def skinToPoints( points=None, curve=None, name=None):
+	""" :param points : list(AbsoluteNode) """
+	null = ECA("joint", name=name+"SkinNull")
+	mainSkin = cmds.skinCluster(null.node, curve, name=name+"mainSkin",
+	                            toSelectedBones=True, skinMethod=1)
+	for i in points:
+		if not i.nodeType() == "joint":
+			continue
+		cmds.skinCluster(mainSkin, edit=True, ai=i.transform)
+	return { "null" : null,
+	         "skin" : mainSkin}

@@ -552,6 +552,9 @@ class ObjectSet(AbsoluteNode):
 		"""why oh why is this so difficult"""
 		cmds.sets( target, e=True, include=self)
 
+	def objects(self):
+		return set( cmds.sets( self, q=True ))
+
 
 class PlugObject(str):
 	"""small wrapper allowing plug to be returned as priority,

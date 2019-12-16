@@ -121,8 +121,6 @@ def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
 	if byLength and top:
 		"""retrieve a ratio which is correct for the curve length"""
 
-
-
 	cmds.setAttr(pci + ".parameter", uVal)
 	if not constantU:
 		if noCycle:

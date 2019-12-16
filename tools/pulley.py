@@ -42,11 +42,10 @@ class Wheel(object):
 		for i in vecAIn, vecBIn:
 			i.parentTo(self.pin)
 			# positions are in pin-space, can use translation directly
+			i.addAttr("radius") # radius of each neighbour wheel
 
 		# vector setup
 		self.vectorSetup(main=vecAIn, aux=vecBIn)
-
-
 
 		# connect everything
 		transform.decomposeMatrixPlug(self.point.outWorld, self.pin, r=0, s=0)

@@ -72,6 +72,18 @@ def setPlugLimits(plug, min=None, max=None):
 		plug = cnd + "outColor"
 	return plug
 
+def setPlugRange(plug, min=0, max=1,
+                 oldMin=0, oldMax=1, name=None):
+	name = name or "remap"
+	remap = ECA("setRange", n=name)
+	remap.conOrSet(min, remap + "min", )
+	remap.conOrSet(max, remap + "max",)
+	remap.conOrSet(oldMin, remap + "oldMin", )
+	remap.conOrSet(oldMax, remap + "oldMax", )
+	remap.con(plug, "value")
+	return remap + ".outValue"
+
+	pass
 
 
 
@@ -120,32 +132,42 @@ def vectorMatrixMultiply(vector=None, matrix=None, normalise=False,
 	return node + ".output"
 
 
-def trigPlug(plug, mode="sine", res=30, inputDegrees=True):
-	"""remap a plug through a trigonometric function"""
-	modes = {"sine" : math.sin,
-	         "cosine" : math.cos,
-	         "tangent" : math.tan,
-	         "arcsine" : math.asin,
-	         "arccosine" : math.acos,
-	         "arctangent" : math.atan}
+trigModes = {"sine" : math.sin,
+         "cosine" : math.cos,
+         "tangent" : math.tan,
+         "arcsine" : math.asin,
+         "arccosine" : math.acos,
+         "arctangent" : math.atan}
 
-	crv = ECA("animCurveUU")
-	func = modes[mode]
+def trigPlug(plug=None, mode="sine", res=16, inputDegrees=True):
+	"""remap a plug through a trigonometric function
+	no adaptive sampling here yet, very inefficient
+	but it's enough for now """
+
+	crv = ECA("animCurveUU", n=mode)
+	func = trigModes[mode]
 	fn = oma.MFnAnimCurve(crv.MObject)
 	if mode in ("sine", "cosine", "tangent"):
 		domain = 180.0
-	else:		domain = 1.0
+		convertToRadians = 1
+	else:
+		domain = 1.0
+		convertToRadians = 0
 
 	step = domain / float(res)
 	for i in range(res + 1):
-		lookup = step * i
-		value = func( math.radians(lookup) )
+		lookup = step * 2 * i - domain
+		if convertToRadians: lookup = math.radians(lookup)
+		value = func( lookup )
 		fn.addKey(lookup, value)
+	fn.setTangentTypes([i for i in range(res + 1)],
+	                   tangentInType=4, tangentOutType=4) # spline, spline
 	crv.set("preInfinity", 3)
 	crv.set("postInfinity", 3)
+	if not plug:
+		return crv
 	crv.con(plug, crv+".input")
 	return plug + ".output"
-
 
 
 class RampPlug(object):
