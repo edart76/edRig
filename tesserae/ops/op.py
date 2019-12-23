@@ -3,7 +3,7 @@ from maya import cmds
 import maya.api.OpenMaya as om
 from edRig.core import ECN, shortUUID
 from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import Env, attrio, scene, attr, transform, pipeline
+from edRig import attrio, scene, attr, transform, pipeline
 from edRig.tesserae.abstractnode import AbstractAttr
 
 from edRig.structures import ActionItem
@@ -271,7 +271,8 @@ class Op(MayaReal):
 	@staticmethod
 	def log(message, **kwargs):
 		"""if we implement proper logging replace everything here"""
-		Env.log(message, **kwargs)
+		#print(message, **kwargs)
+		print(message)
 
 
 	def defineAttrs(self):

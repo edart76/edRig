@@ -3,9 +3,9 @@ from collections import OrderedDict
 
 # container interfacing with the graph - concerned with connections
 import edRig.pipeline
-from edRig.structures import SafeDict, AttrItem, ActionItem, ActionList
+from edRig.structures import AttrItem, ActionItem, ActionList
 from edRig.core import shortUUID
-from edRig import Env, pipeline, attrio
+from edRig import pipeline, attrio
 # from edRig.tesserae.ops.op import Op
 import functools
 from edRig.tesserae.lib import GeneralExecutionManager
@@ -235,9 +235,6 @@ class AbstractNode(object):
 		"""returns a list supplied by real component of stages of execution"""
 		if not self.real:
 			return []
-		#funcs = self.real.executionFunctions() # returns safeDict of functions
-		#return funcs.keys()
-		#self.log("real execStageNames are {}".format(self.real.execStageNames()))
 		return self.real.execStageNames()
 
 	def executionFunctions(self):
@@ -617,7 +614,8 @@ class AbstractAttr(AttrItem):
 		"""ensures that input attributes will only ever have one incoming
 		connection"""
 		if edge in self.connections:
-			Env.log("skipping duplicate edge on attr {}".format(self.name))
+			#self.log("skipping duplicate edge on attr {}".format(self.name))
+			print( "skipping duplicate edge on attr {}".format(self.name) )
 			return
 		if self.role == "output":
 			self.connections.append(edge)

@@ -1,9 +1,8 @@
 from edRig import transform, control
-from edRig.layers.datatypes import DimFn
-from edRig.layers.pointlayers import PointLayerOp
+from edRig.tesserae.ops.layer import LayerOp
 
 
-class PointOp(PointLayerOp):
+class PointOp(LayerOp):
 	"""creates a 0D point
 	:/
 	"""

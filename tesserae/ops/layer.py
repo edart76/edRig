@@ -1,7 +1,7 @@
 # ops to be main stages, able to be blended in a control chain
 import edRig.pipeline
 from edRig.tesserae.ops.op import Op
-from edRig import core, attrio, utils, transform, control
+from edRig import core, attrio, utils, transform, control, beauty
 from edRig.layers.setups import Memory, OpAttrItem
 from edRig.structures import ActionItem
 import functools, inspect
@@ -175,11 +175,6 @@ class LayerOp(Op):
 		self.memory.remember(infoName, infoType, nodes, **kwargs)
 
 
-
-	"""EVENTUALLY make this a live link, so every time something is read from
-	memory object, it's read from the file, and vice versa
-	or only update files at start and end of build process"""
-
 	def getAllActions(self):
 		"""super call freaks out for some reason with regen'd objects
 		no it freaked out because reloading edRig deleted all system modules"""
@@ -223,6 +218,11 @@ class LayerOp(Op):
 
 		for i in ctrl.layers:
 			self.addToSet()
+
+	def markAsGuide(self, target):
+		""" turns stuff yellow """
+		beauty.setColour(target, beauty.colourPresets["guides"])
+
 
 
 	# serialisation and regeneration

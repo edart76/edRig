@@ -1,7 +1,6 @@
 # base machinery for all visual nodes in TilePile
 from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.tesserae.abstractnode import AbstractNode
-from edRig.structures import SafeDict
 from edRig.tesserae.ui2 import tilewidgets, tilesettings
 from edRig.tesserae.ui2.style import *
 #import math
@@ -26,7 +25,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.name = abstractNode.nodeName
 		super(AbstractTile, self).__init__(parent)
 		self.scene = scene
-		self.extras = SafeDict(kwargs)
+		self.extras = dict(kwargs)
 		self._inputs, self._outputs = {}, {} # attrname : TileEntry
 		self.entries = {} # attrname : TileEntry
 
@@ -542,7 +541,7 @@ class Knob(QtWidgets.QGraphicsRectItem):
 		# parent is qGraphicsWidget, attr is AttrItem
 		super(Knob, self).__init__(parent)
 		self.parent = parent
-		self.extras = SafeDict(extras)
+		self.extras = dict(extras)
 		self.baseSize = 20
 		self.setRect(0,0, self.baseSize, self.baseSize)
 		if not attr:

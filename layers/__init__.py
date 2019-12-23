@@ -4,7 +4,4 @@
 # each layer has input, controls, and output
 import sys
 sys.dont_write_bytecode = True
-from edRig import Env
 
-# is this a bad idea
-Env = Env

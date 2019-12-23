@@ -1,6 +1,6 @@
 # manages connectivity and execution order of a dag graph
 
-from edRig import Env, ROOT_PATH, pipeline, naming
+from edRig import ROOT_PATH, pipeline, naming
 from edRig.lib.python import Signal
 from edRig.pipeline import TempAsset
 from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
@@ -262,11 +262,11 @@ class AbstractGraph(object):
 		if self.state != "neutral":
 			self.log ("cannot add node during execution")
 		if node.uid in self.knownUIDs:
-			Env.log("uid {} already exists, retrying".format(node.uid))
+			print("uid {} already exists, retrying".format(node.uid))
 			node.uid += 1
 			return self.addNode(node)
 		elif node.nodeName in self.knownNames:
-			# Env.log("name {} already exists - rename it NOW".format(node.nodeName))
+			# print("name {} already exists - rename it NOW".format(node.nodeName))
 			newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
 			node.rename(newName)
 		self.nodeGraph[node.uid] = {
@@ -428,16 +428,16 @@ class AbstractGraph(object):
 		if self.state != "neutral": # graph is executing
 			return False
 		if source.node.uid == dest.node.uid:
-			Env.log("put some effort into it for god's sake")
+			print("put some effort into it for god's sake")
 			return False
 		elif source in source.node.inputs or dest in dest.node.outputs:
-			Env.log("attempted connection in wrong order")
+			print("attempted connection in wrong order")
 			return False
 		elif source.node in dest.node.future:
-			Env.log("source node in destination's future")
+			print("source node in destination's future")
 			return False
 		elif dest.node in source.node.history:
-			Env.log("dest node in source's past")
+			print("dest node in source's past")
 			return False
 		return True
 

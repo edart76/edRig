@@ -6,7 +6,8 @@ import math
 
 colourPresets = {
 	"red" : (256, 0, 0),
-	"blue" : (0, 256, 0),
+	"blue" : (0, 0, 256),
+	"guides" : (256, 256, 0), # neon unpleasant warning yellow
 }
 
 def getColour(colour=None, normalise=False):
@@ -25,6 +26,9 @@ def setColour(target, colour):
 	attr.setAttr(target + ".overrideEnabled", 1)
 	attr.setAttr(target + ".overrideRGBColors", 1)
 	attr.setAttr(target + ".overrideColorRGB", colour)
+
+def removeColour(target):
+	attr.setAttr(target + ".overrideEnabled", 0)
 
 class Colour(object):
 	"""people laugh at this but it's so important

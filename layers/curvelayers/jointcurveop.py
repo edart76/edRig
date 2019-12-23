@@ -85,11 +85,15 @@ class JointCurveOp(SpookyLayerOp):
 
 		if self.settings["priority"].value == "joints":
 			self.matchCurveToJoints()
+			self.remember("joints", "xform", self.joints, jointMode=True)
+			self.remember("joints", "attr", self.joints, transformAttrs=False)
+
 		else:
 			self.matchJointsToCurve()
+			self.remember("curve", "shape",
+			              nodes=[self.mainCurve, self.upCurve])
 
-		# self.connectInputs()
-
+		self.memory.setClosed("curves", status=True)
 		self.memory.setClosed("joints", status=True)
 		self.updateOutputs()
 
@@ -108,7 +112,7 @@ class JointCurveOp(SpookyLayerOp):
 	"""
 
 	def matchJointsToCurve(self):
-		""" match joints to curve and upCurve"""
+		""" rivet joints to curve and upCurve"""
 
 		n = len( self.joints )
 		for i in range( n ):
@@ -116,12 +120,25 @@ class JointCurveOp(SpookyLayerOp):
 			jntMat = curve.liveMatrixAtU( self.mainCurve, u=u,
 			                              constantU=0, upCurve=self.upCurve)
 			transform.decomposeMatrixPlug(self.joints[i])
-
 		pass
 
 	def matchCurveToJoints(self):
-		""" match curve and regenerate upCurve to joints """
+		""" attach curve and upcurve to joints """
+		for i, val in enumerate(self.joints):
+			# main curve points
+			posPmm = ECA("pointMatrixMult", n="main{}_pos".format(i))
+			posPmm.con(val + ".worldMatrix[0]", posPmm + ".inMatrix")
+			posPmm.con("output", self.mainCurve + ".controlPoints[{}]".format(i))
+
+			# upCurve points
+			upPmm = ECA("pointMatrixMult", n="up{}_pos".format(i))
+			upPmm.set("inPoint", (0, 1, 0))
+			upPmm.con(val + ".worldMatrix[0]", "inMatrix")
+			upPmm.con("output", self.upCurve + ".controlPoints[{}]".format(i))
+
+		# simple for now in that it only affects cvs, not edit points
 		pass
+
 
 	def createJoints(self):
 		entry = self.settings["joints"]
@@ -129,6 +146,7 @@ class JointCurveOp(SpookyLayerOp):
 			joint = self.ECA("joint", name=val)
 			self.joints.append(joint)
 			joint.set("translateY", i * 5)
+
 			if i :
 				joint.parentTo(self.joints[i - 1])
 		self.remember("joints", nodes=self.joints, infoType="xform")
@@ -138,7 +156,7 @@ class JointCurveOp(SpookyLayerOp):
 		# first main curve
 		points = []
 		upPoints = []
-		degree = self.settings["curve"]
+		degree = self.settings["curve"]["degree"]
 		# matching to joints on creation is fine, both will be reset later
 		for i in self.joints:
 			points.append(cmds.xform(i, q=True, ws=True, t=True))
@@ -160,35 +178,28 @@ class JointCurveOp(SpookyLayerOp):
 		    rebuildType=0, fitRebuild=True)[0])
 		cmds.parent([self.mainCurve, self.upCurve], self.spaceGrp)
 
-		self.remember("curve", "shape", nodes=self.upCurve)
-
 
 	#@tidy
 	def showGuides(self):
-		#print "inputMode is {}".format(self.inputs["mode"]["value"])
-		self.memory.setClosed("joints", status=False)
-		self.memory.setClosed("curves", status=False)
-
-		# pointList = [Point(i) for i in self.joints]
-		pointList = self.joints
 
 		if self.settings["priority"].value == "joints":
 			self.matchControlsToJoints()
 			#self.out1D.skinToPoints(pointList)
-			skinToPoints(pointList, curve=self.mainCurve,
-			             name="mainCurveGuide")
-			skinToPoints(pointList, curve=self.upCurve,
-			             name="upCurveGuide")
+			for i in self.joints:
+				self.markAsGuide(i)
+
 
 		elif self.settings["priority"].value == "curve":
-			for i in pointList:
+			self.memory.setClosed("curves", status=False)
+			for i in self.joints:
 				#self.out1D.setRivetPoint(i)
 				u = curve.getClosestU(self.mainCurve, tf=i.transform)
 				curve.curveRivet(
 					point, self.mainCurve.shape, u,
 					upCrv=self.upCurve.shape)
-				return u
-		#	pass
+			self.markAsGuide(self.mainCurve)
+			self.markAsGuide(self.upCurve)
+
 		return 1
 
 	def update1D(self):
