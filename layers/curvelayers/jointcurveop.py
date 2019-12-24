@@ -5,7 +5,6 @@ from edRig.core import ECN, con
 from edRig import core, transform, attrio, control, curve, point, ECA
 from maya import cmds
 from edRig.tesserae.ops.layer import LayerOp
-from edRig.layers.datatypes import Point, Curve
 import maya.api.OpenMaya as om
 import random
 
@@ -62,7 +61,7 @@ class JointCurveOp(SpookyLayerOp):
 		self.settings["curve"]["closed"].value = 0
 
 		self.addSetting(entryName="joints")
-		for i in range( self.getInput("jointCount").value ):
+		for i in range( 4 ):
 			entry = self.settings["joints"][ "joint{}".format(i) ]
 
 

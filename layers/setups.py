@@ -4,12 +4,12 @@
 # data storage
 #from collections import MutableMapping
 import edRig.node
-from edRig.structures import SafeDict, AttrItem
+from edRig.structures import AttrItem
 
 from edRig import core, attrio, mesh, curve, surface, attr, transform
 from edRig.node import AbsoluteNode, ECA
 #from edRig.tesserae.ops.op import Op
-from edRig.layers import Env
+#from edRig.layers import Env
 import copy
 from maya import cmds
 # import maya.api.OpenMaya as om
@@ -422,7 +422,7 @@ class OpAttrItem(AttrItem):
 		self.connections = [] # list of string names and addresses
 		self.default = default
 		self.desc = desc
-		self.extras = SafeDict(kwargs) # can't account for everything
+		self.extras = dict(kwargs)
 		self.parent = None # risky but handy
 
 	@property
@@ -611,7 +611,7 @@ class OpAttrItem(AttrItem):
 		# first remove target from any attributes connected to it
 		target = self.attrFromName(name)
 		if not target:
-			Env.log("attr {} not found and cannot be removed, skipping".format(name))
+			print("attr {} not found and cannot be removed, skipping".format(name))
 			return
 		# what if target has children?
 		for i in target.getChildren():

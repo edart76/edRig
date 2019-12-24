@@ -683,12 +683,12 @@ def iterSubModuleNames(package=None, path=None, fullPath=True, debug=False):
 
 def safeLoadModule(mod, logFunction=None):
 	"""takes string name of module
-	DEPRECATED, use lib/python/safeLoadModule"""
+	"""
 	logFunction = logFunction# or print
 	module = None
 	try:
 		module = importlib.import_module(mod)
-	except Exception as e:
+	except Exception() as e:
 		logFunction("ERROR in loading module {}".format(mod))
 		logFunction("error is {}".format(str(e)))
 	return module

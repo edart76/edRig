@@ -9,7 +9,8 @@ import pprint
 from edRig.layers import pointlayers, \
 	curvelayers, surfacelayers, misclayers
 
-from edRig.pipeline import safeLoadModule
+#from edRig.pipeline import safeLoadModule
+from edRig.lib.python import safeLoadModule
 
 from edRig.tesserae.ops.op import Op
 

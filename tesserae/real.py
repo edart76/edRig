@@ -3,7 +3,7 @@
 
 from __future__ import print_function, with_statement
 from edRig.tesserae.lib import GeneralExecutionManager
-from edRig.lib.deltastack import DeltaStack, StackDelta
+# from edRig.lib.deltastack import DeltaStack, StackDelta
 from edRig.tesserae.abstractnode import AbstractAttr
 import traceback
 
@@ -173,14 +173,14 @@ class RealAttrInterface(object):
 class MayaReal(RealComponent):
 	"""base real class for Maya"""
 
-# class MayaStack(DeltaStack):
-class MayaStack(object):
-	"""maya-specialised stack for tracking deltas in scenes"""
-
-class MayaDelta(StackDelta):
-	"""atomic maya scene delta, tracking addition, removal or
-	modification of nodes"""
-
+# # class MayaStack(DeltaStack):
+# class MayaStack(object):
+# 	"""maya-specialised stack for tracking deltas in scenes"""
+#
+# class MayaDelta(StackDelta):
+# 	"""atomic maya scene delta, tracking addition, removal or
+# 	modification of nodes"""
+#
 
 class HoudiniReal(RealComponent):
 	"""one day"""
