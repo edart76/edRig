@@ -62,8 +62,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		# signals
 		self.tabSearch.search_submitted.connect(self.searchReceived)
-		#""" 'node' will refer to graphics item here"""
-
+		self.nodeDeleteCalled.connect( self.scene.onDeleteCalled )
 
 		self.savePath = None
 		#self.saveFolder = None # given by asset
@@ -90,15 +89,27 @@ class AbstractView(QtWidgets.QGraphicsView):
 		tab.triggered.connect(self.tabSearchToggle)
 		self.addAction(tab)
 
-		delete = QtWidgets.QAction("delete node", self)
-		delete.setShortcut("delete")
-		delete.triggered.connect(self.nodeDeleteCalled)
-		delete.triggered.connect(self.scene.onDeleteCalled)
+		# deleteAction = QtWidgets.QAction("delete", self)
+		# deleteAction.setShortcut(QtGui.QKeySequence.Delete)
+		# deleteAction.triggered.connect(lambda: self.nodeDeleteCalled.emit)
+		# self.addAction('Delete',
+		#
+		#                          QtGui.QKeySequence.Delete)
+		# delete = QtWidgets.QAction("delete node", self)
+		# delete.setShortcut(QtGui.QKeySequence.Delete)
+		# deleteAction.triggered.connect(self.nodeDeleteCalled)
+		# deleteAction.triggered.connect(self.scene.onDeleteCalled)
 			# # print "deleteCalled"
 			# self.nodeDeleteCalled.emit()
 			# self.scene.onDeleteCalled()
 
-
+		# action = QtWidgets.QAction(name, self.__view)
+		# #action.setShortcutVisibleInContextMenu(True)
+		# if shortcut:
+		# 	action.setShortcut(shortcut)
+		# if func:
+		# 	action.triggered.connect(func)
+		# self.__menu.addAction(action, shortcut=shortcut)
 
 		#setup_actions(self)
 	# def setAsset(self, assetItem):
@@ -108,17 +119,20 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.scene.sync()
 
 	# capture events #####
-	# def keyPressEvent(self, event):
-	# 	"""test"""
-	# 	#super(AbstractView, self).keyPressEvent(event)
-	# 	#print "viewer keyPress is {}".format(event.text())
-	#
-	# 	# if event.matches(QtGui.QKeySequence.Delete):
-	# 	# 	# print "deleteCalled"
-	# 	# 	self.nodeDeleteCalled.emit()
-	# 	# 	self.scene.onDeleteCalled()
-	# 	else:
-	# 		super(AbstractView, self).keyPressEvent(event)
+	def keyPressEvent(self, event):
+		"""test"""
+		#super(AbstractView, self).keyPressEvent(event)
+		print "viewer keyPress is {}".format(event.text())
+
+		if event.matches(QtGui.QKeySequence.Delete):
+			# print "deleteCalled"
+			self.nodeDeleteCalled.emit()
+			self.scene.onDeleteCalled()
+			event.accept()
+		else:
+			pass
+			#super(AbstractView, self).keyPressEvent(event)
+		super(AbstractView, self).keyPressEvent(event)
 	# 		#event.accept()
 	# 	# elif event.key() == 0x01000001: # tab
 		# 	self.tabSearchToggle()

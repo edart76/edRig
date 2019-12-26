@@ -60,6 +60,7 @@ class Completer(object):
 class AttrItem(AbstractTree):
 	"""base used to define a tree of connectable attributes
 	consider eventually inheriting from abstractTree
+	does not inherit properly yet, need to conform addChild, branches etc
 	"""
 
 	hTypes = ["leaf", "compound", "array", "root", "dummy"]
@@ -160,14 +161,14 @@ class AttrItem(AbstractTree):
 		it's literally just for skinOp"""
 		return self.extras["multi"]
 
-	# def addChild(self, newChild):
-	# 	if self.hType == "leaf":
-	# 		raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
-	# 	if not newChild.hType:
-	# 		newChild.hType = "leaf"
-	# 	self.children.append(newChild)
-	# 	newChild.parent = self
-	# 	return newChild
+	def addChild(self, newChild):
+		if self.hType == "leaf":
+			raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
+		if not newChild.hType:
+			newChild.hType = "leaf"
+		self.children.append(newChild)
+		newChild.parent = self
+		return newChild
 
 	def getChildren(self):
 		if self.isLeaf():

@@ -282,7 +282,9 @@ def getExistingAssets(checkPath=ROOT_PATH):
 	"""returns file trees for all existing top-level asset folders
 	return a flat list for all, regardless of asset groups"""
 	assets = {}
-	for i in [checkPath]:
+	if not isinstance(checkPath, list):
+		checkPath = [checkPath]
+	for i in checkPath:
 		tree = FilePathTree(i)
 		for name, path in tree.children.iteritems():
 			if isAsset(path):

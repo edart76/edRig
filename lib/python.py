@@ -155,8 +155,8 @@ class StringLike(StringLikeMeta):
 	def __imul__(self, other):
 		self.value = self.value * other
 		return self.value
-	def __iter__(self):
-		return str.__iter__(self.value)
+	# def __iter__(self):
+	# 	return str.__iter__(self.value)
 	def __le__(self, other):
 		return str.__le__(self.value, other)
 	def __len__(self):
@@ -359,10 +359,17 @@ class AbstractTree(object):
 			return self
 		first = address.pop(0)
 		if not first in self._map: # add it if doesn't exist
-			branch = self.addChild(AbstractTree(first, None))
-		else:
-			branch = self._map[first]
+			self.addChild(AbstractTree(first, None))
+		#else:
+		branch = self._map[first]
 		return branch[address]
+
+	def __setitem__(self, key, value):
+		""" assuming that setting tree values is far more frequent than
+		setting actual tree objects """
+		branch = self[ key ]
+		branch.value = value
+
 
 	# def __set__(self, instance, value):
 	# 	if isinstance(value, AbstractTree):

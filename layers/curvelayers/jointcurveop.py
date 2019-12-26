@@ -75,7 +75,7 @@ class JointCurveOp(SpookyLayerOp):
 
 	def execute(self):
 
-		self.prefix = self.settings["prefix"]
+		self.prefix = self.settings["prefix"].value
 		self.joints = []
 		self.mainCurve, self.upCurve = None, None
 
@@ -155,7 +155,7 @@ class JointCurveOp(SpookyLayerOp):
 		# first main curve
 		points = []
 		upPoints = []
-		degree = self.settings["curve"]["degree"]
+		degree = self.settings["curve"]["degree"].value
 		# matching to joints on creation is fine, both will be reset later
 		for i in self.joints:
 			points.append(cmds.xform(i, q=True, ws=True, t=True))

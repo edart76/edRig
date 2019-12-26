@@ -42,14 +42,14 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable) # ????
 		#self.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable, False)
 
-		#print "abstract inputs are {}".format(self.abstract.inputs)
+		print "abstract inputs are {}".format(self.abstract.inputs)
 
 
 
 		# entries
 		for i in self.abstract.inputs:
 			entry = TileEntry(parent=self, attrItem=i, scene=self.scene)
-			#print "entry is {}".format(entry)
+			print "entry is {}".format(entry)
 			self.addEntry(entry, role="input")
 			entry.arrange()
 		for i in self.abstract.outputs:
@@ -68,14 +68,13 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		for i in self.entries.values():
 			i.setRect(0,0, self.width, self.entryHeight)
 
-		# SETTINGS
-		self.settingsWidg = self.addSettings(self.abstract.settings)
 
 		# width, height = self.calc_size()
 		# self.setRect(0,0, width, height)
 		self.calc_size()
 
-
+		# SETTINGS
+		self.settingsWidg = self.addSettings(self.abstract.settings)
 
 
 		# arrange items
@@ -95,6 +94,8 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		settingsWidg = tilesettings.TileSettings(parent=None,
 		                                              tree= tree)
 		self.settingsProxy.setWidget(settingsWidg)
+		self.settingsProxy.resize( self.width, settingsWidg.height())
+		#self.addWidget
 		return settingsWidg
 
 	def sync(self):
@@ -211,7 +212,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 			# i.setPos(self.scene.mapToScene(10, y))
 			i.setPos(0, y)
 			#print "newPos is {}".format(i.pos())
-		y += 5
+		y += 30
 		self.settingsProxy.setPos(0, y)
 
 
@@ -279,9 +280,9 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		calculate minimum node size.
 		"""
 		width = 0.0
-		min = self.nameTag.boundingRect()
-		minWidth = min.x() + 150
-		minHeight = min.y() + 20
+		minRect = self.nameTag.boundingRect()
+		minWidth = minRect.x() + 150
+		minHeight = minRect.y() + 20
 		for i in self.entries.values():
 			minHeight += 33
 			minWidth = max(minWidth, i.boundingRect().width())
