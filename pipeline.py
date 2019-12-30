@@ -538,27 +538,32 @@ def convertRootPath(path, toRelative=False, toAbsolute=False):
 		return path.replace(ROOT_PATH, "ROOT")
 
 
-def saveObjectClass(obj, regenFunc="fromDict", relative=True):
+def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True):
 	""" saves a module and class reference for any object
 	if relative, will return path from root folder"""
+	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
+	if uniqueKey: # not always necessary
+		for i in range(len(keys)): keys[i] = "?" + keys[i]
+
+	path = convertRootPath(obj.__class__.__module__, toRelative=relative)
 	return {
-		"NAME" : obj.__name__,
-		"CLASS" : obj.__class__.__name__,
-		"MODULE" : convertRootPath( obj.__class__.__module__, toRelative=True ),
-		"regenFunc" : regenFunc
+		keys[0]: obj.__name__,
+		keys[1]: obj.__class__.__name__,
+		keys[2]: path,
+		keys[3]: regenFunc
 	}
 
 def loadObjectClass(objData):
 	""" recreates a class object from any known module """
-	for i in ("MODULE", "CLASS"):
+	for i in ("?MODULE", "?CLASS"):
 		if not objData.get(i):
 			print("objectData {} has no key {}, cannot reload class".format(objData, i))
 			return None
 
-	module = convertRootPath( objData["MODULE"], toAbsolute=True)
+	module = convertRootPath( objData["?MODULE"], toAbsolute=True)
 	loadedModule = safeLoadModule(module)
 	try:
-		newClass = getattr(loadedModule, objData["CLASS"])
+		newClass = getattr(loadedModule, objData["?CLASS"])
 		return newClass
 	except Exception as e:
 		print("ERROR in reloading class {} from module {}")

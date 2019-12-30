@@ -166,7 +166,6 @@ class AbstractNode(object):
 		"""putting here as temp, this all needs restructuring"""
 		# settings
 		self.settings = AbstractTree(self.__class__.__name__+"_settings", None)
-		#self.settings = AbstractTree()
 		self.evaluator = self.evaluatorClass(graph=self.graph, node=self)
 
 	def setState(self, state):
@@ -412,7 +411,7 @@ class AbstractNode(object):
 	               options=None, min=None, max=None):
 		"""add setting entry to abstractTree"""
 		parent = parent or self.settings
-		branch = parent[entryName]
+		branch = parent(entryName)
 		if options == bool: options = (True, False)
 		extras = {"options" : options,
 		          "min" : min,

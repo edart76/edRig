@@ -1,5 +1,5 @@
 """general lib for nifty python things like decorators and debugs"""
-#from __future__ import print_function
+from __future__ import print_function
 import inspect,importlib, pprint, pkgutil
 from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
@@ -175,7 +175,7 @@ class StringLike(StringLikeMeta):
 
 if __name__ == '__main__':
 
-	print StringLike
+	print(StringLike)
 	#print type(StringLike)
 
 	#assert issubclass(str, StringLike)
@@ -187,8 +187,8 @@ if __name__ == '__main__':
 	print(test.value)
 	print(test)
 	test.value = "eyyy"
-	print test
-	print test + "ei"
+	print(test)
+	print(test + "ei")
 
 
 class Signal(object):
@@ -236,7 +236,7 @@ class AbstractTree(object):
 	each branch having both name and value"""
 	def __init__(self, name=None, val=None):
 		self._name = name
-		self.parent = None
+		self._parent = None
 		self._value = val
 		self.valueChanged = Signal()
 		self.structureChanged = Signal()
@@ -251,9 +251,38 @@ class AbstractTree(object):
 	def name(self, val):
 		self._name = val
 
+	@property
+	def parent(self):
+		""":rtype AbsoluteNode"""
+		return self._parent
+	@parent.setter
+	def parent(self, val):
+		self._setParent(val)
+
+	@property
+	def root(self):
+		"""returns root tree object"""
+		return self.parent.root if self.parent else self
+	@property
+	def address(self):
+		return self.getAddress()
+
+	@property
+	def value(self):
+		return self._value
+	@value.setter
+	def value(self, val):
+		self._value = val
+		self.valueChanged(self)
+
+	@property
+	def branches(self):
+		"""more explicit that it returns the child tree objects"""
+		return self.values()
+
 	def _setParent(self, tree):
 		"""sets new abstractTree to be parent"""
-		self.parent = tree
+		self._parent = tree
 		self.valueChanged = tree.valueChanged
 		self.structureChanged = tree.structureChanged
 
@@ -293,10 +322,6 @@ class AbstractTree(object):
 	def values(self):
 		return self._map.values()
 
-	@property
-	def branches(self):
-		"""more explicit that it returns the child tree objects"""
-		return self.values()
 
 	def keys(self):
 		return self._map.keys()
@@ -341,7 +366,8 @@ class AbstractTree(object):
 		if not name in self.keys():
 			return name
 		else:
-			return self.getValidName(naming.incrementName(name))
+			#return self.getValidName(naming.incrementName(name))
+			pass
 
 	def remove(self, address=None):
 		"""removes address, or just removes the tree if no address is given"""
@@ -353,6 +379,16 @@ class AbstractTree(object):
 	def __getitem__(self, address):
 		""" allows lookups of string form "root.branchA.leaf"
 		:returns AbstractTree"""
+		return self(address).value
+
+	def __setitem__(self, key, value):
+		""" assuming that setting tree values is far more frequent than
+		setting actual tree objects """
+		self(key).value = value
+
+	def __call__(self, address):
+		""" allows lookups of string form "root.branchA.leaf"
+		:returns AbstractTree"""
 		if isinstance(address, basestring): # if you look up [""] this will break
 			address = address.split(".") # effectively maya attribute syntax
 		if not address: # empty list
@@ -362,35 +398,10 @@ class AbstractTree(object):
 			self.addChild(AbstractTree(first, None))
 		#else:
 		branch = self._map[first]
-		return branch[address]
-
-	def __setitem__(self, key, value):
-		""" assuming that setting tree values is far more frequent than
-		setting actual tree objects """
-		branch = self[ key ]
-		branch.value = value
+		return branch
 
 
-	# def __set__(self, instance, value):
-	# 	if isinstance(value, AbstractTree):
-	# 		raise RuntimeError
-	# 	self.value = value
 
-	@property
-	def root(self):
-		"""returns root tree object"""
-		return self.parent.root if self.parent else self
-	@property
-	def address(self):
-		return self.getAddress()
-
-	@property
-	def value(self):
-		return self._value
-	@value.setter
-	def value(self, val):
-		self._value = val
-		self.valueChanged(self)
 
 	def matchBranchesToSequence(self, sequence,
 	                            create=True, destroy=True):
@@ -405,7 +416,7 @@ class AbstractTree(object):
 			if i in self.keys():
 				newMap[i] = self._map.pop(i)
 			elif create:
-				newBranch = AbstractTree(name=i, value=None)
+				newBranch = AbstractTree(name=i, val=None)
 				newBranch.parent = self
 				newMap[i] = newBranch
 		for i in self.branches:
@@ -416,13 +427,25 @@ class AbstractTree(object):
 
 
 	@staticmethod
-	def fromDict(regenDict):
+	def fromDict(regenDict, cls=None):
 		"""expects dict of format
 		name : eyy
 		value : whatever
 		children : [{
 			etc}, {etc}]"""
-		new = AbstractTree(regenDict["name"], regenDict["value"])
+
+		# support subclass serialisation and regen -
+		# check first for a saved class or module name
+		objDict = regenDict.get("objData") or {}
+		if "?CLASS" in objDict and "?MODULE" in objDict:
+			cls = loadObjectClass({ "?CLASS" : regenDict["?CLASS"],
+			                  "?MODULE" : regenDict["?MODULE"]})
+		else: cls = cls or AbstractTree
+		# if branch is same type as parent, no info needed
+		# a tree of one type will mark all branches as same type
+		# until a new type is flagged
+
+		new = cls(regenDict["name"], regenDict["value"])
 		new.extras = regenDict["extras"]
 
 		# regnerate children with correct indices
@@ -431,7 +454,7 @@ class AbstractTree(object):
 			for i in regenDict["children"]:
 				if not i["?INDEX"] == n:
 					continue
-				branch = AbstractTree.fromDict(i)
+				branch = cls.fromDict(i)
 				new.addChild(branch)
 		return new
 
@@ -445,172 +468,26 @@ class AbstractTree(object):
 			"children" : [i.serialise() for i in self._map.values()],
 			"?INDEX" : self.ownIndex()
 		}
+		if self.parent:
+			if self.parent.__class__ != self.__class__:
+				objData = saveObjectClass(self)
+				serial[ "objData" ] = objData
 		return serial
 
-# test for interfaces with the tree structure
-testTree = AbstractTree("TestRoot")
-testTree["asdf"].value = "firstKey"
-testTree["parent"].value = "nonas"
-testTree["parent"]["childA"].value = 930
-testTree["parent"]["childB"].value = True
+if __name__ == '__main__':
 
 
-#### REFERENCE IMPLEMENTATION BY LUMA ####
+	# test for interfaces with the tree structure
+	testTree = AbstractTree("TestRoot")
+	testTree("asdf").value = "firstKey"
+	testTree("parent").value = "nonas"
+	testTree("parent.childA").value = 930
+	testTree("parent.childB").value = True
 
-NOT_PROXY_WRAPPED = ['__new__', '__getattribute__', '__getattr__', '__setattr__',
-					 '__class__', '__weakref__', '__subclasshook__',
-					 '__reduce_ex__', '__reduce__', '__dict__', '__sizeof__',
-					 '__module__', '__init__', '__doc__']
+	print(testTree["parent"])
+	print(testTree["parent.childA"])
 
-def proxyClass(cls, classname, dataAttrName=None, dataFuncName=None,
-			   remove=(), makeDefaultInit = False, sourceIsImmutable=True,
-			   module=None):
-	"""
-	This function will generate a proxy class which keeps the internal data separate from the wrapped class. This
-	is useful for emulating immutable types such as str and tuple, while using mutable data.  Be aware that changing data
-	will break hashing.  not sure the best solution to this, but a good approach would be to subclass your proxy and implement
-	a valid __hash__ method.
-	:Parameters:
-	cls : `type`
-		The class to wrap
-	classname : `string`
-		The name to give the resulting proxy class
-	dataAttrName : `string`
-		The name of an attribute on which an instance of the wrapped class will
-		be stored.
-		Either dataAttrname or dataFuncName must be given, but not both.
-	dataFuncName : `string`
-		The name of an attribute on which reside a function, which takes no
-		arguments, and when called, will return an instance of the wrapped
-		class.
-		Either dataAttrname or dataFuncName must be given, but not both.
-	remove : `string` iterable
-		An iterable of name of attributes which should NOT be wrapped.
-		Note that certain attributes will never be wrapped - the list of
-		such items is found in the NOT_PROXY_WRAPPED constant.
-	makeDefaultInit : `bool`
-		If True and dataAttrName is True, then a 'default' __init__ function
-		will be created, which creates an instance of the wrapped class, and
-		assigns it to the dataAttr. Defaults to False
-		If dataAttrName is False, does nothing
-	sourceIsImmutable : `bool`
-		This parameter is included only for backwards compatibility - it is
-		ignored.
-	:rtype: `type`
-	"""
-
-	assert not (dataAttrName and dataFuncName), 'Cannot use attribute and function for data storage. Choose one or the other.'
-
-	if dataAttrName:
-		class ProxyAttribute(object):
-
-			def __init__(self, name):
-				self.name = name
-
-			def __get__(self, proxyInst, proxyClass):
-				if proxyInst is None:
-					return getattr(cls, self.name)
-				else:
-					return getattr(getattr(proxyInst, dataAttrName),
-								   self.name)
-
-		def _methodWrapper(method):
-			def wrapper(self, *args, **kwargs):
-				return method(getattr(self, dataAttrName), *args, **kwargs)
-
-			wrapper.__doc__ = method.__doc__
-			wrapper.__name__ = method.__name__
-			return wrapper
-
-	elif dataFuncName:
-		class ProxyAttribute(object):
-
-			def __init__(self, name):
-				self.name = name
-
-			def __get__(self, proxyInst, proxyClass):
-				if proxyInst is None:
-					return getattr(cls, self.name)
-				else:
-					return getattr(getattr(proxyInst, dataFuncName)(),
-								   self.name)
-
-		def _methodWrapper(method):
-			# print method
-			#@functools.wraps(f)
-			def wrapper(self, *args, **kwargs):
-				return method(getattr(self, dataFuncName)(), *args, **kwargs)
-
-			wrapper.__doc__ = method.__doc__
-			wrapper.__name__ = method.__name__
-			return wrapper
-	else:
-		raise TypeError, 'Must specify either a dataAttrName or a dataFuncName'
-
-	class Proxy(object):
-		# make a default __init__ which sets the dataAttr...
-		# if __init__ is in remove, or dataFuncName given,
-		# user must supply own __init__, and set the dataAttr/dataFunc
-		# themselves
-		if makeDefaultInit and dataAttrName:
-			def __init__(self, *args, **kwargs):
-				# We may wrap __setattr__, so don't use 'our' __setattr__!
-				object.__setattr__(self, dataAttrName, cls(*args, **kwargs))
-
-		# For 'type' objects, you can't set the __doc__ outside of
-		# the class definition, so do it here:
-		if '__doc__' not in remove:
-			__doc__ = cls.__doc__
-
-	remove = set(remove)
-	remove.update(NOT_PROXY_WRAPPED)
-	#remove = [ '__init__', '__getattribute__', '__getattr__'] + remove
-	for attrName, attrValue in inspect.getmembers(cls):
-		if attrName not in remove:
-			# We wrap methods using _methodWrapper, because if someone does
-			#    unboundMethod = MyProxyClass.method
-			# ...they should be able to call unboundMethod with an instance
-			# of MyProxyClass as they expect (as opposed to an instance of
-			# the wrapped class, which is what you would need to do if
-			# we used ProxyAttribute)
-
-			# ...the stuff with the cls.__dict__ is just to check
-			# we don't have a classmethod - since it's a data descriptor,
-			# we have to go through the class dict...
-			if ((inspect.ismethoddescriptor(attrValue) or
-				 inspect.ismethod(attrValue)) and
-				not isinstance(cls.__dict__.get(attrName, None),
-							   (classmethod, staticmethod))):
-				try:
-					setattr(Proxy, attrName, _methodWrapper(attrValue))
-				except AttributeError:
-					print "proxyClass: error adding proxy method %s.%s" % (classname, attrName)
-			else:
-				try:
-					setattr(Proxy, attrName, ProxyAttribute(attrName))
-				except AttributeError:
-					print "proxyClass: error adding proxy attribute %s.%s" % (classname, attrName)
-
-	Proxy.__name__ = classname
-	if module is not None:
-		Proxy.__module__ = module
-	return Proxy
-
-
-# Note - for backwards compatibility reasons, PyNodes still inherit from
-# ProxyUnicode, even though we are now discouraging their use 'like strings',
-# and ProxyUnicode itself has now had so many methods removed from it that
-# it's no longer really a good proxy for unicode.
-
-# NOTE: This may move back to core.general, depending on whether the __getitem__ bug was fixed in 2009, since we'll have to do a version switch there
-# ProxyUnicode = proxyClass( unicode, 'ProxyUnicode', dataFuncName='name', remove=['__getitem__', 'translate']) # 2009 Beta 2.1 has issues with passing classes with __getitem__
-ProxyUnicode = proxyClass(unicode, 'ProxyUnicode', module=__name__, dataFuncName='name',
-						  remove=['__doc__', '__getslice__', '__contains__', '__len__',
-								  '__mod__', '__rmod__', '__mul__', '__rmod__', '__rmul__',  # reserved for higher levels
-								  'expandtabs', 'translate', 'decode', 'encode', 'splitlines',
-								  'capitalize', 'swapcase', 'title',
-								  'isalnum', 'isalpha', 'isdigit', 'isspace', 'istitle',
-								  'zfill'])
+# luma's stringlike didn't help in the end
 
 
 def flatten(in_list):
@@ -618,7 +495,7 @@ def flatten(in_list):
 	Args: in_list (list or tuple): Can contain scalars, lists or lists of lists.
 	Returns: list: List of depth 1; no inner lists, only strings, ints, floats, etc.
 			flatten([1, [2, [3], 4, 5], 6])
-			>>> [1, 2, 3, 4, 5, 6]	"""
+				"""
 	flattened_list = []
 	for item in in_list:
 		if isinstance(item, (list, tuple)):
@@ -633,22 +510,13 @@ def itersubclasses(cls, _seen=None):
 	http://code.activestate.com/recipes/576949-find-all-subclasses-of-a-given-class/
 	Generator over all subclasses of a given class, in depth first order.
 
-	>>> list(itersubclasses(int)) == [bool]
 	True
-	>>> class A(object): pass
-	>>> class B(A): pass
-	>>> class C(A): pass
-	>>> class D(B,C): pass
-	>>> class E(D): pass
-	>>>
-	>>> for cls in itersubclasses(A):
-	...     print(cls.__name__)
+
 	B
 	D
 	E
 	C
-	>>> # get ALL (new-style) classes currently defined
-	>>> [cls.__name__ for cls in itersubclasses(object)] #doctest: +ELLIPSIS
+
 	['type', ...'tuple', ...]
 	"""
 
@@ -691,7 +559,7 @@ def iterSubModuleNames(package=None, path=None, fullPath=True, debug=False):
 def safeLoadModule(mod, logFunction=None):
 	"""takes string name of module
 	"""
-	logFunction = logFunction# or print
+	logFunction = logFunction or print
 	module = None
 	try:
 		module = importlib.import_module(mod)
@@ -699,3 +567,36 @@ def safeLoadModule(mod, logFunction=None):
 		logFunction("ERROR in loading module {}".format(mod))
 		logFunction("error is {}".format(str(e)))
 	return module
+
+def saveObjectClass(obj, regenFunc="fromDict", uniqueKey=True):
+	""" saves a module and class reference for any object
+	if relative, will return path from root folder"""
+	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
+	if uniqueKey: # not always necessary
+		for i in range(len(keys)): keys[i] = "?" + keys[i]
+
+	#path = convertRootPath(obj.__class__.__module__, toRelative=relative)
+	path = obj.__class__.__module__
+	return {
+		keys[0]: obj.__name__,
+		keys[1]: obj.__class__.__name__,
+		keys[2]: path,
+		keys[3]: regenFunc
+	}
+
+def loadObjectClass(objData):
+	""" recreates a class object from any known module """
+	for i in ("?MODULE", "?CLASS"):
+		if not objData.get(i):
+			print("objectData {} has no key {}, cannot reload class".format(objData, i))
+			return None
+	module = objData["?MODULE"]
+	loadedModule = safeLoadModule(module)
+	try:
+		newClass = getattr(loadedModule, objData["?CLASS"])
+		return newClass
+	except Exception as e:
+		print("ERROR in reloading class {} from module {}")
+		print("has it moved, or module files been shifted?")
+		print( "error is {}".format(str(e)) )
+		return None

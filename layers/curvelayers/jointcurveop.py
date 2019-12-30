@@ -57,12 +57,12 @@ class JointCurveOp(SpookyLayerOp):
 		self.addSetting(entryName="priority", options=("joints", "curve"),
 		                value="joints")
 		self.addSetting(entryName="curve")
-		self.settings["curve"]["degree"].value = 1
-		self.settings["curve"]["closed"].value = 0
+		self.settings["curve.degree"] = 1
+		self.settings["curve.closed"] = 0
 
 		self.addSetting(entryName="joints")
 		for i in range( 4 ):
-			entry = self.settings["joints"][ "joint{}".format(i) ]
+			entry = self.settings["joints.joint{}".format(i) ]
 
 
 	def matchOutputsToSettings(self):
@@ -82,7 +82,7 @@ class JointCurveOp(SpookyLayerOp):
 		self.createJoints()
 		self.createCurves()
 
-		if self.settings["priority"].value == "joints":
+		if self.settings["priority"] == "joints":
 			self.matchCurveToJoints()
 			self.remember("joints", "xform", self.joints, jointMode=True)
 			self.remember("joints", "attr", self.joints, transformAttrs=False)

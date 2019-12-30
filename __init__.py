@@ -1,5 +1,5 @@
 from __future__ import print_function
-from edRig.structures import EnvironmentSettings
+#from edRig.structures import EnvironmentSettings
 import sys, os
 
 try:
@@ -23,3 +23,12 @@ but also a common material library"""
 
 def log(message, **kwargs):
 	print(message)
+
+""" STANDARDS
+lol
+
+"function" abbreviated to "fn" 
+
+
+"""
+

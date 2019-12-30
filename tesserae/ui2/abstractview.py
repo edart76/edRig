@@ -89,28 +89,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 		tab.triggered.connect(self.tabSearchToggle)
 		self.addAction(tab)
 
-		# deleteAction = QtWidgets.QAction("delete", self)
-		# deleteAction.setShortcut(QtGui.QKeySequence.Delete)
-		# deleteAction.triggered.connect(lambda: self.nodeDeleteCalled.emit)
-		# self.addAction('Delete',
-		#
-		#                          QtGui.QKeySequence.Delete)
-		# delete = QtWidgets.QAction("delete node", self)
-		# delete.setShortcut(QtGui.QKeySequence.Delete)
-		# deleteAction.triggered.connect(self.nodeDeleteCalled)
-		# deleteAction.triggered.connect(self.scene.onDeleteCalled)
-			# # print "deleteCalled"
-			# self.nodeDeleteCalled.emit()
-			# self.scene.onDeleteCalled()
-
-		# action = QtWidgets.QAction(name, self.__view)
-		# #action.setShortcutVisibleInContextMenu(True)
-		# if shortcut:
-		# 	action.setShortcut(shortcut)
-		# if func:
-		# 	action.triggered.connect(func)
-		# self.__menu.addAction(action, shortcut=shortcut)
-
 		#setup_actions(self)
 	# def setAsset(self, assetItem):
 	# 	self.currentAsset = assetItem
