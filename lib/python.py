@@ -322,7 +322,6 @@ class AbstractTree(object):
 	def values(self):
 		return self._map.values()
 
-
 	def keys(self):
 		return self._map.keys()
 
@@ -398,7 +397,7 @@ class AbstractTree(object):
 			self.addChild(AbstractTree(first, None))
 		#else:
 		branch = self._map[first]
-		return branch
+		return branch(address)
 
 
 
@@ -486,6 +485,7 @@ if __name__ == '__main__':
 
 	print(testTree["parent"])
 	print(testTree["parent.childA"])
+	print(testTree["parent.childB"])
 
 # luma's stringlike didn't help in the end
 
