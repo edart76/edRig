@@ -26,7 +26,7 @@ uniform mat4 gViewIXf : ViewInverse < string UIWidget="None"; >;
 
 #else
 
-#version 330
+//#version 330
 // transform object vertices to world-space:
 uniform mat4 gWorldXf;
 
@@ -81,11 +81,14 @@ in vec2 UV;
 in vec3 Normal;
 
 
+
 out vec3 WorldNormal;
 out vec3 WorldEyeVec;
 out vec4 ObjPos;
+out vec3 UvEyeVec;
 out vec4 DCol; // lighting term, not used here
 out vec2 UVout; // uv space coords
+out vec4 corneaInfo;
 
 #endif
 #endif
@@ -105,18 +108,49 @@ void main()
     WorldNormal = Nw;
     DCol = vec4(0.5, 0.5, 0.5, 1);
 
-
     // we assume starting from spherical mesh - create corneal bulge
     float uvDist = length( vec2( 0.5 - UV.x, 0.5 - UV.y) );
-    float irisParam = max( ( irisWidth - uvDist ) / irisWidth, 0);
-    vec3 corneaDisplacement = (Normal * cornealHeight * irisParam);
+    float eyeParam = ( irisWidth - uvDist ) / irisWidth;
+    // 1 is centre of pupil, 0 is edge of iris
+
+    // limbal param
+    float limbalParam = clamp( fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0),
+        0.0, 1.0 );
+    //float limbalParam = fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0);
+    // 1 is inner edge, 0 is outer, 0.5 is midpoint
+
+
+    // cap off eyeParam to form irisParam
+    float irisParam = clamp( eyeParam, 0.0, 1.0);
+
+    // naive displacement for cornea gives sharp point - soften tip values
+    float tipSoftenFactor = pow( smoothstep( 0.8, 1.0, irisParam ), 2.0) ;
+    float tipSoften = cornealHeight * mix( 1.0, 0.9, tipSoftenFactor );
+
+    float displaceParam = irisParam ;
+    float mainDsp = tipSoften * displaceParam;
+
+    // soften limbal ring with a quadratic ramp
+    float limbalMaxDsp = cornealHeight * 0.2; // tune as needed, 0.2 feels good
+    float limbalDsp = limbalMaxDsp * pow(limbalParam, 2);
+
+    float fullDsp = max(limbalDsp, mainDsp);
+    // fullDsp = mainDsp;
+
+
+    vec3 corneaDisplacement = (Normal * fullDsp );
+    // naive fix is only valid for certain profiles
+    // need a solution that is aware of irisWidth and height
+
     vec4 Po = vec4(Position.xyz + corneaDisplacement, 1); // local space position
 
-    // final worldspace outputs
-    vec3 Pw = (gWorldXf*Po).xyz; // world space position
-    WorldEyeVec = normalize(gViewIXf[3].xyz - Pw);
     vec4 hpos = gWvpXf * Po;
-    ObjPos = vec4(UV.y, UV.x, Po.zw);
+
+    // outputs
+    vec3 Pw = (gWorldXf * hpos).xyz; // world space position
+    WorldEyeVec = normalize(gViewIXf[3].xyz - Pw);
+
+    ObjPos = vec4(UV.y, UV.x, hpos.zw);
     gl_Position = hpos; // final vertex position
     UVout = UV;
     corneaInfo = vec4(cornealHeight, irisWidth, 0.0, 0.0);

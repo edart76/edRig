@@ -1,0 +1,2634 @@
+#version 410
+// ----------------------------------------- Header ------------------------------------------
+
+uniform vec2 ShadowFilterTaps[10] < string UIWidget = "None"; > = {{-0.84052, -0.073954}, {-0.326235, -0.40583}, {-0.698464, 0.457259}, {-0.203356, 0.620585}, {0.96345, -0.194353}, {0.473434, -0.480026}, {0.519454, 0.767034}, {0.185461, -0.894523}, {0.507351, 0.064963}, {-0.321932, 0.595435}};
+
+// ----------------------------------- Per Frame --------------------------------------
+uniform mat4 viewI : ViewInverse < string UIWidget = "None"; >;
+
+uniform mat4 viewPrj : ViewProjection < string UIWidget = "None"; >;
+
+uniform bool MayaHwFogEnabled : HardwareFogEnabled < string UIWidget = "None"; > = false;
+uniform int MayaHwFogMode : HardwareFogMode < string UIWidget = "None"; > = 0;
+uniform float MayaHwFogStart : HardwareFogStart < string UIWidget = "None"; > = 0.0;
+uniform float MayaHwFogEnd : HardwareFogEnd < string UIWidget = "None"; > = 100.0;
+uniform float MayaHwFogDensity : HardwareFogDensity < string UIWidget = "None"; > = 0.1;
+uniform vec4 MayaHwFogColor : HardwareFogColor < string UIWidget = "None"; > = { 0.5, 0.5, 0.5, 1.0 };
+uniform float DepthRange : LightRange < string UIWidget = "None"; > = 100000.0;
+
+uniform mat4 view : View < string UIWidget = "None"; >;
+
+
+// --------------------------------------- Per Object -----------------------------------------
+uniform mat4 world : World < string UIWidget = "None"; >;
+
+uniform float BBoxExtraScale : BoundingBoxExtraScale
+<
+	float UISoftMin = 1.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.1;
+	string UIName = "Bounding Box Extra Scale";
+	string UIWidget = "Slider";
+	string UIGroup = "Tessellation and Displacement";
+	int UIOrder = 808;
+> = 1.0;
+
+uniform int ClampDynamicLights
+<
+	float UIMin = 0;
+	float UISoftMin = 0;
+	float UIMax = 99;
+	float UISoftMax = 99;
+	float UIStep = 1;
+	string UIName = "Clamp Dynamic Lights";
+	string UIWidget = "Slider";
+	string UIGroup = "Lighting";
+> = 99;
+
+uniform mat4 shadowViewPrj : ViewProjection < string UIWidget = "None"; >;
+
+uniform bool IsSwatchRender : MayaSwatchRender <string UIWidget = "None"; > = false;
+
+// --------------------------------------- Attributes -----------------------------------------
+uniform float TessellationRange
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 9999.0;
+	float UISoftMax = 9999.0;
+	float UIStep = 0.01;
+	string UIName = "Tessellation Range";
+	string UIWidget = "Slider";
+	string UIGroup = "Tessellation and Displacement";
+	int UIOrder = 809;
+> = 100.0;
+
+uniform float TessellationMaximum
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Tessellation Maximum";
+	string UIWidget = "Slider";
+	string UIGroup = "Tessellation and Displacement";
+> = 20.0;
+
+uniform float ClippingBiasAdd
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Displacement Clipping Bias";
+	string UIWidget = "Slider";
+	string UIGroup = "Tessellation and Displacement";
+	int UIOrder = 807;
+> = 5.0;
+
+uniform float SurfaceMaskCutoff
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Surface Mask Cutoff";
+	string UIWidget = "Slider";
+	string UIGroup = "Surface";
+> = 0.0;
+
+uniform bool UseReflectionMap
+<
+	string UIName = "Reflection Mask";
+	string UIGroup = "Reflection";
+	int UIOrder = 700;
+> = false;
+
+uniform float ReflectionIntensity
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Reflection Intensity";
+	string UIWidget = "Slider";
+	string UIGroup = "Reflection";
+	int UIOrder = 602;
+> = 0.5;
+
+uniform bool UseDiffuseMap
+<
+	string UIName = "Diffuse Map";
+	string UIGroup = "Diffuse";
+	int UIOrder = 199;
+> = false;
+
+uniform vec3 DiffuseColor
+<
+	string UIName = "Diffuse Color";
+	string UIWidget = "ColorPicker";
+	string UIGroup = "Diffuse";
+	int UIOrder = 203;
+> = {0.561,0.561,0.561};
+
+uniform bool UseGlossinessAlphaMap
+<
+	string UIName = "Specular Map";
+	string UIGroup = "Specular";
+	int UIOrder = 400;
+> = false;
+
+uniform float SpecularPower
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Specular Power";
+	string UIWidget = "Slider";
+	string UIGroup = "Specular";
+	int UIOrder = 404;
+> = 20.0;
+
+uniform bool UseSpecularMap
+<
+	string UIName = "Specular Map";
+	string UIGroup = "Specular";
+	int UIOrder = 400;
+> = false;
+
+uniform vec3 SpecularColor
+<
+	string UIName = "Specular Color";
+	string UIWidget = "ColorPicker";
+	string UIGroup = "Specular";
+	int UIOrder = 403;
+> = {1.0,1.0,1.0};
+
+uniform bool UseNormalMap
+<
+	string UIName = "Normal Map";
+	string UIGroup = "Normal";
+	int UIOrder = 500;
+> = false;
+
+uniform float NormalHeight
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Normal Height";
+	string UIWidget = "Slider";
+	string UIGroup = "Normal";
+	int UIOrder = 503;
+> = 1.0;
+
+uniform bool UseDiffuseMapAlphaForOpacity
+<
+	string UIName = "Diffuse Map Alpha";
+	string UIGroup = "Diffuse";
+	int UIOrder = 200;
+> = false;
+
+uniform float Opacity
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Opacity";
+	string UIWidget = "Slider";
+	string UIGroup = "Opacity";
+	int UIOrder = 220;
+> = 1.0;
+
+uniform bool UseAOAlphaMap
+<
+	string UIName = "Ambient Emissive Map AO";
+	string UIGroup = "Ambient and Emissive";
+	int UIOrder = 101;
+> = false;
+
+uniform bool UseThicknessMap
+<
+	string UIName = "Thickness Mask";
+	string UIGroup = "Translucency";
+	int UIOrder = 1000;
+> = false;
+
+uniform float Thickness
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Thickness";
+	string UIWidget = "Slider";
+	string UIGroup = "Translucency";
+> = 1.0;
+
+uniform float TranslucencyDistortion
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Light Translucent Distortion";
+	string UIWidget = "Slider";
+	string UIGroup = "Translucency";
+	int UIOrder = 1003;
+> = 0.2;
+
+uniform float TranslucencyPower
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Light Translucent Power";
+	string UIWidget = "Slider";
+	string UIGroup = "Translucency";
+	int UIOrder = 1004;
+> = 3.0;
+
+uniform float TranslucencyMinimum
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Translucent Minimum";
+	string UIWidget = "Slider";
+	string UIGroup = "Translucency";
+	int UIOrder = 1006;
+> = 0.0;
+
+uniform vec3 TranslucencyOuter
+<
+	string UIName = "Outer Translucent Color";
+	string UIWidget = "ColorPicker";
+	string UIGroup = "Translucency";
+	int UIOrder = 1007;
+> = {1.0,0.64,0.25};
+
+uniform vec3 TranslucencyMedium
+<
+	string UIName = "Medium Translucent Color";
+	string UIWidget = "ColorPicker";
+	string UIGroup = "Translucency";
+	int UIOrder = 1008;
+> = {1.0,0.21,0.14};
+
+uniform vec3 TranslucencyInner
+<
+	string UIName = "Inner Translucent Color";
+	string UIWidget = "ColorPicker";
+	string UIGroup = "Translucency";
+	int UIOrder = 1009;
+> = {0.25,0.05,0.02};
+
+uniform float ReflectionRotation
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 360.0;
+	float UISoftMax = 360.0;
+	float UIStep = 0.01;
+	string UIName = "ReflectionRotation";
+	string UIWidget = "Slider";
+	string UIGroup = "Reflection";
+> = 360.0;
+
+uniform float ReflectionBlur
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Reflection Blur";
+	string UIWidget = "Slider";
+	string UIGroup = "Reflection";
+	int UIOrder = 603;
+> = 5.0;
+
+uniform bool UseEmissiveMap
+<
+	string UIName = "Ambient Emissive Map";
+	string UIGroup = "Ambient and Emissive";
+	int UIOrder = 100;
+> = false;
+
+uniform vec3 AmbientGroundColor
+<
+	string UIName = "Ambient Ground Color";
+	string UIWidget = "ColorPicker";
+	string UIGroup = "Ambient and Emissive";
+	int UIOrder = 104;
+> = {0.0,0.0,0.0};
+
+uniform vec3 AmbientSkyColor
+<
+	string UIName = "Ambient Sky Color";
+	string UIWidget = "ColorPicker";
+	string UIGroup = "Ambient and Emissive";
+	int UIOrder = 103;
+> = {0.0,0.0,0.0};
+
+uniform float EmissiveStrength
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "EmissiveStrength";
+	string UIWidget = "Slider";
+	string UIGroup = "Ambient and Emissive";
+> = 1.0;
+
+uniform float IBLRotation
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 360.0;
+	float UISoftMax = 360.0;
+	float UIStep = 0.01;
+	string UIName = "IBLRotation";
+	string UIWidget = "Slider";
+	string UIGroup = "Lighting";
+> = 360.0;
+
+uniform float IBLBlur
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "IBLBlur";
+	string UIWidget = "Slider";
+	string UIGroup = "Lighting";
+> = 5.0;
+
+uniform float IBLIntensity
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "IBLIntensity";
+	string UIWidget = "Slider";
+	string UIGroup = "Lighting";
+> = 1.0;
+
+uniform float DisplacementOffset
+<
+	float UIMin = -99.0;
+	float UISoftMin = -10.0;
+	float UIMax = 99.0;
+	float UISoftMax = 10.0;
+	float UIStep = 0.01;
+	string UIName = "Displacement Offset";
+	string UIWidget = "Slider";
+	string UIGroup = "Tessellation and Displacement";
+	int UIOrder = 806;
+> = 0.5;
+
+uniform float DisplacementMultiplier
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 999.0;
+	float UISoftMax = 10.0;
+	float UIStep = 0.01;
+	string UIName = "Displacement Height";
+	string UIWidget = "Slider";
+	string UIGroup = "Tessellation and Displacement";
+	int UIOrder = 805;
+> = 1.0;
+
+uniform float FlatTessellationBlend
+<
+	float UIMin = 0.0;
+	float UISoftMin = 0.0;
+	float UIMax = 99.0;
+	float UISoftMax = 99.0;
+	float UIStep = 0.01;
+	string UIName = "Flat Tessellation";
+	string UIWidget = "Slider";
+	string UIGroup = "Tessellation and Displacement";
+	int UIOrder = 811;
+> = 0.0;
+
+
+// ----------------------------------- Lights --------------------------------------
+uniform int Light0Type : LIGHTTYPE
+<
+	string UIName = "Light 0 Type";
+	float UIMin = 0;
+	float UIMax = 5;
+	float UIStep = 1;
+	string UIWidget = "None";
+	string Object = "Light 0";
+> = 3;
+
+uniform int Light1Type : LIGHTTYPE
+<
+	string UIName = "Light 1 Type";
+	float UIMin = 0;
+	float UIMax = 5;
+	float UIStep = 1;
+	string UIWidget = "None";
+	string Object = "Light 1";
+> = 3;
+
+uniform int Light2Type : LIGHTTYPE
+<
+	string UIName = "Light 2 Type";
+	float UIMin = 0;
+	float UIMax = 5;
+	float UIStep = 1;
+	string UIWidget = "None";
+	string Object = "Light 2";
+> = 3;
+
+uniform vec3 Light0Color : LIGHTCOLOR
+<
+	string UIName = "Light 0 Color";
+	string UIWidget = "ColorPicker";
+	string Object = "Light 0";
+> = {1.0, 1.0, 1.0};
+
+uniform vec3 Light1Color : LIGHTCOLOR
+<
+	string UIName = "Light 1 Color";
+	string UIWidget = "ColorPicker";
+	string Object = "Light 1";
+> = {1.0, 1.0, 1.0};
+
+uniform vec3 Light2Color : LIGHTCOLOR
+<
+	string UIName = "Light 2 Color";
+	string UIWidget = "ColorPicker";
+	string Object = "Light 2";
+> = {1.0, 1.0, 1.0};
+
+uniform float Light0Intensity : LIGHTINTENSITY
+<
+	string UIName = "Light 0 Intensity";
+	float UIMin = 0;
+	float UIStep = 0.1;
+	string Object = "Light 0";
+> = 1.0;
+
+uniform float Light1Intensity : LIGHTINTENSITY
+<
+	string UIName = "Light 1 Intensity";
+	float UIMin = 0;
+	float UIStep = 0.1;
+	string Object = "Light 1";
+> = 1.0;
+
+uniform float Light2Intensity : LIGHTINTENSITY
+<
+	string UIName = "Light 2 Intensity";
+	float UIMin = 0;
+	float UIStep = 0.1;
+	string Object = "Light 2";
+> = 1.0;
+
+uniform vec3 Light0Pos : POSITION
+<
+	string UIName = "Light 0 Position";
+	string Space = "World";
+	string Object = "Light 0";
+> = {1.0, 1.0, 1.0};
+
+uniform vec3 Light1Pos : POSITION
+<
+	string UIName = "Light 1 Position";
+	string Space = "World";
+	string Object = "Light 1";
+> = {1.0, 1.0, 1.0};
+
+uniform vec3 Light2Pos : POSITION
+<
+	string UIName = "Light 2 Position";
+	string Space = "World";
+	string Object = "Light 2";
+> = {1.0, 1.0, 1.0};
+
+uniform vec3 Light0Dir : DIRECTION
+<
+	string UIName = "Light 0 Direction";
+	string Space = "World";
+	string Object = "Light 0";
+> = {0.0, -1.0, 0.0};
+
+uniform vec3 Light1Dir : DIRECTION
+<
+	string UIName = "Light 1 Direction";
+	string Space = "World";
+	string Object = "Light 1";
+> = {0.0, -1.0, 0.0};
+
+uniform vec3 Light2Dir : DIRECTION
+<
+	string UIName = "Light 2 Direction";
+	string Space = "World";
+	string Object = "Light 2";
+> = {0.0, -1.0, 0.0};
+
+uniform float Light0Attenuation : DECAYRATE
+<
+	string UIName = "Light 0 Decay";
+	float UIMin = 0;
+	float UIStep = 1;
+	string Object = "Light 0";
+> = 0.0;
+
+uniform float Light1Attenuation : DECAYRATE
+<
+	string UIName = "Light 1 Decay";
+	float UIMin = 0;
+	float UIStep = 1;
+	string Object = "Light 1";
+> = 0.0;
+
+uniform float Light2Attenuation : DECAYRATE
+<
+	string UIName = "Light 2 Decay";
+	float UIMin = 0;
+	float UIStep = 1;
+	string Object = "Light 2";
+> = 0.0;
+
+uniform float Light0ConeAngle : HOTSPOT
+<
+	string UIName = "Light 0 Cone Angle";
+	float UIMin = 0;
+	float UIMax = 1.571;
+	float UIStep = 0.05;
+	string Space = "World";
+	string Object = "Light 0";
+> = 0.46;
+
+uniform float Light1ConeAngle : HOTSPOT
+<
+	string UIName = "Light 1 Cone Angle";
+	float UIMin = 0;
+	float UIMax = 1.571;
+	float UIStep = 0.05;
+	string Space = "World";
+	string Object = "Light 1";
+> = 0.46;
+
+uniform float Light2ConeAngle : HOTSPOT
+<
+	string UIName = "Light 2 Cone Angle";
+	float UIMin = 0;
+	float UIMax = 1.571;
+	float UIStep = 0.05;
+	string Space = "World";
+	string Object = "Light 2";
+> = 0.46;
+
+uniform float Light0Falloff : FALLOFF
+<
+	string UIName = "Light 0 Penumbra Angle";
+	float UIMin = 0;
+	float UIMax = 1.571;
+	float UIStep = 0.05;
+	string Object = "Light 0";
+> = 0.7;
+
+uniform float Light1Falloff : FALLOFF
+<
+	string UIName = "Light 1 Penumbra Angle";
+	float UIMin = 0;
+	float UIMax = 1.571;
+	float UIStep = 0.05;
+	string Object = "Light 1";
+> = 0.7;
+
+uniform float Light2Falloff : FALLOFF
+<
+	string UIName = "Light 2 Penumbra Angle";
+	float UIMin = 0;
+	float UIMax = 1.571;
+	float UIStep = 0.05;
+	string Object = "Light 2";
+> = 0.7;
+
+uniform bool Light0ShadowOn : SHADOWFLAG
+<
+	string UIName = "Light 0 Casts Shadow";
+	string Object = "Light 0";
+> = true;
+
+uniform bool Light1ShadowOn : SHADOWFLAG
+<
+	string UIName = "Light 1 Casts Shadow";
+	string Object = "Light 1";
+> = true;
+
+uniform bool Light2ShadowOn : SHADOWFLAG
+<
+	string UIName = "Light 2 Casts Shadow";
+	string Object = "Light 2";
+> = true;
+
+uniform mat4 Light0ViewPrj : SHADOWMAPMATRIX
+<
+	string Object = "Light 0";
+	string UIName = "Light 0 Matrix";
+	string UIWidget = "None";
+>;
+
+uniform mat4 Light1ViewPrj : SHADOWMAPMATRIX
+<
+	string Object = "Light 1";
+	string UIName = "Light 1 Matrix";
+	string UIWidget = "None";
+>;
+
+uniform mat4 Light2ViewPrj : SHADOWMAPMATRIX
+<
+	string Object = "Light 2";
+	string UIName = "Light 2 Matrix";
+	string UIWidget = "None";
+>;
+
+uniform vec3 Light0ShadowColor : SHADOWCOLOR
+<
+	string UIName = "Light 0 Shadow Color";
+	string Object = "Light 0";
+> = {0, 0, 0};
+
+uniform vec3 Light1ShadowColor : SHADOWCOLOR
+<
+	string UIName = "Light 1 Shadow Color";
+	string Object = "Light 1";
+> = {0, 0, 0};
+
+uniform vec3 Light2ShadowColor : SHADOWCOLOR
+<
+	string UIName = "Light 2 Shadow Color";
+	string Object = "Light 2";
+> = {0, 0, 0};
+
+
+// ---------------------------------------- Textures -----------------------------------------
+uniform texture2D SurfaceMask
+<
+	string ResourceName = "";
+	string UIName = "Surface Mask";
+	string ResourceType = "2D";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Surface";
+>;
+
+uniform sampler2D SurfaceMaskSampler = sampler_state
+{
+	Texture = <SurfaceMask>;
+	TEXTURE_MIN_FILTER = LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture2D DiffuseMap
+<
+	string ResourceName = "";
+	string UIName = "Diffuse Map";
+	string ResourceType = "2D";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Diffuse";
+	int UIOrder = 201;
+>;
+
+uniform sampler2D DiffuseMapSampler = sampler_state
+{
+	Texture = <DiffuseMap>;
+	TEXTURE_MIN_FILTER = LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture2D SpecularMap
+<
+	string ResourceName = "";
+	string UIName = "Specular Map";
+	string ResourceType = "2D";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Specular";
+	int UIOrder = 401;
+>;
+
+uniform sampler2D SpecularMapSampler = sampler_state
+{
+	Texture = <SpecularMap>;
+	TEXTURE_MIN_FILTER = LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture2D NormalMap
+<
+	string ResourceName = "";
+	string UIName = "Normal Map";
+	string ResourceType = "2D";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Normal";
+	int UIOrder = 501;
+>;
+
+uniform sampler2D NormalMapSampler = sampler_state
+{
+	Texture = <NormalMap>;
+	TEXTURE_MIN_FILTER = LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture2D EmissiveAndAOMap
+<
+	string ResourceName = "";
+	string UIName = "Ambient Emissive Map";
+	string ResourceType = "2D";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Ambient and Emissive";
+	int UIOrder = 101;
+>;
+
+uniform sampler2D EmissiveAndAOMapSampler = sampler_state
+{
+	Texture = <EmissiveAndAOMap>;
+	TEXTURE_MIN_FILTER = LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture2D ThicknessMap
+<
+	string ResourceName = "";
+	string UIName = "Thickness Mask";
+	string ResourceType = "2D";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Translucency";
+	int UIOrder = 1001;
+>;
+
+uniform sampler2D ThicknessMapSampler = sampler_state
+{
+	Texture = <ThicknessMap>;
+	TEXTURE_MIN_FILTER = LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture2D Light0ShadowMap : SHADOWMAP
+<
+	string ResourceName = "";
+	string ResourceType = "2D";
+	string UIWidget = "None";
+	string Object = "Light 0";
+	string UIName = "light0ShadowMap";
+>;
+
+uniform textureCube PointLight0ShadowMap : POINTLIGHTSHADOWMAP
+<
+	string ResourceName = "";
+	string ResourceType = "Cube";
+	string UIWidget = "None";
+	string Object = "Light 0";
+	string UIName = "PointLight0ShadowMap";
+>;
+
+uniform texture2D Light1ShadowMap : SHADOWMAP
+<
+	string ResourceName = "";
+	string ResourceType = "2D";
+	string UIWidget = "None";
+	string Object = "Light 1";
+	string UIName = "light1ShadowMap";
+>;
+
+uniform textureCube PointLight1ShadowMap : POINTLIGHTSHADOWMAP
+<
+	string ResourceName = "";
+	string ResourceType = "Cube";
+	string UIWidget = "None";
+	string Object = "Light 1";
+	string UIName = "PointLight1ShadowMap";
+>;
+
+uniform texture2D Light2ShadowMap : SHADOWMAP
+<
+	string ResourceName = "";
+	string ResourceType = "2D";
+	string UIWidget = "None";
+	string Object = "Light 2";
+	string UIName = "light2ShadowMap";
+>;
+
+uniform textureCube PointLight2ShadowMap : POINTLIGHTSHADOWMAP
+<
+	string ResourceName = "";
+	string ResourceType = "Cube";
+	string UIWidget = "None";
+	string Object = "Light 2";
+	string UIName = "PointLight2ShadowMap";
+>;
+
+uniform sampler2D Light0ShadowMapSampler = sampler_state
+{
+	Texture = <Light0ShadowMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform samplerCube PointLight0ShadowMapSampler = sampler_state
+{
+	Texture = <PointLight0ShadowMap>;
+	TEXTURE_MIN_FILTER = LINEAR_MIPMAP_LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = MIRRORED_REPEAT;
+	TEXTURE_WRAP_T = MIRRORED_REPEAT;
+	TEXTURE_WRAP_R = MIRRORED_REPEAT;
+};
+
+uniform sampler2D Light1ShadowMapSampler = sampler_state
+{
+	Texture = <Light1ShadowMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform samplerCube PointLight1ShadowMapSampler = sampler_state
+{
+	Texture = <PointLight1ShadowMap>;
+	TEXTURE_MIN_FILTER = LINEAR_MIPMAP_LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = MIRRORED_REPEAT;
+	TEXTURE_WRAP_T = MIRRORED_REPEAT;
+	TEXTURE_WRAP_R = MIRRORED_REPEAT;
+};
+
+uniform sampler2D Light2ShadowMapSampler = sampler_state
+{
+	Texture = <Light2ShadowMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform samplerCube PointLight2ShadowMapSampler = sampler_state
+{
+	Texture = <PointLight2ShadowMap>;
+	TEXTURE_MIN_FILTER = LINEAR_MIPMAP_LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = MIRRORED_REPEAT;
+	TEXTURE_WRAP_T = MIRRORED_REPEAT;
+	TEXTURE_WRAP_R = MIRRORED_REPEAT;
+};
+
+uniform textureCube ReflectionMap
+<
+	string ResourceName = "";
+	string UIName = "Reflection Mask";
+	string ResourceType = "Cube";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Reflection";
+	int UIOrder = 701;
+>;
+
+uniform samplerCube ReflectionMapSampler = sampler_state
+{
+	Texture = <ReflectionMap>;
+	TEXTURE_MIN_FILTER = LINEAR_MIPMAP_LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = MIRRORED_REPEAT;
+	TEXTURE_WRAP_T = MIRRORED_REPEAT;
+	TEXTURE_WRAP_R = MIRRORED_REPEAT;
+};
+
+uniform textureCube IBLMap
+<
+	string ResourceName = "";
+	string UIName = "IBLMap";
+	string ResourceType = "Cube";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Lighting";
+>;
+
+uniform samplerCube IBLMapSampler = sampler_state
+{
+	Texture = <IBLMap>;
+	TEXTURE_MIN_FILTER = LINEAR_MIPMAP_LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = MIRRORED_REPEAT;
+	TEXTURE_WRAP_T = MIRRORED_REPEAT;
+	TEXTURE_WRAP_R = MIRRORED_REPEAT;
+};
+
+uniform texture2D TransDepthTexture : transpdepthtexture
+<
+	string ResourceName = "";
+	string UIName = "TransDepthTexture";
+	string ResourceType = "2D";
+	string UIWidget = "None";
+>;
+
+uniform texture2D OpaqueDepthTexture : opaquedepthtexture
+<
+	string ResourceName = "";
+	string UIName = "OpaqueDepthTexture";
+	string ResourceType = "2D";
+	string UIWidget = "None";
+>;
+
+uniform sampler2D TransDepthTextureSampler = sampler_state
+{
+	Texture = <TransDepthTexture>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform sampler2D OpaqueDepthTextureSampler = sampler_state
+{
+	Texture = <OpaqueDepthTexture>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture2D VectorDisplacementMap
+<
+	string ResourceName = "";
+	string UIName = "Displacement Map";
+	string ResourceType = "2D";
+	string UIWidget = "FilePicker";
+	string UIGroup = "Tessellation and Displacement";
+	int UIOrder = 801;
+>;
+
+uniform sampler2D VectorDisplacementMapSampler = sampler_state
+{
+	Texture = <VectorDisplacementMap>;
+	TEXTURE_MIN_FILTER = LINEAR;
+	TEXTURE_MAG_FILTER = LINEAR;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+
+GLSLShader Common_Funcs
+{
+}
+
+GLSLShader VertexShader_Funcs
+{
+}
+
+GLSLShader TessControlShader_Funcs
+{
+	vec3 ComputeCP(vec3 posA, vec3 posB, vec3 normA)
+	{
+		return (2.0 * posA + posB - (dot((posB - posA), normA) * normA)) / 3.0;
+	}
+
+	float IsClipped(vec4 clipPos, float clipBias)
+	{
+		float W = clipPos.w + clipBias;
+		return (-W <= clipPos.x && clipPos.x <= W && -W <= clipPos.y && clipPos.y <= W && -W <= clipPos.z && clipPos.z <= W) ? 0.0 : 1.0;
+	}
+
+	float ComputeClipping(vec3 cpA, vec3 cpB, vec3 cpC, float clipBias, mat4 vprj)
+	{
+		vec4 projPosA = vprj * vec4(cpA,1);
+		vec4 projPosB = vprj * vec4(cpB,1);
+		vec4 projPosC = vprj * vec4(cpC,1);
+		return min(min(IsClipped(projPosA, clipBias), IsClipped(projPosB, clipBias)), IsClipped(projPosC, clipBias));
+	}
+}
+
+GLSLShader TessEvaluationShader_Funcs
+{
+	vec3 PickDominant( vec3 vec,
+				float U, float V, float W,
+				vec3 DE0A, vec3 DE0B,
+				vec3 DE1A, vec3 DE1B,
+				vec3 DE2A, vec3 DE2B,
+				vec3 DV0, vec3 DV1, vec3 DV2 )
+	{
+		vec3 dominantVector = vec;
+
+		float edgeThreshold = 0.0001f;
+		int edgeU = (U == 0) ? 1 : 0;
+		int edgeV = (V == 0) ? 1 : 0;
+		int edgeW = (W == 0) ? 1 : 0;
+
+		int corner = ((edgeU + edgeV + edgeW) == 2) ? 1 : 0;
+		int innerarea = ((edgeU + edgeV + edgeW) == 0) ? 1 : 0;
+
+		if (innerarea != 1)
+		{
+			if (corner == 1)
+			{
+				if (U > 1.0 - edgeThreshold)
+					dominantVector = DV1;
+				else if (V > 1.0 - edgeThreshold)
+					dominantVector = DV2;
+				else if (W > 1.0 - edgeThreshold)
+					dominantVector = DV0;
+			}
+			else
+			{
+				if (edgeU == 1)
+					dominantVector = lerp(DE2A, DE2B, W);
+				else if (edgeV == 1)
+					dominantVector = lerp(DE0A, DE0B, U);
+				else
+					dominantVector = lerp(DE1A, DE1B, V);
+			}
+		}
+
+		return dominantVector;
+	}
+}
+
+GLSLShader GeometryShader_Funcs
+{
+}
+
+GLSLShader PixelShader_Funcs
+{
+	int GetLightType(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0Type;
+		else if (ActiveLightIndex == 1)
+			return Light1Type;
+		else
+			return Light2Type;
+	}
+
+	vec3 GetLightColor(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0Color;
+		else if (ActiveLightIndex == 1)
+			return Light1Color;
+		else
+			return Light2Color;
+	}
+
+	float GetLightIntensity(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0Intensity;
+		else if (ActiveLightIndex == 1)
+			return Light1Intensity;
+		else
+			return Light2Intensity;
+	}
+
+	vec3 GetLightPos(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0Pos;
+		else if (ActiveLightIndex == 1)
+			return Light1Pos;
+		else
+			return Light2Pos;
+	}
+
+	vec3 GetLightDir(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0Dir;
+		else if (ActiveLightIndex == 1)
+			return Light1Dir;
+		else
+			return Light2Dir;
+	}
+
+	float GetLightAttenuation(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0Attenuation;
+		else if (ActiveLightIndex == 1)
+			return Light1Attenuation;
+		else
+			return Light2Attenuation;
+	}
+
+	float GetLightConeAngle(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0ConeAngle;
+		else if (ActiveLightIndex == 1)
+			return Light1ConeAngle;
+		else
+			return Light2ConeAngle;
+	}
+
+	float GetLightFalloff(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0Falloff;
+		else if (ActiveLightIndex == 1)
+			return Light1Falloff;
+		else
+			return Light2Falloff;
+	}
+
+	bool GetLightShadowOn(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0ShadowOn;
+		else if (ActiveLightIndex == 1)
+			return Light1ShadowOn;
+		else
+			return Light2ShadowOn;
+	}
+
+	mat4 GetLightViewPrj(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0ViewPrj;
+		else if (ActiveLightIndex == 1)
+			return Light1ViewPrj;
+		else
+			return Light2ViewPrj;
+	}
+
+	vec4 SampleFromShadowMap( int ActiveLightIndex, vec2 UVs)
+	{
+		if (ActiveLightIndex == 0)
+			return textureLod(Light0ShadowMapSampler, UVs, 0);
+		else if (ActiveLightIndex == 1)
+			return textureLod(Light1ShadowMapSampler, UVs, 0);
+		else
+			return textureLod(Light2ShadowMapSampler, UVs, 0);
+	}
+
+	vec4 SampleFromPointLightShadowMap( int ActiveLightIndex, vec3 dir)
+	{
+		if (ActiveLightIndex == 0)
+			return textureLod(PointLight0ShadowMapSampler, dir, 0);
+		else if (ActiveLightIndex == 1)
+			return textureLod(PointLight1ShadowMapSampler, dir, 0);
+		else
+			return textureLod(PointLight2ShadowMapSampler, dir, 0);
+	}
+
+	vec3 GetLightShadowColor(int ActiveLightIndex)
+	{
+		if (ActiveLightIndex == 0)
+			return Light0ShadowColor;
+		else if (ActiveLightIndex == 1)
+			return Light1ShadowColor;
+		else
+			return Light2ShadowColor;
+	}
+
+	vec4 sampleTransDepthTex(vec2 UV)
+	{
+		vec4 col = texture( TransDepthTextureSampler, UV );
+		return col;
+	}
+
+	vec4 sampleOpaqueDepthTex(vec2 UV)
+	{
+		vec4 col = texture( OpaqueDepthTextureSampler, UV );
+		return col;
+	}
+
+	struct DepthPeelOutput
+	{
+		vec4 LinearDepth;
+		float Peel;
+	};
+
+	DepthPeelOutput DepthPeelFunc( vec3 worldPos, mat4 view, mat4 viewPrj )
+	{
+		DepthPeelOutput OUT;
+
+		float currZ = abs( ( view * vec4(worldPos, 1.0f) ).z );
+		vec4 Pndc = viewPrj * vec4(worldPos, 1.0f);
+		vec2 UV = Pndc.xy / Pndc.w * vec2(0.5f, 0.5f) + 0.5f;
+
+		float prevZ = sampleTransDepthTex(UV).r;
+		float opaqZ = sampleOpaqueDepthTex(UV).r;
+		float bias = 0.00002f;
+		if (currZ < prevZ * (1.0f + bias) || currZ > opaqZ * (1.0f - bias))
+		{
+			discard;
+		}
+
+		float ld = abs( ( view * vec4(worldPos, 1.0f) ).z );
+		OUT.LinearDepth = vec4(ld, ld, ld, ld);
+		OUT.Peel = 1.0f;
+
+		return OUT;
+	}
+
+
+	// -------------------------------------- ExpandRangeFunction --------------------------------------
+	struct ExpandRangeOutput
+	{
+		vec3 ExpandedVector;
+	};
+
+	ExpandRangeOutput ExpandRangeFunction(vec3 Vector)
+	{
+		ExpandRangeOutput OUT;
+
+		vec3 NormalMap = (2.0 * Vector);
+		vec3 NormalMap2083 = (NormalMap - 1.0);
+		OUT.ExpandedVector = NormalMap2083;
+
+		return OUT;
+	}
+
+	// -------------------------------------- TangentWorldConvertFunction --------------------------------------
+	struct TangentWorldConvertOutput
+	{
+		vec3 Vector;
+	};
+
+	TangentWorldConvertOutput TangentWorldConvertFunction(float TangentDirection, vec3 Normal, vec3 Tangent, vec3 Vector)
+	{
+		TangentWorldConvertOutput OUT;
+
+		vec3 Bn = (TangentDirection * cross(Normal, Tangent));
+		mat3 toWorld = mat3(Tangent, Bn, Normal);
+		vec3 TangentToWorld = (toWorld * Vector);
+		OUT.Vector = TangentToWorld;
+
+		return OUT;
+	}
+
+	// -------------------------------------- AmbientLightFunction --------------------------------------
+	struct AmbientLightOutput
+	{
+		vec3 LightColor;
+	};
+
+	AmbientLightOutput AmbientLightFunction(int ActiveLightIndex, vec3 AlbedoColor, vec3 LightColor, float LightIntensity)
+	{
+		AmbientLightOutput OUT;
+
+		vec3 MulOp = ((LightColor * AlbedoColor) * LightIntensity);
+		OUT.LightColor = MulOp;
+
+		return OUT;
+	}
+
+	// -------------------------------------- GetLightVectorFunction --------------------------------------
+	struct GetLightVectorOutput
+	{
+		vec3 Result;
+	};
+
+	GetLightVectorOutput GetLightVectorFunction(int ActiveLightIndex, vec3 LightPosition, vec3 VertexWorldPosition, int LightType, vec3 LightDirection)
+	{
+		GetLightVectorOutput OUT;
+
+		bool IsDirectionalLight = (LightType == 4);
+		vec3 LerpOp = mix((LightPosition - VertexWorldPosition), -(LightDirection), float(IsDirectionalLight));
+		OUT.Result = LerpOp;
+
+		return OUT;
+	}
+
+	// -------------------------------------- TranslucencyFunction --------------------------------------
+	struct TranslucencyOutput
+	{
+		vec3 Translucency;
+	};
+
+	TranslucencyOutput TranslucencyFunction(int ActiveLightIndex, vec3 Normal, vec3 LightVector, float Distortion, vec3 CameraVector, float Power, float LightScale, float Minimum, vec3 ObjectThickness, vec3 AlbedoColor)
+	{
+		TranslucencyOutput OUT;
+
+		vec3 AddOp = (LightVector + (Distortion * Normal));
+		float DotOp = dot(CameraVector, -(AddOp));
+		float PowOp = pow(clamp(DotOp, 0.0, 1.0), Power);
+		float AddOp333 = ((LightScale * PowOp) + Minimum);
+		vec3 MulOp = (AlbedoColor * (ObjectThickness * AddOp333));
+		OUT.Translucency = MulOp;
+
+		return OUT;
+	}
+
+	// -------------------------------------- SkinDepthRampFunction --------------------------------------
+	struct SkinDepthRampOutput
+	{
+		vec3 Color;
+	};
+
+	SkinDepthRampOutput SkinDepthRampFunction(int ActiveLightIndex, float Translucency, vec3 OuterColor, vec3 MediumColor, vec3 InnerColor)
+	{
+		SkinDepthRampOutput OUT;
+
+		vec3 IfElseOp429 = vec3(0, 0, 0);
+		float Val = 0.9;
+		if (Translucency > Val)
+		{
+			vec3 SkinRampMaxColor = vec3(1.0,1.0,1.0);
+			float DivOp = ((Translucency - Val) / 0.1);
+			IfElseOp429 = mix(OuterColor, SkinRampMaxColor.xyz, float(DivOp));
+		}
+		else
+		{
+			vec3 IfElseOp436 = vec3(0, 0, 0);
+			float Val439 = 0.7;
+			if (Translucency > Val439)
+			{
+				float DivOp = ((Translucency - Val439) / 0.2);
+				IfElseOp436 = mix(MediumColor, OuterColor, float(DivOp));
+			}
+			else
+			{
+				vec3 IfElseOp443 = vec3(0, 0, 0);
+				float Val446 = 0.4;
+				if (Translucency > Val446)
+				{
+					float DivOp = ((Translucency - Val446) / 0.3);
+					IfElseOp443 = mix(InnerColor, MediumColor, float(DivOp));
+				}
+				else
+				{
+					vec3 SkinRampMinColor = vec3(0.0,0.0,0.0);
+					float DivOp = (Translucency / 0.4);
+					IfElseOp443 = mix(SkinRampMinColor.xyz, InnerColor, float(DivOp));
+				}
+				IfElseOp436 = IfElseOp443;
+			}
+			IfElseOp429 = IfElseOp436;
+		}
+		OUT.Color = IfElseOp429;
+
+		return OUT;
+	}
+
+	// -------------------------------------- LambertDiffuseFunction --------------------------------------
+	struct LambertDiffuseOutput
+	{
+		vec3 Color;
+	};
+
+	LambertDiffuseOutput LambertDiffuseFunction(int ActiveLightIndex, vec3 AlbedoColor, vec3 Normal, vec3 LightVector)
+	{
+		LambertDiffuseOutput OUT;
+
+		float SatOp = clamp(dot(Normal, LightVector), 0.0, 1.0);
+		vec3 Diffuse = (SatOp * AlbedoColor);
+		OUT.Color = Diffuse;
+
+		return OUT;
+	}
+
+	// -------------------------------------- LightDecayFunction --------------------------------------
+	struct LightDecayOutput
+	{
+		float Attenuation;
+	};
+
+	LightDecayOutput LightDecayFunction(int ActiveLightIndex, vec3 LightVectorUN, float Attenuation)
+	{
+		LightDecayOutput OUT;
+
+		bool IsAttenuationUsed = (Attenuation > 0.001);
+		float DecayContribution116 = 0.0;
+		if (IsAttenuationUsed)
+		{
+			float PowOp = pow(length(LightVectorUN), Attenuation);
+			float DivOp = (1.0 / PowOp);
+			DecayContribution116 = DivOp;
+		}
+		else
+		{
+			DecayContribution116 = 1.0;
+		}
+		OUT.Attenuation = DecayContribution116;
+
+		return OUT;
+	}
+
+	// -------------------------------------- LightConeAngleFunction --------------------------------------
+	struct LightConeAngleOutput
+	{
+		float ConeAngle;
+	};
+
+	LightConeAngleOutput LightConeAngleFunction(int ActiveLightIndex, vec3 LightVector, vec3 LightDirection, float ConeAngle, float ConeFalloff)
+	{
+		LightConeAngleOutput OUT;
+
+		float CosOp = cos(max(ConeFalloff, ConeAngle));
+		float DotOp = dot(LightVector, -(LightDirection));
+		float SmoothStepOp = smoothstep(CosOp, cos(ConeAngle), DotOp);
+		OUT.ConeAngle = SmoothStepOp;
+
+		return OUT;
+	}
+
+	// -------------------------------------- ShadowMapFunction --------------------------------------
+	struct ShadowMapOutput
+	{
+		float LightGain;
+	};
+
+	ShadowMapOutput ShadowMapFunction(int ActiveLightIndex, int lightType, mat4 LightViewPrj, float ShadowMapBias, vec3 VertexWorldPosition)
+	{
+		ShadowMapOutput OUT;
+
+		if(lightType == 3) {
+			OUT.LightGain = 1.0;
+
+			float shadow = 1.0f;
+			vec3 lightPos = GetLightPos(ActiveLightIndex);
+			vec3 lookup = VertexWorldPosition - lightPos;
+			float Distance = length(lookup);
+			vec3 normalizeLookup = normalize(lookup);
+			vec4 sampleColor = SampleFromPointLightShadowMap(ActiveLightIndex, normalizeLookup);
+
+			float SampledDistance = sampleColor.r * DepthRange;
+			if (Distance <= SampledDistance + ShadowMapBias*Distance) {
+				shadow = 1.0f;
+			} else {
+				shadow = 0.0f;
+			}
+
+			OUT.LightGain = shadow;
+
+		} else {
+			float IfElseOp199 = 0.0;
+			vec4 VectorConstruct = vec4(VertexWorldPosition.x, VertexWorldPosition.y, VertexWorldPosition.z, 1.0);
+			vec4 MulOp = (LightViewPrj * VectorConstruct);
+			vec3 DivOp = (MulOp.xyz / MulOp.w);
+			if (DivOp.x > -1.0 && DivOp.x < 1.0 && DivOp.y > -1.0 && DivOp.y < 1.0 && DivOp.z > 0.0 && DivOp.z < 1.0)
+			{
+				float Val = 0.5;
+				vec2 AddOp = ((Val * DivOp.xy) + Val);
+				float SubOp = (DivOp.z - (ShadowMapBias / MulOp.w));
+				float ShadowTotal = 0.0;
+				for(int i=0; i<10; i+=1)
+				{
+					vec2 MulOp239 = (0.0009 * ShadowFilterTaps[i]);
+					vec4 Sampler = SampleFromShadowMap(ActiveLightIndex, (AddOp + MulOp239));
+					float IfElseOp193 = ((SubOp - Sampler.x) >= 0.0) ? (0.0) : (0.1);
+					ShadowTotal += IfElseOp193;
+				}
+				IfElseOp199 = ShadowTotal;
+			}
+			else
+			{
+				IfElseOp199 = 1.0;
+			}
+			OUT.LightGain = IfElseOp199;
+		}
+		return OUT;
+	}
+
+	// -------------------------------------- LightContributionFunction --------------------------------------
+	struct LightContributionOutput
+	{
+		vec3 Light;
+	};
+
+	LightContributionOutput LightContributionFunction(int ActiveLightIndex, vec3 VertexWorldPosition, vec3 LightVectorUN)
+	{
+		LightContributionOutput OUT;
+
+		float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+		int _LightType = GetLightType(ActiveLightIndex);
+		bool IsDirectionalLight = (_LightType == 4);
+		float DecayMul162 = 0.0;
+		if (IsDirectionalLight)
+		{
+			DecayMul162 = 1.0;
+		}
+		else
+		{
+			float _LightAttenuation = GetLightAttenuation(ActiveLightIndex);
+			LightDecayOutput LightDecay110 = LightDecayFunction(ActiveLightIndex, LightVectorUN, _LightAttenuation);
+			DecayMul162 = LightDecay110.Attenuation;
+		}
+		bool IsSpotLight = (_LightType == 2);
+		float ConeMul164 = 1.0;
+		if (IsSpotLight)
+		{
+			vec3 NormOp = normalize(LightVectorUN);
+			vec3 _LightDir = GetLightDir(ActiveLightIndex);
+			float _LightConeAngle = GetLightConeAngle(ActiveLightIndex);
+			float _LightFalloff = GetLightFalloff(ActiveLightIndex);
+			LightConeAngleOutput LightConeAngle52 = LightConeAngleFunction(ActiveLightIndex, NormOp, _LightDir, _LightConeAngle, _LightFalloff);
+			ConeMul164 = LightConeAngle52.ConeAngle;
+		}
+		bool _LightShadowOn = GetLightShadowOn(ActiveLightIndex);
+		float ShadowMul165 = 1.0;
+		if (_LightShadowOn)
+		{
+			ShadowMapOutput ShadowMap178;
+
+			mat4 _LightViewPrj = GetLightViewPrj(ActiveLightIndex);
+			ShadowMap178 = ShadowMapFunction(ActiveLightIndex, _LightType, _LightViewPrj, 0.01, VertexWorldPosition);
+
+			vec3 _LightShadowColor = GetLightShadowColor(ActiveLightIndex);
+			float ShadowColorMix = ShadowMap178.LightGain;
+			ShadowMul165 = ShadowColorMix;
+		}
+		float DecayShadowConeMul = ((ShadowMul165 * ConeMul164) * DecayMul162);
+		vec3 _LightColor = GetLightColor(ActiveLightIndex);
+		vec3 MulItensity = ((_LightColor * DecayShadowConeMul) * _LightIntensity);
+		OUT.Light = MulItensity;
+
+		return OUT;
+	}
+
+	// -------------------------------------- BlinnSpecularFunction --------------------------------------
+	struct BlinnSpecularOutput
+	{
+		vec3 SpecularColor;
+	};
+
+	BlinnSpecularOutput BlinnSpecularFunction(int ActiveLightIndex, vec3 LightVector, vec3 Normal, vec3 CameraVector, float SpecularPower, vec3 SpecularColor)
+	{
+		BlinnSpecularOutput OUT;
+
+		vec3 NormOp = normalize((LightVector + CameraVector));
+		float SatOp = clamp(dot(Normal, NormOp), 0.0, 1.0);
+		vec3 BlinnSpec = (SpecularColor * pow(SatOp, SpecularPower));
+		float SatOp626 = clamp(dot(Normal, LightVector), 0.0, 1.0);
+		vec3 MulOp = (SatOp626 * BlinnSpec);
+		OUT.SpecularColor = MulOp;
+
+		return OUT;
+	}
+
+	// -------------------------------------- DesaturateColorFunction --------------------------------------
+	struct DesaturateColorOutput
+	{
+		float DesaturateColor;
+	};
+
+	DesaturateColorOutput DesaturateColorFunction(int ActiveLightIndex, vec3 Color)
+	{
+		DesaturateColorOutput OUT;
+
+		vec3 Col = vec3(0.300008,0.6,0.100008);
+		float DotOp = dot(clamp(Color, 0.0, 1.0), Col.xyz);
+		OUT.DesaturateColor = DotOp;
+
+		return OUT;
+	}
+
+	// -------------------------------------- RotateVectorFunction --------------------------------------
+	struct RotateVectorOutput
+	{
+		float FirstAxis;
+		float SecondAxis;
+	};
+
+	RotateVectorOutput RotateVectorFunction(float FirstAxis, float SecondAxis, float DegreesOrRotation)
+	{
+		RotateVectorOutput OUT;
+
+		float Angle = radians(DegreesOrRotation);
+		float CosOp = cos(Angle);
+		float SinOp = sin(Angle);
+		float axisOne = ((CosOp * FirstAxis) - (SinOp * SecondAxis));
+		float axisTwo = ((FirstAxis * SinOp) + (SecondAxis * CosOp));
+		OUT.FirstAxis = axisOne;
+		OUT.SecondAxis = axisTwo;
+
+		return OUT;
+	}
+
+	// -------------------------------------- DesaturateColorFunction --------------------------------------
+	DesaturateColorOutput DesaturateColorFunction(vec3 Color)
+	{
+		DesaturateColorOutput OUT;
+
+		vec3 Col = vec3(0.300008,0.6,0.100008);
+		float DotOp = dot(clamp(Color, 0.0, 1.0), Col.xyz);
+		OUT.DesaturateColor = DotOp;
+
+		return OUT;
+	}
+
+	// -------------------------------------- GetShadowPassPixelDepthGLFunction --------------------------------------
+	struct GetShadowPassPixelDepthGLOutput
+	{
+		float Depth;
+	};
+
+	GetShadowPassPixelDepthGLOutput GetShadowPassPixelDepthGLFunction(vec4 VertexWorldPosition, mat4 ShadowPrjMatrix)
+	{
+		GetShadowPassPixelDepthGLOutput OUT;
+
+		vec4 MulOp = (ShadowPrjMatrix * VertexWorldPosition);
+		float DepthPerPixel = (MulOp.z / MulOp.w);
+		float AddOp = (DepthPerPixel + fwidth(DepthPerPixel));
+		float NormalMap = (0.5 * AddOp);
+		float AddOp993 = (NormalMap + 0.5);
+		OUT.Depth = AddOp993;
+
+		return OUT;
+	}
+
+	// -------------------------------------- PixelToLightDistanceGLFunction --------------------------------------
+	struct PixelToLightDistanceGLOutput
+	{
+		float Distance;
+	};
+
+	PixelToLightDistanceGLOutput PixelToLightDistanceGLFunction(vec4 VertexWorldPosition)
+	{
+		PixelToLightDistanceGLOutput OUT;
+
+		vec3 LightToVertex = vec3(0.0, 0.0, 0.0);
+
+		LightToVertex = VertexWorldPosition.xyz - viewI[3].xyz;
+		OUT.Distance = length(LightToVertex)/DepthRange;
+
+		return OUT;
+	}
+}
+
+// -------------------------------------- ShaderVertex --------------------------------------
+attribute APPDATA
+{
+	vec3 inPosition : POSITION;
+	vec3 inNormal : NORMAL;
+	vec2 inmap1 : TEXCOORD0;
+	vec3 inTangent : TANGENT;
+	vec3 inBiNormal : BINORMAL;
+};
+
+attribute SHADERDATA
+{
+	vec4 Normal : NORMAL;
+	vec4 WorldPosition : TEXCOORD0;
+	vec4 map1 : TEXCOORD1;
+	vec4 Tangent : TANGENT;
+	vec3 FogFactor : TEXCOORD2;
+};
+
+GLSLShader ShaderVertex
+{
+	void main(void)
+	{
+		gl_Position = vec4(inPosition, 1);
+		vec3 MulOp = ((mat3(world)) * inNormal);
+		vec3 NormalN = normalize(MulOp);
+		vec4 WorldNormal = vec4(NormalN.x, NormalN.y, NormalN.z, 1.0);
+		VS_OUT.Normal = WorldNormal;
+		vec4 WorldPos = (world * gl_Position);
+		VS_OUT.WorldPosition = WorldPos;
+		vec3 CameraPosition = viewI[3].xyz;
+		vec3 ObjectPosition = world[3].xyz;
+		float LengthOp = length((CameraPosition - ObjectPosition));
+		float MaxOp = max((TessellationRange / LengthOp), 1.0);
+		float MinOp = min(MaxOp, TessellationMaximum);
+		vec4 OutUVs = vec4(inmap1.x, inmap1.y, 0.0, 0.0);
+		VS_OUT.map1 = OutUVs;
+		vec3 MulOp2031 = ((mat3(world)) * inTangent);
+		vec3 TangentNorm = normalize(MulOp2031);
+		vec4 WorldTangent = vec4(TangentNorm.x, TangentNorm.y, TangentNorm.z, 1.0);
+		VS_OUT.Tangent = WorldTangent;
+		float DotOp = dot(cross(inNormal, inTangent), inBiNormal);
+		float BiNormalDir2017 = (DotOp < 0.0) ? (-1.0) : (1.0);
+		vec4 VectorConstruct = vec4(VS_OUT.Tangent.xyz.x, VS_OUT.Tangent.xyz.y, VS_OUT.Tangent.xyz.z, BiNormalDir2017);
+		VS_OUT.Tangent = VectorConstruct;
+		VS_OUT.WorldPosition = (world * vec4(inPosition, 1));
+		vec4 _HPosition = mul( viewPrj, vec4(VS_OUT.WorldPosition.xyz, 1) );
+		float fogFactor = 0.0;
+		if (MayaHwFogMode == 0) {
+					fogFactor = saturate((MayaHwFogEnd - _HPosition.z) / (MayaHwFogEnd - MayaHwFogStart));
+		}
+		else if (MayaHwFogMode == 1) {
+					fogFactor = 1.0 / (exp(_HPosition.z * MayaHwFogDensity));
+		}
+		else if (MayaHwFogMode == 2) {
+					fogFactor = 1.0 / (exp(pow(_HPosition.z * MayaHwFogDensity, 2)));
+		}
+		VS_OUT.FogFactor = vec3(fogFactor, fogFactor, fogFactor);
+
+		gl_Position = VS_OUT.WorldPosition;
+	}
+}
+
+// -------------------------------------- ShaderTessControl --------------------------------------
+attribute TCSDATA
+{
+	vec3 CP1 : TEXCOORD0;
+	vec3 CP2 : TEXCOORD1;
+	vec4 DominantEdge : TEXCOORD2;
+	vec2 DominantVertex : TEXCOORD3;
+	vec3 DominantNormalE0 : TEXCOORD4;
+	vec3 DominantNormalE1 : TEXCOORD5;
+	vec3 DominantNormalCorner : TEXCOORD6;
+	vec4 Normal : NORMAL;
+	vec4 WorldPosition : TEXCOORD7;
+	vec4 map1 : TEXCOORD8;
+	vec4 Tangent : TANGENT;
+	vec3 FogFactor : TEXCOORD9;
+};
+
+patchsize 3;
+GLSLShader ShaderTessControl
+{
+	void main(void)
+	{
+		const uint index = gl_InvocationID;
+		const uint nextIndex = index < 2 ? index + 1 : 0;
+		const uint neighborIndex = 3 + 2 * index;
+		const uint neighborNextIndex = neighborIndex + 1;
+		vec3 myCP, neighborCP;
+		myCP = ComputeCP(TCS_IN[index].WorldPosition.xyz, TCS_IN[nextIndex].WorldPosition.xyz, TCS_IN[index].Normal.xyz);
+		neighborCP = ComputeCP(TCS_IN[neighborIndex].WorldPosition.xyz, TCS_IN[neighborNextIndex].WorldPosition.xyz, TCS_IN[neighborIndex].Normal.xyz);
+		TCS_OUT[gl_InvocationID].CP1 = (myCP + neighborCP) / 2;
+		myCP = ComputeCP(TCS_IN[nextIndex].WorldPosition.xyz, TCS_IN[index].WorldPosition.xyz, TCS_IN[nextIndex].Normal.xyz);
+		neighborCP = ComputeCP(TCS_IN[neighborNextIndex].WorldPosition.xyz, TCS_IN[neighborIndex].WorldPosition.xyz, TCS_IN[neighborNextIndex].Normal.xyz);
+		TCS_OUT[gl_InvocationID].CP2 = (myCP + neighborCP) / 2;
+
+		if(index == 2) {
+		vec3 CameraPosition = viewI[3].xyz;
+		vec3 ObjectPosition = world[3].xyz;
+		float LengthOp = length((CameraPosition - ObjectPosition));
+		float MaxOp = max((TessellationRange / LengthOp), 1.0);
+		float MinOp = min(MaxOp, TessellationMaximum);
+		vec3 f3E = (TCS_OUT[0].CP1 + TCS_OUT[0].CP2 + TCS_OUT[1].CP1 + TCS_OUT[1].CP2 + TCS_OUT[2].CP1 + TCS_OUT[2].CP2) / 6.0;
+		vec3 f3V = (TCS_OUT[0].WorldPosition.xyz + TCS_OUT[1].WorldPosition.xyz + TCS_OUT[2].WorldPosition.xyz) / 3.0;
+		vec3 CPCenter = f3E + ((f3E - f3V) / 2.0);
+		float Clipped0 = ComputeClipping(TCS_IN[0].WorldPosition.xyz, TCS_OUT[0].CP1, TCS_OUT[0].CP2, ClippingBiasAdd, viewPrj);
+		float Clipped1 = ComputeClipping(TCS_IN[1].WorldPosition.xyz, TCS_OUT[1].CP1, TCS_OUT[1].CP2, ClippingBiasAdd, viewPrj);
+		float Clipped2 = ComputeClipping(TCS_IN[2].WorldPosition.xyz, TCS_OUT[2].CP1, TCS_OUT[2].CP2, ClippingBiasAdd, viewPrj);
+			bool clipAway = false;
+			vec4 centerViewPos = viewPrj * vec4(CPCenter, 1);
+			float centerClipped = IsClipped(centerViewPos, ClippingBiasAdd);
+			clipAway = !(Clipped0 != 0 && Clipped1 != 0 && Clipped2 != 0 && centerClipped != 0 );
+			gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = MinOp * float(clipAway);
+			gl_TessLevelInner[0] = ( gl_TessLevelOuter[0] + gl_TessLevelOuter[1] + gl_TessLevelOuter[2] ) / 3.0;
+
+		}
+		const uint dominantEdgeIndex = 9 + 2 * index;
+		const uint dominantEdgeNextIndex = dominantEdgeIndex + 1;
+		const uint dominantVertexIndex = 15 + index;
+		TCS_OUT[gl_InvocationID].DominantEdge = vec4(TCS_IN[dominantEdgeNextIndex].map1.xy, TCS_IN[dominantEdgeIndex].map1.xy);
+		TCS_OUT[gl_InvocationID].DominantVertex = TCS_IN[dominantVertexIndex].map1.xy;
+		TCS_OUT[gl_InvocationID].DominantNormalE0 = TCS_IN[dominantEdgeNextIndex].Normal.xyz;
+		TCS_OUT[gl_InvocationID].DominantNormalE1 = TCS_IN[dominantEdgeIndex].Normal.xyz;
+		TCS_OUT[gl_InvocationID].DominantNormalCorner = TCS_IN[dominantVertexIndex].Normal.xyz;
+		TCS_OUT[gl_InvocationID].Normal = TCS_IN[index].Normal;
+		TCS_OUT[gl_InvocationID].WorldPosition = TCS_IN[index].WorldPosition;
+		TCS_OUT[gl_InvocationID].map1 = TCS_IN[index].map1;
+		TCS_OUT[gl_InvocationID].Tangent = TCS_IN[index].Tangent;
+		TCS_OUT[gl_InvocationID].FogFactor = TCS_IN[index].FogFactor;
+	}
+}
+
+// -------------------------------------- ShaderTessEval --------------------------------------
+tesparams (triangles, fractional_odd_spacing, cw);
+GLSLShader ShaderTessEval
+{
+	void main(void)
+	{
+		vec3 f3E = (TES_IN[0].CP1 + TES_IN[0].CP2 + TES_IN[1].CP1 + TES_IN[1].CP2 + TES_IN[2].CP1 + TES_IN[2].CP2) / 6.0;
+		vec3 f3V = (TES_IN[0].WorldPosition.xyz + TES_IN[1].WorldPosition.xyz + TES_IN[2].WorldPosition.xyz) / 3.0;
+		vec3 CPCenter = f3E + ((f3E - f3V) / 2.0);
+
+		vec3 BarycentricCoords = gl_TessCoord.zyx; // swizzle axis to match DX
+		float U = BarycentricCoords.x;
+		float V = BarycentricCoords.y;
+		float W = BarycentricCoords.z;
+
+		float UU = U * U;
+		float VV = V * V;
+		float WW = W * W;
+		float UU3 = UU * 3.0;
+		float VV3 = VV * 3.0;
+		float WW3 = WW * 3.0;
+
+		vec3 position =
+			TES_IN[0].WorldPosition.xyz * WW * W +
+			TES_IN[1].WorldPosition.xyz * UU * U +
+			TES_IN[2].WorldPosition.xyz * VV * V +
+			TES_IN[0].CP1 * WW3 * U +
+			TES_IN[0].CP2 * W * UU3 +
+			TES_IN[2].CP2 * WW3 * V +
+			TES_IN[1].CP1 * UU3 * V +
+			TES_IN[2].CP1 * W * VV3 +
+			TES_IN[1].CP2 * U * VV3 +
+			CPCenter * 6.0 * W * U * V;
+
+		vec3 flatPosition =
+			TES_IN[0].WorldPosition.xyz * W +
+			TES_IN[1].WorldPosition.xyz * U +
+			TES_IN[2].WorldPosition.xyz * V;
+
+		position = lerp(position, flatPosition, FlatTessellationBlend);
+
+		TES_OUT.Normal = TES_IN[0].Normal * W + TES_IN[1].Normal * U + TES_IN[2].Normal * V;
+		TES_OUT.Normal.xyz = normalize(TES_OUT.Normal.xyz);
+		TES_OUT.map1 = TES_IN[0].map1 * W + TES_IN[1].map1 * U + TES_IN[2].map1 * V;
+		TES_OUT.Tangent = TES_IN[0].Tangent * W + TES_IN[1].Tangent * U + TES_IN[2].Tangent * V;
+		TES_OUT.Tangent.xyz = normalize(TES_OUT.Tangent.xyz);
+
+		TES_OUT.FogFactor = TES_IN[0].FogFactor * W + TES_IN[1].FogFactor * U + TES_IN[2].FogFactor * V;
+		vec3 IfElseOp1180 = vec3(0, 0, 0);
+		if (IsSwatchRender == true)
+		{
+			IfElseOp1180 = vec3(0.0, 0.0, 0.0);
+		}
+		else
+		{
+			vec2 PNCrackFixOp2268UV = PickDominant(TES_OUT.map1.xyz, U, V, W, vec3( TES_IN[0].DominantEdge.xy, 0), vec3( TES_IN[0].DominantEdge.zw, 0), vec3( TES_IN[1].DominantEdge.xy, 0), vec3( TES_IN[1].DominantEdge.zw, 0), vec3( TES_IN[2].DominantEdge.xy, 0), vec3( TES_IN[2].DominantEdge.zw, 0), vec3( TES_IN[0].DominantVertex.xy, 0), vec3( TES_IN[1].DominantVertex.xy, 0), vec3( TES_IN[2].DominantVertex.xy, 0)).xy;
+			vec4 Sampler = textureLod(VectorDisplacementMapSampler, vec2(PNCrackFixOp2268UV.x, 1-PNCrackFixOp2268UV.y), 0.0);
+			vec3 PNCrackFixOp1160NORMAL = normalize( PickDominant(TES_OUT.Normal.xyz, U, V, W, TES_IN[0].DominantNormalE0, TES_IN[0].DominantNormalE1, TES_IN[1].DominantNormalE0, TES_IN[1].DominantNormalE1, TES_IN[2].DominantNormalE0, TES_IN[2].DominantNormalE1, TES_IN[0].DominantNormalCorner, TES_IN[1].DominantNormalCorner, TES_IN[2].DominantNormalCorner) );
+			vec3 GrayScale = (PNCrackFixOp1160NORMAL * (Sampler.xyz.x - DisplacementOffset));
+			vec3 DisplaceAmount = (DisplacementMultiplier * GrayScale);
+			IfElseOp1180 = DisplaceAmount;
+		}
+		position.xyz += IfElseOp1180;
+
+		gl_Position = vec4(position.xyz, 1);
+		TES_OUT.WorldPosition = gl_Position;
+
+		vec4 WorldViewSpace = (viewPrj * gl_Position);
+		gl_Position = WorldViewSpace;
+	}
+}
+
+// -------------------------------------- ShaderPixel --------------------------------------
+attribute PIXELDATA
+{
+	vec4 outColor : COLOR0;
+};
+
+GLSLShader ShaderPixel
+{
+	void main(void)
+	{
+		vec4 Sampler = texture(SurfaceMaskSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+		if(Sampler.xyz.x < SurfaceMaskCutoff) discard;
+		float ReflectionIntensityResult = (ReflectionIntensity * int(UseReflectionMap));
+		float InvertSatMask = (1.0 - clamp(ReflectionIntensityResult, 0.0, 1.0));
+		vec3 DiffuseResult1985 = DiffuseColor.xyz;
+		if (UseDiffuseMap)
+		{
+			vec4 Sampler1442 = texture(DiffuseMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			DiffuseResult1985 = (Sampler1442.xyz * DiffuseColor.xyz);
+		}
+		vec3 ReplaceDiffuseWithReflection = (DiffuseResult1985 * InvertSatMask);
+		float SpecPowerResult1995 = SpecularPower;
+		if (UseGlossinessAlphaMap)
+		{
+			vec4 Sampler1475 = texture(SpecularMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			SpecPowerResult1995 = (SpecularPower * Sampler1475.w);
+		}
+		vec3 SpecularColorResult1993 = SpecularColor.xyz;
+		if (UseSpecularMap)
+		{
+			vec4 Sampler1475 = texture(SpecularMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			SpecularColorResult1993 = (SpecularColor.xyz * Sampler1475.xyz);
+		}
+		vec3 NormOp = normalize(PS_IN.Normal.xyz);
+		vec3 NormalResult2210 = NormOp;
+		if (UseNormalMap)
+		{
+			vec3 NormOp2064 = normalize(PS_IN.Tangent.xyz);
+			vec4 Sampler2192 = texture(NormalMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			ExpandRangeOutput ExpandRange2079 = ExpandRangeFunction(Sampler2192.xyz);
+			vec3 VectorConstruct = vec3(NormalHeight, NormalHeight, 1.0);
+			vec3 NormalMapH = (VectorConstruct.xyz * ExpandRange2079.ExpandedVector);
+			TangentWorldConvertOutput TangentWorldConvert2066 = TangentWorldConvertFunction(PS_IN.Tangent.w, NormOp, NormOp2064, NormalMapH);
+			vec3 TangentSpace = normalize(TangentWorldConvert2066.Vector);
+			NormalResult2210 = TangentSpace;
+		}
+		vec3 FlippedNormals = mix(-(NormalResult2210), NormalResult2210, float(gl_FrontFacing));
+		float OpacityResult1987 = Opacity;
+		if (UseDiffuseMapAlphaForOpacity)
+		{
+			vec4 Sampler1442 = texture(DiffuseMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			OpacityResult1987 = (Sampler1442.w * Opacity);
+		}
+		float ClampOpacity = clamp(OpacityResult1987, 0.0, 1.0);
+		float AOResult1989 = 1.0;
+		if (UseAOAlphaMap)
+		{
+			vec4 Sampler1287 = texture(EmissiveAndAOMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			AOResult1989 = Sampler1287.w;
+		}
+		vec3 DefaultThickness = vec3(1.0,1.0,1.0);
+		vec3 ThicknessResult2243 = DefaultThickness.xyz;
+		if (UseThicknessMap)
+		{
+			vec4 Sampler1507 = texture(ThicknessMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			ThicknessResult2243 = Sampler1507.xyz;
+		}
+		vec3 MulThickness = (Thickness * ThicknessResult2243);
+		vec3 CameraPosition = viewI[3].xyz;
+		vec3 CamVec = (CameraPosition - PS_IN.WorldPosition.xyz);
+		vec3 CamVecNorm = normalize(CamVec);
+		vec4 LightLoopTotal917 = vec4(0,0,0,0);
+		for (int ActiveLightIndex = 0; ActiveLightIndex < 3; ++ActiveLightIndex)
+		{
+			if (ActiveLightIndex >= ClampDynamicLights) {continue;}
+			int _LightType = GetLightType(ActiveLightIndex);
+			bool IsAmbientLight = (_LightType == 5);
+			vec4 IfAmbientLight37 = vec4(0, 0, 0, 0);
+			if (IsAmbientLight)
+			{
+				vec3 _LightColor = GetLightColor(ActiveLightIndex);
+				float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+				AmbientLightOutput AmbientLight42 = AmbientLightFunction(ActiveLightIndex, ReplaceDiffuseWithReflection, _LightColor, _LightIntensity);
+				vec3 PreMulAlphaAmbient = (ClampOpacity * (AmbientLight42.LightColor * AOResult1989));
+				vec4 VectorConstruct = vec4(PreMulAlphaAmbient.x, PreMulAlphaAmbient.y, PreMulAlphaAmbient.z, 0.0);
+				IfAmbientLight37 = VectorConstruct;
+			}
+			else
+			{
+				vec3 _LightPos = GetLightPos(ActiveLightIndex);
+				vec3 _LightDir = GetLightDir(ActiveLightIndex);
+				GetLightVectorOutput GetLightVector391 = GetLightVectorFunction(ActiveLightIndex, _LightPos, PS_IN.WorldPosition.xyz, _LightType, _LightDir);
+				vec3 LightVecNorm = normalize(GetLightVector391.Result);
+				float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+				TranslucencyOutput Translucency325 = TranslucencyFunction(ActiveLightIndex, FlippedNormals, LightVecNorm, TranslucencyDistortion, CamVecNorm, TranslucencyPower, _LightIntensity, TranslucencyMinimum, MulThickness, ReplaceDiffuseWithReflection);
+				SkinDepthRampOutput SkinDepthRamp426 = SkinDepthRampFunction(ActiveLightIndex, Translucency325.Translucency.x, TranslucencyOuter.xyz, TranslucencyMedium.xyz, TranslucencyInner.xyz);
+				LambertDiffuseOutput LambertDiffuse471 = LambertDiffuseFunction(ActiveLightIndex, ReplaceDiffuseWithReflection, FlippedNormals, LightVecNorm);
+				LightContributionOutput LightContribution50 = LightContributionFunction(ActiveLightIndex, PS_IN.WorldPosition.xyz, GetLightVector391.Result);
+				vec3 AddTranslucency = (SkinDepthRamp426.Color + (LightContribution50.Light * LambertDiffuse471.Color));
+				BlinnSpecularOutput BlinnSpecular614 = BlinnSpecularFunction(ActiveLightIndex, LightVecNorm, FlippedNormals, CamVecNorm, SpecPowerResult1995, SpecularColorResult1993);
+				vec3 SpecLightIntensity = (BlinnSpecular614.SpecularColor * LightContribution50.Light);
+				vec3 Diffuse_Spec = ((ClampOpacity * AddTranslucency) + SpecLightIntensity);
+				DesaturateColorOutput DesaturateColor312 = DesaturateColorFunction(ActiveLightIndex, SpecLightIntensity);
+				vec4 Color_Alpha = vec4(Diffuse_Spec.x, Diffuse_Spec.y, Diffuse_Spec.z, DesaturateColor312.DesaturateColor);
+				IfAmbientLight37 = Color_Alpha;
+			}
+			vec4 ApplyWeight48 = IfAmbientLight37;
+			LightLoopTotal917 += ApplyWeight48;
+		}
+		vec3 ReflectionColor = vec3(0.5,0.5,0.5);
+		vec3 ReflectionResult2237 = ReflectionColor.xyz;
+		if (UseReflectionMap)
+		{
+			vec3 CamVec1660 = (CameraPosition - PS_IN.WorldPosition.xyz);
+			vec3 ReflectVec = reflect(-(CamVec1660), NormalResult2210);
+			RotateVectorOutput RotateVector1605 = RotateVectorFunction(ReflectVec.x, ReflectVec.z, ReflectionRotation);
+			vec3 Yaw = vec3(RotateVector1605.FirstAxis, ReflectVec.y, RotateVector1605.SecondAxis);
+			vec4 Sampler1694 = textureLod(ReflectionMapSampler, Yaw.xyz, ReflectionBlur);
+			ReflectionResult2237 = Sampler1694.xyz;
+		}
+		vec3 ReflectXmask = (ReflectionResult2237 * ReflectionIntensityResult);
+		float MulOp = (0.5 * NormOp.y);
+		float AddOp = (MulOp + 0.5);
+		vec3 AmbientGroundSky = (DiffuseResult1985 * mix(AmbientGroundColor.xyz, AmbientSkyColor.xyz, float(AddOp)));
+		vec3 MulAO = (AOResult1989 * AmbientGroundSky);
+		vec3 EmissiveResult1991 = MulAO;
+		if (UseEmissiveMap)
+		{
+			vec4 Sampler1287 = texture(EmissiveAndAOMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			vec3 EmissiveMul = (EmissiveStrength * Sampler1287.xyz);
+			EmissiveResult1991 = (MulAO + EmissiveMul);
+		}
+		RotateVectorOutput RotateVector1845 = RotateVectorFunction(NormalResult2210.x, NormalResult2210.z, IBLRotation);
+		vec3 Yaw = vec3(RotateVector1845.FirstAxis, NormalResult2210.y, RotateVector1845.SecondAxis);
+		vec4 Sampler1893 = textureLod(IBLMapSampler, Yaw.xyz, IBLBlur);
+		vec3 IBLAndIntensity = (IBLIntensity * Sampler1893.xyz);
+		vec3 IBLDiffuse = (DiffuseResult1985 * IBLAndIntensity);
+		vec3 PreMultipliedAlpha = (ClampOpacity * (EmissiveResult1991 + IBLDiffuse));
+		vec3 AddReflection = (ReflectXmask + PreMultipliedAlpha);
+		DesaturateColorOutput DesaturateColor16 = DesaturateColorFunction(ReflectXmask);
+		float OpacityAndReflection = (ClampOpacity + DesaturateColor16.DesaturateColor);
+		vec4 TotalAmbientAndOpacity = vec4(AddReflection.x, AddReflection.y, AddReflection.z, OpacityAndReflection);
+		vec4 LightLoopAndAfterLoop = (LightLoopTotal917 + TotalAmbientAndOpacity);
+		float SatOp = clamp(LightLoopAndAfterLoop.w, 0.0, 1.0);
+		vec4 VectorConstruct = vec4(LightLoopAndAfterLoop.xyz.x, LightLoopAndAfterLoop.xyz.y, LightLoopAndAfterLoop.xyz.z, SatOp);
+		if (MayaHwFogEnabled) {
+			float fogFactor = (1.0 - PS_IN.FogFactor.x) * MayaHwFogColor.a;
+			VectorConstruct.rgb	= lerp(VectorConstruct.rgb, MayaHwFogColor.rgb, fogFactor);
+		}
+
+		outColor = VectorConstruct;
+	}
+}
+
+// -------------------------------------- ShaderPixelP1 --------------------------------------
+attribute PIXELDATAP1
+{
+	vec4 outColor : COLOR0;
+};
+
+GLSLShader ShaderPixelP1
+{
+	void main(void)
+	{
+		vec4 Sampler = texture(SurfaceMaskSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+		if(Sampler.xyz.x < SurfaceMaskCutoff) discard;
+		GetShadowPassPixelDepthGLOutput GetShadowPassPixelDepthGL983 = GetShadowPassPixelDepthGLFunction(PS_IN.WorldPosition, shadowViewPrj);
+		vec4 VectorConstruct = vec4(GetShadowPassPixelDepthGL983.Depth, GetShadowPassPixelDepthGL983.Depth, GetShadowPassPixelDepthGL983.Depth, GetShadowPassPixelDepthGL983.Depth);
+		outColor = VectorConstruct;
+	}
+}
+
+// -------------------------------------- ShaderPixelP2 --------------------------------------
+attribute PIXELDATAP2
+{
+	vec4 outColor0 : COLOR0;
+	vec4 outColor1 : COLOR1;
+};
+
+GLSLShader ShaderPixelP2
+{
+	void main(void)
+	{
+		vec4 outColor;
+		vec4 Sampler = texture(SurfaceMaskSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+		if(Sampler.xyz.x < SurfaceMaskCutoff) discard;
+		float ReflectionIntensityResult = (ReflectionIntensity * int(UseReflectionMap));
+		float InvertSatMask = (1.0 - clamp(ReflectionIntensityResult, 0.0, 1.0));
+		vec3 DiffuseResult1985 = DiffuseColor.xyz;
+		if (UseDiffuseMap)
+		{
+			vec4 Sampler1442 = texture(DiffuseMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			DiffuseResult1985 = (Sampler1442.xyz * DiffuseColor.xyz);
+		}
+		vec3 ReplaceDiffuseWithReflection = (DiffuseResult1985 * InvertSatMask);
+		float SpecPowerResult1995 = SpecularPower;
+		if (UseGlossinessAlphaMap)
+		{
+			vec4 Sampler1475 = texture(SpecularMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			SpecPowerResult1995 = (SpecularPower * Sampler1475.w);
+		}
+		vec3 SpecularColorResult1993 = SpecularColor.xyz;
+		if (UseSpecularMap)
+		{
+			vec4 Sampler1475 = texture(SpecularMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			SpecularColorResult1993 = (SpecularColor.xyz * Sampler1475.xyz);
+		}
+		vec3 NormOp = normalize(PS_IN.Normal.xyz);
+		vec3 NormalResult2210 = NormOp;
+		if (UseNormalMap)
+		{
+			vec3 NormOp2064 = normalize(PS_IN.Tangent.xyz);
+			vec4 Sampler2192 = texture(NormalMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			ExpandRangeOutput ExpandRange2079 = ExpandRangeFunction(Sampler2192.xyz);
+			vec3 VectorConstruct = vec3(NormalHeight, NormalHeight, 1.0);
+			vec3 NormalMapH = (VectorConstruct.xyz * ExpandRange2079.ExpandedVector);
+			TangentWorldConvertOutput TangentWorldConvert2066 = TangentWorldConvertFunction(PS_IN.Tangent.w, NormOp, NormOp2064, NormalMapH);
+			vec3 TangentSpace = normalize(TangentWorldConvert2066.Vector);
+			NormalResult2210 = TangentSpace;
+		}
+		vec3 FlippedNormals = mix(-(NormalResult2210), NormalResult2210, float(gl_FrontFacing));
+		float OpacityResult1987 = Opacity;
+		if (UseDiffuseMapAlphaForOpacity)
+		{
+			vec4 Sampler1442 = texture(DiffuseMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			OpacityResult1987 = (Sampler1442.w * Opacity);
+		}
+		float ClampOpacity = clamp(OpacityResult1987, 0.0, 1.0);
+		float AOResult1989 = 1.0;
+		if (UseAOAlphaMap)
+		{
+			vec4 Sampler1287 = texture(EmissiveAndAOMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			AOResult1989 = Sampler1287.w;
+		}
+		vec3 DefaultThickness = vec3(1.0,1.0,1.0);
+		vec3 ThicknessResult2243 = DefaultThickness.xyz;
+		if (UseThicknessMap)
+		{
+			vec4 Sampler1507 = texture(ThicknessMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			ThicknessResult2243 = Sampler1507.xyz;
+		}
+		vec3 MulThickness = (Thickness * ThicknessResult2243);
+		vec3 CameraPosition = viewI[3].xyz;
+		vec3 CamVec = (CameraPosition - PS_IN.WorldPosition.xyz);
+		vec3 CamVecNorm = normalize(CamVec);
+		vec4 LightLoopTotal917 = vec4(0,0,0,0);
+		for (int ActiveLightIndex = 0; ActiveLightIndex < 3; ++ActiveLightIndex)
+		{
+			if (ActiveLightIndex >= ClampDynamicLights) {continue;}
+			int _LightType = GetLightType(ActiveLightIndex);
+			bool IsAmbientLight = (_LightType == 5);
+			vec4 IfAmbientLight37 = vec4(0, 0, 0, 0);
+			if (IsAmbientLight)
+			{
+				vec3 _LightColor = GetLightColor(ActiveLightIndex);
+				float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+				AmbientLightOutput AmbientLight42 = AmbientLightFunction(ActiveLightIndex, ReplaceDiffuseWithReflection, _LightColor, _LightIntensity);
+				vec3 PreMulAlphaAmbient = (ClampOpacity * (AmbientLight42.LightColor * AOResult1989));
+				vec4 VectorConstruct = vec4(PreMulAlphaAmbient.x, PreMulAlphaAmbient.y, PreMulAlphaAmbient.z, 0.0);
+				IfAmbientLight37 = VectorConstruct;
+			}
+			else
+			{
+				vec3 _LightPos = GetLightPos(ActiveLightIndex);
+				vec3 _LightDir = GetLightDir(ActiveLightIndex);
+				GetLightVectorOutput GetLightVector391 = GetLightVectorFunction(ActiveLightIndex, _LightPos, PS_IN.WorldPosition.xyz, _LightType, _LightDir);
+				vec3 LightVecNorm = normalize(GetLightVector391.Result);
+				float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+				TranslucencyOutput Translucency325 = TranslucencyFunction(ActiveLightIndex, FlippedNormals, LightVecNorm, TranslucencyDistortion, CamVecNorm, TranslucencyPower, _LightIntensity, TranslucencyMinimum, MulThickness, ReplaceDiffuseWithReflection);
+				SkinDepthRampOutput SkinDepthRamp426 = SkinDepthRampFunction(ActiveLightIndex, Translucency325.Translucency.x, TranslucencyOuter.xyz, TranslucencyMedium.xyz, TranslucencyInner.xyz);
+				LambertDiffuseOutput LambertDiffuse471 = LambertDiffuseFunction(ActiveLightIndex, ReplaceDiffuseWithReflection, FlippedNormals, LightVecNorm);
+				LightContributionOutput LightContribution50 = LightContributionFunction(ActiveLightIndex, PS_IN.WorldPosition.xyz, GetLightVector391.Result);
+				vec3 AddTranslucency = (SkinDepthRamp426.Color + (LightContribution50.Light * LambertDiffuse471.Color));
+				BlinnSpecularOutput BlinnSpecular614 = BlinnSpecularFunction(ActiveLightIndex, LightVecNorm, FlippedNormals, CamVecNorm, SpecPowerResult1995, SpecularColorResult1993);
+				vec3 SpecLightIntensity = (BlinnSpecular614.SpecularColor * LightContribution50.Light);
+				vec3 Diffuse_Spec = ((ClampOpacity * AddTranslucency) + SpecLightIntensity);
+				DesaturateColorOutput DesaturateColor312 = DesaturateColorFunction(ActiveLightIndex, SpecLightIntensity);
+				vec4 Color_Alpha = vec4(Diffuse_Spec.x, Diffuse_Spec.y, Diffuse_Spec.z, DesaturateColor312.DesaturateColor);
+				IfAmbientLight37 = Color_Alpha;
+			}
+			vec4 ApplyWeight48 = IfAmbientLight37;
+			LightLoopTotal917 += ApplyWeight48;
+		}
+		vec3 ReflectionColor = vec3(0.5,0.5,0.5);
+		vec3 ReflectionResult2237 = ReflectionColor.xyz;
+		if (UseReflectionMap)
+		{
+			vec3 CamVec1660 = (CameraPosition - PS_IN.WorldPosition.xyz);
+			vec3 ReflectVec = reflect(-(CamVec1660), NormalResult2210);
+			RotateVectorOutput RotateVector1605 = RotateVectorFunction(ReflectVec.x, ReflectVec.z, ReflectionRotation);
+			vec3 Yaw = vec3(RotateVector1605.FirstAxis, ReflectVec.y, RotateVector1605.SecondAxis);
+			vec4 Sampler1694 = textureLod(ReflectionMapSampler, Yaw.xyz, ReflectionBlur);
+			ReflectionResult2237 = Sampler1694.xyz;
+		}
+		vec3 ReflectXmask = (ReflectionResult2237 * ReflectionIntensityResult);
+		float MulOp = (0.5 * NormOp.y);
+		float AddOp = (MulOp + 0.5);
+		vec3 AmbientGroundSky = (DiffuseResult1985 * mix(AmbientGroundColor.xyz, AmbientSkyColor.xyz, float(AddOp)));
+		vec3 MulAO = (AOResult1989 * AmbientGroundSky);
+		vec3 EmissiveResult1991 = MulAO;
+		if (UseEmissiveMap)
+		{
+			vec4 Sampler1287 = texture(EmissiveAndAOMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			vec3 EmissiveMul = (EmissiveStrength * Sampler1287.xyz);
+			EmissiveResult1991 = (MulAO + EmissiveMul);
+		}
+		RotateVectorOutput RotateVector1845 = RotateVectorFunction(NormalResult2210.x, NormalResult2210.z, IBLRotation);
+		vec3 Yaw = vec3(RotateVector1845.FirstAxis, NormalResult2210.y, RotateVector1845.SecondAxis);
+		vec4 Sampler1893 = textureLod(IBLMapSampler, Yaw.xyz, IBLBlur);
+		vec3 IBLAndIntensity = (IBLIntensity * Sampler1893.xyz);
+		vec3 IBLDiffuse = (DiffuseResult1985 * IBLAndIntensity);
+		vec3 PreMultipliedAlpha = (ClampOpacity * (EmissiveResult1991 + IBLDiffuse));
+		vec3 AddReflection = (ReflectXmask + PreMultipliedAlpha);
+		DesaturateColorOutput DesaturateColor16 = DesaturateColorFunction(ReflectXmask);
+		float OpacityAndReflection = (ClampOpacity + DesaturateColor16.DesaturateColor);
+		vec4 TotalAmbientAndOpacity = vec4(AddReflection.x, AddReflection.y, AddReflection.z, OpacityAndReflection);
+		vec4 LightLoopAndAfterLoop = (LightLoopTotal917 + TotalAmbientAndOpacity);
+		float SatOp = clamp(LightLoopAndAfterLoop.w, 0.0, 1.0);
+		vec4 VectorConstruct = vec4(LightLoopAndAfterLoop.xyz.x, LightLoopAndAfterLoop.xyz.y, LightLoopAndAfterLoop.xyz.z, SatOp);
+		outColor = VectorConstruct;
+		DepthPeelOutput DepthPeel = DepthPeelFunc(PS_IN.WorldPosition.xyz, view, viewPrj);
+		outColor0 = outColor;
+		outColor1 = DepthPeel.LinearDepth;
+	}
+}
+
+// -------------------------------------- ShaderPixelP3 --------------------------------------
+attribute PIXELDATAP3
+{
+	vec4 outColor0 : COLOR0;
+	vec4 outColor1 : COLOR1;
+};
+
+GLSLShader ShaderPixelP3
+{
+	void main(void)
+	{
+		vec4 outColor;
+		vec4 Sampler = texture(SurfaceMaskSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+		if(Sampler.xyz.x < SurfaceMaskCutoff) discard;
+		float ReflectionIntensityResult = (ReflectionIntensity * int(UseReflectionMap));
+		float InvertSatMask = (1.0 - clamp(ReflectionIntensityResult, 0.0, 1.0));
+		vec3 DiffuseResult1985 = DiffuseColor.xyz;
+		if (UseDiffuseMap)
+		{
+			vec4 Sampler1442 = texture(DiffuseMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			DiffuseResult1985 = (Sampler1442.xyz * DiffuseColor.xyz);
+		}
+		vec3 ReplaceDiffuseWithReflection = (DiffuseResult1985 * InvertSatMask);
+		float SpecPowerResult1995 = SpecularPower;
+		if (UseGlossinessAlphaMap)
+		{
+			vec4 Sampler1475 = texture(SpecularMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			SpecPowerResult1995 = (SpecularPower * Sampler1475.w);
+		}
+		vec3 SpecularColorResult1993 = SpecularColor.xyz;
+		if (UseSpecularMap)
+		{
+			vec4 Sampler1475 = texture(SpecularMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			SpecularColorResult1993 = (SpecularColor.xyz * Sampler1475.xyz);
+		}
+		vec3 NormOp = normalize(PS_IN.Normal.xyz);
+		vec3 NormalResult2210 = NormOp;
+		if (UseNormalMap)
+		{
+			vec3 NormOp2064 = normalize(PS_IN.Tangent.xyz);
+			vec4 Sampler2192 = texture(NormalMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			ExpandRangeOutput ExpandRange2079 = ExpandRangeFunction(Sampler2192.xyz);
+			vec3 VectorConstruct = vec3(NormalHeight, NormalHeight, 1.0);
+			vec3 NormalMapH = (VectorConstruct.xyz * ExpandRange2079.ExpandedVector);
+			TangentWorldConvertOutput TangentWorldConvert2066 = TangentWorldConvertFunction(PS_IN.Tangent.w, NormOp, NormOp2064, NormalMapH);
+			vec3 TangentSpace = normalize(TangentWorldConvert2066.Vector);
+			NormalResult2210 = TangentSpace;
+		}
+		vec3 FlippedNormals = mix(-(NormalResult2210), NormalResult2210, float(gl_FrontFacing));
+		float OpacityResult1987 = Opacity;
+		if (UseDiffuseMapAlphaForOpacity)
+		{
+			vec4 Sampler1442 = texture(DiffuseMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			OpacityResult1987 = (Sampler1442.w * Opacity);
+		}
+		float ClampOpacity = clamp(OpacityResult1987, 0.0, 1.0);
+		float AOResult1989 = 1.0;
+		if (UseAOAlphaMap)
+		{
+			vec4 Sampler1287 = texture(EmissiveAndAOMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			AOResult1989 = Sampler1287.w;
+		}
+		vec3 DefaultThickness = vec3(1.0,1.0,1.0);
+		vec3 ThicknessResult2243 = DefaultThickness.xyz;
+		if (UseThicknessMap)
+		{
+			vec4 Sampler1507 = texture(ThicknessMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			ThicknessResult2243 = Sampler1507.xyz;
+		}
+		vec3 MulThickness = (Thickness * ThicknessResult2243);
+		vec3 CameraPosition = viewI[3].xyz;
+		vec3 CamVec = (CameraPosition - PS_IN.WorldPosition.xyz);
+		vec3 CamVecNorm = normalize(CamVec);
+		vec4 LightLoopTotal917 = vec4(0,0,0,0);
+		for (int ActiveLightIndex = 0; ActiveLightIndex < 3; ++ActiveLightIndex)
+		{
+			if (ActiveLightIndex >= ClampDynamicLights) {continue;}
+			int _LightType = GetLightType(ActiveLightIndex);
+			bool IsAmbientLight = (_LightType == 5);
+			vec4 IfAmbientLight37 = vec4(0, 0, 0, 0);
+			if (IsAmbientLight)
+			{
+				vec3 _LightColor = GetLightColor(ActiveLightIndex);
+				float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+				AmbientLightOutput AmbientLight42 = AmbientLightFunction(ActiveLightIndex, ReplaceDiffuseWithReflection, _LightColor, _LightIntensity);
+				vec3 PreMulAlphaAmbient = (ClampOpacity * (AmbientLight42.LightColor * AOResult1989));
+				vec4 VectorConstruct = vec4(PreMulAlphaAmbient.x, PreMulAlphaAmbient.y, PreMulAlphaAmbient.z, 0.0);
+				IfAmbientLight37 = VectorConstruct;
+			}
+			else
+			{
+				vec3 _LightPos = GetLightPos(ActiveLightIndex);
+				vec3 _LightDir = GetLightDir(ActiveLightIndex);
+				GetLightVectorOutput GetLightVector391 = GetLightVectorFunction(ActiveLightIndex, _LightPos, PS_IN.WorldPosition.xyz, _LightType, _LightDir);
+				vec3 LightVecNorm = normalize(GetLightVector391.Result);
+				float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+				TranslucencyOutput Translucency325 = TranslucencyFunction(ActiveLightIndex, FlippedNormals, LightVecNorm, TranslucencyDistortion, CamVecNorm, TranslucencyPower, _LightIntensity, TranslucencyMinimum, MulThickness, ReplaceDiffuseWithReflection);
+				SkinDepthRampOutput SkinDepthRamp426 = SkinDepthRampFunction(ActiveLightIndex, Translucency325.Translucency.x, TranslucencyOuter.xyz, TranslucencyMedium.xyz, TranslucencyInner.xyz);
+				LambertDiffuseOutput LambertDiffuse471 = LambertDiffuseFunction(ActiveLightIndex, ReplaceDiffuseWithReflection, FlippedNormals, LightVecNorm);
+				LightContributionOutput LightContribution50 = LightContributionFunction(ActiveLightIndex, PS_IN.WorldPosition.xyz, GetLightVector391.Result);
+				vec3 AddTranslucency = (SkinDepthRamp426.Color + (LightContribution50.Light * LambertDiffuse471.Color));
+				BlinnSpecularOutput BlinnSpecular614 = BlinnSpecularFunction(ActiveLightIndex, LightVecNorm, FlippedNormals, CamVecNorm, SpecPowerResult1995, SpecularColorResult1993);
+				vec3 SpecLightIntensity = (BlinnSpecular614.SpecularColor * LightContribution50.Light);
+				vec3 Diffuse_Spec = ((ClampOpacity * AddTranslucency) + SpecLightIntensity);
+				DesaturateColorOutput DesaturateColor312 = DesaturateColorFunction(ActiveLightIndex, SpecLightIntensity);
+				vec4 Color_Alpha = vec4(Diffuse_Spec.x, Diffuse_Spec.y, Diffuse_Spec.z, DesaturateColor312.DesaturateColor);
+				IfAmbientLight37 = Color_Alpha;
+			}
+			vec4 ApplyWeight48 = IfAmbientLight37;
+			LightLoopTotal917 += ApplyWeight48;
+		}
+		vec3 ReflectionColor = vec3(0.5,0.5,0.5);
+		vec3 ReflectionResult2237 = ReflectionColor.xyz;
+		if (UseReflectionMap)
+		{
+			vec3 CamVec1660 = (CameraPosition - PS_IN.WorldPosition.xyz);
+			vec3 ReflectVec = reflect(-(CamVec1660), NormalResult2210);
+			RotateVectorOutput RotateVector1605 = RotateVectorFunction(ReflectVec.x, ReflectVec.z, ReflectionRotation);
+			vec3 Yaw = vec3(RotateVector1605.FirstAxis, ReflectVec.y, RotateVector1605.SecondAxis);
+			vec4 Sampler1694 = textureLod(ReflectionMapSampler, Yaw.xyz, ReflectionBlur);
+			ReflectionResult2237 = Sampler1694.xyz;
+		}
+		vec3 ReflectXmask = (ReflectionResult2237 * ReflectionIntensityResult);
+		float MulOp = (0.5 * NormOp.y);
+		float AddOp = (MulOp + 0.5);
+		vec3 AmbientGroundSky = (DiffuseResult1985 * mix(AmbientGroundColor.xyz, AmbientSkyColor.xyz, float(AddOp)));
+		vec3 MulAO = (AOResult1989 * AmbientGroundSky);
+		vec3 EmissiveResult1991 = MulAO;
+		if (UseEmissiveMap)
+		{
+			vec4 Sampler1287 = texture(EmissiveAndAOMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			vec3 EmissiveMul = (EmissiveStrength * Sampler1287.xyz);
+			EmissiveResult1991 = (MulAO + EmissiveMul);
+		}
+		RotateVectorOutput RotateVector1845 = RotateVectorFunction(NormalResult2210.x, NormalResult2210.z, IBLRotation);
+		vec3 Yaw = vec3(RotateVector1845.FirstAxis, NormalResult2210.y, RotateVector1845.SecondAxis);
+		vec4 Sampler1893 = textureLod(IBLMapSampler, Yaw.xyz, IBLBlur);
+		vec3 IBLAndIntensity = (IBLIntensity * Sampler1893.xyz);
+		vec3 IBLDiffuse = (DiffuseResult1985 * IBLAndIntensity);
+		vec3 PreMultipliedAlpha = (ClampOpacity * (EmissiveResult1991 + IBLDiffuse));
+		vec3 AddReflection = (ReflectXmask + PreMultipliedAlpha);
+		DesaturateColorOutput DesaturateColor16 = DesaturateColorFunction(ReflectXmask);
+		float OpacityAndReflection = (ClampOpacity + DesaturateColor16.DesaturateColor);
+		vec4 TotalAmbientAndOpacity = vec4(AddReflection.x, AddReflection.y, AddReflection.z, OpacityAndReflection);
+		vec4 LightLoopAndAfterLoop = (LightLoopTotal917 + TotalAmbientAndOpacity);
+		float SatOp = clamp(LightLoopAndAfterLoop.w, 0.0, 1.0);
+		vec4 VectorConstruct = vec4(LightLoopAndAfterLoop.xyz.x, LightLoopAndAfterLoop.xyz.y, LightLoopAndAfterLoop.xyz.z, SatOp);
+		outColor = VectorConstruct;
+		DepthPeelOutput DepthPeel = DepthPeelFunc(PS_IN.WorldPosition.xyz, view, viewPrj);
+		outColor0 = outColor;
+		outColor1 = ((outColor0.w > 0.001f ? vec4(1.0f, 1.0f, 1.0f, 1.0f) : vec4(0.0f, 0.0f, 0.0f, 0.0f)) * DepthPeel.Peel);
+	}
+}
+
+// -------------------------------------- ShaderPixelP4 --------------------------------------
+attribute PIXELDATAP4
+{
+	vec4 outColor0 : COLOR0;
+	vec4 outColor1 : COLOR1;
+};
+
+GLSLShader ShaderPixelP4
+{
+	void main(void)
+	{
+		vec4 outColor;
+		vec4 Sampler = texture(SurfaceMaskSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+		if(Sampler.xyz.x < SurfaceMaskCutoff) discard;
+		float ReflectionIntensityResult = (ReflectionIntensity * int(UseReflectionMap));
+		float InvertSatMask = (1.0 - clamp(ReflectionIntensityResult, 0.0, 1.0));
+		vec3 DiffuseResult1985 = DiffuseColor.xyz;
+		if (UseDiffuseMap)
+		{
+			vec4 Sampler1442 = texture(DiffuseMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			DiffuseResult1985 = (Sampler1442.xyz * DiffuseColor.xyz);
+		}
+		vec3 ReplaceDiffuseWithReflection = (DiffuseResult1985 * InvertSatMask);
+		float SpecPowerResult1995 = SpecularPower;
+		if (UseGlossinessAlphaMap)
+		{
+			vec4 Sampler1475 = texture(SpecularMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			SpecPowerResult1995 = (SpecularPower * Sampler1475.w);
+		}
+		vec3 SpecularColorResult1993 = SpecularColor.xyz;
+		if (UseSpecularMap)
+		{
+			vec4 Sampler1475 = texture(SpecularMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			SpecularColorResult1993 = (SpecularColor.xyz * Sampler1475.xyz);
+		}
+		vec3 NormOp = normalize(PS_IN.Normal.xyz);
+		vec3 NormalResult2210 = NormOp;
+		if (UseNormalMap)
+		{
+			vec3 NormOp2064 = normalize(PS_IN.Tangent.xyz);
+			vec4 Sampler2192 = texture(NormalMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			ExpandRangeOutput ExpandRange2079 = ExpandRangeFunction(Sampler2192.xyz);
+			vec3 VectorConstruct = vec3(NormalHeight, NormalHeight, 1.0);
+			vec3 NormalMapH = (VectorConstruct.xyz * ExpandRange2079.ExpandedVector);
+			TangentWorldConvertOutput TangentWorldConvert2066 = TangentWorldConvertFunction(PS_IN.Tangent.w, NormOp, NormOp2064, NormalMapH);
+			vec3 TangentSpace = normalize(TangentWorldConvert2066.Vector);
+			NormalResult2210 = TangentSpace;
+		}
+		vec3 FlippedNormals = mix(-(NormalResult2210), NormalResult2210, float(gl_FrontFacing));
+		float OpacityResult1987 = Opacity;
+		if (UseDiffuseMapAlphaForOpacity)
+		{
+			vec4 Sampler1442 = texture(DiffuseMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			OpacityResult1987 = (Sampler1442.w * Opacity);
+		}
+		float ClampOpacity = clamp(OpacityResult1987, 0.0, 1.0);
+		float AOResult1989 = 1.0;
+		if (UseAOAlphaMap)
+		{
+			vec4 Sampler1287 = texture(EmissiveAndAOMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			AOResult1989 = Sampler1287.w;
+		}
+		vec3 DefaultThickness = vec3(1.0,1.0,1.0);
+		vec3 ThicknessResult2243 = DefaultThickness.xyz;
+		if (UseThicknessMap)
+		{
+			vec4 Sampler1507 = texture(ThicknessMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			ThicknessResult2243 = Sampler1507.xyz;
+		}
+		vec3 MulThickness = (Thickness * ThicknessResult2243);
+		vec3 CameraPosition = viewI[3].xyz;
+		vec3 CamVec = (CameraPosition - PS_IN.WorldPosition.xyz);
+		vec3 CamVecNorm = normalize(CamVec);
+		vec4 LightLoopTotal917 = vec4(0,0,0,0);
+		for (int ActiveLightIndex = 0; ActiveLightIndex < 3; ++ActiveLightIndex)
+		{
+			if (ActiveLightIndex >= ClampDynamicLights) {continue;}
+			int _LightType = GetLightType(ActiveLightIndex);
+			bool IsAmbientLight = (_LightType == 5);
+			vec4 IfAmbientLight37 = vec4(0, 0, 0, 0);
+			if (IsAmbientLight)
+			{
+				vec3 _LightColor = GetLightColor(ActiveLightIndex);
+				float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+				AmbientLightOutput AmbientLight42 = AmbientLightFunction(ActiveLightIndex, ReplaceDiffuseWithReflection, _LightColor, _LightIntensity);
+				vec3 PreMulAlphaAmbient = (ClampOpacity * (AmbientLight42.LightColor * AOResult1989));
+				vec4 VectorConstruct = vec4(PreMulAlphaAmbient.x, PreMulAlphaAmbient.y, PreMulAlphaAmbient.z, 0.0);
+				IfAmbientLight37 = VectorConstruct;
+			}
+			else
+			{
+				vec3 _LightPos = GetLightPos(ActiveLightIndex);
+				vec3 _LightDir = GetLightDir(ActiveLightIndex);
+				GetLightVectorOutput GetLightVector391 = GetLightVectorFunction(ActiveLightIndex, _LightPos, PS_IN.WorldPosition.xyz, _LightType, _LightDir);
+				vec3 LightVecNorm = normalize(GetLightVector391.Result);
+				float _LightIntensity = GetLightIntensity(ActiveLightIndex);
+				TranslucencyOutput Translucency325 = TranslucencyFunction(ActiveLightIndex, FlippedNormals, LightVecNorm, TranslucencyDistortion, CamVecNorm, TranslucencyPower, _LightIntensity, TranslucencyMinimum, MulThickness, ReplaceDiffuseWithReflection);
+				SkinDepthRampOutput SkinDepthRamp426 = SkinDepthRampFunction(ActiveLightIndex, Translucency325.Translucency.x, TranslucencyOuter.xyz, TranslucencyMedium.xyz, TranslucencyInner.xyz);
+				LambertDiffuseOutput LambertDiffuse471 = LambertDiffuseFunction(ActiveLightIndex, ReplaceDiffuseWithReflection, FlippedNormals, LightVecNorm);
+				LightContributionOutput LightContribution50 = LightContributionFunction(ActiveLightIndex, PS_IN.WorldPosition.xyz, GetLightVector391.Result);
+				vec3 AddTranslucency = (SkinDepthRamp426.Color + (LightContribution50.Light * LambertDiffuse471.Color));
+				BlinnSpecularOutput BlinnSpecular614 = BlinnSpecularFunction(ActiveLightIndex, LightVecNorm, FlippedNormals, CamVecNorm, SpecPowerResult1995, SpecularColorResult1993);
+				vec3 SpecLightIntensity = (BlinnSpecular614.SpecularColor * LightContribution50.Light);
+				vec3 Diffuse_Spec = ((ClampOpacity * AddTranslucency) + SpecLightIntensity);
+				DesaturateColorOutput DesaturateColor312 = DesaturateColorFunction(ActiveLightIndex, SpecLightIntensity);
+				vec4 Color_Alpha = vec4(Diffuse_Spec.x, Diffuse_Spec.y, Diffuse_Spec.z, DesaturateColor312.DesaturateColor);
+				IfAmbientLight37 = Color_Alpha;
+			}
+			vec4 ApplyWeight48 = IfAmbientLight37;
+			LightLoopTotal917 += ApplyWeight48;
+		}
+		vec3 ReflectionColor = vec3(0.5,0.5,0.5);
+		vec3 ReflectionResult2237 = ReflectionColor.xyz;
+		if (UseReflectionMap)
+		{
+			vec3 CamVec1660 = (CameraPosition - PS_IN.WorldPosition.xyz);
+			vec3 ReflectVec = reflect(-(CamVec1660), NormalResult2210);
+			RotateVectorOutput RotateVector1605 = RotateVectorFunction(ReflectVec.x, ReflectVec.z, ReflectionRotation);
+			vec3 Yaw = vec3(RotateVector1605.FirstAxis, ReflectVec.y, RotateVector1605.SecondAxis);
+			vec4 Sampler1694 = textureLod(ReflectionMapSampler, Yaw.xyz, ReflectionBlur);
+			ReflectionResult2237 = Sampler1694.xyz;
+		}
+		vec3 ReflectXmask = (ReflectionResult2237 * ReflectionIntensityResult);
+		float MulOp = (0.5 * NormOp.y);
+		float AddOp = (MulOp + 0.5);
+		vec3 AmbientGroundSky = (DiffuseResult1985 * mix(AmbientGroundColor.xyz, AmbientSkyColor.xyz, float(AddOp)));
+		vec3 MulAO = (AOResult1989 * AmbientGroundSky);
+		vec3 EmissiveResult1991 = MulAO;
+		if (UseEmissiveMap)
+		{
+			vec4 Sampler1287 = texture(EmissiveAndAOMapSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+			vec3 EmissiveMul = (EmissiveStrength * Sampler1287.xyz);
+			EmissiveResult1991 = (MulAO + EmissiveMul);
+		}
+		RotateVectorOutput RotateVector1845 = RotateVectorFunction(NormalResult2210.x, NormalResult2210.z, IBLRotation);
+		vec3 Yaw = vec3(RotateVector1845.FirstAxis, NormalResult2210.y, RotateVector1845.SecondAxis);
+		vec4 Sampler1893 = textureLod(IBLMapSampler, Yaw.xyz, IBLBlur);
+		vec3 IBLAndIntensity = (IBLIntensity * Sampler1893.xyz);
+		vec3 IBLDiffuse = (DiffuseResult1985 * IBLAndIntensity);
+		vec3 PreMultipliedAlpha = (ClampOpacity * (EmissiveResult1991 + IBLDiffuse));
+		vec3 AddReflection = (ReflectXmask + PreMultipliedAlpha);
+		DesaturateColorOutput DesaturateColor16 = DesaturateColorFunction(ReflectXmask);
+		float OpacityAndReflection = (ClampOpacity + DesaturateColor16.DesaturateColor);
+		vec4 TotalAmbientAndOpacity = vec4(AddReflection.x, AddReflection.y, AddReflection.z, OpacityAndReflection);
+		vec4 LightLoopAndAfterLoop = (LightLoopTotal917 + TotalAmbientAndOpacity);
+		float SatOp = clamp(LightLoopAndAfterLoop.w, 0.0, 1.0);
+		vec4 VectorConstruct = vec4(LightLoopAndAfterLoop.xyz.x, LightLoopAndAfterLoop.xyz.y, LightLoopAndAfterLoop.xyz.z, SatOp);
+		outColor = VectorConstruct;
+		outColor0 = outColor;
+		outColor1 = (outColor0.w > 0.001f ? vec4(1.0f, 1.0f, 1.0f, 1.0f) : vec4(0.0f, 0.0f, 0.0f, 0.0f));
+	}
+}
+
+// -------------------------------------- ShaderPixelP5 --------------------------------------
+attribute PIXELDATAP5
+{
+	vec4 outColor : COLOR0;
+};
+
+GLSLShader ShaderPixelP5
+{
+	void main(void)
+	{
+		vec4 Sampler = texture(SurfaceMaskSampler, vec2(PS_IN.map1.xy.x, 1-PS_IN.map1.xy.y));
+		if(Sampler.xyz.x < SurfaceMaskCutoff) discard;
+		PixelToLightDistanceGLOutput PixelToLightDistanceGL983 = PixelToLightDistanceGLFunction(PS_IN.WorldPosition);
+		vec4 VectorConstruct = vec4(PixelToLightDistanceGL983.Distance, 0, 0, PixelToLightDistanceGL983.Distance);
+		outColor = VectorConstruct;
+	}
+}
+
+// -------------------------------------- technique T0 ---------------------------------------
+technique T0
+<
+	string index_buffer_type = "PNAEN18";
+	string transparency = "transparent";
+	string supportsAdvancedTransparency = "true";
+	string variableNameAsAttributeName = "false";
+>
+{
+	pass P0
+	<
+		string drawContext = "colorPass";
+	>
+	{
+		VertexShader (in APPDATA, out SHADERDATA VS_OUT) = { Common_Funcs, VertexShader_Funcs, ShaderVertex};
+		TessControlShader (in SHADERDATA TCS_IN, out TCSDATA TCS_OUT) = { Common_Funcs, TessControlShader_Funcs, ShaderTessControl};
+		TessEvaluationShader (in TCSDATA TES_IN, out SHADERDATA TES_OUT) = { Common_Funcs, TessEvaluationShader_Funcs, ShaderTessEval};
+		PixelShader (in SHADERDATA PS_IN, out PIXELDATA) = { Common_Funcs, PixelShader_Funcs, ShaderPixel};
+	}
+
+	pass P1
+	<
+		string drawContext = "shadowPass";
+	>
+	{
+		VertexShader (in APPDATA, out SHADERDATA VS_OUT) = { Common_Funcs, VertexShader_Funcs, ShaderVertex};
+		TessControlShader (in SHADERDATA TCS_IN, out TCSDATA TCS_OUT) = { Common_Funcs, TessControlShader_Funcs, ShaderTessControl};
+		TessEvaluationShader (in TCSDATA TES_IN, out SHADERDATA TES_OUT) = { Common_Funcs, TessEvaluationShader_Funcs, ShaderTessEval};
+		PixelShader (in SHADERDATA PS_IN, out PIXELDATAP1) = { Common_Funcs, PixelShader_Funcs, ShaderPixelP1};
+	}
+
+	pass P2
+	<
+		string drawContext = "transparentPeel";
+	>
+	{
+		VertexShader (in APPDATA, out SHADERDATA VS_OUT) = { Common_Funcs, VertexShader_Funcs, ShaderVertex};
+		TessControlShader (in SHADERDATA TCS_IN, out TCSDATA TCS_OUT) = { Common_Funcs, TessControlShader_Funcs, ShaderTessControl};
+		TessEvaluationShader (in TCSDATA TES_IN, out SHADERDATA TES_OUT) = { Common_Funcs, TessEvaluationShader_Funcs, ShaderTessEval};
+		PixelShader (in SHADERDATA PS_IN, out PIXELDATAP2) = { Common_Funcs, PixelShader_Funcs, ShaderPixelP2};
+	}
+
+	pass P3
+	<
+		string drawContext = "transparentPeelAndAvg";
+	>
+	{
+		VertexShader (in APPDATA, out SHADERDATA VS_OUT) = { Common_Funcs, VertexShader_Funcs, ShaderVertex};
+		TessControlShader (in SHADERDATA TCS_IN, out TCSDATA TCS_OUT) = { Common_Funcs, TessControlShader_Funcs, ShaderTessControl};
+		TessEvaluationShader (in TCSDATA TES_IN, out SHADERDATA TES_OUT) = { Common_Funcs, TessEvaluationShader_Funcs, ShaderTessEval};
+		PixelShader (in SHADERDATA PS_IN, out PIXELDATAP3) = { Common_Funcs, PixelShader_Funcs, ShaderPixelP3};
+	}
+
+	pass P4
+	<
+		string drawContext = "transparentWeightedAvg";
+	>
+	{
+		VertexShader (in APPDATA, out SHADERDATA VS_OUT) = { Common_Funcs, VertexShader_Funcs, ShaderVertex};
+		TessControlShader (in SHADERDATA TCS_IN, out TCSDATA TCS_OUT) = { Common_Funcs, TessControlShader_Funcs, ShaderTessControl};
+		TessEvaluationShader (in TCSDATA TES_IN, out SHADERDATA TES_OUT) = { Common_Funcs, TessEvaluationShader_Funcs, ShaderTessEval};
+		PixelShader (in SHADERDATA PS_IN, out PIXELDATAP4) = { Common_Funcs, PixelShader_Funcs, ShaderPixelP4};
+	}
+
+	pass P5
+	<
+		string drawContext = "pointLightShadowPass";
+	>
+	{
+		VertexShader (in APPDATA, out SHADERDATA VS_OUT) = { Common_Funcs, VertexShader_Funcs, ShaderVertex};
+		TessControlShader (in SHADERDATA TCS_IN, out TCSDATA TCS_OUT) = { Common_Funcs, TessControlShader_Funcs, ShaderTessControl};
+		TessEvaluationShader (in TCSDATA TES_IN, out SHADERDATA TES_OUT) = { Common_Funcs, TessEvaluationShader_Funcs, ShaderTessEval};
+		PixelShader (in SHADERDATA PS_IN, out PIXELDATAP5) = { Common_Funcs, PixelShader_Funcs, ShaderPixelP5};
+	}
+}
+

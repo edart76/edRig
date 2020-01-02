@@ -40,10 +40,13 @@ attribute fragmentOutput {
 
 #else // not ogsfx, only beautiful glsl
 
-#version 330
+//#version 330
 // inputs
 in vec3 WorldNormal;
 in vec3 WorldEyeVec;
+in vec4 DCol;
+in vec2 UVout;
+in vec4 corneaInfo;
 
 //outputs
 out vec4 colourOut;
@@ -59,9 +62,10 @@ out vec4 colourOut;
 void main()
 {
 
-    // unpack cornea parametres
-    float cornealHeight = corneaInfo.x;
-    float irisWidth = corneaInfo.y;
+//    // unpack cornea parametres
+//    float cornealHeight = corneaInfo.x;
+//    float irisWidth = corneaInfo.y;
+    // useless, all shaders access uniforms, remove when complete
 
     vec2 UV = UVout;
 
@@ -70,10 +74,11 @@ void main()
     vec2 polar = cartesianToPolar( UV, centrePoint );
     float radius = polar.x;
     float angle = polar.y;
+    /* linear UV interpolation gives some distortion, but not enough to matter on dense mesh
+    */
 
 
     // reconstruct iris info
-    //float uvDist = length( vec2( 0.5 - UV.x, 0.5 - UV.y) );
     float uvDist = radius;
     float irisParam = max(irisWidth - uvDist, 0);
     // how deep is point on limbal ring?
@@ -147,14 +152,8 @@ void main()
     // mix contributions
     mainColour = mix(mainColour, debugOut, debugColours);
 
-    // mainColour += vec4( WorldEyeVec, 1);
-
-
-    // final output
-
-    // mainColour = mainColour * (1.0 - float(debugColours) );
-    // colourOut = mainColour + debugOut;
     colourOut = mainColour;
+
 
 }
 #endif

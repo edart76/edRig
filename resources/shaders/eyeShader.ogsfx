@@ -4,8 +4,8 @@
 
 // also literally never done this before - WCGW
 
-//#define VERTEXPATH "eyeShaderVertex.glsl"
-//#define FRAGMENTPATH "eyeShaderFragment.glsl"
+#define VERTEXPATH "eyeShaderVertex.glsl"
+#define FRAGMENTPATH "eyeShaderFragment.glsl"
 // tragically cannot get this to work
 // brutality it is, then
 
