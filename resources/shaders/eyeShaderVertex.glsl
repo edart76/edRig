@@ -114,10 +114,9 @@ void main()
     // 1 is centre of pupil, 0 is edge of iris
 
     // limbal param
-    float limbalParam = clamp( fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0),
+    float limbalParam = clamp( fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0) / 1.3,
         0.0, 1.0 );
-    //float limbalParam = fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0);
-    // 1 is inner edge, 0 is outer, 0.5 is midpoint
+    // 1 is inner edge AND EVERYTHING WITHIN IT, 0 is outer AND BEYOND, 0.5 is midpoint
 
 
     // cap off eyeParam to form irisParam

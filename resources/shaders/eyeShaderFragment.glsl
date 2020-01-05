@@ -77,18 +77,26 @@ void main()
     /* linear UV interpolation gives some distortion, but not enough to matter on dense mesh
     */
 
-
     // reconstruct iris info
     float uvDist = radius;
-    float irisParam = max(irisWidth - uvDist, 0);
-    // how deep is point on limbal ring?
-    float limbalParam = 0.0;
+    float eyeParam = ( irisWidth - uvDist ) / irisWidth;
+    float irisParam = max(eyeParam, 0);
+    // reconstruct limbal info
+    float limbalParam = clamp( fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0),
+    0.0, 1.0 );
+    float limbalRad = 1.0 - smoothstep( 0, limbalWidth, abs( eyeParam ) );
+    // limbalParam is linear, limbalRad is smooth and meant for aesthetic use
 
     // pixel location switches
     float irisBool = step(0.01, irisParam);
     float pupilBaseBool = step(uvDist, pupilBaseWidth);
-    float limbalBool = 0.0;
+
     float pupilDilationBool = step(uvDist, pupilBaseWidth + pupilDilation);
+    float limbalBool = step(0.1, limbalParam);
+    limbalBool = limbalParam;
+    limbalBool = limbalRad;
+//    float limbalBool = step( irisWidth - limbalWidth, eyeParam) *
+//        step( eyeParam, irisWidth + limbalWidth);
 
 
 
@@ -140,13 +148,18 @@ void main()
     mainColour = mix(mainColour, irisColour, irisBool);
 
 
-    // pupil colour sits below iris, blended in based on iris opacity
 
+    // blend in limbal colour
+    vec4 limbalColour = vec4( 17, 40, 50, 256) / 256.0;
+    // later make limbal colour proper vector parametre
+    mainColour = mix( mainColour, limbalColour, limbalRad);
 
 
 
     // debug colours
-    vec4 debugOut = vec4(pupilDilationBool, irisBool, pupilBaseBool, 0);
+    //vec4 debugOut = vec4(pupilDilationBool, irisBool, pupilBaseBool, 0);
+    vec4 debugOut = vec4(pupilDilationBool, irisBool, limbalBool, 0);
+    //debugOut = vec4(pupilDilationBool, irisBool, 0, 0);
     debugOut = debugOut * float(debugColours);
 
     // mix contributions

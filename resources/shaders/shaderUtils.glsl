@@ -33,3 +33,11 @@ vec3 projectInto( vec3 vector, vec3 space){
 }
 
 // wholesale raid of inigo quilez' resources
+
+// cubic pulse
+float isolate( float centre, float radius, float x){
+    x = abs( x - centre );
+    if( x > radius ) return 0.0;
+    x /= radius;
+    return 1.0 - x * x * (3.0 - 2.0 * x);
+}
