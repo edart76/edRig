@@ -59,6 +59,8 @@ attribute appdata {
     vec3 Position    : POSITION;
     vec2 UV        : TEXCOORD0;
     vec3 Normal    : NORMAL;
+    vec3 Tangent   : TANGENT;
+    vec4 Binormal  : BINORMAL;
 };
 
 /* data passed from vertex shader to pixel shader */
@@ -71,6 +73,7 @@ attribute vertexOutput {
     vec4 DCol : COLOR0;
     vec2 UVout : COLOR1;
     vec4 corneaInfo : COLOR2;
+    vec3 tangentOut : COLOR3;
 
 };
 
@@ -89,6 +92,7 @@ out vec3 UvEyeVec;
 out vec4 DCol; // lighting term, not used here
 out vec2 UVout; // uv space coords
 out vec4 corneaInfo;
+out vec3 tangentOut;
 
 #endif
 #endif
@@ -152,7 +156,8 @@ void main()
     ObjPos = vec4(UV.y, UV.x, hpos.zw);
     gl_Position = hpos; // final vertex position
     UVout = UV;
-    corneaInfo = vec4(cornealHeight, irisWidth, 0.0, 0.0);
+    corneaInfo = vec4(fullDsp, irisWidth, 0.0, 0.0);
+    tangentOut = Tangent;
 }
 
 #endif

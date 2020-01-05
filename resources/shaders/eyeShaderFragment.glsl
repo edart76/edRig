@@ -47,6 +47,8 @@ in vec3 WorldEyeVec;
 in vec4 DCol;
 in vec2 UVout;
 in vec4 corneaInfo;
+in vec3 UvEyeVec;
+in vec3 tangentOut;
 
 //outputs
 out vec4 colourOut;
@@ -62,10 +64,9 @@ out vec4 colourOut;
 void main()
 {
 
-//    // unpack cornea parametres
-//    float cornealHeight = corneaInfo.x;
-//    float irisWidth = corneaInfo.y;
-    // useless, all shaders access uniforms, remove when complete
+//    // unpack vertex info
+    float cornealDsp = corneaInfo.x;
+    //float irisWidth = corneaInfo.y;
 
     vec2 UV = UVout;
 
@@ -110,6 +111,7 @@ void main()
     // mix in pupil colour
     vec4 pupilColour = vec4( 1, 0.0, 0.0, 1.0);
     mainColour = mix(scleraColour, pupilColour, pupilDilationBool);
+    mainColour = scleraColour;
     // mainColour = pupilColour;
     float pupilWidth = pupilBaseWidth + pupilDilation;
 
@@ -120,10 +122,28 @@ void main()
         -pupilWidth, 0.5), 0) ;
 
 
-    // refraction setup
+    // find initial uvs for iris colour lookup
+    vec2 irisPolar = vec2(irisRadius, polar.y);
+    //irisPolar = vec2(irisRadius, uvView);
+    vec2 irisCoord = polarToCartesian(irisPolar.x, irisPolar.y,
+        centrePoint);
+    //irisCoord += uvView;
+
+
+
+        // refraction setup
+    /* find height from lens to iris
+    for simplicity, we assume a mirrored profile to cornea */
+    float lensHeight = cornealDsp * 2;
+    // construct tangent matrix as it is all I know
+
+
     // first need view vector transformed to uv space
-    // project view vector into normal
+    // project view vector into normal plane
     vec3 normalView = projectInto( WorldEyeVec, WorldNormal );
+    //normalView = WorldNormal * dot( WorldEyeVec, WorldNormal );
+    //normalView = WorldEyeVec;
+    //vec3 normalView = dot( WorldEyeVec, WorldNormal);
     // remove "vertical" component to get eye vec in normal (uv) plane
     vec2 uvView = vec2( normalize( vec2( normalView.y, normalView.x )));
 
@@ -132,19 +152,18 @@ void main()
     // find magnitude of deflection based on normal
     float refractionMag = dot(WorldEyeVec, WorldNormal) * iorBase;
     // ior treatment is likely too simple here but whatever
-    float refractionDistance = refractionMag * baseHeight;
-    // shrug
-    uvView *= refractionDistance;
 
-    // find final uvs for iris colour lookup
-    vec2 irisPolar = vec2(irisRadius, polar.y);
-    vec2 irisCoord = polarToCartesian(irisPolar.x, irisPolar.y,
-        centrePoint);
-    irisCoord += uvView;
+    float refractionDistance = refractionMag * lensHeight;
+    // shrug
+    //irisCoord += refractionDistance;
+    //irisCoord.x *= UvEyeVec.y;
+
+
+
+
     vec4 irisColour = vec4( texture2D(IrisDiffuseSampler,
         irisCoord, 1.0));
-    // vec4 irisColour = vec4( texture2D(IrisDiffuseSampler,
-    //     UV, 1.0));
+
     mainColour = mix(mainColour, irisColour, irisBool);
 
 
@@ -155,7 +174,6 @@ void main()
     mainColour = mix( mainColour, limbalColour, limbalRad);
 
 
-
     // debug colours
     //vec4 debugOut = vec4(pupilDilationBool, irisBool, pupilBaseBool, 0);
     vec4 debugOut = vec4(pupilDilationBool, irisBool, limbalBool, 0);
@@ -164,6 +182,9 @@ void main()
 
     // mix contributions
     mainColour = mix(mainColour, debugOut, debugColours);
+    mainColour = vec4(tangentOut, 0);
+
+    //
 
     colourOut = mainColour;
 
