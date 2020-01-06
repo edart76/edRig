@@ -60,7 +60,7 @@ attribute appdata {
     vec2 UV        : TEXCOORD0;
     vec3 Normal    : NORMAL;
     vec3 Tangent   : TANGENT;
-    vec4 Binormal  : BINORMAL;
+    vec3 Binormal  : BINORMAL;
 };
 
 /* data passed from vertex shader to pixel shader */
@@ -68,12 +68,14 @@ attribute vertexOutput {
     vec3 WorldNormal    : TEXCOORD1;
     vec3 WorldEyeVec    : TEXCOORD2;
     vec4 ObjPos    : TEXCOORD3;
-    vec3 UvEyeVec : TEXCOORD4;
+    //vec3 UvEyeVec : TEXCOORD4;
 
     vec4 DCol : COLOR0;
     vec2 UVout : COLOR1;
     vec4 corneaInfo : COLOR2;
-    vec3 tangentOut : COLOR3;
+    vec3 refractOut : COLOR3;
+    vec3 binormalOut: COLOR4;
+    vec3 UvEyeVec   : COLOR5;
 
 };
 
@@ -82,6 +84,8 @@ attribute vertexOutput {
 in vec3 Position;
 in vec2 UV;
 in vec3 Normal;
+in vec3 Tangent;
+in vec3 Binormal;
 
 
 
@@ -92,7 +96,8 @@ out vec3 UvEyeVec;
 out vec4 DCol; // lighting term, not used here
 out vec2 UVout; // uv space coords
 out vec4 corneaInfo;
-out vec3 tangentOut;
+out vec3 refractOut;
+out vec3 binormalOut;
 
 #endif
 #endif
@@ -108,9 +113,14 @@ out vec3 tangentOut;
 
 void main()
 {
+    // transform normal, binormal and tangent to world
+    vec3 worldBinormal = normalize( (gWorldITXf * vec4(Binormal, 0.0)).xyz );
+    vec3 worldTangent = normalize( (gWorldITXf * vec4(Tangent, 0.0)).xyz );
+
     vec3 Nw = normalize((gWorldITXf * vec4(Normal,0.0)).xyz);
     WorldNormal = Nw;
     DCol = vec4(0.5, 0.5, 0.5, 1);
+
 
     // we assume starting from spherical mesh - create corneal bulge
     float uvDist = length( vec2( 0.5 - UV.x, 0.5 - UV.y) );
@@ -149,15 +159,58 @@ void main()
 
     vec4 hpos = gWvpXf * Po;
 
+
+    // tangent matrix to find surface-space view
+    // T B N matrix
+
+    mat3 tangentToObjectMat = mat3(
+        worldTangent.x, worldBinormal.y, WorldNormal.z,
+        worldTangent.x, worldBinormal.y, WorldNormal.z,
+        worldTangent.x, worldBinormal.y, WorldNormal.z
+    );
+
+     //local version
+    mat3 localMat = mat3(
+        Tangent.x, Binormal.x, Normal.x,
+        Tangent.y, Binormal.y, Normal.y,
+        Tangent.z, Binormal.z, Normal.z    );
+
+    tangentToObjectMat = localMat;
+
+    mat3 objectToTangentMat = inverse( tangentToObjectMat );
+    //objectToTangentMat = transpose( tangentToObjectMat );
+
     // outputs
     vec3 Pw = (gWorldXf * hpos).xyz; // world space position
     WorldEyeVec = normalize(gViewIXf[3].xyz - Pw);
+
+
+    // compute refraction
+    vec3 refractVec = refract( WorldEyeVec, WorldNormal, 1 / iorBase);
+
+    vec3 localEye = tangentToObjectMat * WorldEyeVec;
+    localEye = objectToTangentMat * WorldEyeVec;
+
+    refractVec = refract( localEye, Normal, 1 / iorBase);
+
+    vec3 tangentRefract = normalize(tangentToObjectMat * refractVec);
+    tangentRefract = refractVec;
+
+
+    // localise before refraction
+
+
+
+
+    UvEyeVec = tangentToObjectMat * WorldEyeVec;
+
 
     ObjPos = vec4(UV.y, UV.x, hpos.zw);
     gl_Position = hpos; // final vertex position
     UVout = UV;
     corneaInfo = vec4(fullDsp, irisWidth, 0.0, 0.0);
-    tangentOut = Tangent;
+    refractOut = tangentRefract;
+    binormalOut = Binormal;
 }
 
 #endif

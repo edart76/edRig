@@ -23,13 +23,14 @@ attribute fragmentInput {
     vec3 WorldNormal    : TEXCOORD1;
     vec3 WorldEyeVec    : TEXCOORD2;
     vec4 ObjPos    : TEXCOORD3;
-    vec3 UvEyeVec : TEXCOORD4;
+    //vec3 UvEyeVec : TEXCOORD4;
 
     vec4 DCol : COLOR0;
     vec2 UVout : COLOR1;
     vec4 corneaInfo : COLOR2;
-
-
+    vec3 refractOut : COLOR3;
+    vec3 binormalOut: COLOR4;
+    vec3 UvEyeVec : COLOR5;
 };
 
 attribute fragmentOutput {
@@ -48,7 +49,8 @@ in vec4 DCol;
 in vec2 UVout;
 in vec4 corneaInfo;
 in vec3 UvEyeVec;
-in vec3 tangentOut;
+in vec3 refractOut;
+in vec3 binormalOut;
 
 //outputs
 out vec4 colourOut;
@@ -109,7 +111,7 @@ void main()
     vec4 scleraColour = vec4( texture2D(ScleraSampler, UV, 1.0));
 
     // mix in pupil colour
-    vec4 pupilColour = vec4( 1, 0.0, 0.0, 1.0);
+    vec4 pupilColour = vec4( 1, 0.0, 0.0, 0.0);
     mainColour = mix(scleraColour, pupilColour, pupilDilationBool);
     mainColour = scleraColour;
     // mainColour = pupilColour;
@@ -118,12 +120,16 @@ void main()
 
     // mix in iris colour
     // remap main uv coord into iris-centric map
+//    float irisRadius = max(fit(radius, 0.0, irisWidth,
+//        -pupilWidth, 0.5), 0) ;
     float irisRadius = max(fit(radius, 0.0, irisWidth,
-        -pupilWidth, 0.5), 0) ;
+        -0, 0.5), 0) ;
 
 
     // find initial uvs for iris colour lookup
     vec2 irisPolar = vec2(irisRadius, polar.y);
+    // one thing at a time, pupil stuff is broken for now
+    //irisPolar = vec2(radius, polar.y);
     //irisPolar = vec2(irisRadius, uvView);
     vec2 irisCoord = polarToCartesian(irisPolar.x, irisPolar.y,
         centrePoint);
@@ -135,28 +141,18 @@ void main()
     /* find height from lens to iris
     for simplicity, we assume a mirrored profile to cornea */
     float lensHeight = cornealDsp * 2;
-    // construct tangent matrix as it is all I know
 
+    float refractionDistance = iorBase * lensHeight;
+    refractionDistance = lensHeight;
 
-    // first need view vector transformed to uv space
-    // project view vector into normal plane
-    vec3 normalView = projectInto( WorldEyeVec, WorldNormal );
-    //normalView = WorldNormal * dot( WorldEyeVec, WorldNormal );
-    //normalView = WorldEyeVec;
-    //vec3 normalView = dot( WorldEyeVec, WorldNormal);
-    // remove "vertical" component to get eye vec in normal (uv) plane
-    vec2 uvView = vec2( normalize( vec2( normalView.y, normalView.x )));
+    vec3 refractVec = refractOut;
+    
+    vec2 uvDir = vec2(refractVec.zx);
 
-    // simple linear conical height profile for now
-    float baseHeight = cornealHeight * irisRadius;
-    // find magnitude of deflection based on normal
-    float refractionMag = dot(WorldEyeVec, WorldNormal) * iorBase;
-    // ior treatment is likely too simple here but whatever
+    vec2 refractionVec = vec2( uvDir * refractionDistance);
 
-    float refractionDistance = refractionMag * lensHeight;
-    // shrug
-    //irisCoord += refractionDistance;
-    //irisCoord.x *= UvEyeVec.y;
+    irisCoord += refractionVec;
+
 
 
 
@@ -182,7 +178,7 @@ void main()
 
     // mix contributions
     mainColour = mix(mainColour, debugOut, debugColours);
-    mainColour = vec4(tangentOut, 0);
+//    mainColour = vec4(refractOut, 0);
 
     //
 
