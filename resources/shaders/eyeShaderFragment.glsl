@@ -105,7 +105,7 @@ void main()
 
 
     // initialise output colour
-    vec4 mainColour = vec4(0,0,0,1);
+    vec4 mainColour = vec4(0,0,0,0.5);
 
     // if pixel lies on sclera
     vec4 scleraColour = vec4( texture2D(ScleraSampler, UV, 1.0));
@@ -143,13 +143,14 @@ void main()
     float lensHeight = cornealDsp * 2;
 
     float refractionDistance = iorBase * lensHeight;
-    refractionDistance = lensHeight;
+    refractionDistance = lensHeight ;
 
     vec3 refractVec = refractOut;
-    
-    vec2 uvDir = vec2(refractVec.zx);
 
-    vec2 refractionVec = vec2( uvDir * refractionDistance);
+    
+    vec2 uvDir = normalize( vec2(refractVec.yz) ); // y component is useless
+
+    vec2 refractionVec = vec2( uvDir * refractionDistance) * iorRange;
 
     irisCoord += refractionVec;
 
@@ -158,9 +159,11 @@ void main()
 
 
     vec4 irisColour = vec4( texture2D(IrisDiffuseSampler,
-        irisCoord, 1.0));
+        irisCoord, 0.5));
 
     mainColour = mix(mainColour, irisColour, irisBool);
+
+    mainColour *= 1 - irisBool * 0.8;
 
 
 
@@ -172,15 +175,13 @@ void main()
 
     // debug colours
     //vec4 debugOut = vec4(pupilDilationBool, irisBool, pupilBaseBool, 0);
-    vec4 debugOut = vec4(pupilDilationBool, irisBool, limbalBool, 0);
+    vec4 debugOut = vec4(pupilDilationBool, irisBool, limbalBool, 1.0);
     //debugOut = vec4(pupilDilationBool, irisBool, 0, 0);
     debugOut = debugOut * float(debugColours);
 
     // mix contributions
     mainColour = mix(mainColour, debugOut, debugColours);
-//    mainColour = vec4(refractOut, 0);
 
-    //
 
     colourOut = mainColour;
 

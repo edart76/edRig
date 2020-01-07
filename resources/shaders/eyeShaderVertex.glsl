@@ -39,6 +39,8 @@ uniform mat4 gWvpXf;
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewIXf;
 
+uniform float iorRange;
+
 #endif // OGSFX
 
 #endif // HIDE_OGSFX_UNIFORMS
@@ -175,32 +177,29 @@ void main()
         Tangent.y, Binormal.y, Normal.y,
         Tangent.z, Binormal.z, Normal.z    );
 
-    tangentToObjectMat = localMat;
+    //tangentToObjectMat = localMat;
 
     mat3 objectToTangentMat = inverse( tangentToObjectMat );
-    //objectToTangentMat = transpose( tangentToObjectMat );
+    objectToTangentMat = transpose( tangentToObjectMat );
 
-    // outputs
+//    // outputs
     vec3 Pw = (gWorldXf * hpos).xyz; // world space position
     WorldEyeVec = normalize(gViewIXf[3].xyz - Pw);
 
-
-    // compute refraction
+//
+//    // compute refraction
     vec3 refractVec = refract( WorldEyeVec, WorldNormal, 1 / iorBase);
-
-    vec3 localEye = tangentToObjectMat * WorldEyeVec;
-    localEye = objectToTangentMat * WorldEyeVec;
-
-    refractVec = refract( localEye, Normal, 1 / iorBase);
-
+//
+    //vec3 localEye = tangentToObjectMat * WorldEyeVec;
+//
+//
     vec3 tangentRefract = normalize(tangentToObjectMat * refractVec);
     tangentRefract = refractVec;
 
 
+
+
     // localise before refraction
-
-
-
 
     UvEyeVec = tangentToObjectMat * WorldEyeVec;
 

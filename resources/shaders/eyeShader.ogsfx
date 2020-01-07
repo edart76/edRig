@@ -105,7 +105,17 @@ GLSLShader FS {
 
 
 // define technique
-technique Main {
+technique Main
+<
+//tell Maya to support transparency for this technique
+string Transparency = "Transparent";
+
+// Disable consolidation -- the displacement uses the World matrix which is modified when the consolidation is active
+string handlesConsolidatedGeometry = "false";
+>
+{
+
+
   pass p0 {
 
     VertexShader (in appdata, out vertexOutput) = VS;
