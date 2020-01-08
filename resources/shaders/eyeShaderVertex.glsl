@@ -118,9 +118,8 @@ void main()
     // transform normal, binormal and tangent to world
     vec3 worldBinormal = normalize( (gWorldITXf * vec4(Binormal, 0.0)).xyz );
     vec3 worldTangent = normalize( (gWorldITXf * vec4(Tangent, 0.0)).xyz );
+    vec3 WorldNormal = normalize((gWorldITXf * vec4(Normal,0.0)).xyz);
 
-    vec3 Nw = normalize((gWorldITXf * vec4(Normal,0.0)).xyz);
-    WorldNormal = Nw;
     DCol = vec4(0.5, 0.5, 0.5, 1);
 
 

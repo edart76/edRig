@@ -8,6 +8,10 @@ as well - please forgive
 
 */
 
+//#include <GL/glew.h>
+//#include <GL/glut.h>
+// nope
+
 #if OGSFX
 
 #if !HIDE_OGSFX_UNIFORMS
@@ -42,6 +46,7 @@ attribute fragmentOutput {
 #else // not ogsfx, only beautiful glsl
 
 //#version 330
+
 // inputs
 in vec3 WorldNormal;
 in vec3 WorldEyeVec;
@@ -52,6 +57,10 @@ in vec3 UvEyeVec;
 in vec3 refractOut;
 in vec3 binormalOut;
 
+// gl-supplied
+in vec4 gl_FragCoord;
+
+
 //outputs
 out vec4 colourOut;
 
@@ -61,10 +70,22 @@ out vec4 colourOut;
 // shader tools
 #include "shaderUtils.glsl"
 
+// known values
+float limbalHeight = cos( irisWidth );
+
+float irisHeight( float rad ){
+    // defines depth of iris as function of radius
+    // radius should be NORMALISED within iris
+    return (1 - rad) * irisDepth;
+    // simple linear for now
+}
+
 
 // main shader function
 void main()
 {
+
+    mat4 test = gWorldXf;
 
 //    // unpack vertex info
     float cornealDsp = corneaInfo.x;
@@ -137,26 +158,6 @@ void main()
 
 
 
-        // refraction setup
-    /* find height from lens to iris
-    for simplicity, we assume a mirrored profile to cornea */
-    float lensHeight = cornealDsp * 2;
-
-    float refractionDistance = iorBase * lensHeight;
-    refractionDistance = lensHeight ;
-
-    vec3 refractVec = refractOut;
-
-    
-    vec2 uvDir = normalize( vec2(refractVec.yz) ); // y component is useless
-
-    vec2 refractionVec = vec2( uvDir * refractionDistance) * iorRange;
-
-    irisCoord += refractionVec;
-
-
-
-
 
     vec4 irisColour = vec4( texture2D(IrisDiffuseSampler,
         irisCoord, 0.5));
@@ -164,8 +165,6 @@ void main()
     mainColour = mix(mainColour, irisColour, irisBool);
 
     mainColour *= 1 - irisBool * 0.8;
-
-
 
     // blend in limbal colour
     vec4 limbalColour = vec4( 17, 40, 50, 256) / 256.0;
@@ -185,6 +184,8 @@ void main()
 
     colourOut = mainColour;
 
+    colourOut = normalize(gl_FragCoord);
+
 
 }
 #endif
@@ -196,3 +197,5 @@ however, in future some blade runner mirror eyes would be sweet
 within this material in high light, trace back into the eyeball
 
 */
+
+

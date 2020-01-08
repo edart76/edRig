@@ -4,7 +4,7 @@
 
 // also literally never done this before - WCGW
 
-#define VERTEXPATH "eyeShaderVertex.glsl"
+#define VERTEXPATH <"eyeShaderVertex.glsl">
 #define FRAGMENTPATH "eyeShaderFragment.glsl"
 // tragically cannot get this to work
 // brutality it is, then
@@ -67,6 +67,8 @@ uniform float iorBase = 1.2;
 uniform float iorRange = 0.1;
 
 uniform bool debugColours = False;
+
+uniform vec2 windowSize;
 
 // yes, we actually need to micromanage what gets read when
 // so maya doesn't have a seizure when it defines things
