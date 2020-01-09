@@ -11,13 +11,13 @@ also need to do the magic peace dance to get this to work in maya
 #if OGSFX
 
 // transform object vertices to world-space:
-uniform mat4 gWorldXf : World < string UIWidget="None"; >;
+uniform mat4 gObjToWorld : World < string UIWidget="None"; >;
 
 // transform object normals, tangents, & binormals to world-space:
 uniform mat4 gWorldITXf : WorldInverseTranspose < string UIWidget="None"; >;
 
 // transform object vertices to view space and project them in perspective:
-uniform mat4 gWvpXf : WorldViewProjection < string UIWidget="None"; >;
+uniform mat4 gObjToView : WorldViewProjection < string UIWidget="None"; >;
 
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewIXf : ViewInverse < string UIWidget="None"; >;
@@ -26,15 +26,15 @@ uniform mat4 gViewIXf : ViewInverse < string UIWidget="None"; >;
 
 #else
 
-//#version 330
+#version 440
 // transform object vertices to world-space:
-uniform mat4 gWorldXf;
+uniform mat4 gObjToWorld;
 
 // transform object normals, tangents, & binormals to world-space:
 uniform mat4 gWorldITXf;
 
 // transform object vertices to view space and project them in perspective:
-uniform mat4 gWvpXf;
+uniform mat4 gObjToView;
 
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewIXf;
@@ -158,7 +158,7 @@ void main()
 
     vec4 Po = vec4(Position.xyz + corneaDisplacement, 1); // local space position
 
-    vec4 hpos = gWvpXf * Po;
+    vec4 hpos = gObjToView * Po;
 
 
     // tangent matrix to find surface-space view
@@ -182,8 +182,16 @@ void main()
     objectToTangentMat = transpose( tangentToObjectMat );
 
 //    // outputs
-    vec3 Pw = (gWorldXf * hpos).xyz; // world space position
+    vec3 Pw = (gObjToWorld * hpos).xyz; // world space position
     WorldEyeVec = normalize(gViewIXf[3].xyz - Pw);
+
+    vec4 testPos = vec4(Pw, 0.0);
+    testPos = vec4(Position, iorRange);
+
+    vec4 viewPos = inverse(gObjToView) * testPos; // very cool but not useful
+    viewPos = gObjToView * testPos; // very cool but not useful
+
+    WorldEyeVec = viewPos.xyz;
 
 //
 //    // compute refraction
@@ -205,6 +213,7 @@ void main()
 
     ObjPos = vec4(UV.y, UV.x, hpos.zw);
     gl_Position = hpos; // final vertex position
+    //gl_Position = vec4(-WorldEyeVec.xyz, 0.5); // final vertex position
     UVout = UV;
     corneaInfo = vec4(fullDsp, irisWidth, 0.0, 0.0);
     refractOut = tangentRefract;

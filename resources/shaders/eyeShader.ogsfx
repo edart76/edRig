@@ -18,6 +18,7 @@
 
 #include "eyeShaderVertex.glsl"
 #include "eyeShaderFragment.glsl"
+#include "screenCoordShader.glsl"
 
 // test defining colour maps outside glsl files
 uniform texture2D ScleraDiffuseMap;
@@ -70,6 +71,8 @@ uniform bool debugColours = False;
 
 uniform vec2 windowSize;
 
+
+
 // yes, we actually need to micromanage what gets read when
 // so maya doesn't have a seizure when it defines things
 // in the wrong order
@@ -81,6 +84,8 @@ uniform vec2 windowSize;
 
 #include "eyeShaderVertex.glsl"
 #include "eyeShaderFragment.glsl"
+#include "screenCoordShader.glsl"
+
 
 //**********
 //	Code handling:
@@ -95,14 +100,25 @@ uniform vec2 windowSize;
 #define HIDE_OGSFX_CODE 0
 
 
+
 // link main files
 GLSLShader VS {
 #include "eyeShaderVertex.glsl"
 }
 
-
 GLSLShader FS {
   #include "eyeShaderFragment.glsl"
+}
+
+// test
+GLSLShader ScreenUV {
+    # include "screenCoordShader.glsl"
+}
+
+GLSLShader PassVertex {
+    void main(){
+
+    }
 }
 
 
@@ -117,12 +133,14 @@ string handlesConsolidatedGeometry = "false";
 >
 {
 
-
+  // screenspace pass
   pass p0 {
+    VertexShader ( in appdata, out vertexOutput ) = VS;
+    PixelShader ( out fragmentOutput) = ScreenUV;
+  }
 
-    VertexShader (in appdata, out vertexOutput) = VS;
-
+  // eye passes
+  pass p1 { VertexShader (in appdata, out vertexOutput) = VS;
     PixelShader (in vertexOutput, out fragmentOutput) = FS;
-
   }
 }

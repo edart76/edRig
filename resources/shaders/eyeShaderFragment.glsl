@@ -15,10 +15,6 @@ as well - please forgive
 #if OGSFX
 
 #if !HIDE_OGSFX_UNIFORMS
-// uniform parametres
-
-// various colour maps
-
 
 #endif
 
@@ -45,7 +41,7 @@ attribute fragmentOutput {
 
 #else // not ogsfx, only beautiful glsl
 
-//#version 330
+#version 440
 
 // inputs
 in vec3 WorldNormal;
@@ -70,6 +66,12 @@ out vec4 colourOut;
 // shader tools
 #include "shaderUtils.glsl"
 
+// try to get viewport dimensions
+
+//vec4 viewport = glGetIntegerv( GL_VIEWPORT );
+//vec4 viewport = glGet( 1 );
+
+
 // known values
 float limbalHeight = cos( irisWidth );
 
@@ -85,7 +87,7 @@ float irisHeight( float rad ){
 void main()
 {
 
-    mat4 test = gWorldXf;
+    mat4 test = gObjToWorld;
 
 //    // unpack vertex info
     float cornealDsp = corneaInfo.x;
@@ -183,8 +185,16 @@ void main()
 
 
     colourOut = mainColour;
+    vec4 normalisedCoord = normalize( gl_FragCoord );
 
-    colourOut = normalize(gl_FragCoord);
+    vec2 screenUv = normalize( WorldEyeVec.xy );
+    colourOut = normalize( test[3] );
+
+    colourOut = vec4( screenUv, 0.0,  1.0 );
+
+    colourOut = abs(colourOut);
+
+    //colourOut = vec4( normalize(WorldEyeVec), 1.0 );
 
 
 }
