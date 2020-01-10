@@ -71,16 +71,32 @@ float sphere( vec3 point, vec3 centre, float rad){
 }
 
 // raytracing stuff
-vec3 rayDirFromPos( vec2 uv ){
+vec3 rayDirFromUv( vec2 uv ){
     // finds direction of ray from normalised screen coords
     // assuming normal frustum projection
     return normalize( vec3( uv, 1.0 ) ); }
 
-vec3 rayDirFromPos( vec2 uv, float focalLength ){
+vec3 rayDirFromUv( vec2 uv, float focalLength ){
     return normalize( vec3( uv, focalLength ) );
     // focal length may weight ray direction differently
 }
 
+// can you do inheritance in glsl?
+// well yes but actually  y e s
+float f( in vec3 pos);
+// function f is overall general function for scalar fields, override if you want
 
+float map( in vec3 pos);
 
+vec3 calcNormal( in vec3 pos )
+// central "tetrahedral" differences
+{
+    const float h = 0.0001; // tiny dPos
+    const vec2 k = vec2(1,-1);
+    return normalize( k.xyy * map( pos + k.xyy*h ) +
+                      k.yyx * map( pos + k.yyx*h ) +
+                      k.yxy * map( pos + k.yxy*h ) +
+                      k.xxx * map( pos + k.xxx*h ) );
+    // evaluate field at vertices of tetrahedron
+}
 //#endif
