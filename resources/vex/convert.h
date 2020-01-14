@@ -1,6 +1,5 @@
 // functions for converting between data structures in vex
-#ifndef _convert
-#define _convert
+
 // convert vector3 array to sequence of floats
 function float[] varray_to_farray(vector input[]){
     float output[];
@@ -24,5 +23,3 @@ function vector[] farray_to_varray(float input[]){
         }
     return output;
     }
-
-#endif

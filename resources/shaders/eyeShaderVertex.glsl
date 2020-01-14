@@ -20,7 +20,7 @@ uniform mat4 gWorldITXf : WorldInverseTranspose < string UIWidget="None"; >;
 uniform mat4 gObjToView : WorldViewProjection < string UIWidget="None"; >;
 
 // provide tranform from "view" or "eye" coords back to world-space:
-uniform mat4 gViewIXf : ViewInverse < string UIWidget="None"; >;
+uniform mat4 gViewToWorld : ViewInverse < string UIWidget="None"; >;
 
 
 
@@ -37,7 +37,7 @@ uniform mat4 gWorldITXf;
 uniform mat4 gObjToView;
 
 // provide tranform from "view" or "eye" coords back to world-space:
-uniform mat4 gViewIXf;
+uniform mat4 gViewToWorld;
 
 uniform float iorRange;
 
@@ -183,13 +183,16 @@ void main()
 
 //    // outputs
     vec3 Pw = (gObjToWorld * hpos).xyz; // world space position
-    WorldEyeVec = normalize(gViewIXf[3].xyz - Pw);
+    WorldEyeVec = normalize(gViewToWorld[3].xyz - Pw);
 
     vec4 testPos = vec4(Pw, 0.0);
-    testPos = vec4(Position, iorRange);
+    testPos = vec4(normalize(Position), iorRange);
 
     vec4 viewPos = inverse(gObjToView) * testPos; // very cool but not useful
-    viewPos = gObjToView * testPos; // very cool but not useful
+    viewPos = gObjToView * testPos; // works but gives oval distortion
+
+//    vec4 viewPos = vec4( testPos.x / -testPos.z, testPos.y / -testPos.z, testPos.z, iorRange);
+//    viewPos =  viewPos * transpose( inverse(gViewToWorld) );
 
     WorldEyeVec = viewPos.xyz;
 
@@ -224,4 +227,9 @@ void main()
  /* notes
 in future consider tessellating sclera around veins in sclera map -
 derive the "vein map" from the blue channel of the normal sclera
+
+currently screenpos is distorted by resolution - which is good, but
+we need the inverse of it,
+
+
 */

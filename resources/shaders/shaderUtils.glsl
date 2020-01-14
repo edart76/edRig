@@ -32,6 +32,16 @@ vec2 polarToCartesian( float radius, float angle, vec2 centrePoint){
     return vec2(x, y);
 }
 
+// printing text courtesy of P_Malin
+// actually courtesy of Fabrice Neyret
+int printDigit(vec2 p, float n) {
+    int i=int(p.y), b=int(exp2(floor(30.-p.x-n*3.)));
+    i = ( p.x<0.||p.x>3.? 0:
+    i==5? 972980223: i==4? 690407533: i==3? 704642687: i==2? 696556137:i==1? 972881535: 0 )/b;
+ 	return i-i/2*2;
+}
+
+
 // don't know how to define gentype functions
 vec3 projectInto( vec3 vector, vec3 space){
     return vec3( ( dot( vector, space) /

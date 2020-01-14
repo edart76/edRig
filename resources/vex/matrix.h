@@ -1,5 +1,8 @@
 // functions for multiplying, transposing and inverting matrices
 
+// #ifndef _matrix
+// #define _matrix
+
 function float[] M_trans(float A[]; int m; int n)
 {
     float temp;
@@ -26,12 +29,12 @@ function float[] matrix_mult( float A[]; float B[];
           {
             // we now iterate over the rows and columns of the OUTPUT matrix,
             // with rows of A and columns of B
-            int Cindex = [ i * rowsA + j]
+            int Cindex = [ i * rowsA + j];
             int r = 0;
             for( int k=0; k < colsArowsB; k++)
               {
-                float Aval = A[ i * colsArowsB + k]
-                float Bval = A[ colsArowsB * j + k]
+                float Aval = A[ i * colsArowsB + k];
+                float Bval = A[ colsArowsB * j + k];
 
                 r += Aval * Bval;
             }
@@ -96,3 +99,7 @@ function float[] matrix_multB(float A[]; float B[];
 function float[] matrix_mult_square(float A[]; float B[]; int rank){
       return matrix_mult(A, B, rank, rank, rank);
     }
+
+//
+//
+// #endif
