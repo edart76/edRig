@@ -93,7 +93,6 @@ float map( in vec3 pos ){
     d = d;
     return d;
 }
-
 // ray settings
 #define MAX_RAY_STEPS 64
 
@@ -107,33 +106,60 @@ void main()
     vec2 screenUv = WorldEyeVec.xy ;
     float focalLength = 1.0;
 
-    // find ray info
-    vec3 ro = vec3( 0.0, 0.0, -4.0);
-    vec3 rayDir = rayDirFromUv( screenUv, focalLength );
+    // write out matrix for debug purposes
+    mat4 test = gObjToView;
+    int row = 0;
+    int column = 0;
+    int col = 0;
+    float n;
+    screenUv = screenUv * 15.0;
+//    for( row; row < 2; row++)
+//    {
+//        for( column; column < 2; column++)
+//        {
+//            n = gObjToView[ 1 ][ 0 ];
+//            n = gObjToView[ row ][ column ];
+//            screenUv.y += row;
+//            screenUv.x += column;
+////            col = max(col, printFloat(screenUv, n) );
+//        }
+//    }
+    n = 0.5;
+    screenUv.x += 2.0;
+    screenUv.x /= 2.0;
+//    col = max(col, printDigit(screenUv, n) );
+//    col = max(col, printDot(screenUv ) );
+    col = max(col, printFloat( screenUv, n, 2, 3.5 ) );
+    colour.x = col;
 
-    // initial raycast
-    float t = 1.0;
-    float exit = 10.0;
-    vec3 pos = vec3(0.0);
-    int i = 0;
-    for( i; i < MAX_RAY_STEPS; i++ )
-    {
-        pos = ro + t * rayDir; // ray
-        float d = map( pos ); // test ray position against scene sdf
-        // check exit conditions
-        //if ( abs(d) < 0.01 || t > exit )
-        if ( abs(d) < 0.01  )
-        {
-            break;
-        }
-        t += d;
-    }
-
-    //if ( t < exit )
-    if ( i < MAX_RAY_STEPS )
-    {
-        colour = vec4( 1.0, 0.0, 0.0, 1.0 );
-    }
+//
+//    // find ray info
+//    vec3 ro = vec3( 0.0, 0.0, -4.0);
+//    vec3 rayDir = rayDirFromUv( screenUv, focalLength );
+//
+//    // initial raycast
+//    float t = 1.0;
+//    float exit = 10.0;
+//    vec3 pos = vec3(0.0);
+//    int i = 0;
+//    for( i; i < MAX_RAY_STEPS; i++ )
+//    {
+//        pos = ro + t * rayDir; // ray
+//        float d = map( pos ); // test ray position against scene sdf
+//        // check exit conditions
+//        //if ( abs(d) < 0.01 || t > exit )
+//        if ( abs(d) < 0.01  )
+//        {
+//            break;
+//        }
+//        t += d;
+//    }
+//
+//    //if ( t < exit )
+//    if ( i < MAX_RAY_STEPS )
+//    {
+//        colour = vec4( 1.0, 0.0, 0.0, 1.0 );
+//    }
 
 
     colourOut = colour;

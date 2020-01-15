@@ -35,19 +35,56 @@ vec2 polarToCartesian( float radius, float angle, vec2 centrePoint){
 // printing text courtesy of P_Malin
 // actually courtesy of Fabrice Neyret
 int printDigit(vec2 p, float n) {
+    // digit bottom left at 0.0, 1.0
     int i=int(p.y), b=int(exp2(floor(30.-p.x-n*3.)));
     i = ( p.x<0.||p.x>3.? 0:
     i==5? 972980223: i==4? 690407533: i==3? 704642687: i==2? 696556137:i==1? 972881535: 0 )/b;
  	return i-i/2*2;
 }
+// print a decimal point
+int printDot(vec2 p ){
+    return int( ( -0.1 < p.x && p.x < 0.6) && (1.0 < p.y && p.y < 2.0 ) );
+}
+// print entire float number to target decimal places
+int printFloat( vec2 p, float n, int places, float width ){
+    // compress coordinates
+    int boundPlaces = max(places, 1);
+    //float width = p.x / float(boundPlaces);
+    // separate integer and float components
+    int i = int(trunc(n));
+    float f = fract( n );
+    // print integer
+    int col = printDigit( p, float(i) );
 
+    // add dot if with decimals
+    p.x -= width ;
+    col = max( col, int(places > 0) * printDot(p) );
+    int place = 1;
+    p.x -= width * 0.3;
+    for( place; place <= places; place++){
 
-// don't know how to define gentype functions
-vec3 projectInto( vec3 vector, vec3 space){
-    return vec3( ( dot( vector, space) /
-        exp2( length( space ) ) ) * space );
+        // shuffle the first digit of f into integers
+        f *= 10.0;
+        i = int(trunc( f ));
+        f = fract( f );
+        col = max( col, printDigit( p, float(i) ) );
+        p.x -= width;
+    }
+    return col;
 }
 
+
+//
+//// don't know how to define gentype functions
+//vec3 projectInto( vec3 vector, vec3 space){
+//    return vec3( ( dot( vector, space) /
+//        exp2( length( space ) ) ) * space );
+//}
+
+
+
+
+// screenspace coords
 vec2 uvFromFragCoordNormalised( vec2 fragCoord, vec2 iResolution){
     // returns uvs from -1 t 1 in both axes
     vec2 uv = (-1.0 + 2.0*fragCoord.xy / iResolution.xy) *
