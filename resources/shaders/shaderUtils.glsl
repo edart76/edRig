@@ -34,8 +34,11 @@ vec2 polarToCartesian( float radius, float angle, vec2 centrePoint){
 
 // printing text courtesy of P_Malin
 // actually courtesy of Fabrice Neyret
+float baseWidth = 3.5;
+float dotWidth = baseWidth * 0.3;
 int printDigit(vec2 p, float n) {
     // digit bottom left at 0.0, 1.0
+    // top right at 3.5, 6.0
     int i=int(p.y), b=int(exp2(floor(30.-p.x-n*3.)));
     i = ( p.x<0.||p.x>3.? 0:
     i==5? 972980223: i==4? 690407533: i==3? 704642687: i==2? 696556137:i==1? 972881535: 0 )/b;
@@ -45,10 +48,14 @@ int printDigit(vec2 p, float n) {
 int printDot(vec2 p ){
     return int( ( -0.1 < p.x && p.x < 0.6) && (1.0 < p.y && p.y < 2.0 ) );
 }
-// print entire float number to target decimal places
-int printFloat( vec2 p, float n, int places, float width ){
+// print entire float number to target precision places
+int printFloat( vec2 p, float n, int places ){
     // compress coordinates
     int boundPlaces = max(places, 1);
+
+    // handle tens, hundreds by taking modulo 10?
+
+    float width = baseWidth;
     //float width = p.x / float(boundPlaces);
     // separate integer and float components
     int i = int(trunc(n));
@@ -60,7 +67,7 @@ int printFloat( vec2 p, float n, int places, float width ){
     p.x -= width ;
     col = max( col, int(places > 0) * printDot(p) );
     int place = 1;
-    p.x -= width * 0.3;
+    p.x -= dotWidth;
     for( place; place <= places; place++){
 
         // shuffle the first digit of f into integers
@@ -70,6 +77,23 @@ int printFloat( vec2 p, float n, int places, float width ){
         col = max( col, printDigit( p, float(i) ) );
         p.x -= width;
     }
+    return col;
+}
+
+// extensions of printing to vectors, matrices
+int printVec4( vec2 p, vec4 v, int places){
+    // consider instead returning float of percentage through printing?
+    // total width includes full display and 1 blank character
+    float fullWidth = baseWidth * float(places + 2) + dotWidth;
+    int col = 0;
+    // is there a way to iterate on this properly in glsl
+    col = max( col, printFloat( p, v.x, places) );
+    p.x -= fullWidth;
+    col = max( col, printFloat( p, v.y, places) );
+    p.x -= fullWidth;
+    col = max( col, printFloat( p, v.z, places) );
+    p.x -= fullWidth;
+    col = max( col, printFloat( p, v.w, places) );
     return col;
 }
 

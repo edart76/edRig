@@ -127,9 +127,12 @@ void main()
     n = 0.5;
     screenUv.x += 2.0;
     screenUv.x /= 2.0;
+    screenUv *= 5.0;
 //    col = max(col, printDigit(screenUv, n) );
 //    col = max(col, printDot(screenUv ) );
-    col = max(col, printFloat( screenUv, n, 2, 3.5 ) );
+    //col = max(col, printFloat( screenUv, n, 2 ) );
+    vec4 printVec = vec4(screenUv, 0.0, 0.0);
+    col = max(col, printVec4( screenUv, printVec, 2 ) );
     colour.x = col;
 
 //
