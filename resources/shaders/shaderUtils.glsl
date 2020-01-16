@@ -10,12 +10,19 @@
 #define PI 3.14159265
 #define TAU 6.2831853
 
+// pure maths functions
 float fit( float value, float min1, float max1, float min2, float max2){
     // input as percentage of range1
     float perc = (value - min1) / (max1 - min1);
     // Do the same operation backwards with min2 and max2
     float result = perc * (max2 - min2) + min2;
     return result;
+}
+
+float logToBase( float x, float base ){
+    // using change of base formula
+    // logB(x) = logC(x) / logC(B)
+    return log2(x) / log2(base);
 }
 
 vec2 cartesianToPolar( vec2 xy, vec2 centrePoint){
@@ -43,28 +50,61 @@ int printDigit(vec2 p, float n) {
     i = ( p.x<0.||p.x>3.? 0:
     i==5? 972980223: i==4? 690407533: i==3? 704642687: i==2? 696556137:i==1? 972881535: 0 )/b;
  	return i-i/2*2;
+    // if you pass this things bigger than 1 digit, cool but useless things happen
 }
 // print a decimal point
 int printDot(vec2 p ){
     return int( ( -0.1 < p.x && p.x < 0.6) && (1.0 < p.y && p.y < 2.0 ) );
 }
+// print horizontal hyphen
+int printHyphen( vec2 p){
+    return int( ( -0.1 < p.x && p.x < 1.5) && ( 2.5 < p.y && p.y < 3.5 ) );
+}
 // print entire float number to target precision places
 int printFloat( vec2 p, float n, int places ){
     // compress coordinates
     int boundPlaces = max(places, 1);
-
-    // handle tens, hundreds by taking modulo 10?
-
     float width = baseWidth;
-    //float width = p.x / float(boundPlaces);
+    int col = 0;
+
+    // print dash if less than 0
+    float dashOffset = 2.0;
+    p.x += dashOffset;
+    col = max(col, int(n < 0.0) * printHyphen(p));
+    p.x -= dashOffset;
+
+    // now set to positive
+    n = abs(n);
+
     // separate integer and float components
-    int i = int(trunc(n));
-    float f = fract( n );
+//    int i = int(trunc(n));
+    float f = fract(n);
+
+    // find number of left digits from log10
+    int leftDigits = int(floor(logToBase(n, 10.0)));
+    // curtail integers to single digit
+    float i = round(n);
+    i = i / pow(10.0, (leftDigits + 1 ) );
+
+    // print integers
+    int iplace = 0;
+    //for (place; place <= places; place++){
+    for (iplace; iplace <= leftDigits; iplace++){
+        i *= 10.0;
+        int d = int( round( i ));
+        i = fract( i );
+        col = max( col, printDigit( p, d));
+        p.x -= width;
+    }
+
+
+    //float width = p.x / float(boundPlaces);
+
     // print integer
-    int col = printDigit( p, float(i) );
+    //col = max( col, printDigit( p, float(i) ) );
 
     // add dot if with decimals
-    p.x -= width ;
+    //p.x -= width ;
     col = max( col, int(places > 0) * printDot(p) );
     int place = 1;
     p.x -= dotWidth;
@@ -72,9 +112,9 @@ int printFloat( vec2 p, float n, int places ){
 
         // shuffle the first digit of f into integers
         f *= 10.0;
-        i = int(trunc( f ));
+        i = trunc( f );
         f = fract( f );
-        col = max( col, printDigit( p, float(i) ) );
+        col = max( col, printDigit( p, i ) );
         p.x -= width;
     }
     return col;
@@ -94,6 +134,17 @@ int printVec4( vec2 p, vec4 v, int places){
     col = max( col, printFloat( p, v.z, places) );
     p.x -= fullWidth;
     col = max( col, printFloat( p, v.w, places) );
+    return col;
+}
+
+int printMat4( vec2 p, mat4 mat, int places){
+    int col = 0;
+    float height = 7.0;
+    for( int i = 0; i < 4; i++){
+        vec4 v = vec4( mat[i] );
+        col = max( col, printVec4( p, v, places));
+        p.y += height;
+    }
     return col;
 }
 
@@ -126,7 +177,7 @@ vec2 uvFromFragCoord( vec2 fragCoord, vec2 iResolution){
 // wholesale raid of inigo quilez' resources
 // praise be to gpu jesus
 
-// cubic pulse
+// symmetrical cubic pulse
 float isolate( float centre, float radius, float x){
     x = abs( x - centre );
     if( x > radius ) return 0.0;
