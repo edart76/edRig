@@ -22,6 +22,9 @@ uniform mat4 gObjToView : WorldViewProjection < string UIWidget="None"; >;
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewToWorld : ViewInverse < string UIWidget="None"; >;
 
+// !!!!!!!!!!!!!
+uniform vec2 iResolution : ViewportPixelSize < string UIWidget="None"; >;
+
 
 
 #else
@@ -38,6 +41,8 @@ uniform mat4 gObjToView;
 
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewToWorld;
+
+uniform vec2 iResolution;
 
 uniform float iorRange;
 

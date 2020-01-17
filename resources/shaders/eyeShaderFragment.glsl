@@ -66,12 +66,6 @@ out vec4 colourOut;
 // shader tools
 #include "shaderUtils.glsl"
 
-// try to get viewport dimensions
-
-//vec4 viewport = glGetIntegerv( GL_VIEWPORT );
-//vec4 viewport = glGet( 1 );
-
-
 // known values
 float limbalHeight = cos( irisWidth );
 
@@ -101,42 +95,15 @@ void main()
 {
     vec4 colour = vec4(0.0, 0.0, 0.0, 1.0);
 
-    // recover screen coord from vertex info:
-    //vec2 screenUv = normalize( WorldEyeVec.xy );
-    vec2 screenUv = WorldEyeVec.xy ;
+    // !!!!!
+    vec2 screenUV = gl_FragCoord.xy / iResolution;
+
     float focalLength = 1.0;
 
     // write out matrix for debug purposes
     mat4 test = gObjToView;
-    int row = 0;
-    int column = 0;
-    int col = 0;
-    float n;
-    screenUv = screenUv * 15.0;
-//    for( row; row < 2; row++)
-//    {
-//        for( column; column < 2; column++)
-//        {
-//            n = gObjToView[ 1 ][ 0 ];
-//            n = gObjToView[ row ][ column ];
-//            screenUv.y += row;
-//            screenUv.x += column;
-////            col = max(col, printFloat(screenUv, n) );
-//        }
-//    }
-    n = 0.5;
-    screenUv.x += 10.0;
-    screenUv.x /= 2.0;
-    screenUv *= 5.0;
-//    col = max(col, printDigit(screenUv, n) );
-//    col = max(col, printDot(screenUv ) );
-    //col = max(col, printFloat( screenUv, n, 2 ) );
 
-    //vec4 printVec = vec4(gObjToView[ 0 ] );
-
-    //col = max(col, printVec4( screenUv, printVec, 2 ) );
-    col = max(col, printMat4( screenUv, gObjToView, 2) );
-    colour.x = col;
+    colour.xy = screenUV;
 
 //
 //    // find ray info
