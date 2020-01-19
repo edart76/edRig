@@ -25,7 +25,7 @@ uniform texture2D ScleraDiffuseMap;
 uniform texture2D IrisDiffuseMap;
 uniform texture2D IrisHeightMap;
 
-uniform sampler2D ScleraSampler = sampler_state
+uniform sampler2D ScleraDiffuseSampler = sampler_state
 {
 	Texture = <ScleraDiffuseMap>;
 	TEXTURE_MIN_FILTER = NEAREST;

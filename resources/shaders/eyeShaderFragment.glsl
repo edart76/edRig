@@ -67,13 +67,16 @@ out vec4 colourOut;
 #include "shaderUtils.glsl"
 
 // known values
-float limbalHeight = cos( irisWidth );
+float limbalHeight = cos( irisWidth * PI * 0.5);
 
 float irisHeight( float rad ){
     // defines depth of iris as function of radius
     // radius should be NORMALISED within iris
-    return (1 - rad) * irisDepth;
+    // height is offset from base iris depth
+    //return -smoothstep(0.0, irisDepth, rad);
+    return -irisDepth;
     // simple linear for now
+    // later sample iris height texture here
 }
 
 // set up sdf geometry, centred at origin
@@ -87,165 +90,249 @@ float map( in vec3 pos ){
     d = d;
     return d;
 }
+
+vec3 pupilDilate( vec2 coord ){
+    /* compresses a lookup coordinate on the iris
+    according to pupil dilation
+    also packs bool if the original coord falls within the pupil
+    */
+    vec3 result = vec3(0.0);
+
+    return result;
+
+}
+
+
+/*
+four possible treatments of the pixel:
+ - sclera
+ - limbal ring
+ - iris
+ - pupil
+
+discount pupil for now as iris is enough
+
+pupil dilation affects everything - function to retrieve distorted
+iris coords from normalised?
+
+*/
+
 // ray settings
 #define MAX_RAY_STEPS 64
+
+
+vec4 getScleraColour( vec3 pos, vec3 rayOrigin, vec3 rayDir,
+        vec2 scleraCoord, vec2 scleraPolar ){
+
+    vec4 col = vec4( texture2D(ScleraDiffuseSampler, scleraCoord, 1.0));
+    return col;
+
+}
+
+vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
+        vec2 irisCoord, vec2 irisPolar){
+    // this is all still in full eye-space
+
+    vec4 col = vec4( 0.0, 0.0, 0.0, 1.0 );
+
+    // cast rays into cornea
+    vec3 rayOrigin = pos;
+
+    // compare to centre of iris
+    vec3 centre = vec3( 0.0, limbalHeight, 0.0 );
+
+    // REFRACT
+
+    float rayStep = 0.02;
+    float t = rayStep;
+    int i = 0;
+    for( i; i < MAX_RAY_STEPS; i++ )
+    {
+        pos = rayOrigin + t * rayDir; // ray
+
+        // we don't use a full SDF here, just Y-comparison
+        float radius = length( pos.xz );
+        float height = pos.y - ( limbalHeight + irisHeight( radius ) );
+        height = pos.y - limbalHeight + irisDepth;
+
+        // check exit conditions
+        if ( height < 0.01 )
+        {
+            vec2 rayLookup = pos.xz;
+            // remap coordinates centred at iris to 0 - 1 uv space
+            vec2 coord = fit( vec4( rayLookup, 0.0, 0.0),
+                -1.0, 1.0, 0.0, 1.0 ).xy;
+            col = vec4( texture2D( IrisDiffuseSampler, coord, 0.5 ) );
+            break;
+        }
+        t += rayStep;
+    }
+
+    //col = vec4( texture2D( IrisDiffuseSampler, rayOrigin.xz, 0.5 ) );
+
+    return col;
+}
+
+vec4 getPupilColour( vec3 pos, vec3 rayOrigin, vec3 rayDir ){
+
+    vec4 col = vec4( 0.0, 0.0, 0.0, 1.0);
+    return col;
+}
+
+vec4 getLimbalColour(){
+
+    vec4 col = vec4( 17, 40, 50, 256) / 256.0;
+    return col;
+}
+
 
 // main shader function
 void main()
 {
-    vec4 colour = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 colour = vec4(0.0, 0.0, 0.0, 0.0);
 
-    // !!!!!
-    vec2 screenUV = gl_FragCoord.xy / iResolution;
-
+    // initialise ray params
+    vec2 screenUV = uvFromFragCoordNormalised(gl_FragCoord.xy, iResolution);
     float focalLength = 1.0;
+    // set z component for ray origin - this should be drawn
+    // from view matrix to align with main camera
+    float rayZ = -4.0;
 
-    // write out matrix for debug purposes
-    mat4 test = gObjToView;
+    // find ray info
+    vec3 ro = vec3( screenUV.xy, rayZ);
+    vec3 rayDir = normalize(rayDirFromUv( screenUV, focalLength ));
+    // mult to worldspace
+    rayDir = vec4( inverse( gWorldViewProjection )* normalize(vec4(rayDir, 1.0))).xyz; // almost works
+    //rayDir = vec4( inverse(gProjection) * vec4(rayDir, 1.0)).xyz;
 
-    colour.xy = screenUV;
+    // unpack vertex info
+    float cornealDsp = corneaInfo.x;
+    vec2 UV = UVout;
+    vec3 pos = ObjPos.xyz;
 
+    // uvs in polar space
+    vec2 centrePoint = vec2( 0.5, 0.5 );
+    vec2 polar = cartesianToPolar( UV, centrePoint );
+    float radius = polar.x;
+    float angle = polar.y;
+
+    // reconstruct iris info
+    float uvDist = radius;
+    float eyeParam = ( irisWidth - uvDist ) / irisWidth;
+    float irisParam = max(eyeParam, 0);
+    // reconstruct limbal info
+    float limbalParam = clamp( fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0),
+    0.0, 1.0 );
+    float limbalRad = 1.0 - smoothstep( 0, limbalWidth, abs( eyeParam ) );
+    // limbalParam is linear, limbalRad is smooth and meant for aesthetic use
+
+    // pixel location switches
+    float irisBool = step(0.01, irisParam);
+
+    float limbalBool = smoothstep(0.1, 1.0, limbalParam);
+
+    // initialise output colour
+    vec4 mainColour = vec4(0,0,0,0.5);
+
+    float pupilWidth = pupilBaseWidth + pupilDilation;
+
+    // remap main uv coord into iris-centric map
+    float irisRadius = max(fit(radius, 0.0, irisWidth,
+        -pupilDilation, 0.5), 0) ;
+
+
+    // find initial uvs for iris colour lookup
+    vec2 irisPolar = vec2(irisRadius, polar.y);
+    vec2 irisCoord = polarToCartesian(irisPolar.x, irisPolar.y,
+        centrePoint);
+
+    // find pupil switches
+    float pupilBaseBool = step(irisRadius, pupilBaseWidth);
+    float pupilDilationBool = step(irisRadius, pupilBaseWidth);
+
+    vec2 scleraUV = UV;
+    vec2 scleraPolar = polar;
+
+
+    // ------- execute separate colour functions -------
+
+    // sclera
+    if ( irisBool <= 0.001 ){
+        vec4 scleraColour = getScleraColour(
+        pos, ro, rayDir, scleraUV, scleraPolar
+        );
+        mainColour = scleraColour;
+    }
+
+    // iris
+    if ( irisBool > 0.0 ){
+        vec4 irisColour = getIrisColour(
+            pos, rayDir, WorldNormal, irisCoord, irisPolar
+        );
+        mainColour = mix(mainColour, irisColour, irisBool);
+    }
+
+    // pupil
+    if ( pupilDilationBool > 0.0 ){
+        vec4 pupilColour = getPupilColour(
+            pos, ro, rayDir
+        );
+        //mainColour = mix( mainColour, pupilColour, pupilDilationBool);
+    }
+
+    // limbal ring
+    if (limbalRad > 0.0 ){
+        vec4 limbalColour = getLimbalColour();
+        mainColour = mix( mainColour, limbalColour, limbalRad);
+    }
+
+
+
+    // debug colours
+    // check iris height is detected properly
+    float yHeight = float( limbalHeight > ObjPos.y );
+    vec4 debugOut = vec4(yHeight, irisBool, limbalBool, 1.0);
+    //debugOut = vec4(pupilDilationBool, irisBool, 0, 0);
+    debugOut = debugOut * float(debugColours);
+    // mix debug
+    mainColour = mix(mainColour, debugOut, debugColours);
 //
-//    // find ray info
-//    vec3 ro = vec3( 0.0, 0.0, -4.0);
-//    vec3 rayDir = rayDirFromUv( screenUv, focalLength );
 //
-//    // initial raycast
-//    float t = 1.0;
-//    float exit = 10.0;
-//    vec3 pos = vec3(0.0);
-//    int i = 0;
-//    for( i; i < MAX_RAY_STEPS; i++ )
-//    {
-//        pos = ro + t * rayDir; // ray
-//        float d = map( pos ); // test ray position against scene sdf
-//        // check exit conditions
-//        //if ( abs(d) < 0.01 || t > exit )
-//        if ( abs(d) < 0.01  )
-//        {
-//            break;
-//        }
-//        t += d;
-//    }
-//
-//    //if ( t < exit )
-//    if ( i < MAX_RAY_STEPS )
-//    {
-//        colour = vec4( 1.0, 0.0, 0.0, 1.0 );
-//    }
+    colourOut = mainColour;
+
+/* ray stuff
+    // initial raycast
+    float t = 1.0;
+    float exit = 10.0;
+    vec3 pos = vec3(0.0);
+    int i = 0;
+    for( i; i < MAX_RAY_STEPS; i++ )
+    {
+        pos = ro + t * rayDir; // ray
+        float d = map( pos ); // test ray position against scene sdf
+        // check exit conditions
+        //if ( abs(d) < 0.01 || t > exit )
+        if ( abs(d) < 0.01  )
+        {
+            break;
+        }
+        t += d;
+    }
+
+    //if ( t < exit )
+    if ( i < MAX_RAY_STEPS )
+    {
+        colour = vec4( 1.0, 0.0, 0.0, 1.0 );
+    }
+
+    else {
+        colour = vec4( 0.0, 0.0, 0.0, 1.0);
+    }
 
 
     colourOut = colour;
-
-
-//    mat4 test = gObjToWorld;
-//
-////    // unpack vertex info
-//    float cornealDsp = corneaInfo.x;
-//    //float irisWidth = corneaInfo.y;
-//
-//    vec2 UV = UVout;
-//
-//    // uvs in polar space
-//    vec2 centrePoint = vec2( 0.5, 0.5 );
-//    vec2 polar = cartesianToPolar( UV, centrePoint );
-//    float radius = polar.x;
-//    float angle = polar.y;
-//    /* linear UV interpolation gives some distortion, but not enough to matter on dense mesh
-//    */
-//
-//    // reconstruct iris info
-//    float uvDist = radius;
-//    float eyeParam = ( irisWidth - uvDist ) / irisWidth;
-//    float irisParam = max(eyeParam, 0);
-//    // reconstruct limbal info
-//    float limbalParam = clamp( fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0),
-//    0.0, 1.0 );
-//    float limbalRad = 1.0 - smoothstep( 0, limbalWidth, abs( eyeParam ) );
-//    // limbalParam is linear, limbalRad is smooth and meant for aesthetic use
-//
-//    // pixel location switches
-//    float irisBool = step(0.01, irisParam);
-//    float pupilBaseBool = step(uvDist, pupilBaseWidth);
-//
-//    float pupilDilationBool = step(uvDist, pupilBaseWidth + pupilDilation);
-//    float limbalBool = step(0.1, limbalParam);
-//    limbalBool = limbalParam;
-//    limbalBool = limbalRad;
-////    float limbalBool = step( irisWidth - limbalWidth, eyeParam) *
-////        step( eyeParam, irisWidth + limbalWidth);
-//
-//
-//
-//
-//    // initialise output colour
-//    vec4 mainColour = vec4(0,0,0,0.5);
-//
-//    // if pixel lies on sclera
-//    vec4 scleraColour = vec4( texture2D(ScleraSampler, UV, 1.0));
-//
-//    // mix in pupil colour
-//    vec4 pupilColour = vec4( 1, 0.0, 0.0, 0.0);
-//    mainColour = mix(scleraColour, pupilColour, pupilDilationBool);
-//    mainColour = scleraColour;
-//    // mainColour = pupilColour;
-//    float pupilWidth = pupilBaseWidth + pupilDilation;
-//
-//
-//    // mix in iris colour
-//    // remap main uv coord into iris-centric map
-////    float irisRadius = max(fit(radius, 0.0, irisWidth,
-////        -pupilWidth, 0.5), 0) ;
-//    float irisRadius = max(fit(radius, 0.0, irisWidth,
-//        -0, 0.5), 0) ;
-//
-//
-//    // find initial uvs for iris colour lookup
-//    vec2 irisPolar = vec2(irisRadius, polar.y);
-//    // one thing at a time, pupil stuff is broken for now
-//    //irisPolar = vec2(radius, polar.y);
-//    //irisPolar = vec2(irisRadius, uvView);
-//    vec2 irisCoord = polarToCartesian(irisPolar.x, irisPolar.y,
-//        centrePoint);
-//    //irisCoord += uvView;
-//
-//
-//
-//
-//    vec4 irisColour = vec4( texture2D(IrisDiffuseSampler,
-//        irisCoord, 0.5));
-//
-//    mainColour = mix(mainColour, irisColour, irisBool);
-//
-//    mainColour *= 1 - irisBool * 0.8;
-//
-//    // blend in limbal colour
-//    vec4 limbalColour = vec4( 17, 40, 50, 256) / 256.0;
-//    // later make limbal colour proper vector parametre
-//    mainColour = mix( mainColour, limbalColour, limbalRad);
-//
-//
-//    // debug colours
-//    //vec4 debugOut = vec4(pupilDilationBool, irisBool, pupilBaseBool, 0);
-//    vec4 debugOut = vec4(pupilDilationBool, irisBool, limbalBool, 1.0);
-//    //debugOut = vec4(pupilDilationBool, irisBool, 0, 0);
-//    debugOut = debugOut * float(debugColours);
-//
-//    // mix contributions
-//    mainColour = mix(mainColour, debugOut, debugColours);
-//
-//
-//    colourOut = mainColour;
-//    vec4 normalisedCoord = normalize( gl_FragCoord );
-
-//    vec2 screenUv = normalize( WorldEyeVec.xy );
-//    colourOut = normalize( test[3] );
-//
-//    colourOut = vec4( screenUv, 0.0,  1.0 );
-//
-//    colourOut = (colourOut);
-//
-//    //colourOut = vec4( normalize(WorldEyeVec), 1.0 );
+    //colourOut = vec4( 0.0, 0.0, 0.0, 0.0);
+*/
 
 
 }

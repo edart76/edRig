@@ -19,6 +19,15 @@ float fit( float value, float min1, float max1, float min2, float max2){
     return result;
 }
 
+vec4 fit( vec4 v, float min1, float max1, float min2, float max2){
+    vec4 result;
+    for (int i=0; i < 4; i++){
+        result[i] = fit( v[i], min1, max1, min2, max2);
+    }
+    return result;
+}
+
+
 float logToBase( float x, float base ){
     // using change of base formula
     // logB(x) = logC(x) / logC(B)
@@ -38,6 +47,18 @@ vec2 polarToCartesian( float radius, float angle, vec2 centrePoint){
     float y = radius * sin( angle ) + centrePoint.y;
     return vec2(x, y);
 }
+
+vec3 cartesianToSpherical( vec3 p ){
+    // assumes sphere centred at origin, pole aligned to Y axis
+    // returns UVW parameterisation
+    vec3 pN = normalize( - p);
+    float u = 0.5 + ( atan( pN.z, pN.x ) / TAU);
+    float v = 0.5 - ( asin( pN.y) / PI );
+    float w = length( p );
+    return vec3( u, v, w);
+
+}
+
 
 // printing text courtesy of P_Malin
 // actually courtesy of Fabrice Neyret
@@ -77,7 +98,6 @@ int printFloat( vec2 p, float n, int places ){
     n = abs(n);
 
     // separate integer and float components
-//    int i = int(trunc(n));
     float f = fract(n);
 
     // find number of left digits from log10
@@ -97,14 +117,6 @@ int printFloat( vec2 p, float n, int places ){
         p.x -= width;
     }
 
-
-    //float width = p.x / float(boundPlaces);
-
-    // print integer
-    //col = max( col, printDigit( p, float(i) ) );
-
-    // add dot if with decimals
-    //p.x -= width ;
     col = max( col, int(places > 0) * printDot(p) );
     int place = 1;
     p.x -= dotWidth;
@@ -147,17 +159,6 @@ int printMat4( vec2 p, mat4 mat, int places){
     }
     return col;
 }
-
-
-//
-//// don't know how to define gentype functions
-//vec3 projectInto( vec3 vector, vec3 space){
-//    return vec3( ( dot( vector, space) /
-//        exp2( length( space ) ) ) * space );
-//}
-
-
-
 
 // screenspace coords
 vec2 uvFromFragCoordNormalised( vec2 fragCoord, vec2 iResolution){

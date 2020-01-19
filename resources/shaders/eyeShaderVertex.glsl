@@ -10,6 +10,7 @@ also need to do the magic peace dance to get this to work in maya
 
 #if OGSFX
 
+// look upon the menagerie of parametres we can have
 // transform object vertices to world-space:
 uniform mat4 gObjToWorld : World < string UIWidget="None"; >;
 
@@ -17,13 +18,23 @@ uniform mat4 gObjToWorld : World < string UIWidget="None"; >;
 uniform mat4 gWorldITXf : WorldInverseTranspose < string UIWidget="None"; >;
 
 // transform object vertices to view space and project them in perspective:
-uniform mat4 gObjToView : WorldViewProjection < string UIWidget="None"; >;
+uniform mat4 gWorldViewProjection : WorldViewProjection < string UIWidget="None"; >;
 
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewToWorld : ViewInverse < string UIWidget="None"; >;
 
+// view matrix:
+uniform mat4 gView : View < string UIWidget="None"; >;
+
+// projection matrix:
+uniform mat4 gProjection : Projection < string UIWidget="None"; >;
+
 // !!!!!!!!!!!!!
 uniform vec2 iResolution : ViewportPixelSize < string UIWidget="None"; >;
+
+uniform vec2 currentTime : Time < string UIWidget="None"; >;
+
+uniform int currentFrame : Frame < string UIWidget="None"; >;
 
 
 
@@ -37,11 +48,12 @@ uniform mat4 gObjToWorld;
 uniform mat4 gWorldITXf;
 
 // transform object vertices to view space and project them in perspective:
-uniform mat4 gObjToView;
+uniform mat4 gWorldViewProjection;
 
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewToWorld;
 
+// !!!!!!!!!
 uniform vec2 iResolution;
 
 uniform float iorRange;
@@ -163,7 +175,7 @@ void main()
 
     vec4 Po = vec4(Position.xyz + corneaDisplacement, 1); // local space position
 
-    vec4 hpos = gObjToView * Po;
+    vec4 hpos = gWorldViewProjection * Po;
 
 
     // tangent matrix to find surface-space view
@@ -193,8 +205,8 @@ void main()
     vec4 testPos = vec4(Pw, 0.0);
     testPos = vec4(normalize(Position), iorRange);
 
-    vec4 viewPos = inverse(gObjToView) * testPos; // very cool but not useful
-    viewPos = gObjToView * testPos; // works but gives oval distortion
+    vec4 viewPos = inverse(gWorldViewProjection) * testPos; // very cool but not useful
+    viewPos = gWorldViewProjection * testPos; // works but gives oval distortion
 
 //    vec4 viewPos = vec4( testPos.x / -testPos.z, testPos.y / -testPos.z, testPos.z, iorRange);
 //    viewPos =  viewPos * transpose( inverse(gViewToWorld) );
@@ -219,7 +231,8 @@ void main()
     UvEyeVec = tangentToObjectMat * WorldEyeVec;
 
 
-    ObjPos = vec4(UV.y, UV.x, hpos.zw);
+    //ObjPos = vec4(UV.y, UV.x, hpos.zw);
+    ObjPos = vec4( Position, 0.0 );
     gl_Position = hpos; // final vertex position
     //gl_Position = vec4(-WorldEyeVec.xyz, 0.5); // final vertex position
     UVout = UV;
