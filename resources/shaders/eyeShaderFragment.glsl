@@ -29,8 +29,8 @@ attribute fragmentInput {
     vec2 UVout : COLOR1;
     vec4 corneaInfo : COLOR2;
     vec3 refractOut : COLOR3;
-    vec3 binormalOut: COLOR4;
-    vec3 UvEyeVec : COLOR5;
+    vec3 posOut: COLOR4;
+    vec3 normalOut : COLOR5;
 };
 
 attribute fragmentOutput {
@@ -50,8 +50,8 @@ in vec4 DCol;
 in vec2 UVout;
 in vec4 corneaInfo;
 in vec3 UvEyeVec;
-in vec3 refractOut;
-in vec3 binormalOut;
+in vec3 posOut;
+in vec3 normalOut;
 
 // gl-supplied
 in vec4 gl_FragCoord;
@@ -130,7 +130,7 @@ vec4 getScleraColour( vec3 pos, vec3 rayOrigin, vec3 rayDir,
 }
 
 vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
-        vec2 irisCoord, vec2 irisPolar){
+        vec2 irisCoord, vec2 irisPolar, float ior){
     // this is all still in full eye-space
 
     vec4 col = vec4( 0.0, 0.0, 0.0, 1.0 );
@@ -138,12 +138,19 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
     // cast rays into cornea
     vec3 rayOrigin = pos;
 
+    //normal = vec3( 0.5, 0.5, 1.0);
+    //normal = normalize(pos);
+
     // compare to centre of iris
     vec3 centre = vec3( 0.0, limbalHeight, 0.0 );
 
     // REFRACT
+    vec3 refractDir = rayDir;
+    rayDir = normalize(refract( normalize(rayDir), (normal), ior));
+    // dumb refract since i can't get the real stuff to work
+    //rayDir = normalize(rayDir + normal * ior);
 
-    float rayStep = 0.02;
+    float rayStep = 0.01;
     float t = rayStep;
     int i = 0;
     for( i; i < MAX_RAY_STEPS; i++ )
@@ -162,7 +169,7 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
             // remap coordinates centred at iris to 0 - 1 uv space
             vec2 coord = fit( vec4( rayLookup, 0.0, 0.0),
                 -1.0, 1.0, 0.0, 1.0 ).xy;
-            col = vec4( texture2D( IrisDiffuseSampler, coord, 0.5 ) );
+            col = vec4( texture2D( IrisDiffuseSampler, coord, 1.0 ) );
             break;
         }
         t += rayStep;
@@ -269,7 +276,8 @@ void main()
     // iris
     if ( irisBool > 0.0 ){
         vec4 irisColour = getIrisColour(
-            pos, rayDir, WorldNormal, irisCoord, irisPolar
+            pos, rayDir, normalOut, irisCoord, irisPolar,
+            iorBase
         );
         mainColour = mix(mainColour, irisColour, irisBool);
     }

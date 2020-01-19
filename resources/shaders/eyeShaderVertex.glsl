@@ -93,8 +93,8 @@ attribute vertexOutput {
     vec2 UVout : COLOR1;
     vec4 corneaInfo : COLOR2;
     vec3 refractOut : COLOR3;
-    vec3 binormalOut: COLOR4;
-    vec3 UvEyeVec   : COLOR5;
+    vec3 posOut: COLOR4;
+    vec3 normalOut   : COLOR5;
 
 };
 
@@ -115,8 +115,8 @@ out vec3 UvEyeVec;
 out vec4 DCol; // lighting term, not used here
 out vec2 UVout; // uv space coords
 out vec4 corneaInfo;
-out vec3 refractOut;
-out vec3 binormalOut;
+out vec3 posOut;
+out vec3 normalOut;
 
 #endif
 #endif
@@ -136,6 +136,7 @@ void main()
     vec3 worldBinormal = normalize( (gWorldITXf * vec4(Binormal, 0.0)).xyz );
     vec3 worldTangent = normalize( (gWorldITXf * vec4(Tangent, 0.0)).xyz );
     vec3 WorldNormal = normalize((gWorldITXf * vec4(Normal,0.0)).xyz);
+    WorldNormal = Normal;
 
     DCol = vec4(0.5, 0.5, 0.5, 1);
 
@@ -223,12 +224,8 @@ void main()
     vec3 tangentRefract = normalize(tangentToObjectMat * refractVec);
     tangentRefract = refractVec;
 
-
-
-
-    // localise before refraction
-
-    UvEyeVec = tangentToObjectMat * WorldEyeVec;
+    normalOut = Normal;
+    posOut = Position;
 
 
     //ObjPos = vec4(UV.y, UV.x, hpos.zw);
@@ -238,7 +235,6 @@ void main()
     UVout = UV;
     corneaInfo = vec4(fullDsp, irisWidth, 0.0, 0.0);
     refractOut = tangentRefract;
-    binormalOut = Binormal;
 }
 
 #endif
