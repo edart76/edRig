@@ -193,7 +193,7 @@ void main()
 
     // initialise ray params
     vec2 screenUV = uvFromFragCoordNormalised(gl_FragCoord.xy, iResolution);
-    float focalLength = 1.0;
+    float focalLength = 10000.0;
     // set z component for ray origin - this should be drawn
     // from view matrix to align with main camera
     float rayZ = -4.0;
@@ -203,7 +203,9 @@ void main()
     vec3 rayDir = normalize(rayDirFromUv( screenUV, focalLength ));
     // mult to worldspace
     rayDir = vec4( inverse( gWorldViewProjection )* normalize(vec4(rayDir, 1.0))).xyz; // almost works
-    //rayDir = vec4( inverse(gProjection) * vec4(rayDir, 1.0)).xyz;
+    // -----NB------
+    // getting too close to eye gives weird results without refraction,
+    // I am likely missing a trick here.
 
     // unpack vertex info
     float cornealDsp = corneaInfo.x;
