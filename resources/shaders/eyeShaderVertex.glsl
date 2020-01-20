@@ -140,6 +140,8 @@ void main()
 
     DCol = vec4(0.5, 0.5, 0.5, 1);
 
+    vec3 newPos = normalize(Position);
+
 
     // we assume starting from spherical mesh - create corneal bulge
     float uvDist = length( vec2( 0.5 - UV.x, 0.5 - UV.y) );
@@ -174,7 +176,7 @@ void main()
     // naive fix is only valid for certain profiles
     // need a solution that is aware of irisWidth and height
 
-    vec4 Po = vec4(Position.xyz + corneaDisplacement, 1); // local space position
+    vec4 Po = vec4(newPos.xyz + corneaDisplacement, 1); // local space position
 
     vec4 hpos = gWorldViewProjection * Po;
 
@@ -204,7 +206,7 @@ void main()
     WorldEyeVec = normalize(gViewToWorld[3].xyz - Pw);
 
     vec4 testPos = vec4(Pw, 0.0);
-    testPos = vec4(normalize(Position), iorRange);
+    testPos = vec4(normalize(newPos), iorRange);
 
     vec4 viewPos = inverse(gWorldViewProjection) * testPos; // very cool but not useful
     viewPos = gWorldViewProjection * testPos; // works but gives oval distortion
@@ -225,11 +227,11 @@ void main()
     tangentRefract = refractVec;
 
     normalOut = Normal;
-    posOut = Position;
+    posOut = newPos;
 
 
     //ObjPos = vec4(UV.y, UV.x, hpos.zw);
-    ObjPos = vec4( Position, 0.0 );
+    ObjPos = vec4( newPos, 0.0 );
     gl_Position = hpos; // final vertex position
     //gl_Position = vec4(-WorldEyeVec.xyz, 0.5); // final vertex position
     UVout = UV;

@@ -68,6 +68,8 @@ out vec4 colourOut;
 
 // known values
 float limbalHeight = cos( irisWidth * PI * 0.5);
+float pupilWidth = pupilBaseWidth + pupilDilation;
+
 
 float irisHeight( float rad ){
     // defines depth of iris as function of radius
@@ -94,10 +96,31 @@ float map( in vec3 pos ){
 vec3 pupilDilate( vec2 coord ){
     /* compresses a lookup coordinate on the iris
     according to pupil dilation
-    also packs bool if the original coord falls within the pupil
+    also packs bool if the NEW coord falls within the pupil
     */
     vec3 result = vec3(0.0);
 
+    vec2 centrePoint = vec2(0.5);
+    vec2 polar = cartesianToPolar( coord, centrePoint);
+//
+    // remap main uv coord into iris-centric map
+    float irisRadius = max(fit( polar.x, 0.0, irisWidth,
+        -pupilDilation, 0.5), 0) ;
+
+    // prevent radius from exceeding 0.5 with soft limit
+    irisRadius = ( irisRadius < 0.25 ) ? irisRadius : softClamp( irisRadius, 0.0, 0.48);
+
+
+    // find initial uvs for iris colour lookup
+    vec2 irisPolar = vec2(irisRadius, polar.y);
+    vec2 irisCoord = polarToCartesian(irisPolar.x, irisPolar.y,
+        centrePoint);
+
+    // check if point falls on pupil
+    float pupilWeight = step(pupilWidth, polar.x);
+    // unsure if this is the right place
+
+    result = vec3( irisCoord.xy, pupilWeight);
     return result;
 
 }
@@ -133,6 +156,8 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
         vec2 irisCoord, vec2 irisPolar, float ior){
     // this is all still in full eye-space
 
+    // move pos to be in iris-space
+
     vec4 col = vec4( 0.0, 0.0, 0.0, 1.0 );
 
     // cast rays into cornea
@@ -146,9 +171,9 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
 
     // REFRACT
     vec3 refractDir = rayDir;
-    rayDir = normalize(refract( normalize(rayDir), (normal), ior));
-    // dumb refract since i can't get the real stuff to work
-    //rayDir = normalize(rayDir + normal * ior);
+    rayDir = (refract( normalize(rayDir), (normal), ior));
+    // dumb refract alternative, inspired by gravity lensing
+    // rayDir = normalize(rayDir + normal * ior);
 
     float rayStep = 0.01;
     float t = rayStep;
@@ -161,18 +186,33 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
         float radius = length( pos.xz );
         float height = pos.y - ( limbalHeight + irisHeight( radius ) );
         height = pos.y - limbalHeight + irisDepth;
+        // NB IF THIS SHOULD BE IRIS-NORMALISED OR NOT
 
         // check exit conditions
-        if ( height < 0.01 )
+        if ( height < rayStep )
         {
+            // look up colours
+            // check magnitude of intersection, and nudge ray back or forwards
+            pos += rayDir * height;
+
             vec2 rayLookup = pos.xz;
+
             // remap coordinates centred at iris to 0 - 1 uv space
             vec2 coord = fit( vec4( rayLookup, 0.0, 0.0),
                 -1.0, 1.0, 0.0, 1.0 ).xy;
+
+            vec3 pupilInfo = pupilDilate( coord );
+            coord = pupilInfo.xy;
+
+
             col = vec4( texture2D( IrisDiffuseSampler, coord, 1.0 ) );
             break;
         }
-        t += rayStep;
+
+        // adaptive sampling
+        t = t + height * 0.9;
+        // we don't do it, so as not to distort participation, diffusion etc
+        t = t + rayStep;
     }
 
     //col = vec4( texture2D( IrisDiffuseSampler, rayOrigin.xz, 0.5 ) );

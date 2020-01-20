@@ -27,6 +27,20 @@ vec4 fit( vec4 v, float min1, float max1, float min2, float max2){
     return result;
 }
 
+// thank you mr jaybird
+float smoothClamp(float x, float low, float b)
+{
+    float t = clamp(x, low, b);
+    return t != x ? t : b + (low - b)/(1. + exp((b - low)*(2.*x - low - b)/((x - low)*(b - x))));
+}
+
+float softClamp(float x, float low, float b)
+{ // smoother approach
+ 	float mid = (low + b)*0.5;
+    return mid + smoothClamp((x - mid)*0.5, low - mid, b - mid);
+}
+
+
 
 float logToBase( float x, float base ){
     // using change of base formula
@@ -35,7 +49,7 @@ float logToBase( float x, float base ){
 }
 
 vec2 cartesianToPolar( vec2 xy, vec2 centrePoint){
-    //
+    // returns vec2( radius, angle )
     vec2 x = xy - centrePoint;
     float radius = length(x);
     float angle = atan(x.y, x.x);
