@@ -77,7 +77,6 @@ float irisHeight( float rad ){
     // height is offset from base iris depth
     return -smoothstep(0.0, irisDepth, rad);
     //return -irisDepth;
-    // simple linear for now
     // later sample iris height texture here
 }
 
@@ -92,6 +91,32 @@ float map( in vec3 pos ){
     d = d;
     return d;
 }
+
+// check shadowing of eyeball
+// normalise shadow vectors
+vec3 upperCentre = normalize( upperVector );
+vec3 lowerCentre = normalize( lowerVector );
+vec3 caruncleCentre = normalize( caruncleVector );
+
+float shadowMap( in vec3 pos ){
+    // SDFs in spherical coordinates
+    // I actually developed a maths trick for once
+    // instead of pythagorean distance in euclidean space,
+    // for spherical space, ( 1 - a dot b ) is our distance function
+
+    pos = normalize(pos);
+
+    // is it sodomy to use uniforms in functions without passing as params?
+    float distance = min( min(
+        1 - dot( pos, upperCentre) - upperRadius,
+        1 - dot( pos, lowerCentre) - lowerRadius ),
+        1 - dot( pos, caruncleCentre) - caruncleRadius );
+
+    return distance;
+
+}
+
+
 
 vec3 pupilDilate( vec2 coord ){
     /* compresses a lookup coordinate on the iris
@@ -186,9 +211,9 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
         float radius = length( pos.xz );
         float normRad = radius / irisWidth;
         normRad = radius; // literally no difference yet
-        float height = pos.y - ( limbalHeight + irisHeight( normRad ) );
-        //height = pos.y - limbalHeight + irisDepth;
-        // NB IF THIS SHOULD BE IRIS-NORMALISED OR NOT
+        float height = pos.y - irisHeight( normRad ) + limbalHeight ;
+        height = pos.y - limbalHeight + irisDepth;
+        // can't get height function to work properly yet
 
         // check exit conditions
         if ( height < rayStep )
@@ -338,12 +363,15 @@ void main()
         mainColour = mix( mainColour, limbalColour, limbalRad);
     }
 
+    // test shadowing
+    float shadow = shadowMap( pos );
+
 
 
     // debug colours
     // check iris height is detected properly
     float yHeight = float( limbalHeight > ObjPos.y );
-    vec4 debugOut = vec4(yHeight, irisBool, limbalBool, 1.0);
+    vec4 debugOut = vec4(shadow, irisBool, limbalBool, 1.0);
     //debugOut = vec4(pupilDilationBool, irisBool, 0, 0);
     debugOut = debugOut * float(debugColours);
     // mix debug
