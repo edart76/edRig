@@ -1,6 +1,5 @@
 // maya-facing front end to super-duper WePresent eye shader
 // we will attempt not to pollute the pure glsl code too much
-// we will closely follow the example brix.ogsfx code for linking
 
 // also literally never done this before - WCGW
 
@@ -25,7 +24,7 @@ uniform texture2D ScleraDiffuseMap;
 uniform texture2D IrisDiffuseMap;
 uniform texture2D IrisHeightMap;
 
-uniform sampler2D ScleraDiffuseSampler = sampler_state
+uniform sampler2D ScleraDiffuseSampler <string UIGroup="Textures";>= sampler_state
 {
 	Texture = <ScleraDiffuseMap>;
 	TEXTURE_MIN_FILTER = NEAREST;
@@ -34,7 +33,7 @@ uniform sampler2D ScleraDiffuseSampler = sampler_state
 	TEXTURE_WRAP_T = REPEAT;
 	TEXTURE_WRAP_R = REPEAT;
 };
-uniform sampler2D IrisHeightSampler = sampler_state
+uniform sampler2D IrisHeightSampler <string UIGroup="Textures";>= sampler_state
 {
 	Texture = <IrisHeightMap>;
 	TEXTURE_MIN_FILTER = NEAREST;
@@ -43,7 +42,7 @@ uniform sampler2D IrisHeightSampler = sampler_state
 	TEXTURE_WRAP_T = REPEAT;
 	TEXTURE_WRAP_R = REPEAT;
 };
-uniform sampler2D IrisDiffuseSampler = sampler_state
+uniform sampler2D IrisDiffuseSampler <string UIGroup="Textures";>= sampler_state
 {
 	Texture = <IrisDiffuseMap>;
 	TEXTURE_MIN_FILTER = NEAREST;
@@ -55,21 +54,44 @@ uniform sampler2D IrisDiffuseSampler = sampler_state
 
 // test defining all uniform params in one place
 // test calibration attriutes for iris and corneal heights
-uniform float cornealHeight = 0.2;
-uniform float irisDepth = 0.1;
-uniform float irisWidth = 0.3;
-uniform float pupilDilation = 0.0;
-uniform float pupilBaseWidth = 0.07;
-uniform float limbalWidth = 0.05;
+uniform float cornealHeight <string UIGroup="Main";>= 0.2;
+uniform float irisDepth <string UIGroup="Main";>= 0.1;
+uniform float irisWidth <string UIGroup="Main";>= 0.3;
+uniform float pupilDilation <string UIGroup="Main";>= 0.0;
+uniform float pupilBaseWidth <string UIGroup="Main";>= 0.07;
+uniform float limbalWidth <string UIGroup="Main";>= 0.05;
 
 
 // refraction parametres
-uniform float iorBase = 1.2;
-uniform float iorRange = 0.1;
+uniform float iorBase <string UIGroup="Main";>= 1.2;
+uniform float iorRange <string UIGroup="Main";>= 0.1;
 
-uniform bool debugColours = False;
+uniform bool debugColours <string UIGroup="Main";> = False;
 
-uniform vec2 windowSize;
+
+// spherical sdf markers, to be given as translations in sphere space
+uniform vec3 upperVector <
+    string UIGroup = "Shadow SDF settings"; > ;
+
+uniform float upperRadius <
+    float UIMin = 0; float UIMax = 1.0;
+    string UIGroup = "Shadow SDF settings"; > = 0.1;
+
+uniform vec3 lowerVector <
+    string UIGroup = "Shadow SDF settings"; > ;
+
+uniform float lowerRadius <
+    float UIMin = 0; float UIMax = 1.0;
+    string UIGroup = "Shadow SDF settings"; > = 0.1;
+
+uniform vec3 caruncleVector <
+    string UIGroup = "Shadow SDF settings"; > ;
+
+uniform float caruncleRadius <
+    float UIMin = 0; float UIMax = 1.0;
+    string UIGroup = "Shadow SDF settings"; > = 0.1;
+
+
 
 
 

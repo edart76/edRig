@@ -75,8 +75,8 @@ float irisHeight( float rad ){
     // defines depth of iris as function of radius
     // radius should be NORMALISED within iris
     // height is offset from base iris depth
-    //return -smoothstep(0.0, irisDepth, rad);
-    return -irisDepth;
+    return -smoothstep(0.0, irisDepth, rad);
+    //return -irisDepth;
     // simple linear for now
     // later sample iris height texture here
 }
@@ -164,7 +164,7 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
     vec3 rayOrigin = pos;
 
     //normal = vec3( 0.5, 0.5, 1.0);
-    //normal = normalize(pos);
+    normal = normalize(pos);
 
     // compare to centre of iris
     vec3 centre = vec3( 0.0, limbalHeight, 0.0 );
@@ -184,8 +184,10 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
 
         // we don't use a full SDF here, just Y-comparison
         float radius = length( pos.xz );
-        float height = pos.y - ( limbalHeight + irisHeight( radius ) );
-        height = pos.y - limbalHeight + irisDepth;
+        float normRad = radius / irisWidth;
+        normRad = radius; // literally no difference yet
+        float height = pos.y - ( limbalHeight + irisHeight( normRad ) );
+        //height = pos.y - limbalHeight + irisDepth;
         // NB IF THIS SHOULD BE IRIS-NORMALISED OR NOT
 
         // check exit conditions
