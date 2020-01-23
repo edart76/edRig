@@ -203,9 +203,58 @@ float isolate( float centre, float radius, float x){
 
 // SDF stuff
 // some of these will be centred at origin, more complex may not
+// for reference
+// union : min(a, b)
+// subtraction : max( -a, b)
+// intersection : max( a, b )
 float sphere( vec3 point, vec3 centre, float rad){
     return length( point - centre ) - rad;
 }
+
+// combination functions
+float smoothMin(float a, float b, float k)
+{ // polynomial smooth min (k = 0.1);
+    float h = max( k-abs(a-b), 0.0 )/k;
+    return min( a, b ) - h*h*k*(1.0/4.0);
+}
+
+float smoothMinP(float a, float b, float k){
+    // alternate power-based method
+    a = pow( a, k ); b = pow( b, k );
+    return pow( (a*b)/(a+b), 1.0/k );
+}
+
+float smoothMinCubic( float a, float b, float k )
+{ // allows higher degree of smoothness for derivatives
+    float h = max( k-abs(a-b), 0.0 )/k;
+    return min( a, b ) - h*h*h*k*(1.0/6.0);
+}
+
+float smoothMax( float a, float b, float k ){
+    float h = clamp( 0.5 - 0.5*(b-a)/k, 0.0, 1.0 );
+    return mix( b, a, h ) + k*h*(1.0-h);
+}
+
+// 2d sdf functions
+float stripySDF( float d, float freq){
+    // returns a modulating value from an sdf
+    float f = 1.0 - sign(d);
+//	col *= 1.05 - exp(-4.0*abs(d) - 0.5); // darken values towards sdf surface
+	f *= 0.8 + 0.2*cos(30.0*d * freq);
+	//col = mix( col, vec3(1.0), 1.0-smoothstep(0.0,0.01,abs(d)) );
+    f = mix( f, 1.0, 1.0-smoothstep( 0.0, 0.01, abs(d)));
+    return f;
+}
+
+vec3 colourFromSDF( float d, float freq, vec3 baseCol ){
+    vec3 col = vec3(1.0) - sign(d)* baseCol;
+	col *= 1.05 - exp(-4.0*abs(d) - 0.5);
+	col *= 0.8 + 0.2*cos(110.0*d * freq);
+	col = mix( col, vec3(1.0), 1.0-smoothstep(0.0,0.01,abs(d)) );
+    return col;
+}
+
+
 
 // raytracing stuff
 vec3 rayDirFromUv( vec2 uv ){

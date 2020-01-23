@@ -98,6 +98,10 @@ vec3 upperCentre = normalize( upperVector );
 vec3 lowerCentre = normalize( lowerVector );
 vec3 caruncleCentre = normalize( caruncleVector );
 
+float sphDist( in vec3 pos, in vec3 v, in float rad){
+    return dot( pos, v ) - (1 - rad);
+}
+
 float shadowMap( in vec3 pos ){
     // SDFs in spherical coordinates
     // I actually developed a maths trick for once
@@ -105,16 +109,26 @@ float shadowMap( in vec3 pos ){
     // for spherical space, ( 1 - a dot b ) is our distance function
 
     pos = normalize(pos);
+    float distance;
 
-    // is it sodomy to use uniforms in functions without passing as params?
-    float distance = min( min(
-        1 - dot( pos, upperCentre) - upperRadius,
-        1 - dot( pos, lowerCentre) - lowerRadius ),
-        1 - dot( pos, caruncleCentre) - caruncleRadius );
+    // union of eye halves
+    distance = smoothMin(
+        sphDist( pos, upperCentre, upperRadius ),
+        sphDist( pos, lowerCentre, lowerRadius ),
+        0.025    );
+    // subtract tearduct area
+    distance = smoothMax(
+        sphDist( pos, caruncleCentre, caruncleRadius),
+        - distance,
+        0.03
+    );
+//    distance = max( sphDist( pos, caruncleCentre, caruncleRadius),
+//        -distance);
+
 
     return distance;
-
 }
+
 
 
 
@@ -365,14 +379,17 @@ void main()
 
     // test shadowing
     float shadow = shadowMap( pos );
+    shadow = step(0.01, clamp(-shadow, 0.0, 1.0) );
+    //shadow = stripySDF( shadow, 1.0);
 
-
+    //vec3 shadowCol = colourFromSDF( 1.0/shadow, 0.1, vec3(1.0, 0.0, 0.0));
 
     // debug colours
     // check iris height is detected properly
     float yHeight = float( limbalHeight > ObjPos.y );
     vec4 debugOut = vec4(shadow, irisBool, limbalBool, 1.0);
-    //debugOut = vec4(pupilDilationBool, irisBool, 0, 0);
+    //debugOut = vec4( shadowCol.xyz, 1.0);
+
     debugOut = debugOut * float(debugColours);
     // mix debug
     mainColour = mix(mainColour, debugOut, debugColours);
