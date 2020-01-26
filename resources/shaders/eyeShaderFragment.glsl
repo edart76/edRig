@@ -67,7 +67,7 @@ out vec4 colourOut;
 #include "shaderUtils.glsl"
 
 // known values
-float limbalHeight = cos( irisWidth * PI * 0.5);
+float limbalHeight = cos( irisWidth * PI * 0.5) - cornealHeight;
 float pupilWidth = pupilBaseWidth + pupilDilation;
 
 
@@ -75,7 +75,7 @@ float irisHeight( float rad ){
     // defines depth of iris as function of radius
     // radius should be NORMALISED within iris
     // height is offset from base iris depth
-    return -smoothstep(0.0, irisDepth, rad);
+    return   ( 1.0 - smoothstep(-0.2, 0.4, rad  ) ) * irisDepth;
     //return -irisDepth;
     // later sample iris height texture here
 }
@@ -122,9 +122,6 @@ float shadowMap( in vec3 pos ){
         - distance,
         0.03
     );
-//    distance = max( sphDist( pos, caruncleCentre, caruncleRadius),
-//        -distance);
-
 
     return distance;
 }
@@ -143,7 +140,7 @@ vec3 pupilDilate( vec2 coord ){
     vec2 polar = cartesianToPolar( coord, centrePoint);
 //
     // remap main uv coord into iris-centric map
-    float irisRadius = max(fit( polar.x, 0.0, irisWidth,
+    float irisRadius = max(fit( polar.x, -0.1*pupilBaseWidth, irisWidth,
         -pupilDilation, 0.5), 0) ;
 
     // prevent radius from exceeding 0.5 with soft limit
@@ -161,9 +158,15 @@ vec3 pupilDilate( vec2 coord ){
 
     result = vec3( irisCoord.xy, pupilWeight);
     return result;
-
 }
 
+float irisSelfShadow(){
+    /* for iris structures, first analytically find vector to light
+    check only a few initial steps of shadow ray to find if iris blocks it directly
+    every step LOSE a portion of the base participation factor
+    */
+    return 0.1;
+}
 
 /*
 four possible treatments of the pixel:
@@ -223,10 +226,11 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
 
         // we don't use a full SDF here, just Y-comparison
         float radius = length( pos.xz );
-        float normRad = radius / irisWidth;
-        normRad = radius; // literally no difference yet
-        float height = pos.y - irisHeight( normRad ) + limbalHeight ;
-        height = pos.y - limbalHeight + irisDepth;
+        float normRad = 2 * radius / ( irisWidth ) ;
+        normRad = radius /  irisWidth; // literally no difference yet
+        float height = pos.y  - limbalHeight + irisHeight( normRad ) ;
+        height = pos.y  - limbalHeight  ;
+        // height = pos.y - limbalHeight + irisDepth;
         // can't get height function to work properly yet
 
         // check exit conditions
@@ -253,7 +257,7 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
         // adaptive sampling
         t = t + height * 0.9;
         // we don't do it, so as not to distort participation, diffusion etc
-        t = t + rayStep;
+        //t = t + rayStep;
     }
 
     //col = vec4( texture2D( IrisDiffuseSampler, rayOrigin.xz, 0.5 ) );
@@ -379,15 +383,19 @@ void main()
 
     // test shadowing
     float shadow = shadowMap( pos );
-    shadow = step(0.01, clamp(-shadow, 0.0, 1.0) );
+    float debugshadow = step(0.01, clamp(-shadow, 0.0, 1.0) );
+
+    shadow = smoothstep(0.0, 0.2, shadow);
+
     //shadow = stripySDF( shadow, 1.0);
+    mainColour.xyz -= shadow * 0.15;
 
     //vec3 shadowCol = colourFromSDF( 1.0/shadow, 0.1, vec3(1.0, 0.0, 0.0));
 
     // debug colours
     // check iris height is detected properly
     float yHeight = float( limbalHeight > ObjPos.y );
-    vec4 debugOut = vec4(shadow, irisBool, limbalBool, 1.0);
+    vec4 debugOut = vec4(debugshadow, irisBool, limbalBool, 1.0);
     //debugOut = vec4( shadowCol.xyz, 1.0);
 
     debugOut = debugOut * float(debugColours);
