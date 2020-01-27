@@ -75,7 +75,7 @@ float irisHeight( float rad ){
     // defines depth of iris as function of radius
     // radius should be NORMALISED within iris
     // height is offset from base iris depth
-    return   ( 1.0 - smoothstep(-0.2, 0.4, rad  ) ) * irisDepth;
+    return  irisDepth - ( 1.0 - smoothstep( irisDipStart, irisDipEnd, 1.0 - rad  ) ) * irisDepth;
     //return -irisDepth;
     // later sample iris height texture here
 }
@@ -120,7 +120,7 @@ float shadowMap( in vec3 pos ){
     distance = smoothMax(
         sphDist( pos, caruncleCentre, caruncleRadius),
         - distance,
-        0.03
+        caruncleSmooth
     );
 
     return distance;
@@ -226,11 +226,11 @@ vec4 getIrisColour( vec3 pos, vec3 rayDir, vec3 normal,
 
         // we don't use a full SDF here, just Y-comparison
         float radius = length( pos.xz );
-        float normRad = 2 * radius / ( irisWidth ) ;
-        normRad = radius /  irisWidth; // literally no difference yet
+        float normRad = radius / ( 2 * irisWidth ) ;
+        //normRad = radius /  irisWidth; // literally no difference yet
         float height = pos.y  - limbalHeight + irisHeight( normRad ) ;
-        height = pos.y  - limbalHeight  ;
-        // height = pos.y - limbalHeight + irisDepth;
+        //height = pos.y  - limbalHeight  ;
+        //height = pos.y - limbalHeight + irisDepth;
         // can't get height function to work properly yet
 
         // check exit conditions
@@ -314,6 +314,11 @@ void main()
     float uvDist = radius;
     float eyeParam = ( irisWidth - uvDist ) / irisWidth;
     float irisParam = max(eyeParam, 0);
+
+    // find ior, toning down refraction at iris edge
+    float ior = 1.0 - ( smoothstep( 0.0, 0.3, 1.0 - irisParam ) * (1.0 - iorBase) );
+    ior = mix(1.0, iorBase, ( smoothstep( 0.0, 0.3, 1.2 - irisParam ) ) );
+
     // reconstruct limbal info
     float limbalParam = clamp( fit( eyeParam, -limbalWidth, limbalWidth, 0.0, 1.0),
     0.0, 1.0 );
@@ -362,7 +367,7 @@ void main()
     if ( irisBool > 0.0 ){
         vec4 irisColour = getIrisColour(
             pos, rayDir, normalOut, irisCoord, irisPolar,
-            iorBase
+            ior
         );
         mainColour = mix(mainColour, irisColour, irisBool);
     }
@@ -381,14 +386,14 @@ void main()
         mainColour = mix( mainColour, limbalColour, limbalRad);
     }
 
-    // test shadowing
+    // eyelid mask
     float shadow = shadowMap( pos );
     float debugshadow = step(0.01, clamp(-shadow, 0.0, 1.0) );
 
     shadow = smoothstep(0.0, 0.2, shadow);
 
     //shadow = stripySDF( shadow, 1.0);
-    mainColour.xyz -= shadow * 0.15;
+    mainColour.xyz -= shadow * eyeMaskWeight;
 
     //vec3 shadowCol = colourFromSDF( 1.0/shadow, 0.1, vec3(1.0, 0.0, 0.0));
 

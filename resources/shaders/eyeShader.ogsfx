@@ -53,10 +53,14 @@ uniform sampler2D IrisDiffuseSampler <string UIGroup="Textures";>= sampler_state
 };
 
 // test defining all uniform params in one place
-// test calibration attriutes for iris and corneal heights
+// physical parametres
+
 uniform float cornealHeight <string UIGroup="Main";>= 0.2;
 uniform float irisDepth <string UIGroup="Main";>= 0.1;
 uniform float irisWidth <string UIGroup="Main";>= 0.3;
+uniform float irisDipStart <string UIGroup="Main";>= 0.15;
+uniform float irisDipEnd <string UIGroup="Main";>= 1.0;
+
 uniform float pupilDilation <string UIGroup="Main";>= 0.0;
 uniform float pupilBaseWidth <string UIGroup="Main";>= 0.07;
 uniform float limbalWidth <string UIGroup="Main";>= 0.05;
@@ -70,6 +74,9 @@ uniform bool debugColours <string UIGroup="Main";> = False;
 
 
 // spherical sdf markers, to be given as translations in sphere space
+uniform float eyeMaskWeight <
+    string UIGroup = "Shadow SDF settings"; > ;
+
 uniform vec3 upperVector <
     string UIGroup = "Shadow SDF settings"; > ;
 
@@ -90,6 +97,11 @@ uniform vec3 caruncleVector <
 uniform float caruncleRadius <
     float UIMin = 0; float UIMax = 1.0;
     string UIGroup = "Shadow SDF settings"; > = 0.1;
+
+uniform float caruncleSmooth <
+    float UIMin = 0; float UIMax = 0.05;
+    string UIGroup = "Shadow SDF settings"; > = 0.01;
+
 
 
 
