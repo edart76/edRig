@@ -76,6 +76,8 @@ uniform bool debugColours <string UIGroup="Main";> = False;
 // spherical sdf markers, to be given as translations in sphere space
 uniform float eyeMaskWeight <
     string UIGroup = "Shadow SDF settings"; > ;
+uniform float eyeMaskSmooth <
+    string UIGroup = "Shadow SDF settings"; > ;
 
 uniform vec3 upperVector <
     string UIGroup = "Shadow SDF settings"; > ;

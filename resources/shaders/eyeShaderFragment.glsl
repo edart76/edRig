@@ -390,10 +390,10 @@ void main()
     float shadow = shadowMap( pos );
     float debugshadow = step(0.01, clamp(-shadow, 0.0, 1.0) );
 
-    shadow = smoothstep(0.0, 0.2, shadow);
+    shadow = smoothstep(-eyeMaskSmooth, 0.2, shadow);
 
     //shadow = stripySDF( shadow, 1.0);
-    mainColour.xyz -= shadow * eyeMaskWeight;
+    mainColour.xyz *= 1.0 - shadow * eyeMaskWeight;
 
     //vec3 shadowCol = colourFromSDF( 1.0/shadow, 0.1, vec3(1.0, 0.0, 0.0));
 
@@ -409,40 +409,6 @@ void main()
 //
 //
     colourOut = mainColour;
-
-/* ray stuff
-    // initial raycast
-    float t = 1.0;
-    float exit = 10.0;
-    vec3 pos = vec3(0.0);
-    int i = 0;
-    for( i; i < MAX_RAY_STEPS; i++ )
-    {
-        pos = ro + t * rayDir; // ray
-        float d = map( pos ); // test ray position against scene sdf
-        // check exit conditions
-        //if ( abs(d) < 0.01 || t > exit )
-        if ( abs(d) < 0.01  )
-        {
-            break;
-        }
-        t += d;
-    }
-
-    //if ( t < exit )
-    if ( i < MAX_RAY_STEPS )
-    {
-        colour = vec4( 1.0, 0.0, 0.0, 1.0 );
-    }
-
-    else {
-        colour = vec4( 0.0, 0.0, 0.0, 1.0);
-    }
-
-
-    colourOut = colour;
-    //colourOut = vec4( 0.0, 0.0, 0.0, 0.0);
-*/
 
 
 }
