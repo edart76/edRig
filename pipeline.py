@@ -4,8 +4,8 @@ it's probably not ready for use outside of helping manage tesserae"""
 import os, sys, importlib, pprint, io, tempfile
 import re
 
-from edRig import ROOT_PATH, COMMON_PATH
-from maya import cmds # hurts but there's no point in a separate module yet
+from edRig import ROOT_PATH, COMMON_PATH, cmds
+#from maya import cmds # hurts but there's no point in a separate module yet
 
 
 defaultFolders = ["models", "materials", "ref", "assemblyData"] # create these dynamically as required
@@ -466,7 +466,7 @@ def getLatestVersions( files, versions=2 ):
 
 	allVersions = sorted([ isVersion(i) for i in files], reverse=True)
 	versionMap = [ ( i, isVersion(i) ) for i in files ]
-	print "versionMap {}".format(versionMap)
+	#print "versionMap {}".format(versionMap)
 	#print "allVersions {}".format( allVersions)
 	if not any([ i[1] for i in versionMap ]):
 		return []
@@ -502,7 +502,7 @@ def isVersion(fileName):
 
 		# print "fileName {}".format(fileName)
 
-		print "version {}".format(version)
+		#print "version {}".format(version)
 		return version
 	except:
 		return 0

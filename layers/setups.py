@@ -495,12 +495,6 @@ class OpAttrItem(AttrItem):
 		it's literally just for skinOp"""
 		return self.extras["multi"]
 
-	def addChild(self, newChild):
-		if self.hType == "leaf":
-			raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
-		self.children.append(newChild)
-		newChild.parent = self
-
 	def getChildren(self):
 		if self.isLeaf():
 			return []

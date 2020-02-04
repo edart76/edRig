@@ -12,6 +12,9 @@ PIPE_STYLES = {
     PIPE_STYLE_DOTTED: QtCore.Qt.PenStyle.DotLine
 }
 
+entryHeight = 20
+nameBarHeight = 30
+
 class AbstractTile(QtWidgets.QGraphicsItem):
 	"""base for any tile in the ui"""
 
@@ -26,60 +29,37 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		super(AbstractTile, self).__init__(parent)
 		self.scene = scene
 		self.extras = dict(kwargs)
-		self._inputs, self._outputs = {}, {} # attrname : TileEntry
-		self.entries = {} # attrname : TileEntry
+		self.attrBlocks = [None, None] # input, output,  neutral(?)
+		self.entries = {} # every individual tile entry from blocks
 
 		self._width = 30
 		self._height = 30
+		self.entryHeight = 20
+
+		self.selected = False
+		self.colour = self.abstract.colour
+		self.borderColour = (200,200,250)
 
 		# widgets
 		self.nameTag = tilewidgets.NameTagWidget(self, abstractNode.nodeName)
 		self.classTag = QtWidgets.QGraphicsTextItem(
 			self.abstract.__class__.__name__, self)
 
+		self.settingsWidg = self.addSettings(self.abstract.settings)
+		self.memoryWidg = None # soon
+
 		# flags?
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable) # ????
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable) # ????
-		#self.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable, False)
 
-		print "abstract inputs are {}".format(self.abstract.inputs)
+		#print "abstract inputs are {}".format(self.abstract.inputs)
 
-
-
-		# entries
-		for i in self.abstract.inputs:
-			entry = TileEntry(parent=self, attrItem=i, scene=self.scene)
-			print "entry is {}".format(entry)
-			self.addEntry(entry, role="input")
-			entry.arrange()
-		for i in self.abstract.outputs:
-			entry = TileEntry(parent=self, attrItem=i, scene=self.scene)
-			self.addEntry(entry, role="output")
-			entry.arrange()
-			#self.entries[i.name] = entry
-
-		self.selected = False
-		self.colour = self.abstract.colour
-		self.borderColour = (200,200,250)
-
-		# resizing
-		self.width, self.height = self.calc_size()
-		self.entryHeight = 20
-		for i in self.entries.values():
-			i.setRect(0,0, self.width, self.entryHeight)
-
-
-		# width, height = self.calc_size()
-		# self.setRect(0,0, width, height)
-		self.calc_size()
-
-		# SETTINGS
-		self.settingsWidg = self.addSettings(self.abstract.settings)
+		self.sync()
 
 
 		# arrange items
 		self.arrangeText()
-		self.arrangeEntries()
+		#self.arrangeEntries()
 
 		self.setTextColour((200, 200, 200))
 
@@ -88,55 +68,116 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.actions = {}
 		self.abstract.sync.connect(self.sync)
 
+	@property
+	def inBlock(self):
+		return self.attrBlocks[0]
+	@property
+	def outBlock(self):
+		return self.attrBlocks[1]
+
+	def _resizeSettings(self, *args, **kwargs):
+		self.syncSize()
+
+		self.settingsProxy.resize(self.width, self.settingsWidg.height() * 1.5)
+		self.settingsProxy.setPos(0, self.height )
+
 	def addSettings(self, tree):
 		"""create a new abstractTree widget and add it to the bottom of node"""
 		self.settingsProxy = QtWidgets.QGraphicsProxyWidget(self)
-		settingsWidg = tilesettings.TileSettings(parent=None,
+		self.settingsWidg = tilesettings.TileSettings(parent=None,
 		                                              tree= tree)
-		self.settingsProxy.setWidget(settingsWidg)
-		self.settingsProxy.resize( self.width, settingsWidg.height())
+
+		# def _resizeSettings(*args, **kwargs):
+		# 	self.settingsProxy.resize(self.width, settingsWidg.height() * 1.5)
+
+		self.settingsProxy.setWidget(self.settingsWidg)
+
+		# connect collapse and expand signals to update size properly
+		self.settingsWidg.collapsed.connect( self._resizeSettings )
+		self.settingsWidg.expanded.connect( self._resizeSettings )
+		self._resizeSettings()
+
 		#self.addWidget
-		return settingsWidg
+		return self.settingsWidg
 
 	def sync(self):
-		"""verify number of tileEntries is in sync with abstractNode"""
+		"""update attrBlocks"""
 		self.abstract.log("")
 		self.abstract.log("begin abstractTile sync")
-		self.abstract.log("abstract attrs are {}, {}".format(
-			self.abstract.inputs, self.abstract.outputs))
-		for n in (self.abstract.inputs, self.inputs, "input"), \
-			(self.abstract.outputs, self.outputs, "output"):
+		# self.abstract.log("abstract attrs are {}, {}".format(
+		# 	self.abstract.inputs, self.abstract.outputs))
 
-			# check if we need to add entries
-			for i in n[0]:
-				if i.name not in n[1].keys():
-					entry = TileEntry(parent=self, attrItem=i)
-					self.addEntry(entry, role=n[2])
-				entry = self.entries[i.name]
-				entry.attr = i
+		# remove old entries
+		for i in self.attrBlocks:
+			self.scene.removeItem(i)
+		self.attrBlocks = [None, None]
+		self.entries.clear()
 
-			# check if we need to remove entries
-			for i in n[1].keys():
-				if not any(i in k.name for k in n[0]):
-					self.removeEntry(n[1][i], role=n[2])
-		self.arrangeEntries()
+		# generate new blocks
+
+		inEntry = TileEntry(parent=self,
+		                  attrItem=self.abstract.inputRoot,
+		                  scene=self.scene, text=False)
+		self.attrBlocks[0] = inEntry
+		inEntry.arrange()
+
+		outEntry = TileEntry(parent=self,
+		                  attrItem=self.abstract.outputRoot,
+		                  scene=self.scene, text=False)
+		self.attrBlocks[1] = outEntry
+		outEntry.arrange()
+
+
+		# resizing
+		self.width, self.height = self.syncSize()
+		# for i in self.entries.values():
+		# 	i.setRect(0,0, self.width, self.entryHeight)
+
+		self.arrange()
+
+	def arrange(self):
+		for i in self.attrBlocks:
+			i.arrange()
+		y = nameBarHeight # height of name and class tag
+
+		self.attrBlocks[0].setPos(0, y)
+		y += self.attrBlocks[0].rect().height() + 7
+
+		self.attrBlocks[1].setPos(0, y)
+		y += self.attrBlocks[0].rect().height() + 7
+
+		y += 30
+
+		self.syncSize()
+		self._resizeSettings()
+
+
+	def syncSize(self):
+		"""
+		calculate minimum node size.
+		"""
+		width = 0.0
+		minRect = self.nameTag.boundingRect()
+		minWidth = minRect.x() + 150
+		minHeight = minRect.y() + 20
+		# for i in self.entries.values():
+		# 	minHeight += entryHeight + 2
+		# 	minWidth = max(minWidth, i.boundingRect().width())
+		for i in self.attrBlocks:
+			if not i:
+				continue
+			minHeight += i.boundingRect().height() + 5
+			#minWidth = max( minWidth, i.boundingRect().width() )
+
+
+		#self.prepareGeometryChange()
+		self.width = minWidth
+		self.height = minHeight
+		self.update()
+		return minWidth, minHeight
 
 	def getActions(self):
 		return self.abstract.getAllActions()
-
-	@property
-	def inputs(self):
-		#return sorted(self._inputs)
-		return self._inputs
-
-	@property
-	def outputs(self):
-		#return sorted(self._outputs)
-		return self._outputs
-	#
-	# @property
-	# def entries(self):
-	# 	return self.inputs.update(self.outputs)
 
 	@property
 	def pipes(self):
@@ -155,11 +196,6 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		"""you know that feeling when you need a very specific kind of knob"""
 		return self.entries[knobName].knob
 
-	# def contextMenuEvent(self, event):
-	# 	print "tile context event"
-	# 	super(AbstractTile, self).contextMenuEvent(event)
-
-
 	# signal responses
 	def _onNameChange(self, widget, name):
 		self.abstract.rename(name)
@@ -168,53 +204,13 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.selected = selected
 		super(AbstractTile, self).setSelected(selected)
 
-	# child elements
-	def addEntry(self, entry, role="input"):
-		"""add tile entry item to tile"""
-		roles = {"input" : self.inputs,
-				 "output" : self.outputs}
-		if entry.name in roles[role].keys():
-			# raise RuntimeError("entry name {} is already an {}".format(
-			# 	entry.name, role))
-			# need a more sensitive solution to account for child entries -
-			# if parents add children recursively, this may not be cause for error
-			print "entry name {} is already an {}".format(entry.name, role)
-			return
-		roles[role][entry.name] = entry
-		self.entries[entry.name] = entry
-		#self.scene.addItem(entry) #unparents item
-
-	def removeEntry(self, entry, role="input"):
-		"""remove tile entry item from tile"""
-		roles = {"input": self.inputs,
-				 "output": self.outputs}
-		roles[role].pop(entry.name)
-		self.entries.pop(entry.name)
-		self.scene.removeItem(entry)
-
-
 	# visuals
 	def boundingRect(self):
-		width, height = self.calc_size()
+		width, height = self.syncSize()
 		return QtCore.QRectF(0.0, 0.0, width, height)
 
 	def arrangeText(self):
 		self.classTag.setPos(self.boundingRect().width(), 0)
-
-	def arrangeEntries(self):
-		y = 10 # height of name and class tag
-		for i in self.entries.values():
-			i.arrange()
-			# print ""
-			# print "entryPos is {}".format(i.pos())
-			height = i.rect().height()+7
-			y += height
-			# i.setPos(self.scene.mapToScene(10, y))
-			i.setPos(0, y)
-			#print "newPos is {}".format(i.pos())
-		y += 30
-		self.settingsProxy.setPos(0, y)
-
 
 
 	def setTextColour(self, color):
@@ -275,29 +271,6 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 		painter.restore()
 
-	def calc_size(self):
-		"""
-		calculate minimum node size.
-		"""
-		width = 0.0
-		minRect = self.nameTag.boundingRect()
-		minWidth = minRect.x() + 150
-		minHeight = minRect.y() + 20
-		for i in self.entries.values():
-			minHeight += 33
-			minWidth = max(minWidth, i.boundingRect().width())
-
-
-		height = 0
-		width = 10
-
-		height += 10
-		#self.prepareGeometryChange()
-		self.width = minWidth
-		self.height = minHeight
-		self.update()
-		return minWidth, minHeight
-
 	# set positions of widgets
 	def positionName(self):
 		"""centres nametag widget"""
@@ -334,7 +307,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 	@width.setter
 	def width(self, width=0.0):
-		#w, h = self.calc_size()
+		#w, h = self.syncSize()
 		#self._width = width if width > w else w
 		#width = width if width > w else w
 		#self._width = width
@@ -346,7 +319,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 	@height.setter
 	def height(self, height=0.0):
-		# w, h = self.calc_size()
+		# w, h = self.syncSize()
 		# h = 70 if h < 70 else h
 		# self._height = height if height > h else h
 		#height = height if height > h else h
@@ -359,13 +332,14 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 			"pos" :	(self.pos().x(), self.pos().y()),
 			}
 
-	# def focusInEvent(self, event): # fucking help me
-	# 	event.ignore()
 
 class TileEntry(QtWidgets.QGraphicsRectItem):
 	"""individual shelf for knob and associated widget
-	this sadly locks us into left-to-right rectangular widgets...for now..."""
-	def __init__(self, parent=None, attrItem=None, rect=None, scene=None):
+	this sadly locks us into left-to-right rectangular widgets...for now...
+	should read and arrange attributes recursively from tree leaves
+	doesn't do that yet """
+	def __init__(self, parent=None, attrItem=None, scene=None,
+	             text=True):
 		if not attrItem:
 			raise RuntimeError("no attrItem supplied!")
 		super(TileEntry, self).__init__(parent)
@@ -374,44 +348,60 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		self.attr = attrItem
 		self.name = attrItem.name
 		self.dataType = attrItem.dataType
-		self.children = []
+
+		# base visual dimensions
+		self.edgePad = 5
+		self.unitHeight = entryHeight
+
+		# update parent with shared entry dict
+		self.entries = self.parent.entries
+		self.entries[ self.name ] = self
+
+		# self.width = self.rect().width()
+		# self.height = self.rect().height()
+
+		self.setRect(0,0,self.parent.boundingRect().width() - self.edgePad,
+		             self.unitHeight)
+
+		self.children = [ TileEntry(
+			parent=self, attrItem=i, scene=self.scene)
+				for i in attrItem.children ]
+
+		for i in self.children:
+			#print("attr child {}".format(i.attr))
+			pass
 		self.extras = self.attr.extras
 		self.role = attrItem.role
 		self.widg = None
 		self.label = None
 		self.knob = None
-		self.setRect(0,0,self.parent.width-5,20)
+
+		# overridden later by arrange()
 		if attrItem.isConnectable():
 			self.knob = Knob(self, attr=self.attr)
 		else:
 			self.knob = None
-		if attrItem.isSimple() and self.role == "input":
-			self.widg = self.makeWidg()
-			self.widg.setToolTip(self.attr.desc)
-			self.widg.value_changed.connect(self.setAttrValue)
-		else:
-			if self.role == "output":
-				#self.widg = tilewidgets.NodeLabel(self.attr.desc, self)
-				self.label = QtWidgets.QGraphicsTextItem("output", self)
-				self.label.adjustSize()
-			elif not attrItem.isSimple():
-				self.label = QtWidgets.QGraphicsTextItem("dimensional", self)
-				self.label.adjustSize()
+
 		self.setToolTip(self.attr.desc)
 
 		self.text = QtWidgets.QGraphicsTextItem(self.attr.name, self)
 		self.text.adjustSize()
+		if not text:
+			self.text.setVisible( False )
 
 		self.pen = QtGui.QPen()
 		self.brush = QtGui.QBrush()
 		self.setPen(self.pen)
 		self.setBrush(self.brush)
 
-		self.width = self.rect().width()
-		self.height = self.rect().height()
+		#self.arrange()
 
-		self.arrange()
-
+	@property
+	def width(self):
+		return self.boundingRect().width()
+	@property
+	def height(self):
+		return self.boundingRect().height()
 
 	def onConnectionMade(self):
 		"""disable widget if it exists"""
@@ -431,19 +421,45 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 	def sync(self):
 		"""disable widget if connected, update widget value etc"""
 
-	def arrange(self):
-		"""place widget and port properly according to role
-		AND PLACE CHILDREN eventually"""
+	def arrange(self, parentWidth=None, depth=0, n=0, d=0):
+		"""recursively lay out tree structure
+		not sure this is totally solid yet but for now it works
+		 """
+
+		f = 1 if self.role == "output" else -1
+
+		y = n * (self.unitHeight + 3)
+		x = (depth - 1) * 5 * f
+		depth += 1
+
+
+		y +=3
+
+		self.setPos(x, y)
+		#n += 1
+
+		for i in self.children:
+			# n += 1
+			i.arrange(depth=depth, n=n)
+			n += 1
+
+		n = d
+		height = sum([i.rect().height() for i in self.children])
+		height = height + self.unitHeight
+
+		if self.children:
+			height += 3
+
+		# no more widgets
 		midHeight = self.height / 2.0
 		midWidth = self.width / 2.0
 		mainWidth = self.rect().width()
-		if self.widg:
-			widgetRect = self.widg.rect()
-			widgY = midHeight - widgetRect.height() / 2.0
-			#widgX = mainWidth / 2.0# + widgetRect.width() / 2.0
-			widgX = 0
-			#self.widg.setPos(self.scene.mapToScene(widgX, widgY))
-			self.widg.setPos(widgX, widgY)
+		parentWidth = parentWidth or self.parent.width
+
+
+		#self.setRect( x, y, parentWidth, height)
+		self.setRect( 0, 0, parentWidth, height)
+
 
 		if self.label:
 			labelRect = self.label.boundingRect()
@@ -455,15 +471,25 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 
 		if self.role == "output":
 			x = mainWidth
-			textX = mainWidth + 30
+			if self.knob:
+				textX = mainWidth + 30
+			else: textX = mainWidth + 5
 		else:
 			# position knob on left
 			x = -20
 			textX = textWidth * -1
 		if self.knob:
 			knobY = self.height /2.0 - self.knob.boundingRect().height() / 2.0
-			self.knob.setPos(x, knobY)
+			self.knob.setPos(x, 0)
 		self.text.setPos(textX, 1)
+
+		# # arrange children
+		# for i, val in enumerate(self.children):
+		# 	val.setPos( 5, (1 + i) * 20)
+		# 	pass
+
+
+		#self.setRect(0, 0, self.parent.width - 5, 20)
 
 
 	def makeWidg(self):

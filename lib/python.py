@@ -234,6 +234,12 @@ class Signal(object):
 class AbstractTree(object):
 	"""fractal tree-like data structure
 	each branch having both name and value"""
+
+	""" should branches created by calling
+	directly inherit the parent class,
+	or fall back to basic tree? """
+	branchesInherit = False
+
 	def __init__(self, name=None, val=None):
 		self._name = name
 		self._parent = None
@@ -249,7 +255,8 @@ class AbstractTree(object):
 
 	@name.setter
 	def name(self, val):
-		self._name = val
+		""" update parent map """
+		self._setName(val)
 
 	@property
 	def parent(self):
@@ -272,8 +279,10 @@ class AbstractTree(object):
 		return self._value
 	@value.setter
 	def value(self, val):
+		oldVal = self._value
 		self._value = val
-		self.valueChanged(self)
+		if oldVal != val:
+			self.valueChanged(self)
 
 	@property
 	def branches(self):
@@ -293,7 +302,7 @@ class AbstractTree(object):
 		if branch.name in self.keys():
 			print("cannot add duplicate child of name {}".format(branch.name))
 			newName = self.getValidName(branch.name)
-			branch.setName(newName)
+			branch._setName(newName)
 			# raise RuntimeError(
 			# 	"cannot add duplicate child of name {}".format(branch.name))
 		self._map[branch.name] = branch
@@ -301,7 +310,10 @@ class AbstractTree(object):
 		self.structureChanged()
 		return branch
 
-	def get(self, lookup, default):
+	def addDirectChild(self, branch):
+		""" only called when adding an inherited branch? """
+
+	def get(self, lookup, default=None):
 		"""same implementation as normal dict"""
 		return self._map.get(lookup, default)
 
@@ -339,16 +351,16 @@ class AbstractTree(object):
 		else:
 			return self.parent.getAddress(prev=path)
 
-	def setName(self, name):
+	def _setName(self, name):
 		"""renames and syncs parent's map
 		currently destroys orderedDict order - oh well"""
-		if name == self.name: # we aint even mad
+		if name == self._name: # we aint even mad
 			return name
 
 		# we need to preserve order across renaming
 		if self.parent:
 			newDict = OrderedDict()
-			oldName = self.name
+			oldName = self._name
 			name = self.parent.getValidName(name)
 			for k, v in self.parent.iterBranches():
 				if k == oldName:
@@ -356,7 +368,7 @@ class AbstractTree(object):
 					continue
 				newDict[k] = v
 			self.parent._map = newDict
-		self.name = name
+		self._name = name
 		self.structureChanged()
 		return name
 
@@ -387,6 +399,7 @@ class AbstractTree(object):
 
 	def __call__(self, address):
 		""" allows lookups of string form "root.branchA.leaf"
+
 		:returns AbstractTree"""
 		if isinstance(address, basestring): # if you look up [""] this will break
 			address = address.split(".") # effectively maya attribute syntax
@@ -394,12 +407,15 @@ class AbstractTree(object):
 			return self
 		first = address.pop(0)
 		if not first in self._map: # add it if doesn't exist
-			self.addChild(AbstractTree(first, None))
+			# check if branch should inherit directly, or
+			# remain basic tree object
+			if self.branchesInherit:
+				self.addChild(self.__class__(first, None))
+			else:
+				self.addChild(AbstractTree(first, None))
 		#else:
 		branch = self._map[first]
 		return branch(address)
-
-
 
 
 	def matchBranchesToSequence(self, sequence,
@@ -425,13 +441,14 @@ class AbstractTree(object):
 		self._map = newMap
 
 
-	@staticmethod
-	def fromDict(regenDict, cls=None):
+	@classmethod
+	def fromDict(cls, regenDict):
 		"""expects dict of format
 		name : eyy
 		value : whatever
 		children : [{
-			etc}, {etc}]"""
+			etc}, {etc}]
+			:param regenDict : Dict """
 
 		# support subclass serialisation and regen -
 		# check first for a saved class or module name
@@ -439,13 +456,13 @@ class AbstractTree(object):
 		if "?CLASS" in objDict and "?MODULE" in objDict:
 			cls = loadObjectClass({ "?CLASS" : regenDict["?CLASS"],
 			                  "?MODULE" : regenDict["?MODULE"]})
-		else: cls = cls or AbstractTree
+		#else: cls = cls or AbstractTree
 		# if branch is same type as parent, no info needed
 		# a tree of one type will mark all branches as same type
 		# until a new type is flagged
 
 		new = cls(regenDict["name"], regenDict["value"])
-		new.extras = regenDict["extras"]
+		new.extras = regenDict.get("extras", default={})
 
 		# regnerate children with correct indices
 		length = len(regenDict["children"])
@@ -453,7 +470,12 @@ class AbstractTree(object):
 			for i in regenDict["children"]:
 				if not i["?INDEX"] == n:
 					continue
-				branch = cls.fromDict(i)
+
+				# check if direct inheritance is desired
+				if cls.branchesInherit:
+					branch = cls.fromDict(i)
+				else:
+					branch = AbstractTree.fromDict(i)
 				new.addChild(branch)
 		return new
 
@@ -463,10 +485,11 @@ class AbstractTree(object):
 		serial = {
 			"name" : self.name,
 			"value" : self.value,
-			"extras" : self.extras,
 			"children" : [i.serialise() for i in self._map.values()],
 			"?INDEX" : self.ownIndex()
 		}
+		if self.extras:
+			serial["extras"] = self.extras
 		if self.parent:
 			if self.parent.__class__ != self.__class__:
 				objData = saveObjectClass(self)

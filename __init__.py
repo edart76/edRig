@@ -2,9 +2,13 @@ from __future__ import print_function
 #from edRig.structures import EnvironmentSettings
 import sys, os
 
+cmds = None
+om = None
+
 try:
 	from maya import cmds
 	import maya.api.OpenMaya as om
+
 	from edRig.node import AbsoluteNode, ECA
 	from edRig.attr import con
 	pass

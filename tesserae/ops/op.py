@@ -237,13 +237,22 @@ class Op(MayaReal):
 		self.attrValueChanged = self.abstract.attrValueChanged
 		self.makeBaseActions()
 
+		self.sync.connect( self.onSync )
+
+		self.sync()
+
 		# i would really like some meta way to supplant all op-level methods
 		# with the "correct" abstract-level versions
+
+	def onSync(self):
+		""" user-facing method to update plugs, settings, anything """
+		pass
 
 	def makeBaseActions(self):
 		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
 			{"func" : self.clearMayaRig}))
 		self.addAction(func=self.showGuidesWrapper, name="showGuides")
+		self.addAction(func=self.sync, name="sync")
 
 	@property
 	def __name__(self):

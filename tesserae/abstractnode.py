@@ -632,6 +632,7 @@ class AbstractAttr(AttrItem):
 	def addChild(self, newChild):
 		newChild = super(AbstractAttr, self).addChild(newChild)
 		newChild.node = self.node
+		return newChild
 		#self.node.attrsChanged() # call from node
 
 	@property
@@ -658,11 +659,14 @@ class AbstractAttr(AttrItem):
 		excessChildren = childSet - nameSet
 		newNames = nameSet - childSet
 
+		print( "newNames {}".format(newNames))
+
 		for i in excessChildren:
 			self.removeAttr(i)
 
 		for i in newNames:
-			nameSpec = [n for n in spec if i["name"] == i][0]
+			print( "newName i {}".format(i))
+			nameSpec = [n for n in spec if n["name"] == i][0]
 			kwargs = {}
 			# override defaults with only what is defined in spec
 			for k, v in self.childKwargs.iteritems():

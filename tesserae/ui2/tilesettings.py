@@ -2,7 +2,7 @@
 allowing for more granular control"""
 from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.lib.python import Signal, AbstractTree
-from edRig.tesserae.ui2.lib import ContextMenu
+from edRig.tesserae.ui2.lib import ContextMenu, expandingPolicy
 from edRig.tesserae.expression import EVALUATOR
 from edRig.structures import ActionItem
 
@@ -19,6 +19,11 @@ happen only between pure objects: abstractNode, abstractTree, abstractGraph etc,
 and have no 'direct' dependence on a third party
 """
 
+shrinkingPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Minimum,
+	QtWidgets.QSizePolicy.Minimum,
+)
+
 class TileSettings(QtWidgets.QTreeView):
 	"""widget for viewing and editing an AbstractTree
 	display values in columns, branches in rows"""
@@ -32,7 +37,7 @@ class TileSettings(QtWidgets.QTreeView):
 		""":param tree : AbstractTree"""
 		super(TileSettings, self).__init__(parent)
 		self.setAnimated(True) # attend first to swag
-		self.setAutoExpandDelay(0.3)
+		self.setAutoExpandDelay(0.1)
 
 		self.setAcceptDrops(True)
 		self.setDragDropMode(
@@ -66,9 +71,29 @@ class TileSettings(QtWidgets.QTreeView):
 		self.setAlternatingRowColors(True)
 		self.showDropIndicator()
 
-
-
 		self.initActions()
+
+		header.geometriesChanged.connect( self.resizeToTree )
+		self.collapsed.connect( self.resizeToTree )
+		self.expanded.connect( self.resizeToTree )
+
+
+		#self.setSizePolicy( shrinkingPolicy )
+		self.setSizePolicy( expandingPolicy )
+		self.header().setSizePolicy( expandingPolicy )
+
+	def resizeToTree(self):
+		#self.header().resizeToContents()
+
+		width = self.size().width()
+		height = 40 * self.header().count()
+		self.resize( width, height )
+		#self.header().resize( width, height )
+
+		# self.header().resizeSections()
+		# self.adjustSize()
+
+		pass
 
 	def makeMenu(self):
 
@@ -160,7 +185,9 @@ class TileSettings(QtWidgets.QTreeView):
 
 	def onContext(self, event):
 		self.makeMenu()
-		menu = self.menu.exec_( event.globalPos() )
+		#pos = event.localPos()
+		pos = event.globalPos()
+		menu = self.menu.exec_( pos )
 
 	def onContextPoint(self, qPoint):
 		self.makeMenu()
@@ -208,6 +235,9 @@ class TileSettings(QtWidgets.QTreeView):
 
 		self.modelObject = AbstractTreeModel(tree=self.tree)
 		self.setModel(self.modelObject)
+
+		self.resizeToTree()
+
 		return self.modelObject
 
 
@@ -241,7 +271,7 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		#self.addValueData()
 		
 	def setData(self, value, *args, **kwargs): # sets the NAME of the tree
-		name = self.tree.setName(value)
+		name = self.tree._setName(value)
 		# print "args {}".format(args)
 		# print "kwargs {}".format(kwargs)
 		"""args and kwargs contain nothing useful, or even related to value"""

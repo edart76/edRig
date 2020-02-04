@@ -9,6 +9,27 @@ import shiboken2, weakref
 import maya.cmds as cmds
 from shiboken2 import wrapInstance
 import pprint
+
+expandingPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Expanding,
+	QtWidgets.QSizePolicy.Expanding,
+)
+
+vertExpandingPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Fixed,
+	QtWidgets.QSizePolicy.Expanding,
+)
+
+horiExpandingPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Expanding,
+	QtWidgets.QSizePolicy.Fixed,
+)
+
+staticPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Fixed,
+	QtWidgets.QSizePolicy.Fixed,
+)
+
 # https://github.com/mottosso/Qt.py by Marcus Ottosson
 
 def getMayaWindow():

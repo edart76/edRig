@@ -65,11 +65,15 @@ class JointCurveOp(SpookyLayerOp):
 			entry = self.settings["joints.joint{}".format(i) ]
 
 
+	def onSync(self):
+		self.matchOutputsToSettings()
+
 	def matchOutputsToSettings(self):
-		jointTree = self.settings["joints"]
+		jointTree = self.settings("joints")
 		outputs = jointTree.keys()
 		pointPlug = self.getOutput("points")
 		specList = [ {"name" : i} for i in outputs]
+		self.log( "specList {}".format(specList))
 		pointPlug.matchArrayToSpec(spec=specList)
 
 

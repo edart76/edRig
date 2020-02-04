@@ -1,7 +1,10 @@
 # manages connectivity and execution order of a dag graph
 
+from __future__ import print_function
+
 from edRig import ROOT_PATH, pipeline, naming
 from edRig.lib.python import Signal
+from edRig.lib.python import AbstractTree
 from edRig.pipeline import TempAsset
 from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
 from edRig.tesserae.abstractedge import AbstractEdge
@@ -10,11 +13,11 @@ from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
 import pprint
 
-# Env log needs total overhaul but it's not a priority right now
+
 
 class AbstractAbstractGraph(type):
 	"""metaclass for the abstract graph in case we need it
-	we DO need a way to initialise graphs without actual tesserae stuff"""
+	likely to be used to register graphs on creation """
 
 class ExecutionPath(object):
 	"""class describing a sequential path through the graph"""
@@ -133,12 +136,22 @@ class AbstractGraph(object):
 	"""graph documenting a collection of abstract nodes
 	absolute emphasis on topology and connectivity"""
 
+	# register of all active graphs to async lookup and interaction
+	graphRegister = AbstractTree(name="graphs")
+
 	states = ["neutral", "executing", "complete", "failed", "approved"]
 
-	def __init__(self, parent=None, name="NewGraph"):
+	def __init__(self, parent=None, name="main"):
+		""":param parent : AbstractGraph"""
 
 		self.graphName = name
 		self.parent = parent
+		# add to register
+		if parent:
+			self.graphRegister[parent.name + "." + self.graphName] = self
+		else:
+			self.graphRegister[self.graphName] = self
+
 		self.nodeGraph = {} # node catalogue indexed by UID
 		"""{1040 : {
 				"node" : AbstractNode,
@@ -185,7 +198,7 @@ class AbstractGraph(object):
 
 
 	def log(self, message):
-		print message
+		print(message)
 
 	def setAsset(self, assetItem):
 		self._asset = assetItem
@@ -217,8 +230,8 @@ class AbstractGraph(object):
 
 	@property
 	def dataPath(self):
-		print "graph datapath, asset is {}, path is {}".format(
-			self.asset, self.asset.dataPath)
+		# self.log("graph datapath, asset is {}, path is {}".format(
+		# 	self.asset, self.asset.dataPath) )
 		if self.asset:
 			return self.asset.dataPath
 
@@ -306,7 +319,7 @@ class AbstractGraph(object):
 			return False
 		sourceNode = edge.source[0]
 		sourceEntry = self.getNode(sourceNode, True)
-		print "feeding before delete is {}".format(sourceEntry["feeding"])
+		self.log("feeding before delete is {}".format(sourceEntry["feeding"]) )
 		if edge in self.edges:
 			self.edges.remove(edge)
 
@@ -321,13 +334,12 @@ class AbstractGraph(object):
 		# print "source feeding is {}".format(sourceNode.feeding)
 		# print "source fedBy is {}".format(sourceNode.fedBy)
 		if sourceNode.edges.isdisjoint(destNode.edges):
-			print "sets are disjoint"
+			self.log("sets are disjoint")
 			sourceEntry = self.getNode(sourceNode, True)
 			destEntry = self.getNode(destNode, True)
 			#print "feeding is {}".format(sourceEntry["feeding"])
 			sourceEntry["feeding"].difference({destNode})
 			destEntry["fedBy"].difference({sourceNode})
-		print ""
 
 
 	def deleteNode(self, node):
@@ -428,16 +440,16 @@ class AbstractGraph(object):
 		if self.state != "neutral": # graph is executing
 			return False
 		if source.node.uid == dest.node.uid:
-			print("put some effort into it for god's sake")
+			self.log("put some effort into it for god's sake")
 			return False
 		elif source in source.node.inputs or dest in dest.node.outputs:
-			print("attempted connection in wrong order")
+			self.log("attempted connection in wrong order")
 			return False
 		elif source.node in dest.node.future:
-			print("source node in destination's future")
+			self.log("source node in destination's future")
 			return False
 		elif dest.node in source.node.history:
-			print("dest node in source's past")
+			self.log("dest node in source's past")
 			return False
 		return True
 
@@ -675,9 +687,7 @@ class AbstractGraph(object):
 	@staticmethod
 	def fromDict(regen):
 		"""my bones"""
-		# if isinstance(regen, str):
-		# 	regen = eval(regen)
-		#print "regen is {}".format(regen)
+
 		newGraph = AbstractGraph(name=regen["name"]) # parent will be tricky
 		if "asset" in regen.keys():
 			newGraph.setAsset(pipeline.assetFromName(regen["asset"]))
