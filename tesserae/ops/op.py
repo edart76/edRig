@@ -510,13 +510,18 @@ class Op(MayaReal):
 				plug = attr.addAttr(node, attrName=i.name, attrType=dt)
 		elif i.dataType in attr.INTERFACE_ATTRS:
 			dtdict = attr.INTERFACE_ATTRS[i.dataType]
+			dtdict = {i.name : dtdict }
+			print("new attr dict is {}".format(dtdict))
 			attr.makeAttrsFromDict(node,
-	                              attrDict={i.name : dtdict},
+	                              attrDict=dtdict,
 	                              parent=parentPlug)
 			plug = node+ "." + "".join(parentPlug.split(".")[0:]) + i.name
 		else:
 			dt = i.dataType
-			kwargs = i.extras or {}
+			self.log(" attr is {}".format(i.name))
+			self.log(" attr dt is {}".format(i.dataType))
+			#kwargs = i.extras or {}
+			kwargs = {}
 			plug = attr.addAttr(node, attrName=attrItem.name, attrType=dt,
 			                    parent=parentPlug, **kwargs)
 

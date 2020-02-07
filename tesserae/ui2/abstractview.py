@@ -639,7 +639,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			return
 		print "save as file is {}".format(tilePileFile)
 		#print "save as data is {}".format(saveData) # returns dict type
-		if not pipeline.checkFileExists(tilePileFile):
+		if not pipeline.checkJsonFileExists(tilePileFile):
 			edRig.pipeline.makeBlankFile(path=tilePileFile)
 		pipeline.ioinfo(name="testPileSaveAs", mode="out",
 		              info=saveData, path=tilePileFile)

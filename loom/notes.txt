@@ -1,0 +1,13 @@
+
+"""
+Loom is a tool for exploring the qualitative results of moving between
+normal 3d euclidean space, and things that are not that
+
+an abstract tile-based ui provides a hyperview to design and plan out
+the topology of the space, while a raytracing component allows the smooth
+blending of different metrics
+
+
+
+
+"""

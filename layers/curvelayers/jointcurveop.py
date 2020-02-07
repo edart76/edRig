@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 import edRig.node
 from edRig.core import ECN, con
-from edRig import core, transform, attrio, control, curve, point, ECA
+from edRig import core, transform, attrio, control, curve, point, ECA, plug
 from maya import cmds
 from edRig.tesserae.ops.layer import LayerOp
 import maya.api.OpenMaya as om
@@ -79,7 +79,7 @@ class JointCurveOp(SpookyLayerOp):
 
 	def execute(self):
 
-		self.prefix = self.settings["prefix"].value
+		self.prefix = self.settings["prefix"]
 		self.joints = []
 		self.mainCurve, self.upCurve = None, None
 
@@ -88,16 +88,19 @@ class JointCurveOp(SpookyLayerOp):
 
 		if self.settings["priority"] == "joints":
 			self.matchCurveToJoints()
-			self.remember("joints", "xform", self.joints, jointMode=True)
 			self.remember("joints", "attr", self.joints, transformAttrs=False)
+			self.remember("joints", "xform", self.joints, jointMode=True)
+			# self.remember("joints", "attr", self.joints, transformAttrs=False)
+			self.freezeJoints()
+			#self.refreshMemoryAndSave()
 
 		else:
 			self.matchJointsToCurve()
 			self.remember("curve", "shape",
-			              nodes=[self.mainCurve, self.upCurve])
+			              nodes=[self.mainCurve.shape, self.upCurve.shape])
 
-		self.memory.setClosed("curves", status=True)
-		self.memory.setClosed("joints", status=True)
+		# self.memory.setClosed("curves", status=True)
+		# self.memory.setClosed("joints", status=True)
 		self.updateOutputs()
 
 	""" consider behaviour when adding new joints - 
@@ -120,9 +123,17 @@ class JointCurveOp(SpookyLayerOp):
 		n = len( self.joints )
 		for i in range( n ):
 			u = 1.0 / (n - 1) * i
-			jntMat = curve.liveMatrixAtU( self.mainCurve, u=u,
-			                              constantU=0, upCurve=self.upCurve)
-			transform.decomposeMatrixPlug(self.joints[i])
+			# create pcis
+			pci = curve.pciAtU(self.mainCurve.shape + ".local", u=u, )
+			upPci = curve.pciAtU(self.upCurve.shape + ".local", u=u, )
+			upVec = plug.vecFromTo( pci + ".position", upPci + ".position")
+			jntMat = curve.matrixPlugFromPci(pci, upVector=upVec)
+
+			self.joints[i].disconnect("inverseScale")
+
+			self.joints[i].parentTo()
+
+			transform.decomposeMatrixPlug(jntMat, self.joints[i])
 		pass
 
 	def matchCurveToJoints(self):
@@ -144,7 +155,7 @@ class JointCurveOp(SpookyLayerOp):
 
 
 	def createJoints(self):
-		entry = self.settings["joints"]
+		entry = self.settings("joints")
 		for i, val in enumerate(entry.keys()):
 			joint = self.ECA("joint", name=val)
 			self.joints.append(joint)
@@ -152,14 +163,14 @@ class JointCurveOp(SpookyLayerOp):
 
 			if i :
 				joint.parentTo(self.joints[i - 1])
-		self.remember("joints", nodes=self.joints, infoType="xform")
+
 		return self.joints
 
 	def createCurves(self):
 		# first main curve
 		points = []
 		upPoints = []
-		degree = self.settings["curve"]["degree"].value
+		degree = self.settings["curve.degree"]
 		# matching to joints on creation is fine, both will be reset later
 		for i in self.joints:
 			points.append(cmds.xform(i, q=True, ws=True, t=True))
@@ -185,14 +196,14 @@ class JointCurveOp(SpookyLayerOp):
 	#@tidy
 	def showGuides(self):
 
-		if self.settings["priority"].value == "joints":
+		if self.settings["priority"] == "joints":
 			self.matchControlsToJoints()
 			#self.out1D.skinToPoints(pointList)
 			for i in self.joints:
 				self.markAsGuide(i)
 
 
-		elif self.settings["priority"].value == "curve":
+		elif self.settings["priority"] == "curve":
 			self.memory.setClosed("curves", status=False)
 			for i in self.joints:
 				#self.out1D.setRivetPoint(i)
@@ -205,16 +216,6 @@ class JointCurveOp(SpookyLayerOp):
 
 		return 1
 
-	def update1D(self):
-		self.out1D = Curve(node=self.mainCurve)
-		self.out1D.upCurve = self.upCurve
-		for i in self.joints:
-			u = curve.getClosestU(self.mainCurve, i)
-			point = Point(i)
-			self.out1D.addPoint(u, Point)
-		pass
-
-
 	def connectInputs(self):
 		"""connect space group to parent"""
 		matPlug = point.getPoint(on=self.getInput("parent").plug,
@@ -224,7 +225,7 @@ class JointCurveOp(SpookyLayerOp):
 	def updateOutputs(self):
 		"""transfer output objects to attribute values"""
 		# print "out1D is {}".format(self.getOutput("jc"))
-		self.getOutput("jc").value = self.out1D
+		# self.getOutput("jc").value = self.out1D
 		cmds.connectAttr(self.mainCurve.shape+".local",
 		                 self.getOutput("jc").plug+".mainCurve")
 		cmds.connectAttr(self.upCurve.shape + ".local",

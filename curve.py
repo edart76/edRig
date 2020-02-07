@@ -5,6 +5,7 @@ from core import ECN, con
 from edRig.node import AbsoluteNode, ECA
 import maya.api.OpenMaya as om
 from edRig import attr, plug
+from edRig.plug import conOrSet
 
 sceneScale = 1
 # for later
@@ -57,7 +58,7 @@ def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
 	fn = om.MFnNurbsCurve()
 	target = AbsoluteNode(target)
 	targetName = target.name
-	target.delete()
+	#target.delete()
 
 	print "info to set is {}".format(info)
 
@@ -65,9 +66,15 @@ def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
 	shapeObj = fn.create(
 		cvs, info["knots"], info["degree"], info["form"], False, True, parent=parent.MObject
 	)
-	target.setMObject(shapeObj)
-	target.name = targetName
-	return shapeObj
+
+	# connect attr to maintain references
+	dfn = om.MFnDependencyNode( shapeObj )
+	shape = AbsoluteNode(dfn.name())
+	cmds.connectAttr(shape + ".local", target + ".create", f=True)
+
+	shape.transform.delete()
+
+	return target
 
 
 def getCurveDiff(base, target):
@@ -284,55 +291,49 @@ def getLiveNearestPoint(curve, tf):
 	pass
 
 
-def pciAtU(crvShape, u=0.1, percentage=True,
-	local=True, constantU=True, purpose="anyPurpose"):
+def pciAtU(crvPlug, u=0.1, percentage=True,
+	constantU=True, purpose="anyPurpose"):
 	""" low level function to produce a point on a curve """
 	# if there's an alias thing in python i want to call this pikachu
 	# check for other pcis attached to the curve to avoid unnecessary usage
 	# if it's constant, at the same u, it's compatible
 	# if it's not constant, at the same U for a different purpose, not
 
-	if attr.isPlug(crvShape):
-		connectedAll = attr.getImmediateFuture(crvShape)
-		connectedPcis = [i for i in connectedAll
-		                 if cmds.nodeType(i) == "pointOnCurveInfo"]
-	else:
-		connectedPcis = cmds.listConnections(crvShape+".local", d=True, s=False,
-			type="pointOnCurveInfo")
+	# first look through all connected pci nodes
+	connectedAll = attr.getImmediateFuture(crvPlug)
+	connectedPcis = [i for i in connectedAll
+	                 if cmds.nodeType(i) == "pointOnCurveInfo"]
 	testPcis = []
 	targetPci = ""
-	if connectedPcis:
-		for i in connectedPcis:
-			if cmds.getAttr(i+".parameter") == u:
-				testPcis.append(i)
-				break
-	#print "testPcis is {}".format(testPcis)
-	if testPcis:
-		for i in testPcis:
-			constantTest = attr.getTag(i, tagName="constantU")
-			# constantTest = core.Op.getTag(i, tagName = "constantU")
-			#print "test is {}".format(constantTest)
-			if constantU:
-				if constantTest == "True":
-					targetPci = i
-					break
-			if not constantU:
-				purposeTest = attr.getTag(i, tagName="purpose")
-				print "purposeTest is {}".format(purpose)
-				if constantTest == "False" and purposeTest == purpose:
-					targetPci = i
-					break
-	#print "target pci is {}".format(targetPci)
+	for i in connectedPcis:
+		if cmds.getAttr(i+".parameter") == u:
+			testPcis.append(i)
+			#break
 
+	# can any pcis be reused?
+	for i in testPcis:
+		constantTest = attr.getTag(i, tagName="constantU")
+		# constantTest = core.Op.getTag(i, tagName = "constantU")
+		#print "test is {}".format(constantTest)
+		if constantU:
+			if constantTest == "True":
+				targetPci = i
+				break
+		if not constantU:
+			purposeTest = attr.getTag(i, tagName="purpose")
+			print("pci purposeTest is {}".format(purpose))
+			if constantTest == "False" and purposeTest == purpose:
+				targetPci = i
+				break
+
+	# create new pci node
 	if not targetPci:
-		targetPci = ECN("pci", "pointOn_{}_at{}u".format(crvShape, str(u)))
+		targetPci = ECN("pci", "pointAt_{}u".format(str(u)[:3]))
 		attr.addTag(targetPci, "constantU", str(constantU))
 		attr.addTag(targetPci, "purpose", str(purpose))
 		cmds.setAttr(targetPci + ".parameter", u)
-		if attr.isPlug(crvShape):
-			con(crvShape, targetPci+".inputCurve")
-		else:
-			con(crvShape+".local", targetPci+".inputCurve")
+		con(crvPlug, targetPci+".inputCurve")
+		cmds.setAttr(targetPci + ".turnOnPercentage", int(percentage))
 
 	return targetPci
 
@@ -358,9 +359,39 @@ def matrixAtU(crv, u=0.5, percentage=True):
 					posVec[0], posVec[1], posVec[2], 1))
 	return mat
 
+def matrixPlugFromPci(pci, upVector=None):
+	""" more atomic rewrite of curve functions using clear plug
+	:param pci : AbsoluteNode
+	:param upVector : tuple or plug"""
+
+	mat = ECA("4x4", "matAtU")
+	vp = ECA("vp", "biNormal", "cross")
+
+	con(pci+".normalizedTangent", vp + ".input1")
+
+	if upVector:
+		conOrSet( upVector, vp + ".input2")
+	else:
+		con(pci + ".normalizedNormal", vp + ".input2")
+
+	sources = [pci + ".normalizedTangent",
+	           pci + ".normalizedNormal",
+	           vp + ".output",
+	           pci + ".position",]
+
+	for source, row in zip(sources, "0123"):
+
+		for ax, column in zip("XYZ", "012"):
+			con( source + ax,
+			     mat + ".in" + row + column)
+
+	return mat + ".output"
+
+
 def liveMatrixAtU(crvShape, u=0.5, constantU=True, purpose="anyPurpose",
                   upCurve=None):
-	"""plug-agnostic since we call pciAtU"""
+	"""plug-agnostic since we call pciAtU
+	deprecated for more clear plug interfaces"""
 	data = {}
 	pci = pciAtU(crvShape, u=u, constantU=constantU, purpose=purpose)
 

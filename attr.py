@@ -199,7 +199,7 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None,
 		return target+"."+attrName
 
 	if attrType == "int" : attrType = "long"
-	dtList = ["string", "nurbsCurve"]
+	dtList = ["string", "nurbsCurve", "mesh"]
 	if attrType in dtList:
 		plug = cmds.addAttr(target, ln=attrName, dt=attrType, keyable=True,
 		                    **kwargs)
@@ -294,7 +294,7 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 	if not attrValue:
 		cmds.setAttr(targetPlug, **kwargs)
 
-	print "isPlug {} {}".format(targetPlug, isPlug(targetPlug))
+	#print "isPlug {} {}".format(targetPlug, isPlug(targetPlug))
 	if not isPlug(targetPlug):
 		raise RuntimeError("target plug {} does not exist".format(targetPlug))
 

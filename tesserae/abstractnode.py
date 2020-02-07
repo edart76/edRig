@@ -459,12 +459,12 @@ class AbstractNode(object):
 		"""for use in developing real components live - replaces class of real component
 		with current version"""
 		newReal = self.real.fromDict(self.real.serialise())
-		self.setRealInstance(newReal)
+		self.setRealInstance(newReal, define=False)
 		self.sync()
 
 	# graph io
 	def checkDataFileExists(self):
-		if edRig.pipeline.checkFileExists(self.dataPath):
+		if edRig.pipeline.checkJsonFileExists(self.dataPath):
 			print "data file for {} exists".format(self.nodeName)
 			self.dataFileExists = True
 		else:
@@ -522,13 +522,14 @@ class AbstractNode(object):
 
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]
-			module = realDict["MODULE"]
-			loadedModule = pipeline.safeLoadModule(module)
-			try:
-				realClass = getattr(loadedModule, realDict["CLASS"])
-			except Exception as e:
-				print "ERROR in reconstructing op {}".format(realDict["NAME"])
-				raise e
+			# module = realDict["MODULE"]
+			# loadedModule = pipeline.safeLoadModule(module)
+			# try:
+			# 	realClass = getattr(loadedModule, realDict["CLASS"])
+			# except Exception as e:
+			# 	print "ERROR in reconstructing op {}".format(realDict["NAME"])
+			# 	raise e
+			realClass = pipeline.loadObjectClass(realDict)
 
 		if realClass:
 			newClass = cls.generateAbstractClass(realClass)
@@ -584,7 +585,7 @@ class AbstractAttr(AttrItem):
 	def __init__(self, *args, **kwargs):
 		"""add maya-specific support, this inheritance is totally messed up"""
 		super(AbstractAttr, self).__init__(*args, **kwargs)
-		self.plug = None
+		self._plug = None
 
 		# default kwargs passed to attributes created through array behaviour
 		self.childKwargs = {
@@ -599,6 +600,15 @@ class AbstractAttr(AttrItem):
 		}
 		# TECHNICALLY recursion is now possible
 
+	# plug properties
+	@property
+	def plug(self):
+		return self._plug()
+	@plug.setter
+	def plug(self, val):
+		self._plug = val
+	# not robust AT ALL, but enough for what we need
+
 	def setChildKwargs(self, name=None, desc="", dataType="0D", default=None,
 	                   extras=None):
 		newKwargs = {}
@@ -606,7 +616,7 @@ class AbstractAttr(AttrItem):
 		newKwargs["name"] = name or self.childKwargs["name"]
 		# newKwargs["hType"] == hType or self.childKwargs["hType"]
 		newKwargs["desc"] = desc or self.childKwargs["desc"]
-		newKwargs["dataType"] = desc or self.childKwargs["dataType"]
+		newKwargs["dataType"] = dataType or self.childKwargs["dataType"]
 		self.childKwargs.update(newKwargs)
 
 	def addConnection(self, edge):

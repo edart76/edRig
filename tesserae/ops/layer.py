@@ -3,6 +3,7 @@ import edRig.pipeline
 from edRig.tesserae.ops.op import Op
 from edRig import core, attrio, utils, transform, control, beauty
 from edRig.layers.setups import Memory, OpAttrItem
+from edRig.tesserae.ops.memory import Memory2
 from edRig.structures import ActionItem
 import functools, inspect
 import copy
@@ -24,7 +25,8 @@ class LayerOp(Op):
 		super(LayerOp, self).__init__(*args, **kwargs)
 		print "layer sync is {}".format(self.sync)
 		self.controller = None
-		self.memory = Memory()
+		#self.memory = Memory()
+		self.memory = Memory2()
 		# self.loadMemory()
 
 		self.saveData = None
@@ -42,7 +44,7 @@ class LayerOp(Op):
 			oldDataPath = self.dataFilePath
 			self.opName = newName
 			# check if data exists already
-			if renameData and not edRig.pipeline.checkFileExists(newDataPath):
+			if renameData and not edRig.pipeline.checkJsonFileExists(newDataPath):
 				attrio.renameFile(old=oldDataPath, new=newDataPath)
 			else:
 				self.checkDataFileExists()
@@ -60,7 +62,7 @@ class LayerOp(Op):
 	def checkDataFileExists(self):
 		if self.abstract:
 			return True
-		if edRig.pipeline.checkFileExists(self.dataFilePath):
+		if edRig.pipeline.checkJsonFileExists(self.dataFilePath):
 			print "data file for {} exists".format(self.opName)
 			self.dataFileExists = True
 		else:
@@ -161,16 +163,16 @@ class LayerOp(Op):
 
 		if infoName in self.memory.infoNames():
 			if infoType in self.memory.infoTypes(infoName):
-				print ""
-				print "RECALLING from remember"
+				# print ""
+				# print "RECALLING from remember"
 				self.memory.setNodes(infoName, nodes)
 				self.memory.recall(infoName, infoType, **kwargs)
 			else:
-				print "infoType {} not found in memory {}".format(infoType,
-				                                                  self.memory.infoTypes(infoName))
+				self.log("infoType {} not found in memory {}".format(infoType,
+				                                                  self.memory.infoTypes(infoName)) )
 		else:
-			print "infoName {} not found in memory {}".format(infoName,
-			                                                  self.memory.infoNames())
+			self.log( "infoName {} not found in memory {}".format(infoName,
+			                                                  self.memory.infoNames()) )
 		# self.memory.setNodes(infoName, nodes)
 		self.memory.remember(infoName, infoType, nodes, **kwargs)
 

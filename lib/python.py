@@ -5,7 +5,6 @@ from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
 from abc import ABCMeta
 
-#from edRig import naming
 
 class Decorator(object):
 	"""base decorator class for functions
@@ -249,6 +248,10 @@ class AbstractTree(object):
 		self._map = OrderedDict()
 		self.extras = {}
 
+		# read-only attr
+		self.readOnly = False
+		self.active = True
+
 	@property
 	def name(self):
 		return self._name
@@ -286,7 +289,8 @@ class AbstractTree(object):
 
 	@property
 	def branches(self):
-		"""more explicit that it returns the child tree objects"""
+		"""more explicit that it returns the child tree objects
+		:rtype list( AbstractTree )"""
 		return self.values()
 
 	def _setParent(self, tree):
@@ -407,12 +411,19 @@ class AbstractTree(object):
 			return self
 		first = address.pop(0)
 		if not first in self._map: # add it if doesn't exist
+
+			if self.readOnly:
+				raise RuntimeError( "readOnly tree accessed improperly - "
+				                    "no address {}".format(first))
+
 			# check if branch should inherit directly, or
 			# remain basic tree object
+
 			if self.branchesInherit:
-				self.addChild(self.__class__(first, None))
+				obj = self.__class__(first, None)
 			else:
-				self.addChild(AbstractTree(first, None))
+				obj = AbstractTree(first, None)
+			self.addChild(obj)
 		#else:
 		branch = self._map[first]
 		return branch(address)
@@ -460,14 +471,16 @@ class AbstractTree(object):
 		# if branch is same type as parent, no info needed
 		# a tree of one type will mark all branches as same type
 		# until a new type is flagged
+		val = regenDict.get("?VALUE") or None
+		new = cls(regenDict["?NAME"], val)
+		new.extras = regenDict.get("?EXTRAS") or {}
 
-		new = cls(regenDict["name"], regenDict["value"])
-		new.extras = regenDict.get("extras", default={})
+		children = regenDict.get("?CHILDREN") or []
 
 		# regnerate children with correct indices
-		length = len(regenDict["children"])
+		length = len(children)
 		for n in range(length):
-			for i in regenDict["children"]:
+			for i in children:
 				if not i["?INDEX"] == n:
 					continue
 
@@ -479,21 +492,27 @@ class AbstractTree(object):
 				new.addChild(branch)
 		return new
 
-	def serialise(self):
+	def serialise(self, pretty=False):
 		# print("key {} index {}".format(self.name, self.ownIndex()))
 		# print("keys are {}".format(self.keys()))
 		serial = {
-			"name" : self.name,
-			"value" : self.value,
-			"children" : [i.serialise() for i in self._map.values()],
+			"?NAME" : self.name,
 			"?INDEX" : self.ownIndex()
 		}
+		if self.value:
+			serial["?VALUE"] = self.value
+		if self.branches:
+			serial["?CHILDREN"] = [i.serialise() for i in self._map.values()]
 		if self.extras:
-			serial["extras"] = self.extras
+			serial["?EXTRAS"] = self.extras
 		if self.parent:
 			if self.parent.__class__ != self.__class__:
-				objData = saveObjectClass(self)
-				serial[ "objData" ] = objData
+				if self.__class__ != AbstractTree:
+					objData = saveObjectClass(self)
+					serial[ "objData" ] = objData
+			# only save class if this does not inherit, and is not normal tree
+		if pretty:
+			serial = pprint.pformat(serial)
 		return serial
 
 if __name__ == '__main__':
@@ -510,7 +529,13 @@ if __name__ == '__main__':
 	print(testTree["parent.childA"])
 	print(testTree["parent.childB"])
 
-# luma's stringlike didn't help in the end
+
+def movingMask(seq, maskWidth=1, nullVal=None):
+	""" generates a symmetrical moving frame over sequence
+	eg seq = [ 1, 2, 3, 4, 5, 6 ]
+	mask = movingMask(seq, maskWidth=1)
+	mask = [ ( None, 1, 2 ), (1, 2, 3), (2, 3, 4)... ] etc
+	"""
 
 
 def flatten(in_list):
@@ -594,14 +619,14 @@ def safeLoadModule(mod, logFunction=None):
 def saveObjectClass(obj, regenFunc="fromDict", uniqueKey=True):
 	""" saves a module and class reference for any object
 	if relative, will return path from root folder"""
-	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
+	keys = [ "?NAME", "?CLASS", "?MODULE", "regenFn" ]
 	if uniqueKey: # not always necessary
 		for i in range(len(keys)): keys[i] = "?" + keys[i]
 
 	#path = convertRootPath(obj.__class__.__module__, toRelative=relative)
 	path = obj.__class__.__module__
 	return {
-		keys[0]: obj.__name__,
+		#keys[0]: obj.__name__,
 		keys[1]: obj.__class__.__name__,
 		keys[2]: path,
 		keys[3]: regenFunc

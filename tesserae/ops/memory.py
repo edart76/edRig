@@ -15,6 +15,9 @@ class Memory2(AbstractTree):
 		super(Memory2, self).__init__(name, val)
 		self["nodes"] = [] # node storage
 
+	""" a top-level tree interface is all that's necessary - 
+	no need for a full tree object to hold an integer value """
+
 	@property
 	def nodes(self):
 		""":rtype list(AbsoluteNode)"""
@@ -23,19 +26,17 @@ class Memory2(AbstractTree):
 	def nodes(self, val):
 		self["nodes"] = val
 
-	#
-	def __getitem__(self, key):
-		return super(Memory2, self).__getitem__(key)
-
-	def __setitem__(self, key, value):
-		super(Memory2, self).__setitem__(key, value)
+	IGNORE_KEYS = ("nodes", )
 
 	def _allocateSpace(self, infoName, nodes=None):
 		"""creates blank memory dict
-		one memory cell per node"""
+		"""
+
+		if self.get(infoName):
+			return
 
 		self[infoName] = {}
-		self[infoName]["CLOSED"] = False
+		#self[infoName]["CLOSED"] = False
 		self[infoName]["nodes"] = nodes
 		self.nodes += nodes
 
@@ -64,6 +65,16 @@ class Memory2(AbstractTree):
 	def infoTypes(self, infoName):
 		return self[infoName].keys()
 
+	def _initialiseCell(self, infoName, infoType, nodes=None):
+		if not infoName in self.infoNames():
+			#print "allocating blank space for {}".format(infoName)
+			self._allocateSpace(infoName, nodes=nodes)
+
+		if not infoType in self[infoName].keys():
+			#print "gathering goss, making blank info"
+			self[infoName][infoType] = self.makeBlankInfoType(
+				infoType)
+
 	def remember(self, infoName, infoType, nodes=None, **kwargs):
 		"""add information to op's memory if none exists
 		we remember lists here
@@ -76,22 +87,25 @@ class Memory2(AbstractTree):
 
 		if not isinstance(nodes, list):
 			nodes = [nodes]
-		if not infoName in self.infoNames():
-			#print "allocating blank space for {}".format(infoName)
-			self._allocateSpace(infoName, nodes=nodes)
+		# if not infoName in self.infoNames():
+		# 	#print "allocating blank space for {}".format(infoName)
+		# 	self._allocateSpace(infoName, nodes=nodes)
+		#
+		# if not infoType in self[infoName].keys():
+		# 	#print "gathering goss, making blank info"
+		# 	self[infoName][infoType] = self.makeBlankInfoType(
+		# 		infoType)
+		self._initialiseCell(infoName, infoType, nodes=nodes)
 
-		if not infoType in self._storage[infoName].keys():
-			#print "gathering goss, making blank info"
-			self[infoName][infoType] = self.makeBlankInfoType(
-				infoType)
+		if not self[infoName][infoType]:
 
 			# pre-existing information will not be lost, nodes will still be refreshed
 
 			gatheredGoss = [self._gatherInfo(infoType, target=i, **kwargs) for i in nodes]
-			self._storage[infoName][infoType] = gatheredGoss
+			self[infoName][infoType] = gatheredGoss
 		# always set node regardless to ensure info is relevant in scene
 		# self.setNode(infoName, core.AbsoluteNode(node))
-		self._storage[infoName]["nodes"] = [AbsoluteNode(i) for i in nodes]
+		self[infoName]["nodes"] = [AbsoluteNode(i) for i in nodes]
 
 
 	def recall(self, infoName, infoType="all", **kwargs):
@@ -106,7 +120,7 @@ class Memory2(AbstractTree):
 				self.recall(infoName, infoType=i)
 			#return returnDict
 		else:
-			# return self._storage[infoName][infoType]
+			# return self[infoName][infoType]
 			self._applyInfo(infoName, infoType,
 			                target=self.nodesFromInfoName(infoName),
 			                **kwargs)
@@ -114,31 +128,30 @@ class Memory2(AbstractTree):
 	def refresh(self, infoName="", infoType="", *args, **kwargs):
 		"""updates existing memory with info from scene
 		DOES NOT create new info if none exists"""
-		print
-		print "memory refresh - nodesFromInfoName {} are {}".format(
-			infoName, self.nodesFromInfoName(infoName))
+		print("memory refresh - nodesFromInfoName {} are {}".format(
+			infoName, self.nodesFromInfoName(infoName)) )
 		gatheredGoss = [self._gatherInfo(infoType, target=i)
 		                for i in self.nodesFromInfoName(infoName)]
-		self._storage[infoName][infoType] = gatheredGoss
-		print "{}-{} is now {}".format(infoName, infoType,
-		                               self._storage[infoName][infoType])
+		self[infoName][infoType] = gatheredGoss
+		print( "{}-{} is now {}".format(infoName, infoType,
+		                               self[infoName][infoType]) )
 
 	def remove(self, infoName, infoType=None):
 		"""clears memory selectively without going into the datafile
 		take note FS"""
 		if infoType:
-			self._storage[infoName].pop(infoType, None)
+			self[infoName].pop(infoType, None)
 		else:
-			self._storage.pop(infoName, None)
+			self.pop(infoName, None)
 
 	def renewableMemory(self):
 		"""returns all memory slots that have a value - eg that
 		can be renewed from scene"""
-		# returnDict = copy.deepcopy(self._storage) # NOT FOR DIRECT UPDATE
+		# returnDict = copy.deepcopy(self) # NOT FOR DIRECT UPDATE
 		# USE ONLY AS GUIDE - USE REFRESH TO UPDATE MEMORY
 		returnDict = {}
-		#pprint.pprint("storage is {}".format(self._storage))
-		for k, v in self._storage.iteritems():
+		#pprint.pprint("storage is {}".format(self))
+		for k, v in self.iteritems():
 			if k == "nodes" :
 				continue
 			#print "k is {}, v is {}".format(k, v)
@@ -161,8 +174,8 @@ class Memory2(AbstractTree):
 		if not cmds.objExists(target):
 			raise RuntimeError("no object found named {}".format(target))
 
-		print ""
-		print "GATHERING GOSS"
+		# print ""
+		# print "GATHERING GOSS"
 
 		""" IMPLEMENT RELATIVE VS ABOLUTE 
 		gather both - apply only one as per state of node"""
@@ -195,9 +208,12 @@ class Memory2(AbstractTree):
 		elif infoType == "xform":
 			# speed is not yet of the essence
 			for space, truth in zip(["world", "local"], (True, False)):
-				returnDict[space]["translate"] = cmds.xform(target, q=True, ws=truth, t=True)
-				returnDict[space]["rotate"] = cmds.xform(target, q=True, ws=truth, ro=True)
-				returnDict[space]["scale"] = cmds.xform(target, q=True, ws=truth, s=True)
+				spaceDict = {
+					"translate" : cmds.xform(target, q=True, ws=truth, t=True),
+					"rotate" : cmds.xform(target, q=True, ws=truth, ro=True),
+					"scale" : cmds.xform(target, q=True, ws=truth, s=True),
+				}
+				returnDict[space] = spaceDict
 			if kwargs.get("jointMode"):
 				for ax in "XYZ":
 					jointOrient = cmds.getAttr(target + ".jointOrient" + ax)
@@ -227,20 +243,41 @@ class Memory2(AbstractTree):
 
 	def _applyInfo(self, infoName, infoType, target=None,
 	               relative=None, **kwargs):
-		allInfo = self.infoFromInfoName(infoName)
+
+		# test view all data
+		print(self.serialise(pretty=True))
+
+		allInfo = self[infoName]
+
+		print("allInfo {}".format(allInfo))
+		print("target {}".format(target))
 
 		space = kwargs.get("space") or "world"
 
 		if not isinstance(target, list):
+			print("converting from list")
 			index = self.indexFromNode(infoName, target)
 			info = [allInfo[infoType][index]]
 			target = [target]
 		else:
 			info = allInfo[infoType]
 
+
+		print("allInfo {}".format(allInfo))
+		print("target {}".format(target))
+
+		# if infoType == "xform" :
+		# 	info = info[space]
+
+		# print("target {}".format(target))
+		# print("info {}".format(info))
+
 		#print "info to apply is {}".format(info)
 		# it's really, really for the best if you just work by sequence
 		for target, info in zip(target, info):
+			print("target {}, info {}".format(target, info))
+
+
 			if not cmds.objExists(target):
 				raise RuntimeError("APPLYINFO TARGET {} DOES NOT EXIST".format(target))
 			if infoType == "attr":
@@ -249,9 +286,10 @@ class Memory2(AbstractTree):
 					attr.setAttr(target + "." + k, v)
 
 			elif infoType == "xform":
-				cmds.xform(target, ws=True, t=(info[space]["translate"]))
-				cmds.xform(target, ws=True, ro=info[space]["rotate"])
-				cmds.xform(target, ws=True, s=info[space]["scale"])
+				info = info[space]
+				cmds.xform(target, ws=True, t=(info["translate"]))
+				cmds.xform(target, ws=True, ro=info["rotate"])
+				cmds.xform(target, ws=True, s=info["scale"])
 
 			elif infoType == "weight":
 				# nope
@@ -262,19 +300,17 @@ class Memory2(AbstractTree):
 				pass
 
 	def indexFromNode(self, infoName, node):
-		return self._storage[infoName]["nodes"].index(node)
+		return self[infoName]["nodes"].index(node)
 
 	def nodesFromInfoName(self, infoName):
 		"""returns list of all nodes tracked by infoName"""
-		return [AbsoluteNode(i) for i in self._storage[infoName]["nodes"]]
+		return [AbsoluteNode(i) for i in self[infoName]["nodes"]]
 
-	def infoFromInfoName(self, infoName):
-		return self._storage[infoName]
 
 	def setNodes(self, infoName, nodes):
 		if not isinstance(nodes, list):
 			nodes = [nodes]
-		self._storage[infoName]["nodes"] = nodes
+		self[infoName]["nodes"] = nodes
 
 	def getFlattenedNodes(self):
 		"""ensure nodes are stored as strings, not AbsNodes"""
@@ -282,17 +318,18 @@ class Memory2(AbstractTree):
 		return [str(i) for i in self.nodes]
 
 	def flattenNodes(self):
-		for k, v in self._storage.iteritems():
-			v["nodes"] = [str(i) for i in v["nodes"]]
+		# for k, v in self.iteritems():
+		# 	v["nodes"] = [str(i) for i in v["nodes"]]
+		self["nodes"] = self.getFlattenedNodes()
 
 	def restoreAbsoluteNodes(self):
 		"""restore strings to absNodes, assuming the same names exist"""
 		self.nodes = [AbsoluteNode(i) for i in self.nodes]
-		for k, v in self._storage.iteritems():
-			print "k is {}, v is {}, v keys are {}".format(k, v, v.keys())
+		for k, v in self.iteritems():
+			# print "k is {}, v is {}, v keys are {}".format(k, v, v.keys())
 			if "nodes" in v.keys():
 				v["nodes"] = [AbsoluteNode(i) for i in v["nodes"]]
-			print "restored {}".format(v["nodes"])
+			# print "restored {}".format(v["nodes"])
 		pass
 
 	@staticmethod
@@ -300,20 +337,24 @@ class Memory2(AbstractTree):
 		"""in case special types need special templates"""
 		typeDict = {
 			"attr": [],
-			"xform": {"local" : [],
-			          "world" : []},  # worldspace transforms
+			"xform": [{"local" : [], # ARRAY OF STRUCTS
+			          "world" : []}],  # YOU HAVE NO POWER HERE
 			"weight": [],
 			"shape": [],
 		}
-		return {infoType : typeDict[infoType],
-				"closed" : False}
+		# return {infoType : typeDict[infoType],
+		# 		#"CLOSED" : False,
+		#         }
+		return typeDict[infoType]
 
 	def setClosed(self, infoName, infoType=None, status=True):
 		"""prevent a memory infotype or whole cell from being refreshed"""
+		return # more trouble than worth
+		self._initialiseCell(infoName, infoType)
 		if infoType:
-			self._storage[infoName][infoType]["closed"] = status
+			self[infoName][infoType]["CLOSED"] = status
 		else:
-			self._storage[infoName]["closed"] = status
+			self[infoName]["CLOSED"] = status
 
 	# info type-specific methods
 	@staticmethod
@@ -347,7 +388,8 @@ class Memory2(AbstractTree):
 			kSuccess = surface.setSurfaceInfo(info, target, parent=parent)
 
 		else:
-			print "shape regen failed for some reason, likely mismatch in shapeType - try refreshing"
+			print ("shape regen failed for some reason, likely mismatch in "
+			       "shapeType - try refreshing")
 			return
 
 
@@ -371,8 +413,8 @@ class Memory2(AbstractTree):
 
 	def serialiseMemory(self):
 		"""is it this simple?"""
-		# self._storage["nodes"] = self.getFlattenedNodes()
-		self.flattenNodes()
+		self["nodes"] = self.getFlattenedNodes()
+		#self.flattenNodes()
 		return self._storage
 
 	def reconstructMemory(self, memoryDict):

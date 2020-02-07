@@ -4,6 +4,8 @@ it's probably not ready for use outside of helping manage tesserae"""
 import os, sys, importlib, pprint, io, tempfile
 import re
 
+from edRig.lib.python import AbstractTree
+
 from edRig import ROOT_PATH, COMMON_PATH, cmds
 #from maya import cmds # hurts but there's no point in a separate module yet
 
@@ -224,7 +226,7 @@ def ioinfo(name="", mode="in", info=None, path=None):
 			# file.write(pprint.pformat(json.dumps(info), indent=3))
 			# #file.write(pprint.pformat(info, indent=3))
 			# file.write(json.dumps(pprint.pformat(info, indent=3)))
-			file.write(pprint.pformat(info, indent=3))
+			file.write(pprint.pformat(info, indent=2))
 			file.close()
 
 	else:
@@ -326,7 +328,8 @@ def renameFile(old="", new="", suffix=""):
 
 def checkSuffix(path, suffix="json"):
 	"""adds selected to suffix to path if not there"""
-	if suffix in path:
+	#if suffix in path:
+	if path.endswith(suffix):
 		return path
 	else:
 		if "." in path:
@@ -522,12 +525,16 @@ def checkJsonSuffix(path):
 	return path + ".json"
 
 
-def checkFileExists(filePath):
+def checkJsonFileExists(filePath):
 	##print "testPath is {}".format(filePath)
 	if os.path.exists(filePath + ".json"):
 		return True
 	else:
 		return False
+
+def checkFileExists(filePath):
+	return os.path.exists(filePath)
+
 
 def convertRootPath(path, toRelative=False, toAbsolute=False):
 	""" converts a path to or from a relative path to root folder

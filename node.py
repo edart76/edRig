@@ -111,7 +111,12 @@ class AbsoluteNode(StringLike):
 		self._shape = None
 		self._transform = None
 
-		obj = MObjectFrom(node)
+		try:
+			obj = MObjectFrom(node)
+		except Exception as e:
+			print("failed for node {}".format(node))
+			raise e
+
 		if obj:
 			self.setMObject(obj)
 
@@ -260,10 +265,17 @@ class AbsoluteNode(StringLike):
 		test = cmds.listRelatives(self, children=True)
 		return [AbsoluteNode(i) for i in test] if test else []
 
-	def parentTo(self, targetParent, *args, **kwargs):
+	def parentTo(self, targetParent=None, *args, **kwargs):
 		"""reparents node under target dag
 		replace with api call"""
 		if not self.isDag():
+			return
+		if not targetParent:
+			print("self is {}".format(self()))
+			try:
+				cmds.parent(str(self()), world=True, relative=True)
+			except:
+				pass
 			return
 		cmds.parent(self(), str(targetParent), *args, **kwargs)
 
@@ -304,7 +316,7 @@ class AbsoluteNode(StringLike):
 		"""deletes maya node, and by default deletes entire openmaya framework around it
 		tesserae is very unstable, and i think this might be why"""
 		self()
-		name = self.node
+		name = str(self)
 		self.MObject = None
 		cmds.delete(name)
 
@@ -433,6 +445,11 @@ class AbsoluteNode(StringLike):
 		print "getting {}".format(attrName)
 		return attr.getAttr(attrName, **kwargs)
 
+	def disconnect(self, attrName=None, source=True, dest=True):
+		if not self() in attrName:
+			attrName = self() + "." + attrName
+		attr.breakConnections( attrName, source, dest)
+
 	def addAttr(self, keyable=True, **kwargs):
 		return attr.addAttr(self(), keyable=True, **kwargs)
 
@@ -556,14 +573,14 @@ class ObjectSet(AbsoluteNode):
 		return set( cmds.sets( self, q=True ))
 
 
-class PlugObject(str):
+class PlugObject(StringLike):
 	"""small wrapper allowing plug to be returned as priority,
 	and while still accessing the node easily
 	NOT robust to name changes"""
 
-	def __new__(cls, plug):
-		plugObj = str.__new__(plug)
-		plugObj.plug = plug
+	def __init__(self, plug):
+		super(PlugObject, self).__init__(plug)
+		self.plug = plug
 
 	def __repr__(self):
 		return self.plug
