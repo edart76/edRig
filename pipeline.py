@@ -460,12 +460,14 @@ def reloadEdRig(tesserae=True):
 			else:   del sys.modules[i]
 
 
-def getLatestVersions( files, versions=2 ):
+def getLatestVersions( files=None, versions=2, path=None ):
 	""" looks through a set of files for those marked as versions
 	returns the latest x number of files
 
 	ONLY SUPPORTS ONE PROJECT PER FOLDER
 	"""
+	if path:
+		files = os.listdir(path)
 
 	allVersions = sorted([ isVersion(i) for i in files], reverse=True)
 	versionMap = [ ( i, isVersion(i) ) for i in files ]
@@ -577,3 +579,12 @@ def loadObjectClass(objData):
 		print("has it moved, or module files been shifted?")
 		print( "error is {}".format(str(e)) )
 		return None
+
+def reloadAllReferences():
+	""" syncs a maya scene to update all references """
+	allrefs = cmds.ls( type="reference" )
+	for i in allrefs:
+		cmds.file( loadReference=i )
+
+
+

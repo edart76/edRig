@@ -90,6 +90,7 @@ class AbsoluteNode(StringLike):
 		#absolute = str.__new__(cls, node)
 		absolute = super(AbsoluteNode, cls).__new__(cls, node)
 		absolute.con = absolute._instanceCon
+		absolute.conOrSet = absolute._instanceConOrSet
 
 		# add new node to cache
 		cls.nodeCache[ uid[0] ] = absolute
@@ -310,6 +311,14 @@ class AbsoluteNode(StringLike):
 		for i in attrs:
 			attr.lockAttr(i)
 
+	def rename(self, name, andShape=True):
+		""" allows renaming transform and shape as unit,
+		ensuring names are kept in sync """
+		if not self.isDag():
+			self.name = name
+			return
+		self.transform.name = name
+		self.shape.name = name + "Shape"
 
 
 	def delete(self, full=True):
@@ -386,16 +395,36 @@ class AbsoluteNode(StringLike):
 				plugs.append(self+"."+i+n)
 		return plugs
 
-	def attrs(self, **kwargs):
-		"""return all the attributes of the node"""
-		return cmds.listAttr(self(), **kwargs)
-
 
 	@staticmethod
 	def fromMObject(obj):
 		"""find node associated with obj and wrap it"""
 		name = stringFromMObject(obj)
 		return AbsoluteNode(name)
+
+	# ---- attribute and plug methods
+
+	def attrs(self, **kwargs):
+		"""return all the attributes of the node"""
+		return cmds.listAttr(self(), **kwargs)
+
+	def parseAttrArgs(self, args=None):
+		""" process args given to various attr commands
+		if first token of either argument does not exist,
+		append node name to it (UNLESS set, in which case string
+		value is allowed)
+		"""
+		for i in range(len(args)):
+			val = args[i]
+			if not isinstance(val, str):
+				continue
+			if not "." in val:
+				val = self() + "." + val
+			elif not cmds.objExists( val.split(".")[0]):
+				val = self() + ".name"
+			args[i] = val
+		return args
+
 
 	@staticmethod
 	def con(sourcePlug, destPlug):
@@ -404,15 +433,16 @@ class AbsoluteNode(StringLike):
 
 	def _instanceCon(self, sourcePlug, destPlug):
 		""" im gonna do it """
-		args = (sourcePlug, destPlug)
-		conargs = []
-		for i in args:
-			if not "." in i:
-				c = self + "." + i
-			elif not cmds.objExists(i.split(".")[0]):
-				c = self + "." + i
-			else: c = i
-			conargs.append(c)
+		args = [sourcePlug, destPlug]
+		conargs = self.parseAttrArgs(args)
+		# conargs = []
+		# for i in args:
+		# 	if not "." in i:
+		# 		c = self + "." + i
+		# 	elif not cmds.objExists(i.split(".")[0]):
+		# 		c = self + "." + i
+		# 	else: c = i
+		# 	conargs.append(c)
 		attr.con(conargs[0], conargs[1], f=True)
 
 	@staticmethod
@@ -420,8 +450,10 @@ class AbsoluteNode(StringLike):
 		"""tribulations"""
 		attr.conOrSet(a, b, f)
 
-	def driveWith(self, attrName, driverPlug):
-		attr.con(driverPlug, self() + "." + attrName)
+	def _instanceConOrSet(self, source, dest, **kwargs):
+		args = self.parseAttrArgs([source, dest])
+		attr.conOrSet(args[0], args[1])
+		pass
 
 	@staticmethod
 	def setAttr(plug, value, **kwargs):
@@ -434,15 +466,17 @@ class AbsoluteNode(StringLike):
 		if isinstance(multi, dict):
 			attr.setAttrsFromDict(multi, node=self())
 			return
-		if not self() in attrName :
-			attrName = self() + "." + attrName
+		attrName = self.parseAttrArgs([attrName])[0]
+		# if not self() in attrName :
+		# 	attrName = self() + "." + attrName
 		attr.setAttr(attrName, val, **kwargs)
 
 	def get(self, attrName=None, **kwargs):
 		"""duplication rip"""
-		if not self() in attrName:
-			attrName = self() + "." + attrName
-		print "getting {}".format(attrName)
+		attrName = self.parseAttrArgs([attrName])[0]
+		# if not self() in attrName:
+		# 	attrName = self() + "." + attrName
+		#print "getting {}".format(attrName)
 		return attr.getAttr(attrName, **kwargs)
 
 	def disconnect(self, attrName=None, source=True, dest=True):
@@ -451,7 +485,7 @@ class AbsoluteNode(StringLike):
 		attr.breakConnections( attrName, source, dest)
 
 	def addAttr(self, keyable=True, **kwargs):
-		return attr.addAttr(self(), keyable=True, **kwargs)
+		return attr.addAttr(self(), keyable=keyable, **kwargs)
 
 	def getMPlug(self, plugName):
 		"""return MPlug object"""
@@ -480,6 +514,13 @@ class AbsoluteNode(StringLike):
 	def connectToShader(self, shader):
 		"""takes shadingEngine and connects shape"""
 		self.con(self+".instObjGroups[0]", shader+".dagSetMembers")
+
+	def assignMaterial(self, materialName="lambert1"):
+		""" very temp """
+		cmds.select(cl=1)
+		cmds.select(self())
+		cmds.hyperShade( assign=materialName)
+		cmds.select(cl=1)
 
 	@property
 	def shadingEngine(self):
@@ -523,7 +564,11 @@ def ECA(type, name="", colour=None, *args, **kwargs):
 	# node = cmds.createNode(type, n=name)
 	name = kwargs.get("n") or name
 	node = ECN(type, name, *args, **kwargs)
-	return AbsoluteNode(node)
+	a = AbsoluteNode(node)
+	# avoid annoying material errors
+	if type == "mesh" or type == "nurbsSurface":
+		a.assignMaterial("lambert1")
+	return a
 
 
 class RemapValue(AbsoluteNode):

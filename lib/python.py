@@ -6,6 +6,23 @@ from collections import OrderedDict
 from abc import ABCMeta
 
 
+# from Tkinter import *
+#
+# import Tkinter, tkFileDialog
+#
+# def fileDialog(defaultPath="", title="Select File"):
+# 	""" absolute most basic file selection possible"""
+# 	path = defaultPath or "/"
+# 	root = Tkinter.Tk()
+# 	root.withdraw()
+# 	return tkFileDialog.askopenfilename(
+# 		initialdir=path, title=title
+# 	)
+#
+
+
+
+
 class Decorator(object):
 	"""base decorator class for functions
 	to be assigned ui buttons"""
@@ -611,7 +628,7 @@ def safeLoadModule(mod, logFunction=None):
 	module = None
 	try:
 		module = importlib.import_module(mod)
-	except Exception() as e:
+	except ImportError() as e:
 		logFunction("ERROR in loading module {}".format(mod))
 		logFunction("error is {}".format(str(e)))
 	return module

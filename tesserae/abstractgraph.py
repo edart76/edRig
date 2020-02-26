@@ -8,7 +8,7 @@ from edRig.lib.python import AbstractTree
 from edRig.pipeline import TempAsset
 from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
 from edRig.tesserae.abstractedge import AbstractEdge
-from edRig.tesserae.oplist import ValidList
+# from edRig.tesserae.oplist import ValidList # only on demand
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
 import pprint
@@ -192,6 +192,7 @@ class AbstractGraph(object):
 		"""override for specific implementations"""
 
 		# register real classes that nodes can represent
+		from edRig.tesserae.oplist import ValidList
 		self.realClasses = ValidList.ops
 		self.registerNodeClasses()
 		self._asset = TempAsset # maybe?

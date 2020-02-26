@@ -5,6 +5,19 @@ import maya.api.OpenMaya as om
 from edRig.node import AbsoluteNode, ECA
 from edRig import curve, COMMON_PATH, pipeline, attr # lol
 
+
+def loftCurves(curvePlugs, degree="linear"):
+	""" returns loft plug"""
+	degreeEnum = {"linear" : 1,
+	              "cubic" : 3 } # uggggggh
+	loft = ECA("loft")
+	loft.set("degree", degreeEnum[degree])
+	for i, val in enumerate(curvePlugs):
+		loft.con(val, loft + ".inputCurve[{}]".format(i))
+	return loft + ".outputSurface"
+
+
+
 def exportShapeToTempFile(target):
 	"""returns """
 	cmds.select(clear=True)
@@ -36,31 +49,6 @@ def getSurfaceInfo(shape):
 
 	tfPlug = attr.getMPlug(shape + ".tf")
 	surfInfo["tf"] = str("".join(tfPlug.getSetAttrCmds()))
-
-	#
-	# # needed to keep trimmed shape
-	# surfInfo["isTrimmedSurface"] = fn.isTrimmedSurface()
-	# if surfInfo["isTrimmedSurface"]:
-	# 	surfInfo["numRegions"] = fn.numRegions()
-	# 	surfInfo["numBoundaries"] = fn.numBoundaries()
-	# 	surfInfo["boundaryInfo"] = {}
-	# 	for region in range(surfInfo["numRegions"]):
-	# 		surfInfo["boundaryInfo"][region] = {}
-	# 		for boundary in range(surfInfo["numBoundaries"]):
-	# 			#surfInfo["boundaryInfo"][region][boundary] = {}
-	# 			boundaryInfo = {
-	# 				"boundaryType" : int(fn.boundaryType(region, boundary)),
-	# 				"numEdges" : fn.numEdges(region, boundary),
-	# 				"edgeInfo" : {},
-	# 			}
-	# 			for edge in range(boundaryInfo["numEdges"]):
-	# 				# this is getting ridiculous
-	# 				edgeFn = om.MFnNurbsCurve(fn.edge(
-	# 					region, boundary, edge, False)) # returning 3d edge
-	# 				edgeInfo = curve.getCurveInfo(fn=edgeFn)
-	# 				boundaryInfo[edge] = edgeInfo
-	#
-	# 			surfInfo["boundaryInfo"][region][boundary] = boundaryInfo
 
 	return surfInfo
 	pass
@@ -129,39 +117,3 @@ create(cvs, uKnots, vKnots, uDegree, vDegree, uForm, vForm,
 * rational (bool) - Create as rational (True) or non-rational (False)
         surface.
 """
-
-# needed for create
-# surfInfo["cvs"] = [(i.x, i.y, i.z) for i in fn.cvPositions()]
-# surfInfo["uKnots"] = fn.knotsInU()
-# surfInfo["vKnots"] = fn.knotsInV()
-# surfInfo["uDegree"] = fn.degreeInU
-# surfInfo["vDegree"] = fn.degreeInV
-# surfInfo["uForm"] = fn.formInU
-# surfInfo["vForm"] = fn.formInV
-# surfInfo["rational"] = True
-#
-# # needed to keep trimmed shape
-# surfInfo["isTrimmedSurface"] = fn.isTrimmedSurface()
-# if surfInfo["isTrimmedSurface"]:
-# 	surfInfo["numRegions"] = fn.numRegions()
-# 	surfInfo["numBoundaries"] = fn.numBoundaries()
-# 	surfInfo["boundaryInfo"] = {}
-# 	for region in range(surfInfo["numRegions"]):
-# 		surfInfo["boundaryInfo"][region] = {}
-# 		for boundary in range(surfInfo["numBoundaries"]):
-# 			#surfInfo["boundaryInfo"][region][boundary] = {}
-# 			boundaryInfo = {
-# 				"boundaryType" : int(fn.boundaryType(region, boundary)),
-# 				"numEdges" : fn.numEdges(region, boundary),
-# 				"edgeInfo" : {},
-# 			}
-# 			for edge in range(boundaryInfo["numEdges"]):
-# 				# this is getting ridiculous
-# 				edgeFn = om.MFnNurbsCurve(fn.edge(
-# 					region, boundary, edge, False)) # returning 3d edge
-# 				edgeInfo = curve.getCurveInfo(fn=edgeFn)
-# 				boundaryInfo[edge] = edgeInfo
-#
-# 			surfInfo["boundaryInfo"][region][boundary] = boundaryInfo
-#
-# 	# surfInfo["boundaryType"] = fn.boundaryType()

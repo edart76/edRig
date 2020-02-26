@@ -54,8 +54,10 @@ def getMPlug(plugName):
 def con(a, b, f=True):
 	"""let's try this again"""
 	source = a
-	#print "plugtype {}".format(plugHType(b))
-	if plugHType(b) == "array":
+	# need to rip all this out with proper tree parsing
+	if b[-1] == "]": # assume already defined
+		dest = b
+	elif plugHType(b) == "array":
 		dest = getNextAvailableIndex(b)
 
 	elif plugHType(a) == "compound" and plugHType(b) == "compound" :

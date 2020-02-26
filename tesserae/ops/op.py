@@ -372,14 +372,14 @@ class Op(MayaReal):
 			node = cmds.parent(node, self.opGrp)[0] # prevent messy scenes
 		return node
 
-	def ECAsimple(self, type, name="blankName", cleanup=False, *args):
+	def ECAsimple(self, type, name="blankName", cleanup=False, *args, **kwargs):
 		# this is such a good idea
 		# first check if node already exists, later
-		node = self.ECN(type, *args, name=name, cleanup=cleanup)
+		node = self.ECN(type, *args, name=name, cleanup=cleanup, **kwargs)
 		return AbsoluteNode(node)
 
-	def ECA(self, type, name="blankName", category=None, *args):
-		node = self.ECAsimple(type, name, cleanup=False, *args)
+	def ECA(self, type, name="blankName", category=None, *args, **kwargs):
+		node = self.ECAsimple(type, name, cleanup=False, *args, **kwargs)
 		self.nodes.update(node)
 		if category: # add specific tags
 			self.addTag(node, "category", category)
@@ -423,8 +423,8 @@ class Op(MayaReal):
 		just delete all associated nodes"""
 		for i in self.nodes:
 			if cmds.objExists(i):
-				if not attr.getAttr(i+".category") in exclude:
-					cmds.delete(i)
+				#if not attr.getAttr(i+".category") in exclude: # nope
+				cmds.delete(i)
 
 	def beforeExecution(self):
 		"""create network nodes procedurally from attributes
