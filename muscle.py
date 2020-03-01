@@ -59,6 +59,10 @@ class MuscleCurve(Muscle):
 		key = "muscle" + str(self.muscleDepth)
 		return self.colours[key]
 
+	@property
+	def outputShape(self):
+		""":returns AbsoluteNode"""
+		return self.hair.outputLocalShape
 
 	@classmethod
 	def create(cls, baseCrv, nucleus=None,

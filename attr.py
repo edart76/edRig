@@ -53,7 +53,7 @@ def con(a, b, f=True):
 	if b[-1] == "]": # assume already defined
 		dest = b
 	elif plugHType(b) == "array":
-		dest = getNextAvailableIndex(b)
+		dest = getNextAvailablePlug(b)
 
 	elif plugHType(a) == "compound" and plugHType(b) == "compound" :
 		dest = b
@@ -457,13 +457,16 @@ def unrollPlug(plug, returnLen=-1):
 	found = [node + "." + i for i in foundAttrs]
 	return found
 
-def getNextAvailableIndex(arrayPlug):
+def getNextAvailablePlug(arrayPlug):
 	"""gets the first free index for an array attribute"""
 	length = cmds.getAttr(arrayPlug, size=True)
 	if arrayPlug[-1] == "]" :
 		arrayPlug = "[".join( arrayPlug.split("[") )
 	return arrayPlug+"[{}]".format(length)
 
+def getNextAvailableIndex(arrayPlug):
+	length = cmds.getAttr(arrayPlug, size=True)
+	return length
 
 
 # class ArgParse(object):

@@ -65,6 +65,10 @@ def faceMuscleSetup():
 	faceNucleus.parentTo(rigGrp)
 	faceNucleus.set("gravity", 0.5)
 
+	# add skull collider
+	faceNucleus.addCollider(mesh="colliders_combined",
+	                        name="skull")
+
 	# scalp result
 	browMuscle = muscle.MuscleCurve.create(browAnchor,
 	                                       nucleus=faceNucleus,
@@ -87,10 +91,24 @@ def faceMuscleSetup():
 		                                     nucleus=faceNucleus,
 		                                     name=i+"Muscle")
 		frontalisMuscles.append(frMuscle)
+		frMuscle.setDepth(1)
 
-	# add skull collider
-	faceNucleus.addCollider(mesh="colliders_combined",
-	                        name="skull")
+		# constrain to browAnchor
+		frPoint, browPoint = curve.mutualClosestPoints(
+			frMuscle.outputShape, browMuscle.outputShape)
+		frIndex = round( frMuscle.outputShape.shapeFn.getParamAtPoint(frPoint))
+		browIndex = round(browMuscle.outputShape.shapeFn.
+		                  getParamAtPoint(browPoint))
+		# frComp = frMuscle.hair.getComponent(frIndex)
+		# browComp = browAnchor.hair.getComponent(browIndex)
+
+		constraint = dynamics.NConstraint.create(name=i+"_constraint")
+		#constraint.connectToNucleus(faceNucleus)
+		constraint.constrainElements(elementA=frMuscle.hair,
+		                             indexA=frIndex,
+		                             elementB=browMuscle.hair,
+		                             indexB=browIndex,
+		                             nucleus=faceNucleus)
 
 
 	# set out layer structure of muscles

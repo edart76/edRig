@@ -550,7 +550,7 @@ class AbsoluteNode(StringLike):
 		nodeTypeStr = cls.nodeType()
 
 		nodeType = nodeTypeStr[0].lower() + nodeTypeStr[1:]
-		name = name or n or "noNodeCreateName"
+		name = name or n or nodeType
 		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
 		return node
 

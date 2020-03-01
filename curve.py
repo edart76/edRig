@@ -500,5 +500,30 @@ def liveMatrixAtU(crvShape, u=0.5, constantU=True, purpose="anyPurpose",
 	data["pci"] = pci
 	return data
 
+def staticClosestPoint(curve, point):
+	""" uses api to find closest point on curve """
+	curve = AbsoluteNode(curve)
+	point = om.MPoint(point)
+	closestPoint, closestU = curve.shapeFn.closestPoint(point)
+	return closestPoint, closestU
+
+
+
+def mutualClosestPoints( curveA, curveB, steps=5 ):
+	""" find points of closest approach between two curves """
+	curveA = AbsoluteNode(curveA)
+	curveB = AbsoluteNode(curveB)
+	point = curveB.shapeFn.getPointAtParam(0.5)
+	for i in range(steps):
+		point = staticClosestPoint(curveA, point)[0]
+		pointA = point
+		point = staticClosestPoint(curveB, point)[0]
+		pointB = point
+	return pointA, pointB
+
+# def cvFromU( curve, uValue ):
+# 	""" returns the closest cv to a full uValue """
+
+
 
 

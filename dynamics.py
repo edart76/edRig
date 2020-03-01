@@ -70,7 +70,7 @@ class NDynamicsElement(AbsoluteNode):
 		# how many things are already connected?
 		nucleus = Nucleus(nucleus)
 		newIndex = cmds.getAttr(nucleus+".inputActive", size=True)
-		self.con(nucleus+".startFrame", self+".startFrame")
+		# self.con(nucleus+".startFrame", self+".startFrame")
 		self.con(nucleus+".outputObjects[{}]".format(newIndex),
 		         self+".nextState")
 
@@ -155,6 +155,7 @@ class NHair(NDynamicsElement):
 		to actually compute. sucks man."""
 		super(NHair, self).connectToNucleus(nucleus)
 		newIndex = cmds.getAttr(nucleus+".inputActive", size=True)
+		self.con(nucleus + ".startFrame", self + ".startFrame")
 
 		self.con(self+".startState",
 		         nucleus+".inputActiveStart[{}]".format(newIndex))
@@ -236,7 +237,10 @@ class NConstraint(NDynamicsElement):
 	"""for constraining dynamic elements together"""
 	_nodeType = "dynamicConstraint"
 	methods = ("weld", "spring", "rubberBand")
-	connect = ("nearestPairs", "withinMaxDistance", "componentOrder")
+	connect = {"nearestPairs" : "nearest Pairs",
+	           "withinMaxDistance" : "within Max Distance",
+	           "componentOrder" : "component Order"} # not joking
+
 
 	def constrainElements(self, elementA=None, indexA=0,
 	                      elementB=None, indexB=0, elements=None,
@@ -245,6 +249,7 @@ class NConstraint(NDynamicsElement):
 	                      ):
 		"""main method for constraining elements,
 		through any number of methods
+		should itself be a class method
 		:param elementA : NDynamicsElement,
 		:param elements : list of tuples [ (NDynamicsElement, index), ]
 		"""
@@ -254,18 +259,31 @@ class NConstraint(NDynamicsElement):
 		self.con(compA + ".outComponent", self + ".componentIds[0]")
 		self.con(compB + ".outComponent", self + ".componentIds[1]")
 		self.set("constraintMethod", method)
-		self.set("connectionMethod", connect)
+		self.set("connectionMethod", self.connect[connect])
 
 		if nucleus : self.connectToNucleus(nucleus)
 		self.connectTime(timeSource=timeSource)
 
 	def connectToNucleus(self, nucleus):
-		super(NConstraint, self).connectToNucleus(nucleus)
+		""" special cased cos constraints are weird """
+		nucleus = Nucleus(nucleus)
+
+		attr.makeMutualConnection(nucleus, self, attrType="message",
+		                          startName="elements", endName="nucleus")
+
+		self.con(attr.getImmediatePast( nucleus + ".currentTime", wantPlug=True)[0],
+		         self + ".currentTime" )
+
 		vacant = attr.getNextAvailableIndex(nucleus + ".inputCurrent")
+		print("vacant {}".format(vacant))
 		self.con("evalCurrent[0]", "{}.inputCurrent[{}]".format(
 			nucleus, vacant))
 		self.con("evalStart[0]", "{}.inputStart[{}]".format(
 			nucleus, vacant	))
+
+		nucleus.kick()
+
+
 
 class NCollider(NDynamicsElement):
 	"""collision meshes"""
@@ -278,7 +296,7 @@ class NCollider(NDynamicsElement):
 
 	def connectToNucleus(self, nucleus):
 		super(NCollider, self).connectToNucleus(nucleus)
-		# self.con(nucleus+".startFrame", self+".startFrame")
+		self.con(nucleus + ".startFrame", self + ".startFrame")
 
 		index = cmds.getAttr(nucleus+".inputPassive", size=True)
 		self.con(self+".currentState",
@@ -292,7 +310,7 @@ class NParticle(NDynamicsElement):
 	def connectToNucleus(self, nucleus):
 		"""nHair unfortunately needs a separate follicle node
 		to actually compute. sucks man."""
-		super(NParticle, self).connectToNucleus(nucleus)
+		#super(NParticle, self).connectToNucleus(nucleus)
 		newIndex = cmds.getAttr(nucleus+".inputActive", size=True)
 
 		self.con(self+".startState",
@@ -308,10 +326,17 @@ class Nucleus(AbsoluteNode):
 	def create(cls, name="newNucleus", timeInput="time1.outTime"):
 		# make new nucleus, disable it by default when scrubbing
 		node = super(Nucleus, cls).create(name)
-		node.con(timeInput, node+".currentTime")
+		#node.con(timeInput, node+".currentTime")
 		# node.con(plug.reversePlug("CodeNode.isScrubbing"),
 		#          node+".enable")
 		# scene.SceneGlobals.addNucleus(node)
+
+		# add clear interface for time input to nucleus
+		# all dynamics elements will then draw from this
+		timeInterface = ECA("choice", n=name+"_timeInterface")
+		timeInterface.con(timeInput, timeInterface + ".input[0]")
+		timeInterface.con("output", node+".currentTime")
+
 		return cls(node)
 
 	@staticmethod
