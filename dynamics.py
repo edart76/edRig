@@ -74,10 +74,11 @@ class NDynamicsElement(AbsoluteNode):
 		self.con(nucleus+".outputObjects[{}]".format(newIndex),
 		         self+".nextState")
 
-		self.con(self+".startState",
-		         nucleus+".inputActiveStart[{}]".format(newIndex))
-		self.con(self + ".currentState",
-		         nucleus + ".inputActive[{}]".format(newIndex))
+		# self.con(self+".startState",
+		#          nucleus+".inputActiveStart[{}]".format(newIndex))
+		# self.con(self + ".currentState",
+		#          nucleus + ".inputActive[{}]".format(newIndex))
+		# only for active elements, not colliders
 
 		attr.makeMutualConnection(nucleus, self, attrType="message",
 		                          startName="elements", endName="nucleus")
@@ -153,6 +154,13 @@ class NHair(NDynamicsElement):
 		"""nHair unfortunately needs a separate follicle node
 		to actually compute. sucks man."""
 		super(NHair, self).connectToNucleus(nucleus)
+		newIndex = cmds.getAttr(nucleus+".inputActive", size=True)
+
+		self.con(self+".startState",
+		         nucleus+".inputActiveStart[{}]".format(newIndex))
+		self.con(self + ".currentState",
+		         nucleus + ".inputActive[{}]".format(newIndex))
+
 		self.set( "active", 1)
 
 	def connectInputShape(self, shapePlug, spacePlug=None):
@@ -174,6 +182,12 @@ class NHair(NDynamicsElement):
 		self.con(self+".outputHair[0]", follicle+".currentPosition")
 		self.con(follicle+".outHair", self+".inputHair[0]")
 		return follicle
+
+	def setLockedPoints(self, mode):
+		""" sets start, end, both or none to be locked in place """
+		options = ["none", "start", "end", "both"]
+		self.follicle.set("pointLock", options.index(mode))
+
 
 	"""currently one follicle/hair system per dynamic curve - 
 	later if this is too slow investigate multiple follicles per hair system"""
@@ -246,6 +260,7 @@ class NConstraint(NDynamicsElement):
 		self.connectTime(timeSource=timeSource)
 
 	def connectToNucleus(self, nucleus):
+		super(NConstraint, self).connectToNucleus(nucleus)
 		vacant = attr.getNextAvailableIndex(nucleus + ".inputCurrent")
 		self.con("evalCurrent[0]", "{}.inputCurrent[{}]".format(
 			nucleus, vacant))
@@ -256,8 +271,14 @@ class NCollider(NDynamicsElement):
 	"""collision meshes"""
 	_nodeType = "nRigid"
 
+	@property
+	def inputShapePlug(self):
+		""" collider shape input """
+		return self() + ".inputMesh"
+
 	def connectToNucleus(self, nucleus):
-		self.con(nucleus+".startFrame", self+".startFrame")
+		super(NCollider, self).connectToNucleus(nucleus)
+		# self.con(nucleus+".startFrame", self+".startFrame")
 
 		index = cmds.getAttr(nucleus+".inputPassive", size=True)
 		self.con(self+".currentState",
@@ -268,6 +289,17 @@ class NCollider(NDynamicsElement):
 class NParticle(NDynamicsElement):
 	"""far more simple than others"""
 
+	def connectToNucleus(self, nucleus):
+		"""nHair unfortunately needs a separate follicle node
+		to actually compute. sucks man."""
+		super(NParticle, self).connectToNucleus(nucleus)
+		newIndex = cmds.getAttr(nucleus+".inputActive", size=True)
+
+		self.con(self+".startState",
+		         nucleus+".inputActiveStart[{}]".format(newIndex))
+		self.con(self + ".currentState",
+		         nucleus + ".inputActive[{}]".format(newIndex))
+		self.set( "active", 1)
 
 class Nucleus(AbsoluteNode):
 	"""specific capacities for working with nucleus nodes"""
@@ -296,6 +328,21 @@ class Nucleus(AbsoluteNode):
 	def addElement(self, elementNode):
 		"""adds target nDynamics node to solver
 		not really much point in trying to hack this apart, it's pretty closed"""
+
+	def addCollider(self, mesh, name):
+		""" adds a new collider to nucleus from shape node """
+		shape = AbsoluteNode(mesh).shape
+		collider = NCollider.create(name=name+"_rigid")
+		collider.connectInputShape(shape.outLocal)
+		collider.connectToNucleus( self() )
+		collider.transform.name = name + "_transform"
+
+		# update collider
+		self.kick()
+		collider.set("thickness", 0.1)
+		self.kick()
+
+
 
 	def kick(self):
 		"""disconnects time and jitters current time a bit -

@@ -4,7 +4,7 @@ from edRig import cmds, om, AbsoluteNode, ECA
 from edRig import plug, attr, curve, surface, muscle, dynamics
 
 
-def faceSetup():
+def faceMuscleSetup():
 
 	if cmds.ls("rig_grp"):
 		rigGrp = AbsoluteNode("rig_grp")
@@ -28,6 +28,7 @@ def faceSetup():
 	]
 	loftPlugs = []
 	browPlugs = []
+	contractPlugs = []
 	for i in contractCurves:
 		d = AbsoluteNode(cmds.duplicate(i, n=i + "_contract")[0])
 		print d
@@ -45,6 +46,7 @@ def faceSetup():
 		# points for brow anchor curve
 		pci = curve.pciAtU(d.shape + ".local", u=1.0)
 		browPlugs.append( pci + ".result.position")
+		contractPlugs.append( d + ".contraction")
 
 	loft = surface.loftCurves(loftPlugs)
 	scalp = ECA("nurbsSurface", n="scalp_srf")
@@ -58,16 +60,37 @@ def faceSetup():
 	                                    deg=1, useApi=False)
 	browAnchor.transform.parentTo(rigGrp)
 
-	# frontalis and brow setup
 	# dynamics
 	faceNucleus = dynamics.Nucleus.create(name="faceNucleus")
 	faceNucleus.parentTo(rigGrp)
+	faceNucleus.set("gravity", 0.5)
 
+	# scalp result
 	browMuscle = muscle.MuscleCurve.create(browAnchor,
 	                                       nucleus=faceNucleus,
 	                                       name="browAnchor",)
 	browMuscle.setDepth(0)
+	browMuscle.setLockedPoints("none")
+	browMuscle.ctrl.first.addAttr(attrName="scalpContract", dv=0, min=0, max=1)
+	for i in contractPlugs:
+		browMuscle.ctrl.first.con("scalpContract", i)
 
+	# frontalis brow muscles
+	frontalisInputs = [
+		"frontalis_a",
+		"frontalis_b",
+		"frontalis_c",
+	]
+	frontalisMuscles = []
+	for i in frontalisInputs:
+		frMuscle = muscle.MuscleCurve.create(i,
+		                                     nucleus=faceNucleus,
+		                                     name=i+"Muscle")
+		frontalisMuscles.append(frMuscle)
+
+	# add skull collider
+	faceNucleus.addCollider(mesh="colliders_combined",
+	                        name="skull")
 
 
 	# set out layer structure of muscles

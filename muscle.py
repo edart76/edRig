@@ -22,6 +22,10 @@ class Muscle(SceneObject):
 	def setupGrp(self):
 		return self.invokeNode(self.name)
 
+	@property
+	def techGrp(self):
+		return self.invokeNode(self.name+"_tech", parent=self.setupGrp)
+
 
 
 class MuscleCurve(Muscle):
@@ -42,6 +46,7 @@ class MuscleCurve(Muscle):
 		self.hair = hair
 		self.jointRes = jointRes
 		self.collider = collisionRigid
+		self.ctrl = None
 
 		# internal attributes
 		self.joints = []
@@ -65,7 +70,7 @@ class MuscleCurve(Muscle):
 	           ):
 		"""upSolver governs upvector for joints - """
 		# insert live rebuild before dynamics
-		newCurve, rebuild = cls.rebuildCurve(baseCrv)
+		newCurve, rebuild = cls.rebuildCurve(baseCrv, name=name+"_input")
 		hair = makeCurveDynamic(newCurve, live=True, timeInput=timeInput,
 		                 nucleus=nucleus, name=name)
 		muscle = cls(hair, jointRes=jointRes,
@@ -91,6 +96,10 @@ class MuscleCurve(Muscle):
 		self.muscleDepth = depth
 		self.makeDisplay()
 
+	def setLockedPoints(self, mode="none"):
+		options = ["none", "start", "end", "both"]
+		self.ctrl.first.set("pointLock", options.index(mode))
+
 
 	# build methods --------
 
@@ -103,7 +112,7 @@ class MuscleCurve(Muscle):
 		baseTf = self.hair.inputShape.transform
 		self.ctrl.root.parentTo(baseTf)
 
-		crvDag = ECA("transform")
+		crvDag = ECA("transform", self.name+"_ctrlRivet")
 		curve.curveRivet(crvDag, self.hair.inputShape, 0.5)
 		#transform.matchMatrix(crvDag, self.ctrl.first)
 		transform.matchXforms(self.ctrl.root, crvDag)
@@ -130,6 +139,7 @@ class MuscleCurve(Muscle):
 		degree = node.addAttr(attrName="degree", attrType="int", dv=2)
 		node.con(baseSpans, self.rebuild + ".spans")
 		node.con(degree, self.rebuild + ".degree")
+		node.con(degree, self.hair.follicle + ".degree")
 
 		# get activation value
 		activePlug = self.computeActivation(userInput=active)
@@ -168,12 +178,29 @@ class MuscleCurve(Muscle):
 		                                 basePos)
 
 		# other hair attributes
-		plugs = (self.hair.follicle + ".pointLock",
+		node.addAttr(attrName="pointLock", attrType="int", min=0, max=3, dv=0)
+		node.con("pointLock", self.hair.follicle + ".pointLock")
+		node.addAttr(attrName="bendResistance", attrType="float",
+		             min=0, max=1, dv=0)
+		node.con("bendResistance", self.hair + ".bendResistance")
+		plugs = (#self.hair.follicle + ".pointLock",
 		         self.hair + ".damp",
-		         self.hair + ".bendResistance",
+		         #self.hair + ".bendResistance",
+		         self.hair + ".startCurveAttract",
+		         # self.hair + ".attractionScale[0].attractionScale_FloatValue",
+		         # self.hair + ".attractionScale[1].attractionScale_FloatValue",
 		         )
 		for i in plugs:
 			attr.copyAttr(i, self.ctrl.first)
+		self.ctrl.first.addAttr(attrName="startAttract", attrType="float",
+		                        min=0, max=1.0, dv=1.0)
+		self.ctrl.first.addAttr(attrName="endAttract", attrType="float",
+		                        min=0, max=1.0, dv=1.0)
+		self.ctrl.first.con("startAttract",
+		        self.hair + ".attractionScale[0].attractionScale_FloatValue",)
+		self.ctrl.first.con("endAttract",
+		        self.hair + ".attractionScale[1].attractionScale_FloatValue", )
+
 
 
 	def computeActivation(self, userInput=""):
@@ -189,7 +216,7 @@ class MuscleCurve(Muscle):
 		self.hair.follicle.set("restPose", 3) # from curve
 		self.hair.set("collisionFlag", 1) # vertex
 		self.hair.set("selfCollisionFlag", 1) # vertex
-		self.hair.set("ignoreSolverGravity", 1)
+		#self.hair.set("ignoreSolverGravity", 1)
 		self.hair.set("ignoreSolverWind", 1)
 
 		self.hair.outputLocalShape.transform.parentTo( self.setupGrp )
@@ -234,7 +261,8 @@ class MuscleCurve(Muscle):
 			                              factor=0.1)
 			joint.set("radius", scale)
 			curve.curveRivet(joint, self.hair.outputLocalShape,
-			                 u, upVectorSource=self.ctrlVector )
+			                 u, upVectorSource=self.ctrlVector,
+			                 tidyGrp=self.techGrp)
 			joints.append(joint)
 		return joints
 
@@ -243,6 +271,8 @@ class MuscleCurve(Muscle):
 		""" set colours, cv display etc """
 		self.hair.outputLocalShape.setColour( self.muscleColour )
 		self.hair.outputLocalShape.showCVs(1)
+		for i in self.joints:
+			i.setColour( self.muscleColour )
 
 
 	@staticmethod

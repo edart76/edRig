@@ -118,7 +118,8 @@ def getLengthRatio(crv, uFraction):
 def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
                upSpace="world", top=True, rotX=True,
                byLength=True, upVectorSource=None,
-               constantU=True, purpose="anyPurpose", noCycle=True):
+               constantU=True, purpose="anyPurpose", noCycle=True,
+               tidyGrp=None):
 	"""purpose parametre allows reuse of point on curve nodes"""
 
 	#pci = ECA("pci", "{}-{}-pci".format(dag, uVal))
@@ -189,6 +190,10 @@ def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
 	# if we want to get rid of constraints, you can do compose/decompose
 	# matrix, but i think here they're fine
 	# returns new reference to dag
+	if tidyGrp:
+		cmds.parent(aim, tidyGrp)
+	# else:
+	# 	cmds.parent(aim, dag)
 	return pci
 
 
@@ -353,6 +358,8 @@ def pciAtU(crvPlug, u=0.1, percentage=True,
 	# if it's constant, at the same u, it's compatible
 	# if it's not constant, at the same U for a different purpose, not
 
+	crvName=crvPlug.split(".")[0]
+
 	# first look through all connected pci nodes
 	connectedAll = attr.getImmediateFuture(crvPlug)
 	connectedPcis = [i for i in connectedAll
@@ -382,7 +389,8 @@ def pciAtU(crvPlug, u=0.1, percentage=True,
 
 	# create new pci node
 	if not targetPci:
-		targetPci = ECN("pci", "pointAt_{}u".format(str(u)[:3]))
+		uStr = str(u).replace(".", "o")[:3]
+		targetPci = ECN("pci", crvName+"_pointAt_{}u".format( uStr ))
 		attr.addTag(targetPci, "constantU", str(constantU))
 		attr.addTag(targetPci, "purpose", str(purpose))
 		cmds.setAttr(targetPci + ".parameter", u)

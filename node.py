@@ -198,9 +198,9 @@ class AbsoluteNode(StringLike):
 		return self.node.split("|")[-1]
 	@name.setter
 	def name(self, value):
-		self.MFnDependency.setName(value)
+		#self.MFnDependency.setName(value)
 
-		#cmds.rename(self(), value)
+		cmds.rename(self(), value)
 		self()
 
 	# i've got no strings, so i have fn
@@ -286,8 +286,10 @@ class AbsoluteNode(StringLike):
 	def isTransform(self):
 		if self.shapeFnType:
 			return False
-		if self.MDagPath:
+		if self.MObject.hasFn(110): # kTransform
 			return True
+		# if self.MDagPath:
+		# 	return True
 		else:
 			return False
 
@@ -548,7 +550,7 @@ class AbsoluteNode(StringLike):
 		nodeTypeStr = cls.nodeType()
 
 		nodeType = nodeTypeStr[0].lower() + nodeTypeStr[1:]
-		name = name or n or "eyy"
+		name = name or n or "noNodeCreateName"
 		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
 		return node
 
