@@ -5,7 +5,7 @@ from maya import cmds
 import maya.api.OpenMaya as om
 
 from edRig.core import MObjectFrom, shapeFrom, tfFrom, stringFromMObject, ECN
-from edRig import attr, naming
+from edRig import attr, naming, beauty
 
 # saviour
 from edRig.lib.python import StringLike
@@ -63,7 +63,6 @@ class AbsoluteNode(StringLike):
 	_nodeType = None
 
 	defaultTime = "time1.outTime" # tryin this out
-
 
 
 	def __new__(cls, node ):
@@ -163,14 +162,14 @@ class AbsoluteNode(StringLike):
 
 	## refreshing mechanism
 	def __str__(self):
-		self.refreshPath()
+		self.value = self.refreshPath()
 		return super(AbsoluteNode, self).__str__()
 
 	"""for repeated operations this will incur a penalty in speed
 	consider leaving the call function explicitly to refresh the path"""
 
 	def __call__(self, *args, **kwargs):
-		self.refreshPath()
+		self.value = self.refreshPath()
 		return self.value
 
 
@@ -200,6 +199,7 @@ class AbsoluteNode(StringLike):
 	@name.setter
 	def name(self, value):
 		self.MFnDependency.setName(value)
+
 		#cmds.rename(self(), value)
 		self()
 
@@ -244,13 +244,15 @@ class AbsoluteNode(StringLike):
 		if self.isShape():
 			return self
 		elif not self._shape:
-			self._shape = AbsoluteNode( shapeFrom( self ) )
+			# print( self )
+			# print( self() )
+			self._shape = AbsoluteNode( shapeFrom( self() ) )
 		return self._shape
 
 	@property
 	def transform(self):
 		if self.isTransform():
-			return self()
+			return self
 		elif not self._transform:
 			self._transform = AbsoluteNode( tfFrom( self() ) )
 		return self._transform
@@ -258,7 +260,7 @@ class AbsoluteNode(StringLike):
 	@property
 	def parent(self):
 		"""replace with api call"""
-		test = cmds.listRelatives(self, parent=True)
+		test = cmds.listRelatives(self(), parent=True)
 		return AbsoluteNode(test[0]) if test else None
 
 	@property
@@ -319,6 +321,7 @@ class AbsoluteNode(StringLike):
 			return
 		self.transform.name = name
 		self.shape.name = name + "Shape"
+		return self()
 
 
 	def delete(self, full=True):
@@ -340,7 +343,7 @@ class AbsoluteNode(StringLike):
 		# return cmds.nodeType(cls.node)
 
 	def _instanceNodeType(self):
-		return cmds.nodeType(self)
+		return cmds.nodeType(self())
 
 
 
@@ -467,8 +470,6 @@ class AbsoluteNode(StringLike):
 			attr.setAttrsFromDict(multi, node=self())
 			return
 		attrName = self.parseAttrArgs([attrName])[0]
-		# if not self() in attrName :
-		# 	attrName = self() + "." + attrName
 		attr.setAttr(attrName, val, **kwargs)
 
 	def get(self, attrName=None, **kwargs):
@@ -507,9 +508,20 @@ class AbsoluteNode(StringLike):
 		print "new {}, {}".format(newNode, newNode.inShape)
 
 		self.con(self.outLocal, newNode.inShape)
-		print "shadingEngine {}".format(self.shadingEngine)
-		newNode.connectToShader(self.shadingEngine)
+		if newNode.isMesh:
+			print "shadingEngine {}".format(self.shadingEngine)
+			newNode.connectToShader(self.shadingEngine)
 		return newNode
+
+	# -- other random stuff -----
+	def setColour(self, colour):
+		""" applies override RGB colour """
+		beauty.setColour(self(), colour)
+
+	def showCVs(self, state=1):
+		""" shows cvs of nurbs curves and surfaces """
+		self.shape.set( "dispCV", state )
+
 
 	def connectToShader(self, shader):
 		"""takes shadingEngine and connects shape"""

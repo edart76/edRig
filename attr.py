@@ -26,7 +26,9 @@ def isPlug(target):
 def plugHType(plug):
 	"""returns either leaf, array or compound"""
 	node, attr = tokenisePlug(plug)
-	# querying on common scale attr gives multi false, children list
+	# only the last token is considered
+	# if "." in attr:
+	# 	attr = attr.split(".")[-1]
 
 	try:
 		found = cmds.attributeQuery(attr, node=node, listChildren=True)
@@ -36,13 +38,6 @@ def plugHType(plug):
 
 	if "[" in plug:
 		return "leaf"
-	return "leaf"
-	# print "node {}, attr {}".format(node, attr)
-	# if not cmds.attributeQuery(attr, node=node, multi=True):
-	# 	return "leaf"
-
-	# else: return "array"  # too complex, too much obfuscation
-
 	return "leaf"
 
 
@@ -54,7 +49,7 @@ def getMPlug(plugName):
 def con(a, b, f=True):
 	"""let's try this again"""
 	source = a
-	# need to rip all this out with proper tree parsing
+
 	if b[-1] == "]": # assume already defined
 		dest = b
 	elif plugHType(b) == "array":
@@ -70,6 +65,10 @@ def con(a, b, f=True):
 	#print "source {} dest {}".format(source, dest)
 	cmds.connectAttr(source, dest, f=f)
 	"""upgrade to om if speed becomes painful"""
+
+def con2(a, b, f=True):
+	""" attempt to be less powerful """
+
 
 def conOrSet(a, b, f=True):
 	"""connects plug to b if a is a plug,

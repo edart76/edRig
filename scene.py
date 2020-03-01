@@ -6,6 +6,17 @@ import maya.api.OpenMaya as om
 import traceback
 
 
+class SceneObject(object):
+	""" base class for conceptual objects in maya scene,
+	keeping related elements grouped """
+
+	@classmethod
+	def invokeNode(cls, name, type="transform", parent="", func=None):
+		func = func or ECA
+		return invokeNode(name, type, parent, func)
+
+
+
 class TidyManager(object):
 	"""manage execution of ops"""
 	excludeList = [

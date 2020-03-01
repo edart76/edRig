@@ -453,7 +453,8 @@ def isEqual(x, y, tolerance=0.0001):
 def MObjectFrom(node):
 	# get the MObject from anything
 	sel = om.MSelectionList()
-	sel.add(node)
+	#sel.add(node)
+	sel.add( cmds.ls(node)[0] )
 	ref = sel.getDependNode(0)
 	return ref
 
@@ -481,10 +482,12 @@ def MMatrixFrom(dag):
 def shapeFrom(target):
 	"""sometimes you just say gimme the shape
 	ask and ye shall receive"""
-	if "shape" in cmds.nodeType(target, inherited=True):
-		return target
-	else:
+	if cmds.listRelatives(target, shapes=True):
 		return cmds.listRelatives(target, shapes=True)[0]
+	elif "shape" in cmds.nodeType(target, inherited=True):
+		return target
+	# else:
+	# 	return cmds.listRelatives(target, shapes=True)[0]
 
 def makeShape(name, nodeType):
 	"""creates a new shape node and transform,

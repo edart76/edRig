@@ -1,10 +1,30 @@
 from edRig import AbsoluteNode, ECA, curve, beauty, attr, \
 	control, plug, transform
 from edRig.dynamics import Nucleus, NHair, makeCurveDynamic
-from edRig.scene import TidyManager
+from edRig.scene import TidyManager, SceneObject
 
 
-class MuscleCurve(object):
+class Muscle(SceneObject):
+	""" base class for muscle systems, involving more advanced
+	interaction with dynamics """
+
+	colours = {
+		"muscle0" : (60, 30, 10), # deepest anchor muscle
+		"muscle1" : (100, 60, 10), # intermediate muscles
+		"muscle2" : (150, 100, 10) # top-level floating muscles
+	}
+
+	def __init__(self, name="newMuscle"):
+		""" set name of muscle component """
+		self.name = name
+
+	@property
+	def setupGrp(self):
+		return self.invokeNode(self.name)
+
+
+
+class MuscleCurve(Muscle):
 	"""dynamic curve making relative motions according to changes in length
 	includes a bulge vector and ramp"""
 
@@ -18,14 +38,25 @@ class MuscleCurve(object):
 	             upSolver=""):
 		"""initialise with base hair system governing muscle behaviour
 		:param NHair hair: """
+		super(MuscleCurve, self).__init__(name)
 		self.hair = hair
 		self.jointRes = jointRes
-		self.name = name
 		self.collider = collisionRigid
-		pass
 
-	@staticmethod
-	def create(baseCrv, nucleus=None,
+		# internal attributes
+		self.joints = []
+		self.rebuild = None
+
+		self.muscleDepth = 0
+
+	@property
+	def muscleColour(self):
+		key = "muscle" + str(self.muscleDepth)
+		return self.colours[key]
+
+
+	@classmethod
+	def create(cls, baseCrv, nucleus=None,
 	           jointRes=5,
 	           upSolver="ctrlPos",
 	           timeInput="time1.outTime",
@@ -33,24 +64,42 @@ class MuscleCurve(object):
 	           upSurface=None,
 	           ):
 		"""upSolver governs upvector for joints - """
-		hair = makeCurveDynamic(baseCrv, live=True, timeInput=timeInput,
+		# insert live rebuild before dynamics
+		newCurve, rebuild = cls.rebuildCurve(baseCrv)
+		hair = makeCurveDynamic(newCurve, live=True, timeInput=timeInput,
 		                 nucleus=nucleus, name=name)
-		muscle = MuscleCurve(hair, jointRes=jointRes,
+		muscle = cls(hair, jointRes=jointRes,
 		                     name=name, upSolver=upSolver)
+		muscle.rebuild = rebuild # bit messy
 
-		with TidyManager(name+"_grp"):
+		with TidyManager(muscle.setupGrp):
 			muscle.makeControl()
 			muscle.setup()
-			muscle.makeJoints()
-
+			muscle.joints = muscle.makeJoints()
 		return muscle
+
+	@classmethod
+	def rebuildCurve(cls, baseCrv, name=""):
+		rebuild = curve.rebuildCurve(baseCrv+".local", name+"Rebuild")
+		newCrv = AbsoluteNode(baseCrv).shape.getShapeLayer(
+			name=baseCrv+"_rebuilt")
+		newCrv.con(rebuild + ".outputCurve", "create")
+		return newCrv.transform, rebuild
+
+	def setDepth(self, depth=0):
+		""" sets depth of muscle, regarding how deeply it connects in body """
+		self.muscleDepth = depth
+		self.makeDisplay()
+
+
+	# build methods --------
 
 	def makeControl(self):
 		"""create control attributes"""
 		self.ctrl = control.TileControl(name=self.name,
 		                                colour=(56, 120, 256) )
 		node = AbsoluteNode(self.ctrl.first)
-		print "inputShape {}".format(self.hair.inputShape)
+		#print "inputShape {}".format(self.hair.inputShape)
 		baseTf = self.hair.inputShape.transform
 		self.ctrl.root.parentTo(baseTf)
 
@@ -78,6 +127,9 @@ class MuscleCurve(object):
 		                            min=1.0, dv=100)
 		# curve attributes
 		baseSpans = node.addAttr(attrName="baseSpans", attrType="int", dv=5)
+		degree = node.addAttr(attrName="degree", attrType="int", dv=2)
+		node.con(baseSpans, self.rebuild + ".spans")
+		node.con(degree, self.rebuild + ".degree")
 
 		# get activation value
 		activePlug = self.computeActivation(userInput=active)
@@ -131,31 +183,27 @@ class MuscleCurve(object):
 
 	def setup(self):
 		"""creates all internal systems for muscle"""
-		# baseRebuild = ECA("rebuildCurve")
-		# baseShapePlug = attr.getImmediatePast(
-		# 	self.hair.inputShapePlug, wantPlug=True	)[0]
-		# baseRebuild.con(baseShapePlug, "inputCurve" )
-		# baseRebuild.set("degree", 1) # linear
-		# baseRebuild.con("outputCurve", self.hair.inputShapePlug)
-		# self.baseRebuild = baseRebuild
-		# # connect basic curve stuff
-		# # connect basic curve stuff
-		# self.ctrl.first.con(self.ctrl.first + ".baseSpans",
-		#                    self.baseRebuild + ".spans")
 
 		# hair settings
 		self.hair.follicle.set("startDirection", 1) # input curve
 		self.hair.follicle.set("restPose", 3) # from curve
 		self.hair.set("collisionFlag", 1) # vertex
 		self.hair.set("selfCollisionFlag", 1) # vertex
-		# self.hair.set("ignoreSolverGravity", 1)
-		# self.hair.set("ignoreSolverWind", 1)
+		self.hair.set("ignoreSolverGravity", 1)
+		self.hair.set("ignoreSolverWind", 1)
+
+		self.hair.outputLocalShape.transform.parentTo( self.setupGrp )
+
+		# add curve rebuild
+		rebuild = ECA("rebuildCurve", n=self.name+"_rebuild")
+
+
 		pass
 
 
 	def makeCurveSwollness(self, activationPlug):
 		"""computes the clump width scale for curve p u m p
-		bias - param at which thickness is greatest
+		bias - curve param at which thickness is greatest
 		max - maximum thickness at full activation
 		min - guess
 		bulgeSpread - lateral shape of bulge along curve
@@ -176,6 +224,7 @@ class MuscleCurve(object):
 		"""create joints on muscle curve"""
 		res = res or self.jointRes
 		step = 1.0 / float(res - 1)
+		joints = []
 		for i in range(res):
 			u = step * i
 			joint = ECA("joint",
@@ -186,6 +235,15 @@ class MuscleCurve(object):
 			joint.set("radius", scale)
 			curve.curveRivet(joint, self.hair.outputLocalShape,
 			                 u, upVectorSource=self.ctrlVector )
+			joints.append(joint)
+		return joints
+
+
+	def makeDisplay(self):
+		""" set colours, cv display etc """
+		self.hair.outputLocalShape.setColour( self.muscleColour )
+		self.hair.outputLocalShape.showCVs(1)
+
 
 	@staticmethod
 	def fromCurve(crv):
@@ -197,7 +255,7 @@ class MuscleCurve(object):
 
 
 """
-these muscles will communicate the drive and soul of the people we create
+these muscles will communicate the drive and soul of the people we create - 
 they need to be good.
 activation value is determined by multiple factors:
 	- derivative of change in muscle length
@@ -222,11 +280,13 @@ joint rivet kernel may be varied to account for twisty muscles like linguini
 these barely need to be dynamic, just for the tension stuff, maybe collision
 in hero scenes
 investigate deltamushed poly ribbons instead
-investigated lol, not viable
+investigated lol, very not viable
 
 
 	"""
 
-class MuscleSheet(object):
+class MuscleSheet(Muscle):
 	"""??????
-	probably not necessary"""
+	definitely necessary
+	polygon cloth version of muscle system
+	"""

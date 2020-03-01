@@ -7,6 +7,8 @@ import maya.api.OpenMaya as om
 from edRig import attr, plug
 from edRig.plug import conOrSet
 
+import pprint
+
 sceneScale = 1
 # for later
 
@@ -120,8 +122,9 @@ def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
 	"""purpose parametre allows reuse of point on curve nodes"""
 
 	#pci = ECA("pci", "{}-{}-pci".format(dag, uVal))
-	pci = pciAtU( crvShape=crv, u=uVal, percentage=top,
-	             local=True, constantU=constantU,
+	crvPlug = crv+".local"
+	pci = pciAtU(crvPlug=crvPlug, u=uVal, percentage=top,
+	             constantU=constantU,
 	             purpose=purpose )
 	con(pci + ".position", dag + ".translate")
 
@@ -235,6 +238,49 @@ def curveFromCvs(points, closed=False, deg=3, name="pointCrv",
 				pass
 	return AbsoluteNode(outCrvShape)
 
+def curveFromCvPlugs(plugs, closed=False, deg=1, name="pointCrv", useApi=True):
+	""" improved rewrite of above to explicitly deal with plugs """
+	print( "cvPlugs {}".format(plugs))
+	startSpans = len(plugs) - 1
+	base = createBaseCurve(name, useApi=0, nPoints=startSpans+1)
+
+	# had ridiculous issues trying to rebuild a linear curve from 2 to 3 points
+	cmds.rebuildCurve(base(), degree=deg, ch=0, keepControlPoints=1
+	                  )
+	for i in range(len(plugs)):
+		base.conOrSet( plugs[i], base.shape + ".controlPoints[{}]".format(i))
+
+	return base
+
+
+
+def createBaseCurve(name, useApi=True, nPoints=3):
+	""" create nurbs curve using shapeFn, cvs at x0 and x1
+	:returns AbsoluteNode"""
+	if useApi:
+		points = [om.MPoint(0, 0, 0,), om.MPoint(1, 0, 0)]
+		fn = om.MFnNurbsCurve()
+		newObj = fn.create(points, # cvs
+		                                 [0.0, 1.0], # knots
+		                                 1, # degree
+		                                 om.MFnNurbsCurve.kOpen, # form, kOpen
+		                                 False, # is2D
+		                                 True) # isRational
+		node = AbsoluteNode.fromMObject(newObj)
+
+	else:
+		node = cmds.curve(p=[(0, 0, 0)],
+		                  worldSpace=True, periodic=0,
+		                  degree=1, n=name)
+		points = [(i,0,0) for i in range( nPoints)]
+		for i in range(1, nPoints):
+			cmds.curve(node, p=[points[i]], worldSpace=True, append=True)
+		node = AbsoluteNode(node)
+
+	node = AbsoluteNode(node.rename(name))
+	return node.transform
+
+
 def curveBinarySearch(crv, startU, targetLength):
 	#supercede that aim feedback loop in carpal
 
@@ -287,6 +333,15 @@ def getClosestU(curve, tf):
 		cmds.delete(curve.transform)
 	return u
 
+def rebuildCurve(plug, name="rebuild"):
+	""" inserts rebuildCurve node on target plug"""
+	node = ECA("rebuildCurve", n=name)
+	node.con(plug, "inputCurve")
+	return node
+
+
+
+
 def getLiveNearestPoint(curve, tf):
 	pass
 
@@ -294,7 +349,6 @@ def getLiveNearestPoint(curve, tf):
 def pciAtU(crvPlug, u=0.1, percentage=True,
 	constantU=True, purpose="anyPurpose"):
 	""" low level function to produce a point on a curve """
-	# if there's an alias thing in python i want to call this pikachu
 	# check for other pcis attached to the curve to avoid unnecessary usage
 	# if it's constant, at the same u, it's compatible
 	# if it's not constant, at the same U for a different purpose, not

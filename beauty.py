@@ -8,6 +8,7 @@ colourPresets = {
 	"red" : (256, 0, 0),
 	"blue" : (0, 0, 256),
 	"guides" : (256, 256, 0), # neon unpleasant warning yellow
+
 }
 
 def getColour(colour=None, normalise=False):
@@ -22,7 +23,8 @@ def getColour(colour=None, normalise=False):
 			colour[i] = val / 256.0
 	return colour
 
-def setColour(target, colour):
+def setColour(target, colour=(40, 200, 40)):
+	colour = getColour(colour)
 	attr.setAttr(target + ".overrideEnabled", 1)
 	attr.setAttr(target + ".overrideRGBColors", 1)
 	attr.setAttr(target + ".overrideColorRGB", colour)

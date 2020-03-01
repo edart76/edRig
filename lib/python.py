@@ -4,6 +4,7 @@ import inspect,importlib, pprint, pkgutil
 from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
 from abc import ABCMeta
+import types
 
 
 # from Tkinter import *
@@ -69,7 +70,8 @@ def outerVars():
 	return callerFrame.f_locals
 
 
-class StringLikeMeta(str):
+#class StringLikeMeta(ABCMeta):
+class StringLikeMeta(type):
 
 	__metaclass__ = ABCMeta
 
@@ -90,20 +92,20 @@ class StringLikeMeta(str):
 	                 ]
 
 
-	#def __new__(mcs, *args, **kwargs):
-	def __new__(mcs, base):
+	def __new__(mcs, *args, **kwargs):
+	#def __new__(mcs, base):
 
-		#new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
 		#new = super(StringLikeMeta, mcs).__new__(mcs)
-		new = str.__new__(mcs, base)
-		#StringLikeMeta.register(new, str)
-
+		#new = str.__new__(mcs, base)
+		#new = str.__new__(mcs, *args, **kwargs)
+		# mcs.register(str)
+		new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
 		return new
 	
 	def __call__(cls, *args, **kwargs):
 		#cls.register(basestring)
 		new = super(StringLikeMeta, cls).__call__(*args, **kwargs)
-		#StringLikeMeta.register(cls, str)
+		#StringLikeMeta.register(cls)
 	# 	for i in StringLikeMeta.stringMethods:
 	# 		if i in str.__dict__:
 	# 			new.__dict__[i] = str.__dict__[i]
@@ -112,14 +114,28 @@ class StringLikeMeta(str):
 	#
 	 	return new
 
+#StringLikeMeta.register(str)
+#StringLikeMeta.register(basestring)
+#StringLikeMeta.register(type("") )
 
-class StringLike(StringLikeMeta):
+""" beginning to think there is something specifically wrong with maya
+cmds, everything else works without directly inheriting from string
+registering str as a false type is the next step, but I can't get that
+to work either """
+
+
+#class StringLike(str, object):
+#class StringLike(object, str):
+class StringLike(str): # best I can do for now
+#class StringLike(object):
 	""" a proper, usable user string
 	intelligent maya nodes, maya plugs, self-formatting email addresses
 	we can do it"""
 
+	__metaclass__ = StringLikeMeta
+
 	def __init__(self, base=""):
-		self._base = base
+		self._base = str(base) # no unicode
 
 	# basic interface for core _base object ---
 	@property
@@ -129,22 +145,28 @@ class StringLike(StringLikeMeta):
 	@value.setter
 	def value(self, val):
 		""" :rtype : str """
-		self._base = val
+		self._base = str(val) # no unicode
 
 
-	def __getattr__(self, item):
-		return self._base.__getattribute__(item)
-
-	def __getattribute__(self, item):
-		try:
-			return object.__getattribute__(self, item)
-		except:
-			return str.__getattribute__(self._base, item)
+	# def __getattr__(self, item):
+	# 	try:
+	# 		return object.__getattr__(item)
+	# 	except:
+	# 		return self._base.__getattribute__(item )
+	#
+	# def __getattribute__(self, item):
+	# 	try:
+	# 		return object.__getattribute__(self, item)
+	# 	except:
+	# 		return str.__getattribute__(self._base, item)
 
 	def __repr__(self):
 		return self.__str__()
 	def __str__(self):
-		return self._base
+		return str(self._base)
+
+	# def __unicode__(self):
+	# 	return unicode(self.__str__())
 
 	# string magic methods -------------
 	def __add__(self, other):
@@ -152,7 +174,7 @@ class StringLike(StringLikeMeta):
 	def __contains__(self, item):
 		return str.__contains__(self.value, item)
 	def __delslice__(self, i, j):
-		return str.__delslice__(self.base, i, j)
+		return str.__delslice__(self.value, i, j)
 	def __eq__(self, other):
 		return str.__eq__(self.value, other)
 	def __format__(self, format_spec):
@@ -187,7 +209,10 @@ class StringLike(StringLikeMeta):
 		return reversed(self.value)
 	def __rmul__(self, other):
 		return str.__rmul__(self.value, other)
+	def __hash__(self):
+		return str.__hash__(self.value)
 
+#StringLike.register(str)
 
 if __name__ == '__main__':
 
