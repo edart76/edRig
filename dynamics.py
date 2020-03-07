@@ -124,11 +124,13 @@ class NDynamicsElement(AbsoluteNode):
 				# don't do that
 		return components
 
-	def connectNComponent(self, index=1):
-		"""creates new nComponent and sets its index correctly"""
-		comp = NComponent.create()
+	def connectNComponent(self, index=1, name=None):
+		"""creates new nComponent and sets its index correctly
+		reusing nComponents would be AMAZING in future """
+		name = name or self.name + "_{}component".format(index)
+		comp = NComponent.create(n=name)
 		self.con(self + ".nucleusId", comp + ".objectId")
-		comp.set("componentType", "point")
+		comp.set("componentType", 2) # point, enum indices are weird
 		comp.set("componentIndices[0]", index)
 		return comp
 
@@ -250,16 +252,21 @@ class NConstraint(NDynamicsElement):
 		"""main method for constraining elements,
 		through any number of methods
 		should itself be a class method
+		this currently incurs heavy node duplication
 		:param elementA : NDynamicsElement,
 		:param elements : list of tuples [ (NDynamicsElement, index), ]
 		"""
 		compA = elementA.getComponent(index=indexA)
 		compB = elementB.getComponent(index=indexB)
+		# getComponent sets indices properly
+
+		self.set("constraintMethod", method)
+		self.set("connectionMethod", self.connect[connect])
 
 		self.con(compA + ".outComponent", self + ".componentIds[0]")
 		self.con(compB + ".outComponent", self + ".componentIds[1]")
-		self.set("constraintMethod", method)
-		self.set("connectionMethod", self.connect[connect])
+
+		self.set("enable", 1)
 
 		if nucleus : self.connectToNucleus(nucleus)
 		self.connectTime(timeSource=timeSource)
