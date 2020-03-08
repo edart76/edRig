@@ -114,7 +114,7 @@ class AbsoluteNode(StringLike):
 		try:
 			obj = MObjectFrom(node)
 		except Exception as e:
-			print("failed for node {}".format(node))
+			print("absolute init failed for node {}".format(node))
 			raise e
 
 		if obj:
@@ -552,6 +552,9 @@ class AbsoluteNode(StringLike):
 		nodeType = nodeTypeStr[0].lower() + nodeTypeStr[1:]
 		name = name or n or nodeType
 		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
+
+		node.setDefaults()
+
 		return node
 
 	def setDefaults(self):

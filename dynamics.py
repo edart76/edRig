@@ -143,6 +143,17 @@ class NHair(NDynamicsElement):
 	"""wiggly willy
 	points to hairSystem, not follicle"""
 
+	defaultAttrs = { # by default clump taper actually affects collision
+		"clumpWidthScale[0].clumpWidthScale_FloatValue" : 1,
+		"clumpWidthScale[1].clumpWidthScale_FloatValue" : 1,
+		"hairWidthScale[0].hairWidthScale_FloatValue" : 1,
+		"hairWidthScale[1].hairWidthScale_FloatValue" : 1,
+
+		"clumpWidth" : 0.0,
+		"hairWidth" : 0.1, # ideally we shouldn't tangle with clumpWidth
+
+	}
+
 	_nodeType = "hairSystem"
 	# follicle = None
 
@@ -267,6 +278,11 @@ class NConstraint(NDynamicsElement):
 		self.con(compB + ".outComponent", self + ".componentIds[1]")
 
 		self.set("enable", 1)
+		self.set("maxIterations", 1) # has appreciable impact on performance
+		# increment if necessary
+
+		# 3.52ms
+
 
 		if nucleus : self.connectToNucleus(nucleus)
 		self.connectTime(timeSource=timeSource)
@@ -373,8 +389,7 @@ class Nucleus(AbsoluteNode):
 		self.kick()
 		collider.set("thickness", 0.1)
 		self.kick()
-
-
+		return collider
 
 	def kick(self):
 		"""disconnects time and jitters current time a bit -

@@ -1,7 +1,7 @@
 """ temp file to test face setups before the full infrastructure is ready """
 
 from edRig import cmds, om, AbsoluteNode, ECA
-from edRig import plug, attr, curve, surface, muscle, dynamics
+from edRig import plug, attr, curve, surface, muscle, dynamics, anim
 
 
 def faceMuscleSetup():
@@ -35,7 +35,7 @@ def faceMuscleSetup():
 		print cmds.objExists(d)
 		cmds.parent(d, rigGrp)
 		d.addAttr(attrName="contraction", dv=0, min=0.01, max=0.99)
-		d.addAttr(attrName="minLength", dv=0.4, min=0.01, max=0.99)
+		d.addAttr(attrName="minLength", dv=0.7, min=0.01, max=0.99)
 		p = makeSubCurveContraction( i + ".local",
 		                         d + ".minLength",
 		                         d + ".contraction",
@@ -66,18 +66,22 @@ def faceMuscleSetup():
 	faceNucleus.set("gravity", 0.5)
 
 	# add skull collider
-	faceNucleus.addCollider(mesh="colliders_combined",
+	skull = faceNucleus.addCollider(mesh="colliders_combined",
 	                        name="skull")
+	#skull.set("collide", 0)
+	skull.set("selfCollide", 0)
+	skull.set("forceField", 1) # along normal
+	skull.set("fieldMagnitude", 0.01)
 
 	# scalp result
-	browMuscle = muscle.MuscleCurve.create(browAnchor,
+	scalpMuscle = muscle.MuscleCurve.create(browAnchor,
 	                                       nucleus=faceNucleus,
 	                                       name="browAnchor",)
-	browMuscle.setDepth(0)
-	browMuscle.setLockedPoints("none")
-	browMuscle.ctrl.first.addAttr(attrName="scalpContract", dv=0, min=0, max=1)
+	scalpMuscle.setDepth(0)
+	scalpMuscle.setLockedPoints("none")
+	scalpMuscle.ctrl.first.addAttr(attrName="scalpContract", dv=0, min=0, max=1)
 	for i in contractPlugs:
-		browMuscle.ctrl.first.con("scalpContract", i)
+		scalpMuscle.ctrl.first.con("scalpContract", i)
 
 	# frontalis brow muscles
 	frontalisInputs = [
@@ -86,29 +90,100 @@ def faceMuscleSetup():
 		"frontalis_c",
 	]
 	frontalisMuscles = []
-	for i in frontalisInputs:
-		frMuscle = muscle.MuscleCurve.create(i,
+	constraints = []
+	constraintSettings = {
+		"constraintMethod" : "spring",
+		"restLengthMethod" : "constant",
+		"damp" : 10,
+	}
+
+
+	# hardcode and duplicate everything for now
+	frontalisAM = muscle.MuscleCurve.create("frontalis_a",
 		                                     nucleus=faceNucleus,
-		                                     name=i+"Muscle")
-		frontalisMuscles.append(frMuscle)
+		                                     name="frontalis_a"+"Muscle")
+	frontalisBM = muscle.MuscleCurve.create("frontalis_b",
+		                                     nucleus=faceNucleus,
+		                                     name="frontalis_b"+"Muscle")
+	frontalisCM = muscle.MuscleCurve.create("frontalis_c",
+	                                        nucleus=faceNucleus,
+	                                        name="frontalis_c" + "Muscle")
+	frontalisMuscles = [ frontalisAM, frontalisBM, frontalisCM]
+
+	# corrugator
+	corrugatorAM = muscle.MuscleCurve.create("corrugator_a", nucleus=faceNucleus,
+	                                        name="corrugator_a" + "Muscle")
+
+	# oculi
+	oculiAM = muscle.MuscleCurve.create("oculi_a", nucleus=faceNucleus,
+	                                        name="oculi_a" + "Muscle",
+	                                    jointRes=7, isRing=True)
+	oculiAM.ctrl.first.set("baseSpans", 8)
+	oculiBM = muscle.MuscleCurve.create("oculi_b", nucleus=faceNucleus,
+	                                    name="oculi_b" + "Muscle",
+	                                    jointRes=7, isRing=True)
+	oculiBM.ctrl.first.set("baseSpans", 8)
+
+	allMuscles = [
+		scalpMuscle,
+		frontalisAM, frontalisBM, frontalisCM,
+		corrugatorAM,
+		oculiAM, oculiBM
+	]
+	for i in allMuscles:
+		i.setUpSolver("surfaceNormal", "skull_collider_hi_res")
+
+
+
+	#for i in frontalisInputs:
+	for frMuscle in frontalisMuscles:
+		# frMuscle = muscle.MuscleCurve.create(i,
+		#                                      nucleus=faceNucleus,
+		#                                      name=i+"Muscle")
+		#frontalisMuscles.append(frMuscle)
 		frMuscle.setDepth(1)
 
 		# constrain to browAnchor
 		frPoint, browPoint = curve.mutualClosestPoints(
-			frMuscle.outputShape, browMuscle.outputShape)
+			frMuscle.outputShape, scalpMuscle.outputShape)
 		frIndex = round( frMuscle.outputShape.shapeFn.getParamAtPoint(frPoint))
-		browIndex = round(browMuscle.outputShape.shapeFn.
+		browIndex = round(scalpMuscle.outputShape.shapeFn.
 		                  getParamAtPoint(browPoint))
-		# frComp = frMuscle.hair.getComponent(frIndex)
-		# browComp = browAnchor.hair.getComponent(browIndex)
 
-		constraint = dynamics.NConstraint.create(name=i+"_constraint")
-		#constraint.connectToNucleus(faceNucleus)
+		constraint = dynamics.NConstraint.create(name=frMuscle.name+"_constraint")
 		constraint.constrainElements(elementA=frMuscle.hair,
 		                             indexA=frIndex,
-		                             elementB=browMuscle.hair,
+		                             elementB=scalpMuscle.hair,
 		                             indexB=browIndex,
 		                             nucleus=faceNucleus)
+
+		# constraint dynamics
+		constraint.set(multi=constraintSettings)
+
+		constraints.append(constraint)
+
+	# bind all joints in basic manner and apply deformers
+	outputGeo = "head"
+	joint = ECA("joint", n="skinRoot", parent="rigGrp")
+	#skc = cmds.skinCluster( joint, outputGeo)
+
+	bindJnts = [joint]
+	for i in allMuscles:
+		bindJnts.extend(i.joints)
+	skc = cmds.skinCluster( bindJnts, outputGeo)
+	dm = cmds.deformer( outputGeo, type="deltaMush")
+
+
+
+
+	# common settings
+	for i in allMuscles:
+		i.ctrl.first.set("damp", 50)
+
+
+	# make keyframes for test animation
+	anim.keyPlug( scalpMuscle.ctrl.first + ".scalpContract", 24, 0)
+	anim.keyPlug( scalpMuscle.ctrl.first + ".scalpContract", 200, 1)
 
 
 	# set out layer structure of muscles

@@ -39,7 +39,8 @@ class MuscleCurve(Muscle):
 	def __init__(self, hair, name="newMuscle",
 	             collisionRigid=None,
 	             jointRes=5,
-	             upSolver=""):
+	             upSolver="ctrlPos", upSurface=None,
+	             isRing=False):
 		"""initialise with base hair system governing muscle behaviour
 		:param NHair hair: """
 		super(MuscleCurve, self).__init__(name)
@@ -51,6 +52,13 @@ class MuscleCurve(Muscle):
 		# internal attributes
 		self.joints = []
 		self.rebuild = None
+
+		if upSolver not in self.upSolvers:
+			raise RuntimeError("unsupported muscle upSolver {}".format(upSolver))
+		self.upSolver = upSolver
+		self.upSurface = upSurface
+
+		self.isRing = isRing
 
 		self.muscleDepth = 0
 
@@ -67,10 +75,10 @@ class MuscleCurve(Muscle):
 	@classmethod
 	def create(cls, baseCrv, nucleus=None,
 	           jointRes=5,
-	           upSolver="ctrlPos",
+	           upSolver="ctrlPos", upSurface=None,
 	           timeInput="time1.outTime",
 	           name="testMuscle",
-	           upSurface=None,
+	           isRing=False,
 	           ):
 		"""upSolver governs upvector for joints - """
 		# insert live rebuild before dynamics
@@ -78,13 +86,16 @@ class MuscleCurve(Muscle):
 		hair = makeCurveDynamic(newCurve, live=True, timeInput=timeInput,
 		                 nucleus=nucleus, name=name)
 		muscle = cls(hair, jointRes=jointRes,
-		                     name=name, upSolver=upSolver)
+		                     name=name, upSolver=upSolver,
+		             isRing=isRing)
 		muscle.rebuild = rebuild # bit messy
 
 		with TidyManager(muscle.setupGrp):
 			muscle.makeControl()
 			muscle.setup()
 			muscle.joints = muscle.makeJoints()
+			# temp
+			muscle.makeDisplay()
 		return muscle
 
 	@classmethod
@@ -135,12 +146,12 @@ class MuscleCurve(Muscle):
 		length = node.addAttr(attrName="tensedLength", attrType="float",
 		                      min=0, dv=baseLength / 3.0)
 		restStretch = node.addAttr(attrName="restStretchResistance", attrType="float",
-		                            min=1.0, dv=10)
+		                            min=1.0, dv=1)
 		tenseStretch = node.addAttr(attrName="tenseStretchResistance", attrType="float",
 		                            min=1.0, dv=100)
 		# curve attributes
 		baseSpans = node.addAttr(attrName="baseSpans", attrType="int", dv=5)
-		degree = node.addAttr(attrName="degree", attrType="int", dv=2)
+		degree = node.addAttr(attrName="degree", attrType="int", dv=1)
 		node.con(baseSpans, self.rebuild + ".spans")
 		node.con(degree, self.rebuild + ".degree")
 		node.con(degree, self.hair.follicle + ".degree")
@@ -196,6 +207,8 @@ class MuscleCurve(Muscle):
 		         )
 		for i in plugs:
 			attr.copyAttr(i, self.ctrl.first)
+		node.set( "damp", 10)
+		node.set( "startCurveAttract", 0.1)
 		self.ctrl.first.addAttr(attrName="startAttract", attrType="float",
 		                        min=0, max=1.0, dv=1.0)
 		self.ctrl.first.addAttr(attrName="endAttract", attrType="float",
@@ -220,8 +233,18 @@ class MuscleCurve(Muscle):
 		self.hair.follicle.set("restPose", 3) # from curve
 		self.hair.set("collisionFlag", 1) # vertex
 		self.hair.set("selfCollisionFlag", 1) # vertex
-		#self.hair.set("ignoreSolverGravity", 1)
+		self.hair.set("ignoreSolverGravity", 1)
 		self.hair.set("ignoreSolverWind", 1)
+
+		self.hair.set("mass", 10)
+		self.hair.set("drag", 0)
+		self.hair.set("tangentialDrag", 0)
+		self.hair.set("stretchDamp", 0)
+
+		# performance
+		# self.hair.set( "iterations", 1 )
+		self.hair.set( "stiffness", 0 )
+		self.hair.set( "friction", 0 )
 
 		self.hair.outputLocalShape.transform.parentTo( self.setupGrp )
 
@@ -255,11 +278,13 @@ class MuscleCurve(Muscle):
 		"""create joints on muscle curve"""
 		res = res or self.jointRes
 		step = 1.0 / float(res - 1)
+		if self.isRing:
+			step = 1.0 / float(res)
 		joints = []
 		for i in range(res):
 			u = step * i
 			joint = ECA("joint",
-			            n=self.name + "_u{}_".format(u))
+			            n=self.name + "_u{}_".format(str(u)[:3]))
 			# scale joint to be usable in scene
 			scale = beauty.getUsableScale(self.hair.outputLocalShape,
 			                              factor=0.1)
@@ -268,7 +293,30 @@ class MuscleCurve(Muscle):
 			                 u, upVectorSource=self.ctrlVector,
 			                 tidyGrp=self.techGrp)
 			joints.append(joint)
+
+		# make upSolver
+		self.setUpSolver(self.upSolver, self.upSurface)
 		return joints
+
+	def setUpSolver(self, upSolver="surfaceNormal", upSurface=""):
+		self.upSolver = upSolver
+		self.upSurface = upSurface
+		self.buildUpSolver()
+
+	def buildUpSolver(self):
+		if self.upSolver == "surfaceNormal":
+			for i in self.joints:
+				pciPlug = attr.getImmediatePast(i + ".translate",
+				                                wantPlug=True)[0]
+				aim = attr.getImmediatePast(i + ".rotate")[0]
+				npm = ECA("nearestPointOnMesh", n=i+"upSurface_point")
+				npm.con(pciPlug, "inPosition")
+				upSource = AbsoluteNode(self.upSurface).shape.outLocal
+				npm.con(upSource, "inMesh")
+				npm.con("normal", aim + ".worldUpVector")
+
+				pass
+
 
 
 	def makeDisplay(self):
@@ -277,6 +325,13 @@ class MuscleCurve(Muscle):
 		self.hair.outputLocalShape.showCVs(1)
 		for i in self.joints:
 			i.setColour( self.muscleColour )
+
+			# connect hair scale ramps to joint radius
+			hairRamp = plug.RampPlug( self.hair + ".hairWidthScale")
+			instance = hairRamp
+			# only when we need it, and when ramp plugs are fixed
+
+		#
 
 
 	@staticmethod

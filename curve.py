@@ -194,6 +194,11 @@ def curveRivet(dag, crv, uVal, upCrv=None, upDag=None,
 		cmds.parent(aim, tidyGrp)
 	# else:
 	# 	cmds.parent(aim, dag)
+
+	# add uValue attribute to riveted transform
+	cmds.addAttr(dag, ln="uValue")
+	cmds.connectAttr(pci + ".parameter", dag + ".uValue")
+
 	return pci
 
 
