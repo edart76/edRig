@@ -46,6 +46,11 @@ def getMPlug(plugName):
 	sel.add(plugName)
 	return sel.getPlug(0)
 
+def getMObject(node):
+	sel = om.MSelectionList()
+	sel.add(node)
+	return sel.getDependNode(0)
+
 def con(a, b, f=True):
 	"""let's try this again"""
 	source = a
@@ -183,6 +188,17 @@ def setLocked(plug, state=True):
 		cmds.setAttr(plug, locked=state)
 	except:
 		print "unable to lock attr {}".format(plug)
+
+
+def addUntypedAttr(node, attrName="untypedAttr"):
+	""" testing api methods for this, may supercede cmd calls """
+	mfnTyped = om.MFnTypedAttribute()
+	aTypedObj = mfnTyped.create( attrName, attrName, om.MFnData.kAny) # kAny
+	nodeObj = getMObject(node)
+	mfnDep = om.MFnDependencyNode(nodeObj)
+	mfnDep.addAttribute(aTypedObj)
+	return node + "." + attrName
+
 
 def addAttr(target, attrName="newAttr", attrType="float", parent=None,
             keyable=True, **kwargs):

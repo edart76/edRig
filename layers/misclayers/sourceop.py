@@ -1,7 +1,7 @@
 
 """ import stuff from scene or file """
 
-from edRig import cmds, om, core, pipeline, COMMON_PATH
+from edRig import cmds, om, core, pipeline, COMMON_PATH, AbsoluteNode, ECA
 from edRig.tesserae.ops.layer import LayerOp
 from edRig.lib.python import AbstractTree
 
@@ -21,7 +21,8 @@ class SourceOp(LayerOp):
 		+ - transformName : 0D
 		"""
 		self.settings["fileA"] = "/"
-		self.settings["fileA.C_body"] = "2D"
+		#self.settings["fileA.C_body"] = "2D"
+		self.settings["fileA.body"] = "C_body_mesh"
 		self.settings["fileA._version"] = "latest"
 
 	def defineAttrs(self):
@@ -34,7 +35,8 @@ class SourceOp(LayerOp):
 		for i in self.settings.branches:
 			for n in i.branches:
 				attrName = n.name
-				attrType = n.value
+				#attrType = n.value
+				attrType = "nD"
 
 				if attrName == "_version" :
 					continue
@@ -59,7 +61,35 @@ class SourceOp(LayerOp):
 			if i.value == "scene":
 				self.log("sourcing {} from scene".format(i.name))
 			else:
-				self.sourceFile(i.value, version=i["_version"])
+				self.loadFile(i.value, version=i["_version"])
+			for n in i.branches:
+				if n.name == "_version":
+					continue
+				self.sourceNodes(n.name, n.value)
+
+	# connecting nodes from scene
+	def sourceNodes(self, outputName="output", nodeName=""):
+		if not cmds.ls(nodeName):
+			self.log("no node found of name {}, skipping source".format(nodeName))
+			return None
+		node = AbsoluteNode( nodeName )
+
+		if node.shape:
+			node = node.shape
+			self.log("node {}".format(node))
+			self.log(" node isShape {}".format(node.isShape()))
+			self.log("node shape {}".format(node.shape) )
+			dataType = self.dataTypeForNodeType(node.shape.nodeType())
+		else:
+			dataType = "0D"
+		""" no sophisticated guessing for input nodes
+		if it has a shape, you want the shape """
+
+		sourcePlug = node.outWorld
+
+		outputPlug = self.getOutput(outputName).plug
+		AbsoluteNode.con(sourcePlug, outputPlug)
+
 
 
 	# file io
@@ -69,7 +99,7 @@ class SourceOp(LayerOp):
 			raise RuntimeError( "given node {} does not exist in scene"
 			                    .format(nodeName))
 
-	def sourceFile(self, path, version="latest"):
+	def loadFile(self, path, version="latest"):
 		""" import 3d file """
 		path = pipeline.convertRootPath(path, toAbsolute=True)
 		found = False

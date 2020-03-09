@@ -506,8 +506,9 @@ class Op(MayaReal):
 				newItem = AbstractAttr(name=i.name, dataType=dt, hType="leaf")
 				self.makeOpIoNodeAttrs(node, newItem, parentItem)
 			else:
-				dt = "matrix"
-				plug = attr.addAttr(node, attrName=i.name, attrType=dt)
+				# dt = "matrix"
+				# plug = attr.addAttr(node, attrName=i.name, attrType=dt)
+				plug = attr.addUntypedAttr(node, attrName=i.name)
 		elif i.dataType in attr.INTERFACE_ATTRS:
 			dtdict = attr.INTERFACE_ATTRS[i.dataType]
 			dtdict = {i.name : dtdict }
@@ -574,6 +575,17 @@ class Op(MayaReal):
 			except Exception as e:
 				self.log("unable to connect attrItem " + i.name +
 				         "error {}".format(e))
+
+	@staticmethod
+	def dataTypeForNodeType( nodeType ):
+		""" returns "0D" for transform, "2D" for meshes and surfaces
+		etc"""
+		if nodeType == "transform" : return "0D"
+		elif nodeType == "nurbsCurve" or nodeType == "bezierCurve" :
+			return "1D"
+		elif nodeType == "mesh" or nodeType == "nurbsSurface" :
+			return "2D"
+		raise RuntimeError("no dataType for nodeType {}".format(nodeType))
 
 	# io
 	def searchData(self, infoName):

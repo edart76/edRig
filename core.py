@@ -486,6 +486,8 @@ def shapeFrom(target):
 		return cmds.listRelatives(target, shapes=True)[0]
 	elif "shape" in cmds.nodeType(target, inherited=True):
 		return target
+	else:
+		return None
 	# else:
 	# 	return cmds.listRelatives(target, shapes=True)[0]
 

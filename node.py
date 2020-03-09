@@ -50,6 +50,11 @@ class AbsoluteNode(StringLike):
 			"outLocal" : "local",
 			"outWorld" : "worldSpace[0]",
 			"inShape" : "create"
+		},
+		"nurbsSurface": {
+			"outLocal": "local",
+			"outWorld": "worldSpace[0]",
+			"inShape": "create"
 		}
 	}
 
@@ -90,6 +95,7 @@ class AbsoluteNode(StringLike):
 		absolute = super(AbsoluteNode, cls).__new__(cls, node)
 		absolute.con = absolute._instanceCon
 		absolute.conOrSet = absolute._instanceConOrSet
+		absolute.nodeType = absolute._instanceNodeType
 
 		# add new node to cache
 		cls.nodeCache[ uid[0] ] = absolute
@@ -244,9 +250,10 @@ class AbsoluteNode(StringLike):
 		if self.isShape():
 			return self
 		elif not self._shape:
-			# print( self )
-			# print( self() )
-			self._shape = AbsoluteNode( shapeFrom( self() ) )
+			test = shapeFrom( self() )
+			if not test:
+				return None
+			self._shape = AbsoluteNode( test )
 		return self._shape
 
 	@property
