@@ -165,6 +165,8 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		        if isinstance(i, Pipe)]
 
 	def mousePressEvent(self, event):
+
+		print("scene press event")
 		selected_nodes = self.selectedNodes()
 		if self.activeView:
 			self.activeView.sceneMousePressEvent(event)

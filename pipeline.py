@@ -70,7 +70,7 @@ class FilePathTree(str):
 
 	@property
 	def parent(self):
-		return "/".join(self.path.split("/")[:-1])
+		return FilePathTree("/".join(self.path.split("/")[:-1]))
 
 	@property
 	def children(self):
@@ -583,8 +583,29 @@ def loadObjectClass(objData):
 def reloadAllReferences():
 	""" syncs a maya scene to update all references """
 	allrefs = cmds.ls( type="reference" )
-	for i in allrefs:
-		cmds.file( loadReference=i )
 
+	for i in allrefs:
+		try:
+			cmds.file( unloadReference=i)
+			cmds.file( loadReference=i, lockReference=False,
+			           loadReferenceDepth="all",
+			           #mergeNamespacesOnClash=1, # bamboo_:bamboo_:bamboo_:...
+			           groupReference=1,
+			           groupName=i,
+			           )
+		except Exception as e:
+			print(e)
+			print("failed to reload reference {}".format(i))
+
+def getScenePath():
+	return cmds.file(q=True, sn=True)
+
+def exportToObj(targetGeo=None, path=None, force=True):
+	# don't know how to export other than selection
+	path = checkSuffix(path, suffix="obj")
+	cmds.select(targetGeo, replace=True)
+	cmds.file(path, pr=1, typ="OBJexport", es=1, f=force,
+	          op="groups=0; ptgroups=0; materials=0; smoothing=0; normals=0")
+	cmds.select(cl=1)
 
 

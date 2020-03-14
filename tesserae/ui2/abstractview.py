@@ -97,20 +97,22 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.scene.sync()
 
 	# capture events #####
-	def keyPressEvent(self, event):
-		"""test"""
-		#super(AbstractView, self).keyPressEvent(event)
-		print "viewer keyPress is {}".format(event.text())
+	# def keyPressEvent(self, event):
+	# 	"""test"""
+	# 	#super(AbstractView, self).keyPressEvent(event)
+	# 	print "viewer keyPress is {}".format(event.text())
+	#
+	# 	if event.matches(QtGui.QKeySequence.Delete):
+	# 		# print "deleteCalled"
+	# 		self.nodeDeleteCalled.emit()
+	# 		self.scene.onDeleteCalled()
+	# 		event.accept()
+	# 		#event.ignore()
+	# 	else:
+	# 		pass
+	# 		#super(AbstractView, self).keyPressEvent(event)
+	# 	super(AbstractView, self).keyPressEvent(event)
 
-		if event.matches(QtGui.QKeySequence.Delete):
-			# print "deleteCalled"
-			self.nodeDeleteCalled.emit()
-			self.scene.onDeleteCalled()
-			event.accept()
-		else:
-			pass
-			#super(AbstractView, self).keyPressEvent(event)
-		super(AbstractView, self).keyPressEvent(event)
 	# 		#event.accept()
 	# 	# elif event.key() == 0x01000001: # tab
 		# 	self.tabSearchToggle()
@@ -134,19 +136,19 @@ class AbstractView(QtWidgets.QGraphicsView):
 		# else:
 		# 	event.accept()
 
-	def focusOutEvent(self, event):
-		#print "view focusOut is {}".format(event.reason())
-		if event.reason() == QtCore.Qt.TabFocusReason:
-			self.setFocus(QtCore.Qt.OtherFocusReason)
-			keyEvent = QtGui.QKeyEvent(QtCore.QEvent.KeyPress,
-			                            QtCore.Qt.Key_Tab,
-			                            QtCore.Qt.NoModifier)
-			#self.sendEvent(self, keyEvent)
-			self.keyPressEvent(keyEvent)
-			event.ignore()
-		#else:
-			#super(AbstractView, self).focusOutEvent(event)
-		super(AbstractView, self).focusOutEvent(event)
+	# def focusOutEvent(self, event):
+	# 	#print "view focusOut is {}".format(event.reason())
+	# 	if event.reason() == QtCore.Qt.TabFocusReason:
+	# 		self.setFocus(QtCore.Qt.OtherFocusReason)
+	# 		keyEvent = QtGui.QKeyEvent(QtCore.QEvent.KeyPress,
+	# 		                            QtCore.Qt.Key_Tab,
+	# 		                            QtCore.Qt.NoModifier)
+	# 		#self.sendEvent(self, keyEvent)
+	# 		self.keyPressEvent(keyEvent)
+	# 		event.ignore()
+	# 	#else:
+	# 		#super(AbstractView, self).focusOutEvent(event)
+	# 	super(AbstractView, self).focusOutEvent(event)
 		# works
 
 
@@ -167,13 +169,16 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.contextMenu.exec_(event.globalPos())
 		# super(AbstractView, self).contextMenuEvent(event)
 
-
+	""" view receives events first - calling super passes them to scene """
 
 
 	def mousePressEvent(self, event):
-		#print "view mouse event"
+		print ("view mouse event")
 		alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
 		shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
+
+		#event.accept() # still passed to scene
+		#event.ignore() # still passed to scene lol
 
 		items = self._items_near(self.mapToScene(event.pos()), None, 20, 20)
 		nodes = [i for i in items if isinstance(i, AbstractTile)]

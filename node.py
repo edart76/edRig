@@ -69,17 +69,23 @@ class AbsoluteNode(StringLike):
 
 	defaultTime = "time1.outTime" # tryin this out
 
+	""" IMPORTANT ISSUES facing AbsNode:
+	no automatic way to create specific wrappers against specific node types
+	once created as one wrapper, node cannot be converted to another 
+	"""
 
-	def __new__(cls, node ):
+
+	def __new__(cls, node, useCache=True):
 		""" new mechanism now used only to check validity and cache -
 		  no more string shenanigans """
 
 		# check if absoluteNode already exists for uid
 		uid = cmds.ls(node, uid=1)
-		if not uid: # no node, empty list
-			pass
-		elif uid[0] in cls.nodeCache:
-			return cls.nodeCache[ uid[0] ]
+		if useCache:
+			if not uid: # no node, empty list
+				pass
+			elif uid[0] in cls.nodeCache:
+				return cls.nodeCache[ uid[0] ]
 
 		if isinstance(node, AbsoluteNode):
 			return node
@@ -103,7 +109,7 @@ class AbsoluteNode(StringLike):
 		return absolute
 
 
-	def __init__(self, node=""):
+	def __init__(self, node="", useCache=True):
 		super(AbsoluteNode, self).__init__(base=node)
 
 		self.MObject = None
@@ -639,7 +645,10 @@ class ObjectSet(AbsoluteNode):
 		cmds.sets( target, e=True, include=self)
 
 	def objects(self):
-		return set( cmds.sets( self, q=True ))
+		items = cmds.sets( self, q=True )
+		if not items: return []
+		return set( [AbsoluteNode(i) for i in items])
+
 
 
 class PlugObject(StringLike):

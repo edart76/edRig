@@ -5,19 +5,30 @@ import sys, os
 cmds = None
 om = None
 
+# host values
+thisIsMaya = False
+thisIsHoudini = False
+thisIsPython = False
+
+# running without ui
+thisIsHeadless = False
+
+
 try:
 	from maya import cmds
 	import maya.api.OpenMaya as om
 
 	from edRig.node import AbsoluteNode, ECA
 	from edRig.attr import con
+	thisIsMaya = True
 	pass
 except :
 	print("this is not maya")
+	thisIsMaya = False
 	pass
 
 sys.dont_write_bytecode = True
-ROOT_PATH = "F:" + "/" + "all_projects_desktop"
+ROOT_PATH = "F:" + "/" + "all_projects_desktop" # root path of asset system
 COMMON_PATH = "F:" + "/" + "all_projects_desktop/common"
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 """this asset system is designed to work with a central "common" folder,

@@ -1,33 +1,59 @@
 # build the tesserae window
 from PySide2 import QtGui, QtWidgets, QtCore
-import shiboken2
+from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
 from edRig.tesserae.ui2.abstractview import AbstractView
 from edRig.tesserae.ui2.statuspane import StatusPane
-from edRig.tesserae.ui2.lib import  MyDockingUI, dock_window
+from edRig.tesserae.ui2.lib import  MyDockingUI, dock_window, getMayaWindow
 from edRig.pipeline import TempAsset
 from edRig import ROOT_PATH
 
+from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
+def getMayaWindow():
+	ptr = omui.MQtUtil.mainWindow()
+	#widget = wrapInstance( long( ptr ), QtWidgets.QWidget )
+	widget = wrapInstance( long( ptr ), QtWidgets.QMainWindow )
+	return widget
+
+def getMayaObject():
+	ptr = omui.MQtUtil.mainWindow()
+	widget = wrapInstance( long( ptr ), QtCore.QObject )
+	return widget
+
+windows = []
 
 def show():
-	#eyy = TilePileUI()
-	#eyy = TilePileUI(parent=getMayaWindow())
-	# maya = getMayaWindow()
-	# print "maya is {}".format(maya)
-	eyy = dock_window(TilePileUI)
-	eyyyyy = eyy.show()
-	return eyyyyy
+
+	mayaWindow = getMayaWindow()
+	mayaObj = getMayaObject()
+
+	#win = mayaObj.findChild( TilePileUI )
+
+	#win = TilePileUI( mayaWindow )
+	win = TilePileUI( )
+	ref = win.show(dock=True)
 
 
-# class TilePileUI(QtWidgets.QWidget):
-class TilePileUI(MyDockingUI):
+	windows.append(win)
+	return win
+
+
+
+
+#class TilePileUI(QtWidgets.QWidget):
+#class TilePileUI(QtWidgets.QApplication):
+#class TilePileUI(MyDockingUI):
+#class TilePileUI(QtWidgets.QMainWindow):
+class TilePileUI(MayaQWidgetDockableMixin, QtWidgets.QWidget):
+#class TilePileUI(MayaQWidgetDockableMixin):
 	"""main TilePile window"""
 	assetChanged = QtCore.Signal(list)
 	CONTROL_NAME = "TilePile"
 	DOCK_LABEL_NAME = "TilePile"
 	def __init__(self, parent=None):
 		super(TilePileUI, self).__init__(parent)
+		#super(TilePileUI, self).__init__([])
 		self.graphView = None
 
 		self.text = "hello :)"
@@ -38,7 +64,7 @@ class TilePileUI(MyDockingUI):
 
 		self.initUi()
 		self.initSignals()
-		self.setWindowModality(QtCore.Qt.WindowModal)
+		#self.setWindowModality(QtCore.Qt.WindowModal)
 		#self.setWindowFlags(QtCore.Qt.Window)
 		self.resize(self.width, self.height)
 
@@ -61,13 +87,11 @@ class TilePileUI(MyDockingUI):
 		no widgets
 		only beautiful boundless nodes"""
 
-		#parent = getMayaWindow()
-		#parentWindow = QtWidgets.QMainWindow(parent)
-		#self.setText("hello")
 
 		# set continuous nodegraph as backdrop to whole window
 		self.graphView = AbstractView(parent=self)
-		#self.setCentralWidget(self.graphView)
+		if isinstance(self, QtWidgets.QMainWindow):
+			self.setCentralWidget(self.graphView)
 
 
 		#print "initialising status"
@@ -111,4 +135,6 @@ class TilePileUI(MyDockingUI):
 		print ""
 		print "until we tile again"
 		print ""
+		# remove reference to window
+		windows.remove(self)
 		event.accept()

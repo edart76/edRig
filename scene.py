@@ -221,3 +221,54 @@ def alembicExport(targetSets=None, startFrame=None, endFrame=None):
 	start and end frame default to scene timeline"""
 
 
+# --- NAMESPACES
+def addNamespace(name):
+	""" wrapper to squash errors on existing and nested namespaces """
+	print("name {}".format(name))
+	print("split {}".format(name.split(":")))
+	for i, val in enumerate(name.split(":")):
+
+		space = ":".join(name.split(":")[:i+1])
+		print("namespace {}".format(space))
+		if not cmds.namespace(exists=space):
+			cmds.namespace(addNamespace=space)
+			# add network node to let namespace survive save and load
+			network = cmds.createNode("network", n=space+":marker")
+
+def removeNamespace(name, deleteNodes=False):
+	if name[0] != ":" : name = ":" + name
+	print("name {}".format(name.split(":")))
+	for i, val in enumerate(name.split(":")):
+		#space = ":".join(name.split(":"))
+		space = name.split(":")[-1]
+		parent = ":".join(name.split(":")[:-(i+2)]) or ":"
+		print("namespace {}, parent {}".format(space, parent))
+		if cmds.namespace(exists=space):
+			if deleteNodes:
+				cmds.delete( cmds.namespaceInfo(space,
+				                listOnlyDependencyNodes=1, internal=1))
+				cmds.namespace(removeNamespace=space)
+			else:
+				cmds.namespace(removeNamespace=space,
+				               mergeNamespaceWithParent=1)
+
+def pruneRemnantSpaces():
+	""" most namespaces get left with only some random render layer
+	or material nodes keeping them alive
+	this assumes that if namespace contains no dag nodes,
+	we probably won't miss it """
+	cmds.namespace(setNamespace=":") # root
+	spaces = cmds.namespaceInfo(listOnlyNamespaces=1, recurse=1)
+	if not spaces: return
+	for i in spaces:
+		hasDag = False
+		for n in cmds.namespaceInfo(i, listOnlyDependencyNodes=1):
+			if "kDagNode" in cmds.nodeType(i, inherited=1, api=1):
+				hasDag = True
+		if not hasDag:
+			removeNamespace(i, deleteNodes=1)
+
+
+
+
+
