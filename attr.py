@@ -1,7 +1,16 @@
 # lib for adding and modifying attributes
 import random
-from maya import cmds
-import maya.api.OpenMaya as om
+
+# try:
+# 	from maya import cmds
+# 	import maya.api.OpenMaya as om
+# except:
+# 	cmds = None
+# 	om = None
+
+from edRig.dcc import cmds, om
+
+
 
 dimTypes = {
 	"0D" : ("matrix",),

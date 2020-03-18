@@ -8,12 +8,19 @@ wider ecosystem: reload references, export outputs, import inputs, everything
 from edRig import cmds, om, pipeline, scene
 from edRig.node import AbsoluteNode, ECA, ObjectSet
 
+from edRig import hou # it's happening
+
+
 def sync():
 	cmds.loadPlugin("objExport")
 	pipeline.reloadAllReferences()
 
 	path = pipeline.getScenePath()
 	print("scenePath {}".format(path))
+	if cmds.objExists("bridge_set"):
+		syncBridgeSets()
+
+def syncBridgeSets():
 	topSet = ObjectSet("bridge_set")
 	topSetItems = topSet.objects()
 	print("topSetItems {}".format(topSetItems))
@@ -44,3 +51,37 @@ def sync():
 
 			scene.addNamespace("bridge_:{}_".format(i.name))
 			# framestore readable underscore convention
+
+
+
+def syncHIO():
+	syncHInputs()
+	syncHOutputs()
+
+def syncHInputs():
+	""" begins from root obj node - recurses through all nodes for now
+	when file node is found in load mode, reloads geometry """
+	root = hou.node("/")
+	for i in root.allSubChildren():
+		#print("node {}, node type {}".format(i, i.type()))
+		if i.type().name() == "file":
+			#print("found file {}".format(i))
+			button = i.parm( "reload" )
+			mode = i.parm( "filemode" ).evalAsString()
+			#print( "parmString is {}".format(mode)) # returns "read", "write"
+			# if you leave file nodes on auto you're an animal and i have no sympathy
+			if mode == "read":
+				button.pressButton()
+
+def syncHOutputs(onlyHDA=True):
+	""" looks for files or for specific export HDAs"""
+	root = hou.node("/")
+	for i in root.allSubChildren():
+		if i.type().name() == "Ed_export_geo":
+			button = i.parm( "stashinput" )
+			button.pressButton()
+	""" I wrote this HDA having absolutely no perspective on the coding side - 
+	node and attribute names may certainly change in future """
+
+
+

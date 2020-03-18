@@ -1,8 +1,14 @@
 """AbsoluteNode and object-style nod wrappers"""
 import weakref, ctypes
 
-from maya import cmds
-import maya.api.OpenMaya as om
+# try:
+# 	from maya import cmds
+# 	import maya.api.OpenMaya as om
+# except:
+# 	cmds = None
+# 	om = None
+
+from edRig.dcc import cmds, om
 
 from edRig.core import MObjectFrom, shapeFrom, tfFrom, stringFromMObject, ECN
 from edRig import attr, naming, beauty

@@ -1,6 +1,7 @@
 """low-level library for parsing colour tuples
 and generally improving user experience in a maya scene"""
-from maya import cmds
+# from maya import cmds
+from edRig.dcc import cmds, om
 from edRig import attr
 import math
 

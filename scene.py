@@ -1,8 +1,6 @@
 # operations for listing, grouping, adding to sets etc
-from maya import cmds
 from edRig.node import ECA, AbsoluteNode, invokeNode
-from edRig import attr, core
-import maya.api.OpenMaya as om
+from edRig import cmds, om, attr, core
 import traceback
 
 

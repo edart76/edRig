@@ -1,6 +1,12 @@
 # core functions and useful things
-import maya.cmds as cmds
-import maya.api.OpenMaya as om
+# try:
+# 	import maya.cmds as cmds
+# 	import maya.api.OpenMaya as om
+# except:
+# 	cmds = None
+# 	om = None
+from edRig.dcc import cmds, om
+
 import math, random, sys, functools
 
 sys.dont_write_bytecode = True
