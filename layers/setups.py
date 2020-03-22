@@ -530,6 +530,12 @@ class OpAttrItem(AttrItem):
 		return levelList
 
 	def getConnections(self):
+		""" returns everything if attr is array """
+		if self.hType == "array":
+			connections = []
+			for i in self.children:
+				connections.extend(i.getConnections)
+			return connections
 		return self.connections
 
 	def setConnections(self, val):

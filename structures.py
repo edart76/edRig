@@ -133,9 +133,6 @@ class AttrItem(AbstractTree):
 		return self.hType == "array"
 
 	def isConnectable(self):
-		#print "testing if {} is connectable".format(self.name)
-		#print "attr hType is {}".format(self.hType)
-		#print "result is {}".format(self.hType == "leaf" or self.hType == "compound")
 		return self.hType == "leaf" or self.hType == "compound"
 
 	def isSimple(self):
@@ -436,12 +433,13 @@ class AttrItem2(AbstractTree):
 		return self.extras["multi"]
 
 	def addChild(self, newChild):
-		super(AttrItem, self).addChild(newChild)
+		if self.hType == "leaf":
+			raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
+
+		super(AttrItem2, self).addChild(newChild)
 		if not isinstance(newChild, AttrItem):
 			return newChild
 
-		if self.hType == "leaf":
-			raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
 
 		self.children.append(newChild)
 		newChild.parent = self

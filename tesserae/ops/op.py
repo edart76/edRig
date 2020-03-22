@@ -496,11 +496,8 @@ class Op(MayaReal):
 			             parent=parentPlug,
 						 enumName=options)
 		elif i.dataType == "nD":
-			"""this is a bit involved. in theory if nd attribute has no input it shouldn't
-			exist at all - however, for purpose of my sanity, with no input it will
-			default to matrix.
-			with input connection, it will copy that datatype, with conversion (presume
-			to matrix) taking place internally to op"""
+			""" acgnostic datatype """
+
 			if i.getConnections():
 				dt = i.getConnections()[0].dataType
 				newItem = AbstractAttr(name=i.name, dataType=dt, hType="leaf")

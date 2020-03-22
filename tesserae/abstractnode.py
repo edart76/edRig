@@ -639,6 +639,7 @@ class AbstractAttr(AttrItem):
 		elif self.role == "output":
 			return [i.destAttr for i in self.getConnections()]
 
+
 	def addChild(self, newChild):
 		newChild = super(AbstractAttr, self).addChild(newChild)
 		newChild.node = self.node

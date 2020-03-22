@@ -10,18 +10,18 @@ om = None
 hou = None
 
 # maya setup
-# try:
-# 	from maya import cmds
-# 	import maya.api.OpenMaya as om
-#
-# 	from edRig.node import AbsoluteNode, ECA
-# 	from edRig.attr import con
-# 	thisIsMaya = True
-# 	pass
-# except :
-# 	print("this is not maya")
-# 	pass
-#
+try:
+	from maya import cmds
+	import maya.api.OpenMaya as om
+
+	from edRig.node import AbsoluteNode, ECA
+	from edRig.attr import con
+	thisIsMaya = True
+	pass
+except :
+	print("this is not maya")
+	pass
+
 # # houdini setup
 # try:
 # 	from houdini import hou

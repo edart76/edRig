@@ -73,7 +73,7 @@ class MuscleCurve(Muscle):
 		return self.hair.outputLocalShape
 
 	@classmethod
-	def create(cls, baseCrv, nucleus=None,
+	def create(cls, baseCrvPlug, nucleus=None,
 	           jointRes=5,
 	           upSolver="ctrlPos", upSurface=None,
 	           timeInput="time1.outTime",
@@ -82,7 +82,9 @@ class MuscleCurve(Muscle):
 	           ):
 		"""upSolver governs upvector for joints - """
 		# insert live rebuild before dynamics
-		newCurve, rebuild = cls.rebuildCurve(baseCrv, name=name+"_input")
+		if not attr.isPlug(baseCrvPlug):
+			baseCrvPlug = baseCrvPlug + ".local"
+		newCurve, rebuild = cls.rebuildCurve(baseCrvPlug, name=name + "_input")
 		hair = makeCurveDynamic(newCurve, live=True, timeInput=timeInput,
 		                 nucleus=nucleus, name=name)
 		muscle = cls(hair, jointRes=jointRes,
@@ -99,10 +101,10 @@ class MuscleCurve(Muscle):
 		return muscle
 
 	@classmethod
-	def rebuildCurve(cls, baseCrv, name=""):
-		rebuild = curve.rebuildCurve(baseCrv+".local", name+"Rebuild")
-		newCrv = AbsoluteNode(baseCrv).shape.getShapeLayer(
-			name=baseCrv+"_rebuilt")
+	def rebuildCurve(cls, baseShapePlug, name=""):
+		rebuild = curve.rebuildCurve(baseShapePlug, name + "Rebuild")
+		newCrv = AbsoluteNode(baseShapePlug).shape.getShapeLayer(
+			name=baseShapePlug + "_rebuilt")
 		newCrv.con(rebuild + ".outputCurve", "create")
 		return newCrv.transform, rebuild
 
