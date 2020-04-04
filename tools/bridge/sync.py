@@ -25,6 +25,8 @@ def syncBridgeSets():
 	topSetItems = topSet.objects()
 	print("topSetItems {}".format(topSetItems))
 
+	path = pipeline.getScenePath()
+
 	# every set in a bridge set for now signifies an export
 	for i in topSetItems:
 		if i.nodeType() == "objectSet":
@@ -33,16 +35,23 @@ def syncBridgeSets():
 			# combine objects and export
 			duplicates = [ cmds.duplicate(n, name=n+"_duplicate")[0] for n in combineTargets]
 
-			combined = cmds.polyUnite(duplicates, ch=0, n=i.name+"_combined")
+			for n in duplicates:
+				prepSyncGeo(n)
+
 
 			# make bridge folder adjacent to scene
 			parentDir = pipeline.FilePathTree(path).parent
 			bridgeDir = parentDir.makeChildFolder("bridge")
 			outputObjPath = bridgeDir + "/{}_mayaOutput.obj".format(i.name)
+			outputFbxPath = bridgeDir + "/{}_mayaOutput.fbx".format(i.name)
+			outputAbcPath = bridgeDir + "/{}_mayaOutput.abc".format(i.name)
 
-			pipeline.exportToObj(combined, outputObjPath)
+			#pipeline.exportToObj(combined, outputObjPath)
+			pipeline.exportToObj(duplicates, outputObjPath)
+			pipeline.exportToFbx(duplicates, outputFbxPath)
+			pipeline.exportToAlembic(duplicates, outputAbcPath)
 
-			cmds.delete(combined)
+			#cmds.delete(combined)
 			for n in duplicates:
 				if cmds.objExists(n):
 					cmds.delete(n)
@@ -51,6 +60,22 @@ def syncBridgeSets():
 
 			scene.addNamespace("bridge_:{}_".format(i.name))
 			# framestore readable underscore convention
+
+def prepSyncGeo(geo):
+	""" run any passes needed for geometry to pass through bridge properly """
+	# fbx does weird stuff with linear nurbs curves
+	# resample densely to a higher degree
+
+	if cmds.nodeType(geo) == "nurbsCurve" or cmds.nodeType(geo+"Shape") == "nurbsCurve":
+		if cmds.getAttr( geo + ".degree" ) == 1:
+			cmds.rebuildCurve( geo, fitRebuild=0,
+			                   rebuildType=0, #uniform
+			                   spans=100,
+			                   degree=3,
+			                   ch=0
+			                   )
+
+	pass
 
 
 
@@ -68,7 +93,7 @@ def syncHInputs():
 			#print("found file {}".format(i))
 			button = i.parm( "reload" )
 			mode = i.parm( "filemode" ).evalAsString()
-			#print( "parmString is {}".format(mode)) # returns "read", "write"
+			# returns "read", "write"
 			# if you leave file nodes on auto you're an animal and i have no sympathy
 			if mode == "read":
 				button.pressButton()

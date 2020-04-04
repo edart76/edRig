@@ -6,9 +6,7 @@ import re
 
 from edRig.lib.python import AbstractTree
 
-from edRig import ROOT_PATH, COMMON_PATH, cmds
-#from maya import cmds # hurts but there's no point in a separate module yet
-
+from edRig import ROOT_PATH, COMMON_PATH, cmds, mel, hou
 
 defaultFolders = ["models", "materials", "ref", "assemblyData"] # create these dynamically as required
 defaultFiles = [] # maybe
@@ -608,4 +606,45 @@ def exportToObj(targetGeo=None, path=None, force=True):
 	          op="groups=0; ptgroups=0; materials=0; smoothing=0; normals=0")
 	cmds.select(cl=1)
 
+def exportToFbx(targetGeo=None, path=None, force=True):
+	path = checkSuffix(path, suffix="fbx")
+	cmds.select( targetGeo, replace=1)
+	cmds.file(path, es=1, type="FBX export", f=force)
+	cmds.select(cl=1)
 
+def exportToAlembic(targetGeo=None, path=None, f=True):
+	"""
+	AbcExport -j "-frameRange 1 1
+		-dataFormat ogawa
+		-attr thickness
+		-root |curves|polyToCurve1 -root |curves|polyToCurve2
+		-file F:/all_projects_desktop/winter/models/bridge/pipe_curves_mayaOutput.abc";
+
+	looks like one "root" per top-level dag node
+	"""
+	if not isinstance(targetGeo, list): targetGeo = [targetGeo]
+	path = checkSuffix(path, suffix="abc")
+	cmds.select( targetGeo, replace=1)
+
+	# check if any attributes are able to be exported
+	attrString = ""
+	for i in targetGeo:
+		if not cmds.listAttr(i, ud=1):
+			continue
+		for n in cmds.listAttr(i, ud=1):
+			print("custom attr {}".format(n))
+			attrString += "-attr {} ".format(n)
+
+	# gather all objects to list
+	itemString = ""
+	for i in targetGeo:
+		full = cmds.ls(i, long=1)[0]
+		itemString += "-root {} ".format(full)
+
+	pathString = "-file {}".format(path)
+
+	cmd = """AbcExport -j "-frameRange 1 1 -f 1 -dataFormat ogawa {customAttrs}{items}{path}";""".format(
+		customAttrs=attrString, items=itemString, path=pathString
+	)
+	mel.eval(cmd)
+	cmds.select(cl=1)

@@ -24,8 +24,10 @@ thisIsHeadless = False
 
 
 try:
-	from maya import cmds
+	from maya import cmds, mel
 	import maya.api.OpenMaya as om
+	import maya.api.OpenMayaAnim as oma
+	import maya.api.OpenMayaUi as omui
 
 	from edRig.node import AbsoluteNode, ECA
 	from edRig.attr import con
