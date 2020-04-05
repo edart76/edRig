@@ -67,6 +67,10 @@ class NucleusOp( DynamicOp ):
 
 
 class ColliderOp( DynamicOp ):
+	""" technically colliders should be inputs directly to nucleus, as this
+	arrangement allows crazy things like using a mesh as its own collider -
+	just be sensible, as usual with tesserae, if you try to break it
+	you will break it """
 
 	def defineAttrs(self):
 		super(ColliderOp, self).defineSettings()

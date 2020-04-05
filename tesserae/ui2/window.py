@@ -2,6 +2,7 @@
 from PySide2 import QtGui, QtWidgets, QtCore
 from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
+#from edRig import omui
 from edRig.tesserae.ui2.abstractview import AbstractView
 from edRig.tesserae.ui2.statuspane import StatusPane
 from edRig.tesserae.ui2.lib import  MyDockingUI, dock_window, getMayaWindow
@@ -9,6 +10,10 @@ from edRig.pipeline import TempAsset
 from edRig import ROOT_PATH
 
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
+
+# temp, putting this here until a node solution is found
+# saves path on close, loads on open
+currentPath = ""
 
 def getMayaWindow():
 	ptr = omui.MQtUtil.mainWindow()
@@ -32,6 +37,7 @@ def show():
 
 	#win = TilePileUI( mayaWindow )
 	win = TilePileUI( )
+	win.graphView.loadFromScene()
 	ref = win.show(dock=True)
 
 
@@ -129,12 +135,18 @@ class TilePileUI(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 		height = sizeRect.height()
 		return width, height
 
+	def show(self, *args, **kwargs):
+		""" hook for graph setup"""
+		self.graphView.loadFromScene()
+		return super(TilePileUI, self).show(*args, **kwargs)
+
 	def closeEvent(self, event):
 		"""saves graph to maya maybe"""
-		#self.graphView.saveToScene()
+		self.graphView.saveToScene()
 		print ""
 		print "until we tile again"
 		print ""
 		# remove reference to window
-		windows.remove(self)
+		if self in windows:
+			windows.remove(self)
 		event.accept()

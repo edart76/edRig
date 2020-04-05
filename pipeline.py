@@ -189,6 +189,14 @@ class FilePathTree(str):
 def getTempFile(usage="temp"):
 	""""""
 
+def isFile(path, ext=False):
+	if isinstance(path, basestring):
+		if not ext:
+			path = FilePathTree.stripExt(path)
+			return any([isFile(path+i, ext=True) for i in defaultExtensions])
+		return os.path.isfile(path)
+	elif isinstance(path, FilePathTree):
+		return os.path.isfile(path.path)
 
 def ioinfo(name="", mode="in", info=None, path=None):
 	# read and write generic info to and from maya
@@ -234,6 +242,13 @@ def ioinfo(name="", mode="in", info=None, path=None):
 
 def isDir(path):
 	return os.path.isdir(path)
+
+def dirFromPath(path):
+	""" returns the lowest directory containing path"""
+	if not isDir(path):
+		# path = os.path.join( os.path.split(path)[:-1])
+		path = "/".join( os.path.split(path)[:-1]) + "/"
+	return path
 
 def isAsset(path):
 	if not os.path.exists(str(path)):
@@ -358,10 +373,7 @@ def makeLegit(path):
 			if 'fileInfo "license" "student";\n' in line:
 				heinous.pop(i)
 				break
-
 		# student warning should always be at same line in file
-		# print "legit is {}".format(legit)
-		# f.writelines(legit)
 		f.writelines(heinous)
 	return True
 
@@ -648,3 +660,37 @@ def exportToAlembic(targetGeo=None, path=None, f=True):
 	)
 	mel.eval(cmd)
 	cmds.select(cl=1)
+
+
+""" current scene data system is not robust at all to dense writing and reading, 
+should not be used as storage within functions 
+scene data is exclusively an AbstractTree
+"""
+def getDataNode():
+	""" returns a network node name __DATA__ used to save an abstractTree
+	of data to a maya scene
+	no consideration yet given to imports, duplicates etc """
+	if cmds.ls("__DATA__"):
+		return "__DATA__"
+	node = cmds.createNode("network", n="__DATA__")
+	cmds.addAttr( node, ln="dict", dt="string")
+	return node
+
+def getSceneData():
+	""" returns a TREE of whatever the scene holds as data
+	:returns AbstractTree """
+	node = getDataNode()
+	data = cmds.getAttr( node + ".dict" )
+	if not data:
+		return AbstractTree(name="data")
+	return AbstractTree.fromDict(eval(data))
+
+def saveSceneData(tree):
+	""" OVERRIDES scene data with dict provided """
+	if isinstance(tree, AbstractTree):
+		tree = tree.serialise()
+	node = getDataNode()
+	cmds.setAttr( node + ".dict", str(tree), type="string",)
+
+
+

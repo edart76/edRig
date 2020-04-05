@@ -8,7 +8,8 @@
 import pprint
 
 from edRig.layers import pointlayers, \
-	curvelayers, surfacelayers, misclayers
+	curvelayers, surfacelayers, misclayers, \
+	dynamiclayers
 
 
 from edRig.tesserae.ops.op import Op
@@ -27,7 +28,8 @@ class OpList(object):
 		#jointlayers,
 		curvelayers,
 		surfacelayers,
-		misclayers
+		misclayers,
+		dynamiclayers,
 	]
 
 	ops = set()

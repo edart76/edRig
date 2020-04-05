@@ -74,13 +74,27 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		self._init_actions()
 
+
 	@property
 	def currentAsset(self):
 		return self.graph.asset
 
 	def saveToScene(self):
-		"""soon maybe"""
-		pass
+		"""saves current file path"""
+		currentInfo = pipeline.getSceneData()
+		if self.savePath:
+			currentInfo["tesserae.savePath"] = self.savePath
+		pipeline.saveSceneData(currentInfo)
+		#print( pipeline.getSceneData().serialise(pretty=True))
+
+	def loadFromScene(self, force=True):
+		""" loads current file path
+		if force, loads entire graph"""
+		info = pipeline.getSceneData()
+		self.savePath = info["tesserae.savePath"]
+		if force and pipeline.checkFileExists(self.savePath):
+			self.openTilePileFile(self.savePath, force=True)
+		#print( info.serialise(pretty=True))
 
 	def _init_actions(self):
 		# setup tab search shortcut.
@@ -136,22 +150,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 		# else:
 		# 	event.accept()
 
-	# def focusOutEvent(self, event):
-	# 	#print "view focusOut is {}".format(event.reason())
-	# 	if event.reason() == QtCore.Qt.TabFocusReason:
-	# 		self.setFocus(QtCore.Qt.OtherFocusReason)
-	# 		keyEvent = QtGui.QKeyEvent(QtCore.QEvent.KeyPress,
-	# 		                            QtCore.Qt.Key_Tab,
-	# 		                            QtCore.Qt.NoModifier)
-	# 		#self.sendEvent(self, keyEvent)
-	# 		self.keyPressEvent(keyEvent)
-	# 		event.ignore()
-	# 	#else:
-	# 		#super(AbstractView, self).focusOutEvent(event)
-	# 	super(AbstractView, self).focusOutEvent(event)
-		# works
-
-
 	def wheelEvent(self, event):
 		adjust = (event.delta() / 120) * 0.1
 		self._set_viewer_zoom(adjust)
@@ -173,7 +171,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 
 	def mousePressEvent(self, event):
-		print ("view mouse event")
+		#print ("view mouse event")
+		# called BEFORE scene event
 		alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
 		shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
 
@@ -209,17 +208,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 		if alt_modifier:
 			return
 
-
-
-		# print ""
-		# print "node pos is {}".format(nodes[0].pos())
-		# print "node scenePos is {}".format(nodes[0].scenePos()) # same
-
-
-		#
-		# # update the recorded node positions.
-		# self._node_positions.update({n: n.pos for n in self.selectedNodes()})
-		#
 		# show selection selection marquee
 		if self.LMB_state and not items:
 			rect = QtCore.QRect(self._previous_pos, QtCore.QSize())
@@ -584,10 +572,11 @@ class AbstractView(QtWidgets.QGraphicsView):
 		saveAction = ActionItem(execDict={
 			"func" : self.saveTilePile}, name="Save")
 		saveAsAction = ActionItem(
-			execDict={"func" : self.saveAsTilePile, "kwargs" : {"path" :self.savePath}},
+			execDict={"func" : self.saveAsTilePile, "kwargs" : {"defaultPath" :self.savePath}},
 			name="Save As")
 		openAction = ActionItem(execDict={
-			"func" : self.openTilePileFile}, name="Open")
+			"func" : self.openTilePileFile, "kwargs" : {"path" : self.savePath}},
+			name="Open")
 		newAction = ActionItem(execDict={
 			"func" : self.newTilePile}, name="New")
 
@@ -601,15 +590,16 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.graph.clearSession()
 		self.sync()
 
-	def openTilePileFile(self, path=None):
-		"""opens a file"""
-		serialised = self.loadTilePileInfo(path=path)
+	def openTilePileFile(self, path=None, force=False):
+		""" loads file, then sets asset correctly etc """
+		serialised = self.loadTilePileInfo(path=path, force=force)
 		if not serialised:
 			return
 		newAsset = pipeline.assetFromName(serialised["asset"])
 		if newAsset.path != self.currentAsset.path:
-			if not ConfirmDialogue.confirm(self, "confirm asset change"):
-				return
+			if not force:
+				if not ConfirmDialogue.confirm(self, "confirm asset change"):
+					return
 		self.graph.clearSession()
 		self.assetChanged.emit([newAsset])
 		#self.graph.setAsset(newAsset)
@@ -618,32 +608,39 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.scene.regenUi(serialised)
 		pass
 
-	def loadTilePileInfo(self, path=None):
-		tilePileFile = QtWidgets.QFileDialog.getOpenFileName(
-			parent=self)[0]
-		print "open file is {}".format(tilePileFile)
-		if not tilePileFile:
+	def loadTilePileInfo(self, path=None, force=False):
+		""" loads serialised information from disk """
+		if force:
+			tilePileFile = path
+		else:
+			path = pipeline.dirFromPath(path)
+			tilePileFile = QtWidgets.QFileDialog.getOpenFileName(
+				parent=self, caption="load tile pile", dir=path)[0]
+
+		if not tilePileFile or not pipeline.checkFileExists(tilePileFile):
 			return
+		self.savePath = tilePileFile
 		serialised = pipeline.ioinfo(mode="in", path=tilePileFile)
 		#print "loaded data is {}".format(serialised)
 		return serialised
 
-	def saveAsTilePile(self, path=None):
+	def saveAsTilePile(self, path=None, defaultPath=None):
 		saveData = self.graph.serialise()
 		self.scene.serialiseUi(saveData)
+		if not defaultPath:
+			defaultPath = self.savePath or self.currentAsset.path or ROOT_PATH
 		if not path:
 			print "current asset is {}".format(self.currentAsset.name)
 			print "asset path is {}".format(self.currentAsset.path)
 			tilePileFile = QtWidgets.QFileDialog.getSaveFileName(
 				parent=self, caption="save this pile of tiles",
-				dir=self.currentAsset.path or ROOT_PATH)[0]
+				dir=defaultPath)[0]
 		else:
 			tilePileFile = path
 
 		if not tilePileFile:
 			return
-		print "save as file is {}".format(tilePileFile)
-		#print "save as data is {}".format(saveData) # returns dict type
+
 		if not pipeline.checkJsonFileExists(tilePileFile):
 			edRig.pipeline.makeBlankFile(path=tilePileFile)
 		pipeline.ioinfo(name="testPileSaveAs", mode="out",
