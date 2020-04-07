@@ -431,6 +431,7 @@ class AbstractTree(object):
 		if not address:
 			if self.parent:
 				self.parent._map.pop(self.name)
+				self.structureChanged()
 
 
 	def __getitem__(self, address):

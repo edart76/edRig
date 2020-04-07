@@ -11,7 +11,7 @@ class SpaceSwitch(object):
 
 	def __init__(self,
 	             name="testSpaceSwitch",
-	             spaceDrivers=None, spacePlugs=None,
+	             spaces=None,
 	             blendDegree=2):
 		"""depends on mode wanted"""
 		self.mainChoice = None
@@ -20,6 +20,7 @@ class SpaceSwitch(object):
 		self.degree = blendDegree
 		self.name = name
 		self.makeInternals()
+		self.spaces = spaces or {}
 
 	def makeInternals(self):
 		"""create the backend node network for a spaceswitch"""

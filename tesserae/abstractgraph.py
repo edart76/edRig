@@ -13,6 +13,11 @@ from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
 import pprint
 
+# lots of pain has been generated from trying
+# to keep tesserae's structure "correct"
+# bit sick of it
+
+from edRig.tesserae import maya
 
 
 class AbstractAbstractGraph(type):
@@ -544,6 +549,8 @@ class AbstractGraph(object):
 
 	def reset(self):
 		self.resetNodes(self.nodes)
+		maya.clearAllOpNodes()
+
 		self.setState("neutral")
 		self.stateChanged()
 
