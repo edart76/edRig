@@ -8,6 +8,8 @@ from edRig.core import shortUUID
 from edRig import pipeline, attrio
 # from edRig.tesserae.ops.op import Op
 import functools
+
+from edRig.tesserae.abstractattr import AbstractAttr
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.lib.python import Signal, AbstractTree
 
@@ -572,127 +574,6 @@ class AbstractNode(object):
 		self.outputRoot.delete()
 		self.real.delete()
 
-
-class AbstractAttr(AttrItem):
-	"""simple object marking separate inputs and outputs to AbstractNodes
-	also incorporating hierarchy"""
-
-	accepts = { # key accepts connections of type value
-		"nD" : ["0D", "1D", "2D", "3D"],
-		# this should probably be exposed to user per-attribute
-	}
-
-	def __init__(self, *args, **kwargs):
-		"""add maya-specific support, this inheritance is totally messed up"""
-		super(AbstractAttr, self).__init__(*args, **kwargs)
-		self._plug = None
-
-		# default kwargs passed to attributes created through array behaviour
-		self.childKwargs = {
-			"name" : "newAttr",
-			"role" : self.role,
-			"dataType" : "0D",
-			"hType" : "leaf",
-			"desc" : "",
-			"default" : None,
-			"extras" : {},
-			"children" : {} # don't even try
-		}
-		# TECHNICALLY recursion is now possible
-
-	# plug properties
-	@property
-	def plug(self):
-		return self._plug()
-	@plug.setter
-	def plug(self, val):
-		self._plug = val
-	# not robust AT ALL, but enough for what we need
-
-	def setChildKwargs(self, name=None, desc="", dataType="0D", default=None,
-	                   extras=None):
-		newKwargs = {}
-		# this is disgusting i know
-		newKwargs["name"] = name or self.childKwargs["name"]
-		# newKwargs["hType"] == hType or self.childKwargs["hType"]
-		newKwargs["desc"] = desc or self.childKwargs["desc"]
-		newKwargs["dataType"] = dataType or self.childKwargs["dataType"]
-		self.childKwargs.update(newKwargs)
-
-	def addConnection(self, edge):
-		"""ensures that input attributes will only ever have one incoming
-		connection"""
-		if edge in self.connections:
-			#self.log("skipping duplicate edge on attr {}".format(self.name))
-			print( "skipping duplicate edge on attr {}".format(self.name) )
-			return
-		if self.role == "output":
-			self.connections.append(edge)
-		else:
-			self.connections = [edge]
-
-	def getConnectedAttrs(self):
-		"""returns only connected attrItems, not abstractEdges -
-		this should be the limit of what's called in normal api"""
-		if self.role == "input":
-			return [i.sourceAttr for i in self.getConnections()]
-		elif self.role == "output":
-			return [i.destAttr for i in self.getConnections()]
-
-
-	def addChild(self, newChild):
-		newChild = super(AbstractAttr, self).addChild(newChild)
-		newChild.node = self.node
-		return newChild
-		#self.node.attrsChanged() # call from node
-
-	@property
-	def abstract(self):
-		return self.node
-
-	def addFreeArrayIndex(self, arrayAttr):
-		"""looks at array attr and ensures there is always at least one free index"""
-
-	def matchArrayToSpec(self, spec=None):
-		"""supplied with a desired array of names, will add, remove or
-		rearrange child attributes
-		this is because we can't just delete and regenerate the objects -
-		edge references will be lost
-		:param spec list of dicts:
-		[ { name : "woo", hType : "leaf"}, ]
-		etc
-			"""
-
-		# set operations first
-		nameList = [i["name"] for i in spec]
-		nameSet = set(nameList)
-		childSet = {i.name for i in self.children}
-		excessChildren = childSet - nameSet
-		newNames = nameSet - childSet
-
-		print( "newNames {}".format(newNames))
-
-		for i in excessChildren:
-			self.removeAttr(i)
-
-		for i in newNames:
-			print( "newName i {}".format(i))
-			nameSpec = [n for n in spec if n["name"] == i][0]
-			kwargs = {}
-			# override defaults with only what is defined in spec
-			for k, v in self.childKwargs.iteritems():
-				kwargs[k] = nameSpec.get(k) or v
-				# safer than update
-
-			newAttr = AbstractAttr(**kwargs)
-			self.children.append(newAttr)
-
-		# lastly reorder children to match list
-		newChildren = []
-		for i in nameList:
-			child = self.attrFromName(i)
-			newChildren.append(child)
-		self.children = newChildren
 
 
 
