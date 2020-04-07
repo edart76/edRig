@@ -580,19 +580,37 @@ def movingMask(seq, maskWidth=1, nullVal=None):
 	"""
 
 
-def flatten(in_list):
-	"""Flatten a given list recursively.
-	Args: in_list (list or tuple): Can contain scalars, lists or lists of lists.
-	Returns: list: List of depth 1; no inner lists, only strings, ints, floats, etc.
-			flatten([1, [2, [3], 4, 5], 6])
-				"""
-	flattened_list = []
-	for item in in_list:
-		if isinstance(item, (list, tuple)):
-			flattened_list.extend(flatten(item))
-		else:
-			flattened_list.append(item)
-	return flattened_list
+# def flatten(in_list):
+# 	"""Flatten a given list recursively.
+# 	Args: in_list (list or tuple): Can contain scalars, lists or lists of lists.
+# 	Returns: list: List of depth 1; no inner lists, only strings, ints, floats, etc.
+# 			flatten([1, [2, [3], 4, 5], 6])
+# 				"""
+# 	flattened_list = []
+# 	for item in in_list:
+# 		if isinstance(item, (list, tuple)):
+# 			flattened_list.extend(flatten(item))
+# 		else:
+# 			flattened_list.append(item)
+# 	return flattened_list
+
+def flatten(in_list, ltypes=(list, tuple)):
+	"""better flattening courtesy of Mike C Fletcher (I think)
+	"""
+	ltype = type(in_list)
+	in_list = list(in_list)
+	i = 0
+	while i < len(in_list):
+		while isinstance( in_list[i], ltypes):
+			if not in_list[i]:
+				in_list.pop(i)
+				i -= 1
+				break
+			else:
+				in_list[ i : i+1 ] = in_list[i]
+		i += 1
+	return ltype( in_list )
+
 
 def itersubclasses(cls, _seen=None):
 	"""

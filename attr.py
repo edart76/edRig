@@ -8,6 +8,7 @@ import random
 # 	cmds = None
 # 	om = None
 
+from edRig.lib import python
 from edRig.dcc import cmds, om
 
 
@@ -341,22 +342,36 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 		#print "plug type is {}".format(plugType(targetPlug))
 		if plugType(targetPlug) == "enum":
 			setEnumFromString(targetPlug, attrValue)
-		else: cmds.setAttr(targetPlug, attrValue, type="string")
+		else:
+			#cmds.setAttr(targetPlug, attrValue, type="string")
+			_setAttrSafe(targetPlug, attrValue, type="string")
 		return
 
 	elif plugHType(targetPlug) == "compound":
 		if isinstance(attrValue, (tuple, list)):
-			"""try everything"""
-			cmds.setAttr(targetPlug, *attrValue)
+			""" catch those fun times when you get a value like [ ( 1.0, ) ] """
+			attrValue = python.flatten(attrValue)
+			#cmds.setAttr(targetPlug, *attrValue)
+			_setAttrSafe(targetPlug, *attrValue)
 			return
 
+		# this is used to specify one value for a multi attr
 		targets = unrollPlug(targetPlug)
 		for i in targets:
 			setAttr(i, attrValue=attrValue)
 		return
 
 	else:
-		cmds.setAttr(targetPlug, attrValue, **kwargs)
+		#cmds.setAttr(targetPlug, attrValue, **kwargs)
+		_setAttrSafe(targetPlug, attrValue, **kwargs)
+
+def _setAttrSafe(*args, **kwargs):
+	""" THIS close to catching errors when setting connected attributes """
+	try:
+		cmds.setAttr(*args, **kwargs)
+	except Exception as e:
+		print("error in cmds.setAttr with args {}, kwargs {}".format(args, kwargs))
+		print(e)
 
 def setAttrsFromDict(attrDict, node=None):
 	"""expects dict of format {"attr" : value}"""
@@ -373,6 +388,7 @@ def setEnumFromString(plug, value):
 		                   "valid values are {}".format(
 			value, plug, enumList ))
 	cmds.setAttr(plug, enumList.index(value))
+	#_setAttrSafe(plug, enumList.index(value))
 
 def getEnumEntries(node, attr):
 	""" there are terrible things here """

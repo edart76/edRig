@@ -87,14 +87,7 @@ class Memory2(AbstractTree):
 
 		if not isinstance(nodes, list):
 			nodes = [nodes]
-		# if not infoName in self.infoNames():
-		# 	#print "allocating blank space for {}".format(infoName)
-		# 	self._allocateSpace(infoName, nodes=nodes)
-		#
-		# if not infoType in self[infoName].keys():
-		# 	#print "gathering goss, making blank info"
-		# 	self[infoName][infoType] = self.makeBlankInfoType(
-		# 		infoType)
+
 		self._initialiseCell(infoName, infoType, nodes=nodes)
 
 		if not self[infoName][infoType]:
@@ -113,12 +106,9 @@ class Memory2(AbstractTree):
 		if not infoType in self.infoKinds and infoType != "all":
 			raise RuntimeError("infoType {} is not recognised".format(infoType))
 		if infoType == "all":
-			# returnDict = {}
-			# returnDict.clear()
+
 			for i in self.infoKinds:
-				# returnDict[i] = self.recall(infoName, infoType=i)
 				self.recall(infoName, infoType=i)
-			#return returnDict
 		else:
 			# return self[infoName][infoType]
 			self._applyInfo(infoName, infoType,
@@ -147,8 +137,6 @@ class Memory2(AbstractTree):
 	def renewableMemory(self):
 		"""returns all memory slots that have a value - eg that
 		can be renewed from scene"""
-		# returnDict = copy.deepcopy(self) # NOT FOR DIRECT UPDATE
-		# USE ONLY AS GUIDE - USE REFRESH TO UPDATE MEMORY
 		returnDict = {}
 		#pprint.pprint("storage is {}".format(self))
 		for k, v in self.iteritems():
@@ -167,7 +155,7 @@ class Memory2(AbstractTree):
 
 	def _gatherInfo(self, infoType, target=None, **kwargs):
 		"""implements specific methods of gathering information from scene
-		could have done some fancy metamethod but i am but a basic boi"""
+		"""
 		target = AbsoluteNode(target)
 		if infoType not in self.infoKinds:
 			raise RuntimeError("cannot gather info of type {}".format(infoType))
@@ -181,29 +169,30 @@ class Memory2(AbstractTree):
 		gather both - apply only one as per state of node"""
 
 		returnDict = {}
-		target = AbsoluteNode(target)  # speed
 		attrList = []
+
+		# print("infotype {}".format(infoType))
+		# print("target {}".format(target))
+		# print("kwargs {}".format(kwargs))
+
 		if infoType == "attr":
-			# gather dict of attribute names and values
-			# all of them?
-			if kwargs.get("allAttrs"):
-				attrList = cmds.listAttr(target, settable=True)  # very risky
-			# attr can register transform attrs, but only if directed
-			elif not kwargs.get("transformAttrs"):
-				omitList = ["translate", "rotate", "scale"]
-				baseList = cmds.listAttr(target, cb=True)
-				#attrList = [i for i in baseList if not (any(omitList) in i)]
-				for i in baseList:
-					if not i.split(".")[-1] in omitList:
-						attrList.append(i)
-					else:
-						continue
-			else:
-				attrList = cmds.listAttr(target, cb=True)  # channelbox
-			for i in attrList:
+
+			# check if transform attributes are specifically requested
+			baseList = cmds.listAttr(target, keyable=1)
+			omitList = ["translate", "rotate", "scale"]
+			outList = []
+
+			if kwargs.get("xformAttrs"):
+				omitList = []
+
+			for i in baseList:
+				if any([n in i for n in omitList]):
+					continue
+				outList.append(i)
+
+			for i in outList:
 				returnDict[i] = attr.getAttr(target + "." + i)
-			# we will absolutely need more nuanced handling down the line,
-			# but this is fine for now
+
 
 		elif infoType == "xform":
 			# speed is not yet of the essence
@@ -245,17 +234,17 @@ class Memory2(AbstractTree):
 	               relative=None, **kwargs):
 
 		# test view all data
-		print(self.serialise(pretty=True))
+		#print(self.serialise(pretty=True))
 
 		allInfo = self[infoName]
 
-		print("allInfo {}".format(allInfo))
-		print("target {}".format(target))
+		#print("allInfo {}".format(allInfo))
+		#print("target {}".format(target))
 
 		space = kwargs.get("space") or "world"
 
 		if not isinstance(target, list):
-			print("converting from list")
+			#print("converting from list")
 			index = self.indexFromNode(infoName, target)
 			info = [allInfo[infoType][index]]
 			target = [target]
@@ -263,8 +252,8 @@ class Memory2(AbstractTree):
 			info = allInfo[infoType]
 
 
-		print("allInfo {}".format(allInfo))
-		print("target {}".format(target))
+		# print("allInfo {}".format(allInfo))
+		# print("target {}".format(target))
 
 		# if infoType == "xform" :
 		# 	info = info[space]
@@ -275,7 +264,7 @@ class Memory2(AbstractTree):
 		#print "info to apply is {}".format(info)
 		# it's really, really for the best if you just work by sequence
 		for target, info in zip(target, info):
-			print("target {}, info {}".format(target, info))
+			#print("target {}, info {}".format(target, info))
 
 
 			if not cmds.objExists(target):
@@ -283,7 +272,10 @@ class Memory2(AbstractTree):
 			if infoType == "attr":
 				for k, v in info.iteritems():
 					#print "setting attr {}.{} to {}".format(target, k, v)
-					attr.setAttr(target + "." + k, v)
+					try:
+						attr.setAttr(target + "." + k, v)
+					except Exception as e:
+						print("could not remember attr {}, value {}".format(k, v))
 
 			elif infoType == "xform":
 				info = info[space]
@@ -392,12 +384,6 @@ class Memory2(AbstractTree):
 			       "shapeType - try refreshing")
 			return
 
-
-		# if kSuccess:
-		#
-
-
-		pass
 
 	@staticmethod
 	def getWeightInfo(targetNode=None, targetAttr=None,
