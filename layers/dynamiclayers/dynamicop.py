@@ -74,7 +74,7 @@ class ColliderOp( DynamicOp ):
 
 	def defineAttrs(self):
 		super(ColliderOp, self).defineSettings()
-		self.addInput("collider2D", dataType="2D")
+		self.addInput(name="collider2D", dataType="2D")
 
 	def execute(self):
 		super(ColliderOp, self).execute()

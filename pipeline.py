@@ -545,6 +545,8 @@ def checkJsonFileExists(filePath):
 		return False
 
 def checkFileExists(filePath):
+	if not filePath:
+		return False
 	return os.path.exists(filePath)
 
 

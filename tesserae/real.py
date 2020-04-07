@@ -69,7 +69,7 @@ class RealComponent(object):
 		# for k, v in fromDict.iteritems():
 		# 	newAttr = None
 
-	def addInput(self, parent=None, name=None, dataType=None,
+	def addInput(self,name=None,  parent=None, dataType=None,
 	             hType="leaf", desc="", default=None, attrItem=None,
 	             *args, **kwargs):
 		parent = parent or self.inputRoot
@@ -78,7 +78,7 @@ class RealComponent(object):
 		                    hType=hType, desc=desc, default=default,
 		                    attrItem=attrItem, *args, **kwargs)
 
-	def addOutput(self, parent=None, name=None, dataType=None,
+	def addOutput(self, name=None, parent=None, dataType=None,
 	              hType="leaf", desc="", default=None, attrItem=None,
 	              *args, **kwargs):
 		parent = self.outputRoot if not parent else parent

@@ -1,5 +1,8 @@
 
-from edRig.lib.python import AbstractTree
+import copy
+
+from edRig.lib.python import AbstractTree, Signal
+from edRig.structures import DataStyle # still around for now, not hurting anything
 
 class AttrItem(AbstractTree):
 	""" trees to function as attributes for tesserae ops
@@ -9,7 +12,7 @@ class AttrItem(AbstractTree):
 
 
 	accepts = {  # key accepts connections of type value
-		"nD": ["0D", "1D", "2D", "3D"],
+		"nD" : ["0D", "1D", "2D", "3D"],
 		# this should probably be exposed to user per-attribute
 	}
 
@@ -19,39 +22,34 @@ class AttrItem(AbstractTree):
 		super(AttrItem, self).__init__(name=name, val=default)
 
 		# flags stored in normal dict key
-		self["flags"] = {}
+		self.extras["flags"] = {}
 		# don't know the best way to do this, leaving this for now
 
-		self.node = node
+		self._node = node
 		self.role = role
 		self.default = default
 		self.dataType = dataType
 		self.hType = hType  # hierarchy type - leaf, compound, array, root, dummy
 
-		self.desc = desc
-		# self.extras = SafeDict(kwargs) # can't account for everything
-		self.extras = kwargs
+		self.extras["desc"] = desc
 
-		self.connections = [] # override with whatever the hell you want
+		# self.connections = [] # override with whatever the hell you want
 		self.colour = DataStyle[self.dataType]["colour"]
 
 		self.connectionChanged = Signal()
 		self.childrenChanged = Signal()
 
-	# @property
-	# def name(self):
-	# 	return self._name
-	#
-	# @name.setter
-	# def name(self, val):
-	# 	self._name = val
+	@property
+	def desc(self):
+		return self.extras["desc"]
 
-	# @property
-	# def children(self):
-	# 	return self["children"]
-	# @children.setter
-	# def children(self, val):
-	# 	self["children"] = val
+	@property
+	def node(self):
+		""" points to abstractNode which owns this attr
+		:rtype AbstractNode"""
+		if self.parent:
+			return self.parent.node
+		return self._node
 
 	@property
 	def connections(self):
@@ -62,19 +60,27 @@ class AttrItem(AbstractTree):
 
 	@property
 	def dataType(self):
-		return self["flags"]["dataType"]
+		return self.extras["flags"]["dataType"]
 
 	@dataType.setter
 	def dataType(self, val):
-		self["flags"]["dataType"] = val
+		self.extras["flags"]["dataType"] = val
 
 	@property
 	def hType(self):
-		return self["flags"].get("hType", default="leaf")
+		return self.extras["flags"].get("hType") or "leaf"
 
 	@hType.setter
 	def hType(self, val):
-		self["flags"]["hType"] = val
+		self.extras["flags"]["hType"] = val
+
+	@property
+	def role(self):
+		return self.extras["role"]
+
+	@role.setter
+	def role(self, val):
+		self.extras["role"] = val
 
 	def isLeaf(self):
 		return self.hType == "leaf"
@@ -109,8 +115,8 @@ class AttrItem(AbstractTree):
 		return  self.hType == "dummy"
 
 	def addChild(self, newChild):
-		if self.hType == "leaf":
-			raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
+		# if self.hType == "leaf":
+		# 	raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
 
 		super(AttrItem, self).addChild(newChild)
 		if not isinstance(newChild, AttrItem):
@@ -173,13 +179,9 @@ class AttrItem(AbstractTree):
 
 	def attrFromName(self, name):
 		#print "attrFromName looking for {}".format(name)
-		if self.name == name:
-			return self
-		elif self.getChildren():
-			results = [i.attrFromName(name) for i in self.getChildren()]
-			return next((i for i in results if i), None)
-		else:
-			return None
+		results = self.search(name)
+		if results: return results[0]
+		else: return
 
 	### user facing methods
 	def addAttr(self, name="", hType="leaf", dataType="0D",
@@ -227,17 +229,25 @@ class AttrItem(AbstractTree):
 	def serialise(self, pretty=False):
 		data = super(AttrItem, self).serialise(pretty)
 
-		returnDict = {"hType" : self.hType,
-					  "dataType" : self.dataType,
-					  "role" : self.role,
+		auxDict = {#"hType" : self.hType,
+					  #"dataType" : self.dataType,
+					  #"role" : self.role,
 					  "value" : self.value if isinstance(self.value, (int, str, float)) else None,
 					  #"connections" : self.getConnections(), # managed by graph
-					  "children" : [i.serialise() for i in self.getChildren()],
-					  "name" : self.name,
-					  "desc" : self.desc,
-					  "extras" : self.extras
+					  #"children" : [i.serialise() for i in self.getChildren()],
+					  #"name" : self.name,
+					  #"desc" : self.desc,
+					  #"extras" : self.extras
 					  }
-		return returnDict
+		data.update(auxDict)
+		return data
+
+	@classmethod
+	def fromDict(cls, regenDict=None, node=None):
+		tree = AbstractTree.fromDict(regenDict)
+		tree._node = node
+
+
 
 
 
@@ -304,7 +314,7 @@ class AbstractAttr(AttrItem):
 
 	def addChild(self, newChild):
 		newChild = super(AbstractAttr, self).addChild(newChild)
-		newChild.node = self.node
+		newChild._node = self.node
 		return newChild
 		#self.node.attrsChanged() # call from node
 

@@ -305,7 +305,7 @@ class AbstractTree(object):
 
 	@property
 	def parent(self):
-		""":rtype AbsoluteNode"""
+		""":rtype AbstractTree"""
 		return self._parent
 	@parent.setter
 	def parent(self, val):
@@ -334,6 +334,11 @@ class AbstractTree(object):
 		"""more explicit that it returns the child tree objects
 		:rtype list( AbstractTree )"""
 		return self.values()
+
+	@property
+	def children(self):
+		""" :rtype list( AbstractTree )"""
+		return self.branches
 
 	def _setParent(self, tree):
 		"""sets new abstractTree to be parent"""
@@ -389,6 +394,13 @@ class AbstractTree(object):
 	def iterBranches(self):
 		return self._map.iteritems()
 
+	def allBranches(self):
+		""" returns list of all tree objects """
+		found = [ self ]
+		for i in self.branches:
+			found.extend(i.allBranches())
+		return found
+
 	def getAddress(self, prev=""):
 		"""returns string path from root to this tree"""
 		path = ".".join( (self.name, prev) )
@@ -396,6 +408,28 @@ class AbstractTree(object):
 			return path
 		else:
 			return self.parent.getAddress(prev=path)
+
+	def search(self, path, found=None):
+		""" searches branches for trees matching a partial path,
+		and returns ALL THAT MATCH
+		so for a tree
+		root
+		+ branchA
+		  + leaf
+		+ branchB
+		  + leaf
+		search("leaf") -> two trees
+		right now would also return both for search( "lea" ) -
+		basic contains check is all I have
+		"""
+
+		found = []
+		if path in self.name:
+			found.append(self)
+		for i in self.branches:
+			found.extend( i.search(path) )
+		return found
+
 
 	def _setName(self, name):
 		"""renames and syncs parent's map
@@ -580,20 +614,6 @@ def movingMask(seq, maskWidth=1, nullVal=None):
 	mask = [ ( None, 1, 2 ), (1, 2, 3), (2, 3, 4)... ] etc
 	"""
 
-
-# def flatten(in_list):
-# 	"""Flatten a given list recursively.
-# 	Args: in_list (list or tuple): Can contain scalars, lists or lists of lists.
-# 	Returns: list: List of depth 1; no inner lists, only strings, ints, floats, etc.
-# 			flatten([1, [2, [3], 4, 5], 6])
-# 				"""
-# 	flattened_list = []
-# 	for item in in_list:
-# 		if isinstance(item, (list, tuple)):
-# 			flattened_list.extend(flatten(item))
-# 		else:
-# 			flattened_list.append(item)
-# 	return flattened_list
 
 def flatten(in_list, ltypes=(list, tuple)):
 	"""better flattening courtesy of Mike C Fletcher (I think)

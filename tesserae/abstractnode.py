@@ -543,9 +543,9 @@ class AbstractNode(object):
 		newInst.uid = fromDict["uid"]
 		newInst.rename(fromDict["nodeName"])
 
-		newInst.outputRoot = AbstractAttr.fromDict(fromDict=fromDict["outputRoot"],
+		newInst.outputRoot = AbstractAttr.fromDict(regenDict=fromDict["outputRoot"],
 		                                           node=newInst)
-		newInst.inputRoot = AbstractAttr.fromDict(fromDict=fromDict["inputRoot"],
+		newInst.inputRoot = AbstractAttr.fromDict(regenDict=fromDict["inputRoot"],
 		                                          node=newInst)
 		newInst.settings = AbstractTree.fromDict(fromDict["settings"])
 		# print ""
