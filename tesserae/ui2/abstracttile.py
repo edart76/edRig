@@ -114,7 +114,6 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.entries.clear()
 
 		# generate new blocks
-		print("inputRoot is {}".format(self.abstract.inputRoot))
 		inEntry = TileEntry(parent=self,
 		                  attrItem=self.abstract.inputRoot,
 		                  scene=self.scene, text=False)
@@ -344,9 +343,6 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 			raise RuntimeError("no attrItem supplied!")
 		super(TileEntry, self).__init__(parent)
 
-		print("making tileEntry for attrItem {}".format(attrItem))
-		print(attrItem.display())
-
 		self.parent = parent
 		self.scene = scene
 		self.attr = attrItem
@@ -361,9 +357,6 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		self.entries = self.parent.entries
 		self.entries[ self.name ] = self
 
-		# self.width = self.rect().width()
-		# self.height = self.rect().height()
-
 		self.setRect(0,0,self.parent.boundingRect().width() - self.edgePad,
 		             self.unitHeight)
 
@@ -371,9 +364,7 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 			parent=self, attrItem=i, scene=self.scene)
 				for i in attrItem.children ]
 
-		for i in self.children:
-			#print("attr child {}".format(i.attr))
-			pass
+
 		self.extras = self.attr.extras
 		self.role = attrItem.role
 		self.widg = None
@@ -419,7 +410,6 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 
 	def setAttrValue(self, name, val):
 		"""given tuple of (name, value) when widget changes"""
-		print "setting attr {} value to {}".format(self.name, val)
 		self.attr.value = val
 
 	def sync(self):
@@ -435,7 +425,6 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		y = n * (self.unitHeight + 3)
 		x = (depth - 1) * 5 * f
 		depth += 1
-
 
 		y +=3
 
@@ -487,20 +476,12 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 			self.knob.setPos(x, 0)
 		self.text.setPos(textX, 1)
 
-		# # arrange children
-		# for i, val in enumerate(self.children):
-		# 	val.setPos( 5, (1 + i) * 20)
-		# 	pass
-
-
-		#self.setRect(0, 0, self.parent.width - 5, 20)
-
 
 	def makeWidg(self):
 		name = self.attr.name
 		value = self.attr.value
-		print ""
-		print "widg attr is {}, value is {}".format(self.attr, self.attr.value)
+		# print ""
+		# print "widg attr is {}, value is {}".format(self.attr, self.attr.value)
 		if self.dataType == "int":
 			widg = tilewidgets.NodeIntSpinbox(parent=self, name=name,
 			                                  value=value, min=self.extras.get("min"),
@@ -628,12 +609,6 @@ class Knob(QtWidgets.QGraphicsRectItem):
 		self.setRect(0, 0, self.baseSize, self.baseSize)
 
 class Pipe(QtWidgets.QGraphicsPathItem):
-
-	# matchIndex = re.match(
-	# 	r'([a-zA-Z0-9]+)\.weightList\[([0-9]+)\]\.weights', weightAttr
-	# )
-	# ?????
-
 	"""tis a noble thing to be a bridge between knobs"""
 
 	def __init__(self, start=None, end=None, edge=None):
@@ -659,7 +634,6 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 		self.selected = selected
 		if selected:
 			self.highlight()
-			print ""
 		if not selected:
 			self.reset()
 		super(Pipe, self).setSelected(selected)

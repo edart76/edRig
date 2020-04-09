@@ -37,7 +37,6 @@ class AbstractAttr(AbstractTree):
 		self.extras["desc"] = desc
 
 		# self.connections = [] # override with whatever the hell you want
-		self.colour = DataStyle[self.dataType]["colour"]
 
 		self.connectionChanged = Signal()
 		self.childrenChanged = Signal()
@@ -108,6 +107,12 @@ class AbstractAttr(AbstractTree):
 	def plug(self, val):
 		self._plug = val
 		# not robust AT ALL, but enough for what we need
+
+	# misc stuff
+	@property
+	def colour(self):
+		return DataStyle[self.dataType]["colour"]
+
 
 
 	# ---- main methods ---
