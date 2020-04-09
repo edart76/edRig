@@ -48,7 +48,7 @@ class AbstractNodeExecutionManager(GeneralExecutionManager):
 			self.node.afterExecute(success=True)
 			#self.node.setState("complete")
 
-class AbstractNode(object):
+class AbstractNode(AbstractTree):
 	"""abstract node managed by abstract graph
 	interfaces with direct operations, and with UI"""
 
@@ -71,6 +71,8 @@ class AbstractNode(object):
 		"""this is where the spaghetti begins"""
 		self.real = None
 		self.nodeName = name or self.defaultName + shortUUID(2)
+		
+		super(AbstractNode, self).__init__(name=self.nodeName)
 
 		self.uid = shortUUID(8)
 		self._graph = graph
@@ -554,9 +556,10 @@ class AbstractNode(object):
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]
 			realInstance = realClass.fromDict(realDict, abstract=newInst)
-			#print "realInstance is {}".format(realInstance)
+			print "realInstance is {}".format(realInstance)
 			newInst.setRealInstance(realInstance, define=False)
 			newInst.real.makeBaseActions()
+		print("abstract fromDict newInst root {}".format(newInst.inputRoot))
 		return newInst
 
 	@staticmethod

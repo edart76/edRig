@@ -1,6 +1,7 @@
 # base op
-from maya import cmds
-import maya.api.OpenMaya as om
+# from maya import cmds
+# import maya.api.OpenMaya as om
+from edRig import cmds, om
 from edRig.core import ECN, shortUUID
 from edRig.node import AbsoluteNode, ECA, invokeNode
 from edRig import attrio, scene, attr, transform, pipeline
@@ -139,11 +140,6 @@ class Op(MayaReal):
 	@classmethod
 	def execFuncs(cls):
 		"""all execution stages associated with class"""
-		# return {
-		# 	"plan" : {"onExec" : cls.plan,
-		# 	          "onStop" : cls.onPlanStop},
-		# 	"build" : {"onExec" : cls.build,
-		# 	           "onStop" : cls.onBuildStop},}
 		return {"execute" : cls.execute}
 
 	@classmethod
@@ -187,14 +183,8 @@ class Op(MayaReal):
 		if self.abstract:
 			self.setAbstract(abstract)
 
-		#self.refreshIo()
-		#self.actions = copy.deepcopy(self.actions) # /shrug
 		self.makeBaseActions()
-		#
-		# self.defineSettings()
 
-		# #experimental
-		# self.deltaStack = MayaStack()
 
 		# testing stacks of functions to be called automatically
 		# on show / hide guides
@@ -636,8 +626,8 @@ class Op(MayaReal):
 		opDict = pipeline.saveObjectClass(self) # name, class and module
 		opDict["opName"] = self.opName
 
-		opDict["inputRoot"] = self.inputRoot.serialise()
-		opDict["outputRoot"] = self.outputRoot.serialise()
+		# opDict["inputRoot"] = self.inputRoot.serialise()
+		# opDict["outputRoot"] = self.outputRoot.serialise()
 		return opDict
 
 	@staticmethod
@@ -654,13 +644,9 @@ class Op(MayaReal):
 		if abstract:
 			opInstance.inputRoot = abstract.inputRoot
 			opInstance.outputRoot = abstract.outputRoot
-		else:
-			opInstance.inputRoot = AbstractAttr.fromDict(regenDict["inputRoot"])
-			opInstance.outputRoot = AbstractAttr.fromDict(regenDict["outputRoot"])
 
+		print("op fromdict input {}".format(opInstance.inputRoot))
 
-		# print "new inputs are {}".format(opInstance.inputs)
-		# print "new outputs are {}".format(opInstance.outputs)
 		opInstance.data = regenDict.get("data")
 		#opInstance.addAction(func=opInstance.showGuides)
 		opInstance.makeBaseActions()

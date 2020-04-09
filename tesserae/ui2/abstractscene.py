@@ -43,9 +43,9 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		abstractNodes = self.abstractGraph.nodes
 		#current = {tile:tile.abstract for tile in self.tiles.keys()}
 
-		print ""
-		print "current scene is {}".format(self.tiles)
-		print "current graph is {}".format(abstractNodes)
+		# print ""
+		# print "current scene is {}".format(self.tiles)
+		# print "current graph is {}".format(abstractNodes)
 
 		for i in abstractNodes:
 			if i not in self.tiles.keys():

@@ -2,9 +2,12 @@
 # currently for use only in maya, but fully extensible to anything
 
 from __future__ import print_function, with_statement
+from edRig.lib.python import AbstractTree
+
 from edRig.tesserae.lib import GeneralExecutionManager
 # from edRig.lib.deltastack import DeltaStack, StackDelta
 from edRig.tesserae.abstractnode import AbstractAttr
+
 import traceback
 
 
@@ -15,14 +18,25 @@ class AbstractReal(type):
 		real = super(AbstractReal, mcs).__new__(*args, **kwargs)
 		return real
 
-class RealComponent(object):
+class RealComponent(AbstractTree):
 	"""base real class to interface with DCCs
 	contains memory functionality, attribute lookup and execution
 	to be attached to an abstractNode"""
 
+	def __init__(self, *args, **kwargs):
+		super(RealComponent, self).__init__(*args, **kwargs)
+		self._abstract = None
+
+	@property
+	def abstract(self):
+		""":rtype AbstractNode"""
+		return self._abstract
+	@abstract.setter
+	def abstract(self, val):
+		self._abstract = val
+
 	def executionManager(self):
 		return GeneralExecutionManager(self)
-
 
 	@property
 	def inputs(self):

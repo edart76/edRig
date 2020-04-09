@@ -241,10 +241,14 @@ def ioinfo(name="", mode="in", info=None, path=None):
 
 
 def isDir(path):
-	return os.path.isdir(path)
+	if path:
+		return os.path.isdir(path)
+	return False
 
 def dirFromPath(path):
 	""" returns the lowest directory containing path"""
+	if not path:
+		return None
 	if not isDir(path):
 		# path = os.path.join( os.path.split(path)[:-1])
 		path = "/".join( os.path.split(path)[:-1]) + "/"

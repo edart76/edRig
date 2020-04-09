@@ -114,7 +114,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.entries.clear()
 
 		# generate new blocks
-
+		print("inputRoot is {}".format(self.abstract.inputRoot))
 		inEntry = TileEntry(parent=self,
 		                  attrItem=self.abstract.inputRoot,
 		                  scene=self.scene, text=False)
@@ -343,6 +343,10 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		if not attrItem:
 			raise RuntimeError("no attrItem supplied!")
 		super(TileEntry, self).__init__(parent)
+
+		print("making tileEntry for attrItem {}".format(attrItem))
+		print(attrItem.display())
+
 		self.parent = parent
 		self.scene = scene
 		self.attr = attrItem

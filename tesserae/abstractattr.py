@@ -4,7 +4,7 @@ import copy
 from edRig.lib.python import AbstractTree, Signal
 from edRig.structures import DataStyle # still around for now, not hurting anything
 
-class AttrItem(AbstractTree):
+class AbstractAttr(AbstractTree):
 	""" trees to function as attributes for tesserae ops
 	"""
 
@@ -15,11 +15,12 @@ class AttrItem(AbstractTree):
 		"nD" : ["0D", "1D", "2D", "3D"],
 		# this should probably be exposed to user per-attribute
 	}
+	branchesInherit = False
 
-	def __init__(self, node=None, role="input", dataType="0D",
-				 hType="leaf", name="blankName", desc="", default=None,
+	def __init__(self, name="blankName", node=None, role="input", dataType="0D",
+				 hType="leaf", desc="", default=None,
 				 *args, **kwargs):
-		super(AttrItem, self).__init__(name=name, val=default)
+		super(AbstractAttr, self).__init__(name=name, val=default)
 
 		# flags stored in normal dict key
 		self.extras["flags"] = {}
@@ -31,6 +32,8 @@ class AttrItem(AbstractTree):
 		self.dataType = dataType
 		self.hType = hType  # hierarchy type - leaf, compound, array, root, dummy
 
+		self._plug = None
+
 		self.extras["desc"] = desc
 
 		# self.connections = [] # override with whatever the hell you want
@@ -38,6 +41,19 @@ class AttrItem(AbstractTree):
 
 		self.connectionChanged = Signal()
 		self.childrenChanged = Signal()
+
+
+		# default kwargs passed to attributes created through array behaviour
+		self.childKwargs = {
+			"name" : "newAttr",
+			"role" : self.role,
+			"dataType" : "0D",
+			"hType" : "leaf",
+			"desc" : "",
+			"default" : None,
+			"extras" : {},
+			"children" : {} # don't even try
+		}
 
 	@property
 	def desc(self):
@@ -51,6 +67,11 @@ class AttrItem(AbstractTree):
 			return self.parent.node
 		return self._node
 
+
+	@property
+	def abstract(self):
+		return self.node
+
 	@property
 	def connections(self):
 		return self["connections"]
@@ -61,7 +82,6 @@ class AttrItem(AbstractTree):
 	@property
 	def dataType(self):
 		return self.extras["flags"]["dataType"]
-
 	@dataType.setter
 	def dataType(self, val):
 		self.extras["flags"]["dataType"] = val
@@ -69,7 +89,6 @@ class AttrItem(AbstractTree):
 	@property
 	def hType(self):
 		return self.extras["flags"].get("hType") or "leaf"
-
 	@hType.setter
 	def hType(self, val):
 		self.extras["flags"]["hType"] = val
@@ -77,10 +96,26 @@ class AttrItem(AbstractTree):
 	@property
 	def role(self):
 		return self.extras["role"]
-
 	@role.setter
 	def role(self, val):
 		self.extras["role"] = val
+
+	# plug properties
+	@property
+	def plug(self):
+		return self._plug()
+	@plug.setter
+	def plug(self, val):
+		self._plug = val
+		# not robust AT ALL, but enough for what we need
+
+
+	# ---- main methods ---
+	def addChild(self, newChild):
+		newChild = super(AbstractAttr, self).addChild(newChild)
+		newChild._node = self.node
+		return newChild
+
 
 	def isLeaf(self):
 		return self.hType == "leaf"
@@ -114,15 +149,6 @@ class AttrItem(AbstractTree):
 		not recommended"""
 		return  self.hType == "dummy"
 
-	def addChild(self, newChild):
-		# if self.hType == "leaf":
-		# 	raise RuntimeError("CANNOT ADD CHILD ATTRIBUTES TO LEAF")
-
-		super(AttrItem, self).addChild(newChild)
-		if not isinstance(newChild, AttrItem):
-			return newChild
-
-		return newChild
 
 	def getChildren(self):
 		if self.isLeaf():
@@ -161,21 +187,25 @@ class AttrItem(AbstractTree):
 			levelList.append(self)
 		return levelList
 
-	# @staticmethod
-	# def opHierarchyFromDict(fromDict, attrClass,
-	#                         role="input", value=None, name="newAttr",):
-	# 	"""used in deserialisation - pass the attr class to be generated"""
-	# 	newAttr = attrClass(name=name, dataType=fromDict["dataType"],
-	# 	                     hType=fromDict["hType"], value=value, role=role,
-	# 	                     desc=fromDict["desc"])
-	# 	if "children" in fromDict.keys():
-	# 		for i in fromDict["children"]:
-	# 			newAttr.addChild(attrClass.opHierarchyFromDict(i,
-	# 				role=role, value=i["value"], name=i["name"]))
-	# 	return newAttr
+	def addConnection(self, edge):
+		"""ensures that input attributes will only ever have one incoming
+		connection"""
+		if edge in self.connections:
+			#self.log("skipping duplicate edge on attr {}".format(self.name))
+			print( "skipping duplicate edge on attr {}".format(self.name) )
+			return
+		if self.role == "output":
+			self.connections.append(edge)
+		else:
+			self.connections = [edge]
 
-	# this is handled by normal deserialisation
-
+	def getConnectedAttrs(self):
+		"""returns only connected AbstractAttrs, not abstractEdges -
+		this should be the limit of what's called in normal api"""
+		if self.role == "input":
+			return [i.sourceAttr for i in self.getConnections()]
+		elif self.role == "output":
+			return [i.destAttr for i in self.getConnections()]
 
 	def attrFromName(self, name):
 		#print "attrFromName looking for {}".format(name)
@@ -186,7 +216,7 @@ class AttrItem(AbstractTree):
 	### user facing methods
 	def addAttr(self, name="", hType="leaf", dataType="0D",
 				default=None, desc="", *args, **kwargs):
-		#print "attrItem addAttr name is {}".format(name)
+		#print "AbstractAttr addAttr name is {}".format(name)
 		if self.isLeaf():
 			raise RuntimeError("CANNOT ADD ATTR TO LEAF")
 		# check if attr of same name already exists
@@ -227,7 +257,7 @@ class AttrItem(AbstractTree):
 
 
 	def serialise(self, pretty=False):
-		data = super(AttrItem, self).serialise(pretty)
+		data = super(AbstractAttr, self).serialise() # no string
 
 		auxDict = {#"hType" : self.hType,
 					  #"dataType" : self.dataType,
@@ -244,43 +274,12 @@ class AttrItem(AbstractTree):
 
 	@classmethod
 	def fromDict(cls, regenDict=None, node=None):
-		tree = AbstractTree.fromDict(regenDict)
+		tree = super(AbstractAttr, cls).fromDict(regenDict)
 		tree._node = node
+		return tree
 
 
-
-
-
-class AbstractAttr(AttrItem):
-	"""temp, will be rolled into the same object as above"""
-
-	def __init__(self, *args, **kwargs):
-		"""add maya-specific support, this inheritance is totally messed up"""
-		super(AbstractAttr, self).__init__(*args, **kwargs)
-		self._plug = None
-
-		# default kwargs passed to attributes created through array behaviour
-		self.childKwargs = {
-			"name" : "newAttr",
-			"role" : self.role,
-			"dataType" : "0D",
-			"hType" : "leaf",
-			"desc" : "",
-			"default" : None,
-			"extras" : {},
-			"children" : {} # don't even try
-		}
-		# TECHNICALLY recursion is now possible
-
-	# plug properties
-	@property
-	def plug(self):
-		return self._plug()
-	@plug.setter
-	def plug(self, val):
-		self._plug = val
-	# not robust AT ALL, but enough for what we need
-
+	# ---- ARRAY BEHAVIOUR ----
 	def setChildKwargs(self, name=None, desc="", dataType="0D", default=None,
 					   extras=None):
 		newKwargs = {}
@@ -291,36 +290,6 @@ class AbstractAttr(AttrItem):
 		newKwargs["dataType"] = dataType or self.childKwargs["dataType"]
 		self.childKwargs.update(newKwargs)
 
-	def addConnection(self, edge):
-		"""ensures that input attributes will only ever have one incoming
-		connection"""
-		if edge in self.connections:
-			#self.log("skipping duplicate edge on attr {}".format(self.name))
-			print( "skipping duplicate edge on attr {}".format(self.name) )
-			return
-		if self.role == "output":
-			self.connections.append(edge)
-		else:
-			self.connections = [edge]
-
-	def getConnectedAttrs(self):
-		"""returns only connected attrItems, not abstractEdges -
-		this should be the limit of what's called in normal api"""
-		if self.role == "input":
-			return [i.sourceAttr for i in self.getConnections()]
-		elif self.role == "output":
-			return [i.destAttr for i in self.getConnections()]
-
-
-	def addChild(self, newChild):
-		newChild = super(AbstractAttr, self).addChild(newChild)
-		newChild._node = self.node
-		return newChild
-		#self.node.attrsChanged() # call from node
-
-	@property
-	def abstract(self):
-		return self.node
 
 	def addFreeArrayIndex(self, arrayAttr):
 		"""looks at array attr and ensures there is always at least one free index"""
@@ -364,4 +333,4 @@ class AbstractAttr(AttrItem):
 		for i in nameList:
 			child = self.attrFromName(i)
 			newChildren.append(child)
-		self.children = newChildren
+		#self.children = newChildren

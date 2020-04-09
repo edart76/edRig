@@ -544,7 +544,7 @@ class AbstractTree(object):
 		if "?CLASS" in objDict and "?MODULE" in objDict:
 			cls = loadObjectClass({ "?CLASS" : regenDict["?CLASS"],
 			                  "?MODULE" : regenDict["?MODULE"]})
-		#else: cls = cls or AbstractTree
+
 		# if branch is same type as parent, no info needed
 		# a tree of one type will mark all branches as same type
 		# until a new type is flagged
@@ -554,6 +554,9 @@ class AbstractTree(object):
 
 		children = regenDict.get("?CHILDREN") or []
 
+		""" NB: we do not check for inheritance on deserialisation:
+		what you serialise is what you deserialise """
+
 		# regnerate children with correct indices
 		length = len(children)
 		for n in range(length):
@@ -561,15 +564,11 @@ class AbstractTree(object):
 				if not i["?INDEX"] == n:
 					continue
 
-				# check if direct inheritance is desired
-				if cls.branchesInherit:
-					branch = cls.fromDict(i)
-				else:
-					branch = AbstractTree.fromDict(i)
+				branch = cls.fromDict(i)
 				new.addChild(branch)
 		return new
 
-	def serialise(self, pretty=False):
+	def serialise(self):
 		# print("key {} index {}".format(self.name, self.ownIndex()))
 		# print("keys are {}".format(self.keys()))
 		serial = {
@@ -588,9 +587,12 @@ class AbstractTree(object):
 					objData = saveObjectClass(self)
 					serial[ "objData" ] = objData
 			# only save class if this does not inherit, and is not normal tree
-		if pretty:
-			serial = pprint.pformat(serial)
+		# always returns dict
 		return serial
+
+	def display(self):
+		seq = pprint.pformat( self.serialise() )
+		return seq
 
 if __name__ == '__main__':
 
