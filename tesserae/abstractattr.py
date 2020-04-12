@@ -258,18 +258,6 @@ class AbstractAttr(AbstractTree):
 
 	def serialise(self, pretty=False):
 		data = super(AbstractAttr, self).serialise() # no string
-
-		auxDict = {#"hType" : self.hType,
-					  #"dataType" : self.dataType,
-					  #"role" : self.role,
-					  "value" : self.value if isinstance(self.value, (int, str, float)) else None,
-					  #"connections" : self.getConnections(), # managed by graph
-					  #"children" : [i.serialise() for i in self.getChildren()],
-					  #"name" : self.name,
-					  #"desc" : self.desc,
-					  #"extras" : self.extras
-					  }
-		data.update(auxDict)
 		return data
 
 	@classmethod
