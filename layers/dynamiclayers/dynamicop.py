@@ -73,7 +73,7 @@ class ColliderOp( DynamicOp ):
 	you will break it """
 
 	def defineAttrs(self):
-		super(ColliderOp, self).defineSettings()
+		super(ColliderOp, self).defineAttrs()
 		self.addInput(name="collider2D", dataType="2D")
 
 	def execute(self):
@@ -92,7 +92,7 @@ class ColliderOp( DynamicOp ):
 class MuscleOp( DynamicOp ):
 
 	def defineAttrs(self):
-		super(MuscleOp, self).defineSettings()
+		super(MuscleOp, self).defineAttrs()
 		self.addInput("input1D", dataType="1D",
 		              desc="curve with which to drive muscle")
 

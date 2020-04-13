@@ -74,6 +74,7 @@ class JointCurveOp(SpookyLayerOp):
 		pointPlug = self.getOutput("points")
 		specList = [ {"name" : i} for i in outputs]
 		self.log( "specList {}".format(specList))
+		#print( pointPlug.display())
 		pointPlug.matchArrayToSpec(spec=specList)
 
 
@@ -170,7 +171,7 @@ class JointCurveOp(SpookyLayerOp):
 		# first main curve
 		points = []
 		upPoints = []
-		degree = self.settings["curve.degree"]
+		degree = int(self.settings["curve.degree"])
 		# matching to joints on creation is fine, both will be reset later
 		for i in self.joints:
 			points.append(cmds.xform(i, q=True, ws=True, t=True))

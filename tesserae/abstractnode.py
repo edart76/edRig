@@ -526,13 +526,6 @@ class AbstractNode(AbstractTree):
 
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]
-			# module = realDict["MODULE"]
-			# loadedModule = pipeline.safeLoadModule(module)
-			# try:
-			# 	realClass = getattr(loadedModule, realDict["CLASS"])
-			# except Exception as e:
-			# 	print "ERROR in reconstructing op {}".format(realDict["NAME"])
-			# 	raise e
 			realClass = pipeline.loadObjectClass(realDict)
 
 		if realClass:
@@ -559,7 +552,7 @@ class AbstractNode(AbstractTree):
 			print "realInstance is {}".format(realInstance)
 			newInst.setRealInstance(realInstance, define=False)
 			newInst.real.makeBaseActions()
-		print("abstract fromDict newInst root {}".format(newInst.inputRoot))
+		#print("abstract fromDict newInst root {}".format(newInst.inputRoot))
 		return newInst
 
 	@staticmethod

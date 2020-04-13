@@ -112,8 +112,8 @@ class SourceOp(LayerOp):
 			self.log( "no source found at {}".format(path) )
 			return
 
-		if version == "latest":
-			path = self.getLatestVersion(path)
+		# if version == "latest":
+		# 	path = self.getLatestVersion(path)
 		# reference
 		cmds.file( path, i=1 )
 

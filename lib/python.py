@@ -332,12 +332,14 @@ class AbstractTree(object):
 	@property
 	def branches(self):
 		"""more explicit that it returns the child tree objects
-		:rtype list( AbstractTree )"""
+		:rtype list( AbstractTree )
+		always returns all branches, regardless of class"""
 		return self.values()
 
 	@property
 	def children(self):
-		""" :rtype list( AbstractTree )"""
+		""" :rtype list( AbstractTree )
+		override for custom filtering"""
 		return self.branches
 
 	def _setParent(self, tree):
@@ -409,7 +411,7 @@ class AbstractTree(object):
 		else:
 			return self.parent.getAddress(prev=path)
 
-	def search(self, path, found=None):
+	def search(self, path, onlyChildren=True, found=None):
 		""" searches branches for trees matching a partial path,
 		and returns ALL THAT MATCH
 		so for a tree
@@ -421,12 +423,17 @@ class AbstractTree(object):
 		search("leaf") -> two trees
 		right now would also return both for search( "lea" ) -
 		basic contains check is all I have
+
+		if onlyChildren, only searches through children -
+		else checks through all branches
+
 		"""
 
 		found = []
 		if path in self.name:
 			found.append(self)
-		for i in self.branches:
+		toCheck = self.children if onlyChildren else self.branches
+		for i in toCheck:
 			found.extend( i.search(path) )
 		return found
 
@@ -542,8 +549,9 @@ class AbstractTree(object):
 		# check first for a saved class or module name
 		objDict = regenDict.get("objData") or {}
 		if "?CLASS" in objDict and "?MODULE" in objDict:
-			cls = loadObjectClass({ "?CLASS" : regenDict["?CLASS"],
-			                  "?MODULE" : regenDict["?MODULE"]})
+			# cls = loadObjectClass({ "?CLASS" : objDict["?CLASS"],
+			#                   "?MODULE" : objDict["?MODULE"]})
+			cls = loadObjectClass( objDict )
 
 		# if branch is same type as parent, no info needed
 		# a tree of one type will mark all branches as same type
@@ -583,9 +591,9 @@ class AbstractTree(object):
 			serial["?EXTRAS"] = self.extras
 		if self.parent:
 			if self.parent.__class__ != self.__class__:
-				if self.__class__ != AbstractTree:
-					objData = saveObjectClass(self)
-					serial[ "objData" ] = objData
+				# if self.__class__ != AbstractTree:
+				objData = saveObjectClass(self)
+				serial[ "objData" ] = objData
 			# only save class if this does not inherit, and is not normal tree
 		# always returns dict
 		return serial
@@ -703,8 +711,8 @@ def saveObjectClass(obj, regenFunc="fromDict", uniqueKey=True):
 	""" saves a module and class reference for any object
 	if relative, will return path from root folder"""
 	keys = [ "?NAME", "?CLASS", "?MODULE", "regenFn" ]
-	if uniqueKey: # not always necessary
-		for i in range(len(keys)): keys[i] = "?" + keys[i]
+	# if uniqueKey: # not always necessary
+	# 	for i in range(len(keys)): keys[i] = "?" + keys[i]
 
 	#path = convertRootPath(obj.__class__.__module__, toRelative=relative)
 	path = obj.__class__.__module__

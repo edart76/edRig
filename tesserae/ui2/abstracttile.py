@@ -1,6 +1,6 @@
 # base machinery for all visual nodes in TilePile
 from PySide2 import QtCore, QtWidgets, QtGui
-from edRig.tesserae.abstractnode import AbstractNode
+from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
 from edRig.tesserae.ui2 import tilewidgets, tilesettings
 from edRig.tesserae.ui2.style import *
 #import math
@@ -341,6 +341,7 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 	             text=True):
 		if not attrItem:
 			raise RuntimeError("no attrItem supplied!")
+		#print("attritem {} type {}".format( attrItem.name, type(attrItem)))
 		super(TileEntry, self).__init__(parent)
 
 		self.parent = parent
@@ -362,7 +363,7 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 
 		self.children = [ TileEntry(
 			parent=self, attrItem=i, scene=self.scene)
-				for i in attrItem.children ]
+				for i in attrItem.children if isinstance(i, AbstractAttr) ]
 
 
 		self.extras = self.attr.extras

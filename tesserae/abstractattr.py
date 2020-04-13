@@ -36,7 +36,7 @@ class AbstractAttr(AbstractTree):
 
 		self.extras["desc"] = desc
 
-		# self.connections = [] # override with whatever the hell you want
+		self.connections = [] # override with whatever the hell you want
 
 		self.connectionChanged = Signal()
 		self.childrenChanged = Signal()
@@ -44,13 +44,13 @@ class AbstractAttr(AbstractTree):
 
 		# default kwargs passed to attributes created through array behaviour
 		self.childKwargs = {
-			"name" : "newAttr",
+			"name" : "newChildAttr",
 			"role" : self.role,
 			"dataType" : "0D",
 			"hType" : "leaf",
 			"desc" : "",
 			"default" : None,
-			"extras" : {},
+			"extras" : { "flags" : {}},
 			"children" : {} # don't even try
 		}
 
@@ -80,7 +80,11 @@ class AbstractAttr(AbstractTree):
 
 	@property
 	def dataType(self):
-		return self.extras["flags"]["dataType"]
+		try:
+			return self.extras["flags"]["dataType"]
+		except Exception as e:
+			print("error getting datatype for attritem {}".format(self.name))
+			return "nD"
 	@dataType.setter
 	def dataType(self, val):
 		self.extras["flags"]["dataType"] = val
@@ -121,6 +125,9 @@ class AbstractAttr(AbstractTree):
 		newChild._node = self.node
 		return newChild
 
+	@property
+	def children(self):
+		return [i for i in self.branches if isinstance(i, AbstractAttr)]
 
 	def isLeaf(self):
 		return self.hType == "leaf"
@@ -132,10 +139,10 @@ class AbstractAttr(AbstractTree):
 		return self.hType == "array"
 
 	def isConnectable(self):
-		#print "testing if {} is connectable".format(self.name)
-		#print "attr hType is {}".format(self.hType)
-		#print "result is {}".format(self.hType == "leaf" or self.hType == "compound")
 		return self.hType == "leaf" or self.hType == "compound"
+
+	def getConnections(self):
+		return self.connections
 
 	def isSimple(self):
 		"""can attr be set simply by user in ui?"""
@@ -268,6 +275,7 @@ class AbstractAttr(AbstractTree):
 	@classmethod
 	def fromDict(cls, regenDict=None, node=None):
 		tree = super(AbstractAttr, cls).fromDict(regenDict)
+		#tree = AbstractTree.fromDict(regenDict)
 		tree._node = node
 		return tree
 
@@ -319,11 +327,13 @@ class AbstractAttr(AbstractTree):
 				# safer than update
 
 			newAttr = AbstractAttr(**kwargs)
-			self.children.append(newAttr)
+			#self.children.append(newAttr)
+			self.addChild(newAttr)
 
 		# lastly reorder children to match list
-		newChildren = []
-		for i in nameList:
-			child = self.attrFromName(i)
-			newChildren.append(child)
-		#self.children = newChildren
+		# newChildren = []
+		# for i in nameList:
+		# 	child = self.attrFromName(i)
+		# 	newChildren.append(child)
+		# self.children = newChildren
+		# this is difficult

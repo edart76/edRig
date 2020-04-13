@@ -550,18 +550,20 @@ class Op(MayaReal):
 		"""tries to connect attrItems on both sides of node"""
 		for i in self.inputRoot.getAllLeaves():
 			#print "inputConnections {}".format(i.getConnectedAttrs())
-			try:
-				self.connectInputPlug(i)
-			except Exception as e:
-				self.log("unable to connect attrItem " + i.name +
-				         "error {}".format(e))
+			#try:
+			self.connectInputPlug(i)
+			# except Exception as e:
+			# 	self.log("unable to connect attrItem " + i.name +
+			# 	         "error {}".format(e))
+			# 	raise e
 		for i in self.outputRoot.getAllLeaves():
 			#print "outputConnections {}".format(i.getConnectedAttrs())
-			try:
-				self.connectOutputPlug(i)
-			except Exception as e:
-				self.log("unable to connect attrItem " + i.name +
-				         "error {}".format(e))
+			#try:
+			self.connectOutputPlug(i)
+			# except Exception as e:
+			# 	self.log("unable to connect attrItem " + i.name +
+			# 	         "error {}".format(e))
+			# 	raise e
 
 	@staticmethod
 	def dataTypeForNodeType( nodeType ):

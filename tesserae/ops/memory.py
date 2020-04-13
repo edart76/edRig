@@ -79,6 +79,9 @@ class Memory2(AbstractTree):
 		"""add information to op's memory if none exists
 		we remember lists here
 		main entrypoint"""
+		print("remember infoName {}, infotype {}, nodes {}".format(
+			infoName, infoType, nodes)
+		)
 
 		# multi memory support
 		if isinstance(infoType, list):
@@ -98,6 +101,7 @@ class Memory2(AbstractTree):
 			self[infoName][infoType] = gatheredGoss
 		# always set node regardless to ensure info is relevant in scene
 		# self.setNode(infoName, core.AbsoluteNode(node))
+		print("final nodes {}".format(nodes))
 		self[infoName]["nodes"] = [AbsoluteNode(i) for i in nodes]
 
 
