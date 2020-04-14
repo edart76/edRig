@@ -426,6 +426,21 @@ class AbsoluteNode(StringLike):
 		name = stringFromMObject(obj)
 		return AbsoluteNode(name)
 
+	@classmethod
+	def create(cls, name=None, n=None, *args, **kwargs):
+		"""any subsequent wrapper class will create its own node type
+		:rtype cls"""
+		# nodeTypeStr = cls.nodeType() or cls.__name__
+		nodeTypeStr = cls.nodeType()
+
+		nodeType = nodeTypeStr[0].lower() + nodeTypeStr[1:]
+		name = name or n or nodeType
+		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
+
+		node.setDefaults()
+
+		return node
+
 	# ---- attribute and plug methods
 
 	def attrs(self, **kwargs):
@@ -561,20 +576,14 @@ class AbsoluteNode(StringLike):
 		if self.isShape():
 			return attr.getImmediateFuture(self+".instObjGroups[0]")[0]
 
-	@classmethod
-	def create(cls, name=None, n=None, *args, **kwargs):
-		"""any subsequent wrapper class will create its own node type
-		:rtype cls"""
-		# nodeTypeStr = cls.nodeType() or cls.__name__
-		nodeTypeStr = cls.nodeType()
+	def setDrawingOverride(self, referenced=False, clean=False):
+		""" sets object display mode override"""
+		self.set("overrideEnabled", 1)
+		if referenced:
+			self.set("overrideDisplayType", 2)
+		elif clean:
+			self.set("overrideDisplayType", 0)
 
-		nodeType = nodeTypeStr[0].lower() + nodeTypeStr[1:]
-		name = name or n or nodeType
-		node = cls(cmds.createNode(nodeType, n=name)) # cheeky
-
-		node.setDefaults()
-
-		return node
 
 	def setDefaults(self):
 		"""called when node is created"""

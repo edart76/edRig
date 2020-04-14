@@ -53,7 +53,7 @@ class JointCurveOp(SpookyLayerOp):
 
 
 	def defineSettings(self):
-		self.addSetting(entryName="prefix", value="c_")
+		#self.addSetting(entryName="prefix", value="c_")
 		self.addSetting(entryName="priority", options=("joints", "curve"),
 		                value="joints")
 		self.addSetting(entryName="curve")
@@ -80,7 +80,7 @@ class JointCurveOp(SpookyLayerOp):
 
 	def execute(self):
 
-		self.prefix = self.settings["prefix"]
+		#self.prefix = self.settings["prefix"]
 		self.joints = []
 		self.mainCurve, self.upCurve = None, None
 
@@ -132,9 +132,11 @@ class JointCurveOp(SpookyLayerOp):
 
 			self.joints[i].disconnect("inverseScale")
 
-			self.joints[i].parentTo()
+			self.joints[i].parentTo(self.opGrp)
 
 			transform.decomposeMatrixPlug(jntMat, self.joints[i])
+
+			self.joints[i].setDrawingOverride(referenced=1)
 		pass
 
 	def matchCurveToJoints(self):
@@ -176,7 +178,8 @@ class JointCurveOp(SpookyLayerOp):
 		for i in self.joints:
 			points.append(cmds.xform(i, q=True, ws=True, t=True))
 		# first make linear curve
-		linearShape = curve.curveFromCvs(points, deg=1, name=self.prefix+"_crv")
+		#linearShape = curve.curveFromCvs(points, deg=1, name=self.prefix+"_crv")
+		linearShape = curve.curveFromCvs(points, deg=1, name=self.opName+"_mainCrv")
 		self.mainCurve = edRig.node.AbsoluteNode(
 			cmds.rebuildCurve(linearShape, ch=False, degree=degree,
 		                        rebuildType=0, fitRebuild=True)[0])
@@ -187,7 +190,7 @@ class JointCurveOp(SpookyLayerOp):
 			upPoints.append(transform.staticVecMatrixMult(
 				mat, point=(1,0,0), length=1))
 		#self.log("upPoints are {}".format(upPoints))
-		upShape = curve.curveFromCvs(upPoints, deg=1, name=self.prefix+"_upCrv")
+		upShape = curve.curveFromCvs(upPoints, deg=1, name=self.opName+"_upCrv")
 		self.upCurve = edRig.node.AbsoluteNode(
 			cmds.rebuildCurve(upShape, ch=False, degree=degree,
 		    rebuildType=0, fitRebuild=True)[0])

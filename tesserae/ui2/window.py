@@ -17,8 +17,8 @@ currentPath = ""
 
 def getMayaWindow():
 	ptr = omui.MQtUtil.mainWindow()
-	#widget = wrapInstance( long( ptr ), QtWidgets.QWidget )
-	widget = wrapInstance( long( ptr ), QtWidgets.QMainWindow )
+	widget = wrapInstance( long( ptr ), QtWidgets.QWidget )
+	#widget = wrapInstance( long( ptr ), QtWidgets.QMainWindow )
 	return widget
 
 def getMayaObject():
@@ -35,10 +35,11 @@ def show():
 
 	#win = mayaObj.findChild( TilePileUI )
 
-	#win = TilePileUI( mayaWindow )
-	win = TilePileUI( )
+	win = TilePileUI( mayaWindow )
+	#win = TilePileUI( )
 	win.graphView.loadFromScene()
-	ref = win.show(dock=True)
+	#ref = win.show(dock=False)
+	ref = win.show()
 
 
 	windows.append(win)
@@ -50,8 +51,8 @@ def show():
 #class TilePileUI(QtWidgets.QWidget):
 #class TilePileUI(QtWidgets.QApplication):
 #class TilePileUI(MyDockingUI):
-#class TilePileUI(QtWidgets.QMainWindow):
-class TilePileUI(MayaQWidgetDockableMixin, QtWidgets.QWidget):
+class TilePileUI(QtWidgets.QMainWindow):
+#class TilePileUI(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 #class TilePileUI(MayaQWidgetDockableMixin):
 	"""main TilePile window"""
 	assetChanged = QtCore.Signal(list)
@@ -149,4 +150,4 @@ class TilePileUI(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 		# remove reference to window
 		if self in windows:
 			windows.remove(self)
-		event.accept()
+		super(TilePileUI, self).closeEvent(event)

@@ -99,10 +99,11 @@ class Memory2(AbstractTree):
 
 			gatheredGoss = [self._gatherInfo(infoType, target=i, **kwargs) for i in nodes]
 			self[infoName][infoType] = gatheredGoss
-		# always set node regardless to ensure info is relevant in scene
-		# self.setNode(infoName, core.AbsoluteNode(node))
+
 		print("final nodes {}".format(nodes))
-		self[infoName]["nodes"] = [AbsoluteNode(i) for i in nodes]
+
+		# only store NAMES of nodes
+		self[infoName]["nodes"] = [AbsoluteNode(i)() for i in nodes]
 
 
 	def recall(self, infoName, infoType="all", **kwargs):
@@ -306,27 +307,12 @@ class Memory2(AbstractTree):
 	def setNodes(self, infoName, nodes):
 		if not isinstance(nodes, list):
 			nodes = [nodes]
-		self[infoName]["nodes"] = nodes
+		self[infoName]["nodes"] = [AbsoluteNode(i)() for i in nodes ]
 
 	def getFlattenedNodes(self):
 		"""ensure nodes are stored as strings, not AbsNodes"""
 		#self.nodes = [str(i) for i in self.nodes] # for some reason | characters screw up strings
 		return [str(i) for i in self.nodes]
-
-	def flattenNodes(self):
-		# for k, v in self.iteritems():
-		# 	v["nodes"] = [str(i) for i in v["nodes"]]
-		self["nodes"] = self.getFlattenedNodes()
-
-	def restoreAbsoluteNodes(self):
-		"""restore strings to absNodes, assuming the same names exist"""
-		self.nodes = [AbsoluteNode(i) for i in self.nodes]
-		for k, v in self.iteritems():
-			# print "k is {}, v is {}, v keys are {}".format(k, v, v.keys())
-			if "nodes" in v.keys():
-				v["nodes"] = [AbsoluteNode(i) for i in v["nodes"]]
-			# print "restored {}".format(v["nodes"])
-		pass
 
 	@staticmethod
 	def makeBlankInfoType(infoType):
@@ -409,5 +395,4 @@ class Memory2(AbstractTree):
 
 	def reconstructMemory(self, memoryDict):
 		self._storage = copy.deepcopy(memoryDict) or {}
-		#self.restoreAbsoluteNodes()
 		return self

@@ -645,12 +645,16 @@ class AbstractView(QtWidgets.QGraphicsView):
 			edRig.pipeline.makeBlankFile(path=tilePileFile)
 		pipeline.ioinfo(name="testPileSaveAs", mode="out",
 		              info=saveData, path=tilePileFile)
-		#self.tilePileFile = tilePileFile
+
 		self.savePath = tilePileFile
+
+		# save graph path to scene to open more quickly
+		self.saveToScene()
 
 	def saveTilePile(self):
 		self.saveAsTilePile(path=self.savePath)
 
 	def onAssetChanged(self, assetInfos):
 		self.graph.setAsset(assetInfos[0]) # assetItem
+		self.savePath = assetInfos[0].path
 		# self.graph.setDataPath(assetInfos)
