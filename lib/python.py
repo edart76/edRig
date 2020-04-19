@@ -397,7 +397,8 @@ class AbstractTree(object):
 		return self._map.iteritems()
 
 	def allBranches(self):
-		""" returns list of all tree objects """
+		""" returns list of all tree objects
+		depth first """
 		found = [ self ]
 		for i in self.branches:
 			found.extend(i.allBranches())

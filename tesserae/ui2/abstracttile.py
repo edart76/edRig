@@ -77,8 +77,12 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 	def _resizeSettings(self, *args, **kwargs):
 		self.syncSize()
-
-		self.settingsProxy.resize(self.width, self.settingsWidg.height() )
+		self.settingsWidg.resizeToTree()
+		#self.settingsProxy.resize(self.width, self.settingsWidg.height() )
+		self.settingsProxy.resize(self.settingsWidg.width(),
+		                          self.settingsWidg.height() )
+		#self.settingsProxy.resize(self.width, 500 )
+		# self.settingsProxy.adjustSize() # does not work properly
 		self.settingsProxy.setPos(0, self.height )
 
 	def addSettings(self, tree):

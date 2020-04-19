@@ -206,10 +206,11 @@ def ioinfo(name="", mode="in", info=None, path=None):
 	if not path:
 		return None
 	if mode == "in":
-		with open("{}".format(path)) as file:
+		with open("{}".format(path), "r") as file:
 			# goss = json.load(file)
 			#goss = json.loads(eval(file.read()))
 			goss = file.read()
+			file.close()
 
 		if isinstance(goss, dict):
 			print "goss is dict"
@@ -379,6 +380,7 @@ def makeLegit(path):
 				break
 		# student warning should always be at same line in file
 		f.writelines(heinous)
+		f.close()
 	return True
 
 def makeBogus(path):
@@ -402,6 +404,7 @@ def makeBogus(path):
 		if mod:
 			wealthy.insert(11, 'fileInfo "license" "student";\n')
 		f.writelines(wealthy)
+		f.close()
 	return True
 
 def safeMayaImport(path):
@@ -417,6 +420,7 @@ def safeRead(path, lines=False):
 			content = f.readlines()
 		else:
 			content = f.read()
+		f.close()
 	return content
 
 def getMostRecentVersion(dir):
@@ -550,6 +554,8 @@ def checkJsonFileExists(filePath):
 
 def checkFileExists(filePath):
 	if not filePath:
+		return False
+	if os.path.isdir(filePath):
 		return False
 	return os.path.exists(filePath)
 

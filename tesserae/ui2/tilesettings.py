@@ -71,6 +71,8 @@ class TileSettings(QtWidgets.QTreeView):
 		self.setAlternatingRowColors(True)
 		self.showDropIndicator()
 
+		#self.setSizeAdjustPolicy( QtWidgets.QAbstractScrollArea.AdjustToContents)
+
 		self.initActions()
 
 		header.geometriesChanged.connect( self.resizeToTree )
@@ -79,19 +81,34 @@ class TileSettings(QtWidgets.QTreeView):
 
 
 		#self.setSizePolicy( shrinkingPolicy )
-		self.setSizePolicy( expandingPolicy )
-		self.header().setSizePolicy( expandingPolicy )
+		#self.setSizePolicy( expandingPolicy )
+		#self.header().setSizePolicy( expandingPolicy )
 
 	def resizeToTree(self):
 		#self.header().resizeToContents()
 
-		width = self.size().width()
-		height = 40 * self.header().count()
-		self.resize( width, height )
-		#self.header().resize( width, height )
+		# get all visible indices and expand to include them
+		# count = 0
+		# indexList = self.modelObject.persistentIndexList()
+		# print(indexList)
+		#
+		# for modelIndex in indexList:
+		# 	if not self.isRowHidden(0, modelIndex):
+		# 		count += 1
+		# print("visible count is {}".format(count))
 
-		# self.header().resizeSections()
-		# self.adjustSize()
+		# for now expand to maximum size, can't find a good way of
+
+		width = self.size().width()
+
+		#height = self.viewportSizeHint().height()
+		count = len( self.tree.root.allBranches() )
+
+		#height = 40 * self.header().count()
+		height = 20 * count
+		index = self.rootIndex()
+		#height = ( self.rowHeight( index ) + 2 ) * count
+		self.resize( width, height )
 
 		pass
 
@@ -109,13 +126,13 @@ class TileSettings(QtWidgets.QTreeView):
 		print "hey"
 
 	def copyEntry(self):
-		print "copying"
+		#print "copying"
 		clip = QtGui.QGuiApplication.clipboard()
 		indices = self.selectedIndexes() # i hate
-		print "indices {}".format(indices)
+		#print "indices {}".format(indices)
 		""" returns a python list of qModelIndices """
 		if not indices:
-			print( "no entries selected" )
+			print( "no entries selected to copy" )
 			return
 		index = indices[0] # only copying single entry for now
 		# obj = self.modelObject.data( index )
@@ -126,7 +143,7 @@ class TileSettings(QtWidgets.QTreeView):
 		# print( "item {}".format(item))
 
 		mime = self.modelObject.mimeData( [index] )
-		print( "copy mime {}".format(mime.text()))
+		# print( "copy mime {}".format(mime.text()))
 		clip.setMimeData(mime)
 
 		"""get mime of all selected objects
@@ -373,7 +390,7 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 			print("dropped text is {}".format(mimeText))
 
 			info = eval(mimeText)
-			print("eval'd info is {}".format(info))
+			print("eval'd info is {}".format(info)) # evals to a dict
 
 			tree = AbstractTree.fromDict(info)
 
@@ -396,7 +413,7 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 			# print("jhgjh")
 			# self.buildFromTree(tree, parentItem)
 			#self.setTree(parentTree.root)
-			print("jkhkjgk")
+			# print("jkhkjgk")
 			self.endInsertRows()
 
 			# destroy parent tree branches and rebuild from model

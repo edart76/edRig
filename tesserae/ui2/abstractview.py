@@ -64,7 +64,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.tabSearch.search_submitted.connect(self.searchReceived)
 		self.nodeDeleteCalled.connect( self.scene.onDeleteCalled )
 
-		self.savePath = None
+		self._savePath = None
+		self._filePath = None
 		#self.saveFolder = None # given by asset
 
 		#self.setWindowModality(QtCore.Qt.WindowModal)
@@ -79,11 +80,27 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def currentAsset(self):
 		return self.graph.asset
 
+	@property
+	def savePath(self):
+		return self._savePath or self.currentAsset.path
+	@savePath.setter
+	def savePath(self, val):
+		self._savePath = val
+
+	@property
+	def filePath(self):
+		""" exact path to save file """
+		return self._filePath
+	@filePath.setter
+	def filePath(self, val):
+		self._filePath = val
+
 	def saveToScene(self):
 		"""saves current file path"""
 		currentInfo = pipeline.getSceneData()
 		if self.savePath:
 			currentInfo["tesserae.savePath"] = self.savePath
+			currentInfo["tesserae.filePath"] = self.filePath
 		pipeline.saveSceneData(currentInfo)
 		#print( pipeline.getSceneData().serialise(pretty=True))
 
@@ -92,8 +109,10 @@ class AbstractView(QtWidgets.QGraphicsView):
 		if force, loads entire graph"""
 		info = pipeline.getSceneData()
 		self.savePath = info["tesserae.savePath"]
-		if force and pipeline.checkFileExists(self.savePath):
-			self.openTilePileFile(self.savePath, force=True)
+		self.filePath = info["tesserae.filePath"]
+		if force and pipeline.checkFileExists(self.filePath):
+			print("forcing open from scene, self save path is {}".format(self.filePath))
+			self.openTilePileFile(self.filePath, force=True)
 		#print( info.serialise(pretty=True))
 
 	def _init_actions(self):
@@ -592,6 +611,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 	def openTilePileFile(self, path=None, force=False):
 		""" loads file, then sets asset correctly etc """
+		if not path:
+			path = self.savePath
 		serialised = self.loadTilePileInfo(path=path, force=force)
 		if not serialised:
 			return
@@ -606,6 +627,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.graph = self.graph.fromDict(serialised)
 		self.sync()
 		self.scene.regenUi(serialised)
+		print("savePath after open is {}".format(self.savePath))
 		pass
 
 	def loadTilePileInfo(self, path=None, force=False):
@@ -620,6 +642,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		if not tilePileFile or not pipeline.checkFileExists(tilePileFile):
 			return
 		self.savePath = tilePileFile
+		self.filePath = tilePileFile
 		serialised = pipeline.ioinfo(mode="in", path=tilePileFile)
 		#print "loaded data is {}".format(serialised)
 		return serialised
@@ -647,12 +670,13 @@ class AbstractView(QtWidgets.QGraphicsView):
 		              info=saveData, path=tilePileFile)
 
 		self.savePath = tilePileFile
+		self.filePath = tilePileFile
 
 		# save graph path to scene to open more quickly
 		self.saveToScene()
 
 	def saveTilePile(self):
-		self.saveAsTilePile(path=self.savePath)
+		self.saveAsTilePile(path=self.filePath)
 
 	def onAssetChanged(self, assetInfos):
 		self.graph.setAsset(assetInfos[0]) # assetItem
