@@ -87,6 +87,9 @@ class JointCurveOp(SpookyLayerOp):
 		self.createJoints()
 		self.createCurves()
 
+		#self.loadMemory()
+		print("jointCurve memory is {}".format(self.memory.display()))
+
 		if self.settings["priority"] == "joints":
 			self.matchCurveToJoints()
 			self.remember("joints", "attr", self.joints, transformAttrs=False)

@@ -137,6 +137,8 @@ class AbsoluteNode(StringLike):
 
 		if obj:
 			self.setMObject(obj)
+		else:
+			raise RuntimeError
 
 
 		# absolute._nodeType = cmds.nodeType(node)
@@ -348,10 +350,8 @@ class AbsoluteNode(StringLike):
 	def delete(self, full=True):
 		"""deletes maya node, and by default deletes entire openmaya framework around it
 		tesserae is very unstable, and i think this might be why"""
-		self()
-		name = str(self)
+		cmds.delete(self())
 		self.MObject = None
-		cmds.delete(name)
 
 	#@property
 	@classmethod

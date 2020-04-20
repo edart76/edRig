@@ -13,6 +13,10 @@ from edRig.tesserae.abstractattr import AbstractAttr
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.lib.python import Signal, AbstractTree
 
+# temp, find a better order for this
+from edRig.tesserae.ops.memory import Memory2
+
+
 # test
 from edRig.tesserae.expression import EVALUATOR
 
@@ -477,13 +481,15 @@ class AbstractNode(AbstractTree):
 			self.dataFileExists = True
 
 	def searchData(self, infoName, internal=True):
+		print("abstractNode running searchData")
 		if internal:
 			memoryCell = self.graph.getNodeMemoryCell(self)
+			print("found internal memoryCell {}".format(memoryCell))
 			return memoryCell["data"].get(infoName)
 
-		print "abstract getting data" + infoName
-		self.checkDataFileExists()
-		return attrio.getData(infoName, self.dataPath)
+		print "abstract getting legacy data" + infoName
+		#self.checkDataFileExists()
+		#return attrio.getData(infoName, self.dataPath)
 		pass
 
 	def saveOutData(self, infoName="info", data=None, internal=True):
@@ -491,15 +497,16 @@ class AbstractNode(AbstractTree):
 		in the interest of not drowning in files, a mechanism for storing all
 		data in one single .tes file
 		"""
+		print("abstractNode saving out data {}".format(data))
 		if internal:
 			memoryCell = self.graph.getNodeMemoryCell(self)
 			memoryCell["data"][infoName] = data
 			return
 
 		# golly gee willakers
-		print "abstract saving data " + infoName
+		print "abstract saving legacy data " + infoName
 		self.checkDataFileExists()
-		attrio.updateData(infoName, data, path=self.dataPath)
+		#attrio.updateData(infoName, data, path=self.dataPath)
 
 
 	def serialise(self):
@@ -515,6 +522,7 @@ class AbstractNode(AbstractTree):
 		}
 		if self.real:
 			serial["real"] = self.real.serialise()
+			#serial["memory"] = self.real.memory.serialise()
 		return serial
 
 	@classmethod
@@ -552,6 +560,13 @@ class AbstractNode(AbstractTree):
 			print "realInstance is {}".format(realInstance)
 			newInst.setRealInstance(realInstance, define=False)
 			newInst.real.makeBaseActions()
+
+			# regenerate memory
+			if "memory" in fromDict["real"]:
+				# newInst.real.memory = Memory2.fromDict(fromDict["memory"])
+				# newInst.saveOutData(infoName="memory", data=fromDict["real"]["memory"])
+				pass
+
 		#print("abstract fromDict newInst root {}".format(newInst.inputRoot))
 		return newInst
 

@@ -27,7 +27,6 @@ class LayerOp(Op):
 		self.controller = None
 		#self.memory = Memory()
 		self.memory = Memory2()
-		# self.loadMemory()
 
 		self.saveData = None
 		self.dataFileExists = False
@@ -75,20 +74,24 @@ class LayerOp(Op):
 		# patch methods
 		self.__dict__["saveOutData"] = self.abstract.saveOutData
 		self.__dict__["searchData"] = self.abstract.searchData
-		self.loadMemory()
+		#self.loadMemory()
 
 		#self.checkDataFileExists()
 
 	def saveOutMemory(self):
-		self.saveOutData(infoName="memory", data=self.memory.serialiseMemory())
-		# attrio.updateData("memory", self.memory.serialiseMemory(),
-		#                   path=self.dataFilePath)
+		self.saveOutData(infoName="memory", data=self.memory.serialise(),
+		                 internal=True)
+
 
 	def loadMemory(self):
-		#goss = attrio.getData("memory", self.dataFilePath)
+		print("layerOp loadMemory")
 		goss = self.searchData("memory")
+		if not goss:
+			print("unable to load memory")
+			self.memory = Memory2()
+			return
 		print "loaded memory is {}".format(goss)
-		self.memory.reconstructMemory(goss)
+		self.memory = self.memory.fromDict(goss)
 
 	def memoryActions(self):
 		openDict = self.memory.renewableMemory()
@@ -149,13 +152,7 @@ class LayerOp(Op):
 				              relative=v.get("relative"),
 				              **kwargs)
 				return True
-			""" TO DO 
-			PREFERABLY memory would be adaptible to arbitrary dicts, as any memory
-			saved as compound will be recalled as compound, and it is inelegant to generate
-			multiple top-level headers for the same information
-			however, the current (original) implementation of memory
-			is not the most robust thing in the world, and an adaptive structure is way off
-			"""
+
 
 		"""relative left None to ignore - otherwise specify transform or matrix
 		plug to remember and recall only in local space
@@ -170,11 +167,14 @@ class LayerOp(Op):
 			else:
 				self.log("infoType {} not found in memory {}".format(infoType,
 				                                                  self.memory.infoTypes(infoName)) )
+
 		else:
 			self.log( "infoName {} not found in memory {}".format(infoName,
 			                                                  self.memory.infoNames()) )
-		# self.memory.setNodes(infoName, nodes)
+		#self.memory.setNodes(infoName, nodes)
 		self.memory.remember(infoName, infoType, nodes, **kwargs)
+
+		self.saveOutMemory()
 
 
 	def getAllActions(self):
@@ -183,6 +183,8 @@ class LayerOp(Op):
 		base = {}
 		base = super(LayerOp, self).getAllActions()
 
+		#base.update({"memory": self.memoryActions()})
+		#
 		try:
 			base.update({"memory": self.memoryActions()})
 		except Exception as e:
@@ -230,7 +232,7 @@ class LayerOp(Op):
 	# serialisation and regeneration
 	def serialise(self):
 		orig = super(LayerOp, self).serialise()
-		orig["memory"] = self.memory.serialiseMemory()
+		orig["memory"] = self.memory.serialise()
 
 		return orig
 
@@ -243,8 +245,11 @@ class LayerOp(Op):
 		if "memory" in regenDict.keys():
 			print "regen memory"
 			#opInstance.memory.reconstructMemory({"memory" : copy.deepcopy(regenDict["memory"])})
-			opInstance.memory.reconstructMemory(regenDict["memory"])
+			opInstance.memory = Memory2.fromDict(regenDict["memory"])
+			print("regen instance memory {}".format(opInstance.memory.display()))
 			print "done"
-
+		# if isinstance(opInstance, LayerOp):
+		# 	opInstance.loadMemory()
+		print("final fromDict memory is {}".format(opInstance.memory.display()))
 		return opInstance
 

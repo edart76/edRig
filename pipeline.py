@@ -216,12 +216,14 @@ def ioinfo(name="", mode="in", info=None, path=None):
 			print "goss is dict"
 			return goss
 
-		try:
-			#goss = eval(ast.literal_eval(str(goss)))
-			goss = eval(goss)
-		except Exception as e:
-			print "ERROR in attrio reading from file {}".format(path)
-			print "error is {}".format(str(e))
+		goss = eval(goss)
+		#
+		# try:
+		# 	#goss = eval(ast.literal_eval(str(goss)))
+		# 	goss = eval(goss)
+		# except Exception as e:
+		# 	print "ERROR in attrio reading from file {}".format(path)
+		# 	print "error is {}".format(str(e))
 		#print "goss is {}".format(goss)
 
 		return goss

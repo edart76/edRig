@@ -4,7 +4,7 @@
 from edRig import cmds, om
 from edRig.core import ECN, shortUUID
 from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import attrio, scene, attr, transform, pipeline
+from edRig import scene, attr, transform, pipeline
 from edRig.tesserae.abstractnode import AbstractAttr
 
 from edRig.structures import ActionItem
@@ -148,6 +148,7 @@ class Op(MayaReal):
 		return invokeNode(name="tilePile", type="transform")
 
 	def __init__(self, name=None, abstract=None):
+		""":type abstract AbstractNode"""
 		self.character = None
 		print "Op instantiated"
 		self._opName = None
@@ -164,7 +165,6 @@ class Op(MayaReal):
 			self.inputRoot = AbstractAttr(role="input", hType="root", name="inputRoot")
 			self.outputRoot = AbstractAttr(role="output", hType="root", name="outputRoot")
 		self.defineAttrs() # override this specific method with attr construction
-		#self.data = copy.deepcopy(self.data)
 
 		# abstract interface
 		# signals and methods directly from abstract
@@ -190,6 +190,10 @@ class Op(MayaReal):
 		# on show / hide guides
 		self.showGuidesStack = []
 		self.hideGuidesStack = []
+
+	@property
+	def internal(self):
+		return self.abstract.internal
 
 	def executionManager(self):
 		return OpExecutionManager(self)
@@ -577,15 +581,16 @@ class Op(MayaReal):
 		raise RuntimeError("no dataType for nodeType {}".format(nodeType))
 
 	# io
-	def searchData(self, infoName):
-		return attrio.getData(infoName, self.dataFilePath)
+	def searchData(self, infoName, internal=True):
+		print( "op legacy searchData called")
+		# return attrio.getData(infoName, self.dataFilePath)
 		pass
 
-	def saveOutData(self, infoName="info", data={}):
+	def saveOutData(self, infoName="info", data=None, internal=True):
 		# golly gee willakers
-		print "op saving data"
-		self.checkDataFileExists()
-		attrio.updateData(infoName, data, path=self.dataFilePath)
+		print "op saving data with legacy method saveOutData"
+		# self.checkDataFileExists()
+		# attrio.updateData(infoName, data, path=self.dataFilePath)
 
 	# actions
 	def getAllActions(self):

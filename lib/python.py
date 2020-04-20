@@ -558,13 +558,12 @@ class AbstractTree(object):
 		# a tree of one type will mark all branches as same type
 		# until a new type is flagged
 		val = regenDict.get("?VALUE") or None
-		new = cls(regenDict["?NAME"], val)
+		new = cls(name=regenDict["?NAME"], val=val)
 		new.extras = regenDict.get("?EXTRAS") or {}
 
 		children = regenDict.get("?CHILDREN") or []
 
-		""" NB: we do not check for inheritance on deserialisation:
-		what you serialise is what you deserialise """
+
 
 		# regnerate children with correct indices
 		length = len(children)
@@ -573,7 +572,18 @@ class AbstractTree(object):
 				if not i["?INDEX"] == n:
 					continue
 
+				""" check some rules on deserialisation """
+				# is there any kind of override?
+				if i.get("objData"):
+					childCls = loadObjectClass(i["objData"])
+				else:
+					if cls.branchesInherit:
+						childCls = cls
+					else:
+						childCls = AbstractTree
+
 				branch = cls.fromDict(i)
+				#branch = childCls.fromDict(i)
 				new.addChild(branch)
 		return new
 
@@ -591,11 +601,28 @@ class AbstractTree(object):
 		if self.extras:
 			serial["?EXTRAS"] = self.extras
 		if self.parent:
+
 			if self.parent.__class__ != self.__class__:
-				# if self.__class__ != AbstractTree:
 				objData = saveObjectClass(self)
-				serial[ "objData" ] = objData
-			# only save class if this does not inherit, and is not normal tree
+				serial["objData"] = objData
+
+			if 0: # doesn't work yet
+				# class type saving
+
+				# save class if parent type DOES inherit,
+				# and this type is not parent
+				if self.parent.branchesInherit:
+					if self.parent.__class__ != self.__class__:
+						objData = saveObjectClass(self)
+						serial["objData"] = objData
+
+				# save class if parent type DOES NOT inherit,
+				# and this is not a normal AbstractTree
+				else:
+					if self.__class__ != AbstractTree:
+						objData = saveObjectClass(self)
+						serial[ "objData" ] = objData
+
 		# always returns dict
 		return serial
 

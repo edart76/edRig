@@ -51,7 +51,7 @@ def getCurveInfo(shape=None, fn=None):
 	curveInfo["knots"] = [i for i in fn.knots()]
 	#curveInfo["rational"] = fn.rational()
 	curveInfo["rational"] = True
-	print "{} info is {}".format(shape, curveInfo)
+	#print "{} info is {}".format(shape, curveInfo)
 	return curveInfo
 
 def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
@@ -60,19 +60,26 @@ def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
 	fn = om.MFnNurbsCurve()
 	target = AbsoluteNode(target)
 	targetName = target.name
-	#target.delete()
 
-	print "info to set is {}".format(info)
+	parentTf = cmds.createNode("transform", n="tempCurveRecall_tf")
+
+	#print "info to set is {}".format(info)
 
 	cvs = [om.MPoint(i) for i in info["cvs"]]
 	shapeObj = fn.create(
-		cvs, info["knots"], info["degree"], info["form"], False, True, parent=parent.MObject
+		cvs, info["knots"], info["degree"], info["form"], False, True,
+		parent=core.MObjectFrom(parentTf)
 	)
-
 	# connect attr to maintain references
 	dfn = om.MFnDependencyNode( shapeObj )
 	shape = AbsoluteNode(dfn.name())
 	cmds.connectAttr(shape + ".local", target + ".create", f=True)
+	try:
+		cmds.getAttr(target + ".local")
+	except:
+		pass
+
+	#raise RuntimeError
 
 	shape.transform.delete()
 

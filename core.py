@@ -460,6 +460,9 @@ def MObjectFrom(node):
 	# get the MObject from anything
 	sel = om.MSelectionList()
 	#sel.add(node)
+	if not cmds.ls(node):
+		print("node {} not found".format(node))
+		return None
 	sel.add( cmds.ls(node)[0] )
 	ref = sel.getDependNode(0)
 	return ref

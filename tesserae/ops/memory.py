@@ -67,7 +67,7 @@ class Memory2(AbstractTree):
 
 	def _initialiseCell(self, infoName, infoType, nodes=None):
 		if not infoName in self.infoNames():
-			#print "allocating blank space for {}".format(infoName)
+			print "allocating blank space for infoName {}".format(infoName)
 			self._allocateSpace(infoName, nodes=nodes)
 
 		if not infoType in self[infoName].keys():
@@ -100,14 +100,13 @@ class Memory2(AbstractTree):
 			gatheredGoss = [self._gatherInfo(infoType, target=i, **kwargs) for i in nodes]
 			self[infoName][infoType] = gatheredGoss
 
-		print("final nodes {}".format(nodes))
-
 		# only store NAMES of nodes
 		self[infoName]["nodes"] = [AbsoluteNode(i)() for i in nodes]
 
 
 	def recall(self, infoName, infoType="all", **kwargs):
 		"""retrieve saved info AND APPLY IT """
+		print("memory recall infoName {}, infoType {}".format(infoName, infoType))
 		if not infoType in self.infoKinds and infoType != "all":
 			raise RuntimeError("infoType {} is not recognised".format(infoType))
 		if infoType == "all":
@@ -128,8 +127,8 @@ class Memory2(AbstractTree):
 		gatheredGoss = [self._gatherInfo(infoType, target=i)
 		                for i in self.nodesFromInfoName(infoName)]
 		self[infoName][infoType] = gatheredGoss
-		print( "{}-{} is now {}".format(infoName, infoType,
-		                               self[infoName][infoType]) )
+		# print( "{}-{} is now {}".format(infoName, infoType,
+		#                                self[infoName][infoType]) )
 
 	def remove(self, infoName, infoType=None):
 		"""clears memory selectively without going into the datafile
@@ -142,20 +141,25 @@ class Memory2(AbstractTree):
 	def renewableMemory(self):
 		"""returns all memory slots that have a value - eg that
 		can be renewed from scene"""
+		print("renewable memory")
+		print(self.display())
 		returnDict = {}
-		#pprint.pprint("storage is {}".format(self))
-		for k, v in self.iteritems():
-			if k == "nodes" :
+		for i in self.branches:
+			print("i branch {} value {}".format(i.name, i.value))
+			if not isinstance(i.value, dict):
 				continue
-			#print "k is {}, v is {}".format(k, v)
-			if v.get("closed"):
+			if i.name == "nodes":
 				continue
-			returnDict[k] = []
-			for vk in v.keys():
-				#print "vk is {}".format(vk)
-				if vk == "nodes" or vk == "closed" :
+			if i.get("closed"):
+				continue
+			returnDict[i.name] = []
+			print("i branches {}".format(i.branches))
+			for n in i.value.keys():
+				print("n branch {}".format(n))
+				if n == "nodes" or n== "closed":
 					continue
-				returnDict[k].append(vk)
+				returnDict[i.name].append(n)
+
 		return returnDict
 
 	def _gatherInfo(self, infoType, target=None, **kwargs):
@@ -387,12 +391,7 @@ class Memory2(AbstractTree):
 	                  weights=None):
 		"""reapply weights on to target shape"""
 
-	def serialiseMemory(self):
-		"""is it this simple?"""
-		self["nodes"] = self.getFlattenedNodes()
-		#self.flattenNodes()
-		return self._storage
+	def serialise(self):
+		self.nodes = [ str(i) for i in self.nodes]
+		return super(Memory2, self).serialise()
 
-	def reconstructMemory(self, memoryDict):
-		self._storage = copy.deepcopy(memoryDict) or {}
-		return self
