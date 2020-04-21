@@ -571,7 +571,8 @@ def convertRootPath(path, toRelative=False, toAbsolute=False):
 		return path.replace(ROOT_PATH, "ROOT")
 
 
-def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True):
+def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True,
+					legacy=False):
 	""" saves a module and class reference for any object
 	if relative, will return path from root folder"""
 	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
@@ -579,24 +580,35 @@ def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True):
 		for i in range(len(keys)): keys[i] = "?" + keys[i]
 
 	path = convertRootPath(obj.__class__.__module__, toRelative=relative)
-	return {
-		keys[0]: obj.__name__,
-		keys[1]: obj.__class__.__name__,
-		keys[2]: path,
-		keys[3]: regenFunc
-	}
+	if legacy: # old inefficient dict method
+		return {
+			keys[0]: obj.__name__,
+			keys[1]: obj.__class__.__name__,
+			keys[2]: path,
+			keys[3]: regenFunc
+		}
+	data = (obj.__name__, obj.__class__.__name__, path, regenFunc)
+	return data
 
 def loadObjectClass(objData):
 	""" recreates a class object from any known module """
-	for i in ("?MODULE", "?CLASS"):
-		if not objData.get(i):
-			print("objectData {} has no key {}, cannot reload class".format(objData, i))
-			return None
+	if isinstance(objData, dict):
+		for i in ("?MODULE", "?CLASS"):
+			if not objData.get(i):
+				print("objectData {} has no key {}, cannot reload class".format(objData, i))
+				return None
+		path = objData["?MODULE"]
+		className = objData["?CLASS"]
 
-	module = convertRootPath( objData["?MODULE"], toAbsolute=True)
+	elif isinstance(objData, (tuple, list)):
+		# sequence [ name, class, modulepath, regenFn ]
+		path = objData[2]
+		className = objData[1]
+
+	module = convertRootPath( path, toAbsolute=True)
 	loadedModule = safeLoadModule(module)
 	try:
-		newClass = getattr(loadedModule, objData["?CLASS"])
+		newClass = getattr(loadedModule, className)
 		return newClass
 	except Exception as e:
 		print("ERROR in reloading class {} from module {}")
