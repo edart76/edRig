@@ -4,7 +4,7 @@ it's probably not ready for use outside of helping manage tesserae"""
 import os, sys, importlib, pprint, io, tempfile
 import re
 
-from edRig.lib.python import AbstractTree
+from edRig.lib.python import AbstractTree, saveObjectClass, loadObjectClass
 
 from edRig import ROOT_PATH, COMMON_PATH, cmds, mel, hou
 
@@ -571,50 +571,50 @@ def convertRootPath(path, toRelative=False, toAbsolute=False):
 		return path.replace(ROOT_PATH, "ROOT")
 
 
-def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True,
-					legacy=False):
-	""" saves a module and class reference for any object
-	if relative, will return path from root folder"""
-	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
-	if uniqueKey: # not always necessary
-		for i in range(len(keys)): keys[i] = "?" + keys[i]
-
-	path = convertRootPath(obj.__class__.__module__, toRelative=relative)
-	if legacy: # old inefficient dict method
-		return {
-			keys[0]: obj.__name__,
-			keys[1]: obj.__class__.__name__,
-			keys[2]: path,
-			keys[3]: regenFunc
-		}
-	data = (obj.__name__, obj.__class__.__name__, path, regenFunc)
-	return data
-
-def loadObjectClass(objData):
-	""" recreates a class object from any known module """
-	if isinstance(objData, dict):
-		for i in ("?MODULE", "?CLASS"):
-			if not objData.get(i):
-				print("objectData {} has no key {}, cannot reload class".format(objData, i))
-				return None
-		path = objData["?MODULE"]
-		className = objData["?CLASS"]
-
-	elif isinstance(objData, (tuple, list)):
-		# sequence [ name, class, modulepath, regenFn ]
-		path = objData[2]
-		className = objData[1]
-
-	module = convertRootPath( path, toAbsolute=True)
-	loadedModule = safeLoadModule(module)
-	try:
-		newClass = getattr(loadedModule, className)
-		return newClass
-	except Exception as e:
-		print("ERROR in reloading class {} from module {}")
-		print("has it moved, or module files been shifted?")
-		print( "error is {}".format(str(e)) )
-		return None
+# def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True,
+# 					legacy=False):
+# 	""" saves a module and class reference for any object
+# 	if relative, will return path from root folder"""
+# 	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
+# 	if uniqueKey: # not always necessary
+# 		for i in range(len(keys)): keys[i] = "?" + keys[i]
+#
+# 	path = convertRootPath(obj.__class__.__module__, toRelative=relative)
+# 	if legacy: # old inefficient dict method
+# 		return {
+# 			keys[0]: obj.__name__,
+# 			keys[1]: obj.__class__.__name__,
+# 			keys[2]: path,
+# 			keys[3]: regenFunc
+# 		}
+# 	data = (obj.__name__, obj.__class__.__name__, path, regenFunc)
+# 	return data
+#
+# def loadObjectClass(objData):
+# 	""" recreates a class object from any known module """
+# 	if isinstance(objData, dict):
+# 		for i in ("?MODULE", "?CLASS"):
+# 			if not objData.get(i):
+# 				print("objectData {} has no key {}, cannot reload class".format(objData, i))
+# 				return None
+# 		path = objData["?MODULE"]
+# 		className = objData["?CLASS"]
+#
+# 	elif isinstance(objData, (tuple, list)):
+# 		# sequence [ name, class, modulepath, regenFn ]
+# 		path = objData[2]
+# 		className = objData[1]
+#
+# 	module = convertRootPath( path, toAbsolute=True)
+# 	loadedModule = safeLoadModule(module)
+# 	try:
+# 		newClass = getattr(loadedModule, className)
+# 		return newClass
+# 	except Exception as e:
+# 		print("ERROR in reloading class {} from module {}")
+# 		print("has it moved, or module files been shifted?")
+# 		print( "error is {}".format(str(e)) )
+# 		return None
 
 def reloadAllReferences():
 	""" syncs a maya scene to update all references """

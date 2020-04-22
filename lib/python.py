@@ -488,7 +488,6 @@ class AbstractTree(object):
 
 	def __call__(self, address):
 		""" allows lookups of string form "root.branchA.leaf"
-
 		:returns AbstractTree"""
 		if isinstance(address, basestring): # if you look up [""] this will break
 			address = address.split(".") # effectively maya attribute syntax
@@ -508,9 +507,9 @@ class AbstractTree(object):
 				obj = self.__class__(first, None)
 			else:
 				obj = AbstractTree(first, None)
-			self.addChild(obj)
-		#else:
-		branch = self._map[first]
+			branch = self.addChild(obj)
+		else: # branch name might be altered
+			branch = self._map[first]
 		return branch(address)
 
 
@@ -548,11 +547,10 @@ class AbstractTree(object):
 
 		# support subclass serialisation and regen -
 		# check first for a saved class or module name
-		objDict = regenDict.get("objData") or {}
-		if "?CLASS" in objDict and "?MODULE" in objDict:
-			# cls = loadObjectClass({ "?CLASS" : objDict["?CLASS"],
-			#                   "?MODULE" : objDict["?MODULE"]})
-			cls = loadObjectClass( objDict )
+		objData = regenDict.get("objData") or {}
+		#print("objdict is {}".format(objData))
+		if objData:
+			cls = loadObjectClass( objData )
 
 		# if branch is same type as parent, no info needed
 		# a tree of one type will mark all branches as same type
@@ -560,10 +558,7 @@ class AbstractTree(object):
 		val = regenDict.get("?VALUE") or None
 		new = cls(name=regenDict["?NAME"], val=val)
 		new.extras = regenDict.get("?EXTRAS") or {}
-
 		children = regenDict.get("?CHILDREN") or []
-
-
 
 		# regnerate children with correct indices
 		length = len(children)
@@ -584,6 +579,7 @@ class AbstractTree(object):
 
 				branch = cls.fromDict(i)
 				#branch = childCls.fromDict(i)
+				# print("regen branch {}".format(branch))
 				new.addChild(branch)
 		return new
 
@@ -630,20 +626,6 @@ class AbstractTree(object):
 		seq = pprint.pformat( self.serialise() )
 		return seq
 
-if __name__ == '__main__':
-
-
-	# test for interfaces with the tree structure
-	testTree = AbstractTree("TestRoot")
-	testTree("asdf").value = "firstKey"
-	testTree("parent").value = "nonas"
-	testTree("parent.childA").value = 930
-	testTree("parent.childB").value = True
-
-	print(testTree["parent"])
-	print(testTree["parent.childA"])
-	print(testTree["parent.childB"])
-
 
 def movingMask(seq, maskWidth=1, nullVal=None):
 	""" generates a symmetrical moving frame over sequence
@@ -651,7 +633,6 @@ def movingMask(seq, maskWidth=1, nullVal=None):
 	mask = movingMask(seq, maskWidth=1)
 	mask = [ ( None, 1, 2 ), (1, 2, 3), (2, 3, 4)... ] etc
 	"""
-
 
 def flatten(in_list, ltypes=(list, tuple)):
 	"""better flattening courtesy of Mike C Fletcher (I think)
@@ -669,7 +650,6 @@ def flatten(in_list, ltypes=(list, tuple)):
 				in_list[ i : i+1 ] = in_list[i]
 		i += 1
 	return ltype( in_list )
-
 
 def itersubclasses(cls, _seen=None):
 	"""
@@ -735,35 +715,92 @@ def safeLoadModule(mod, logFunction=None):
 		logFunction("error is {}".format(str(e)))
 	return module
 
-def saveObjectClass(obj, regenFunc="fromDict", uniqueKey=True):
+uniqueSign = "|@|" # something that will never appear in file path
+def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True,
+					legacy=False):
 	""" saves a module and class reference for any object
 	if relative, will return path from root folder"""
-	keys = [ "?NAME", "?CLASS", "?MODULE", "regenFn" ]
-	# if uniqueKey: # not always necessary
-	# 	for i in range(len(keys)): keys[i] = "?" + keys[i]
+	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
+	if uniqueKey: # not always necessary
+		for i in range(len(keys)): keys[i] = "?" + keys[i]
 
 	#path = convertRootPath(obj.__class__.__module__, toRelative=relative)
 	path = obj.__class__.__module__
-	return {
-		#keys[0]: obj.__name__,
-		keys[1]: obj.__class__.__name__,
-		keys[2]: path,
-		keys[3]: regenFunc
-	}
+	if legacy: # old inefficient dict method
+		return {
+			keys[0]: obj.__name__,
+			keys[1]: obj.__class__.__name__,
+			keys[2]: path,
+			keys[3]: regenFunc
+		}
+	data = uniqueSign.join([obj.__class__.__name__, path])
+	return data
 
 def loadObjectClass(objData):
 	""" recreates a class object from any known module """
-	for i in ("?MODULE", "?CLASS"):
-		if not objData.get(i):
-			print("objectData {} has no key {}, cannot reload class".format(objData, i))
-			return None
-	module = objData["?MODULE"]
+	if isinstance(objData, dict):
+		for i in ("?MODULE", "?CLASS"):
+			if not objData.get(i):
+				print("objectData {} has no key {}, cannot reload class".format(objData, i))
+				return None
+		path = objData["?MODULE"]
+		className = objData["?CLASS"]
+
+	elif isinstance(objData, (tuple, list)):
+		# sequence [ class, modulepath, regenFn ]
+		path = objData[1]
+		className = objData[0]
+	elif isinstance(objData, basestring):
+		className, path = objData.split(uniqueSign)
+
+	#module = convertRootPath( path, toAbsolute=True)
+	module = path
 	loadedModule = safeLoadModule(module)
 	try:
-		newClass = getattr(loadedModule, objData["?CLASS"])
+		newClass = getattr(loadedModule, className)
 		return newClass
 	except Exception as e:
 		print("ERROR in reloading class {} from module {}")
 		print("has it moved, or module files been shifted?")
 		print( "error is {}".format(str(e)) )
 		return None
+
+
+if __name__ == '__main__':
+
+	class NewTree(AbstractTree):
+		branchesInherit = True
+	class BreakTree(AbstractTree):
+		branchesInherit = False
+
+	# test for interfaces with the tree structure
+	testTree = AbstractTree("TestRoot")
+	testTree("asdf").value = "firstKey"
+	testTree("parent").value = "nonas"
+	testTree("parent.childA").value = 930
+	testTree("parent.childB").value = True
+
+	testTree["parent.testObj"] = saveObjectClass(testTree)
+
+	newTree = NewTree("newTreeName", val=21)
+	newTree["newTreeBranch.end"] = "jljlkjl"
+	testTree.addChild(newTree)
+
+	breakTree = BreakTree("breakTreeName", val="nope")
+	breakTree["breakTreeBranch.end"] = "break this"
+	testTree.addChild(breakTree)
+
+	print(testTree.display())
+
+	loadedTree = AbstractTree.fromDict( testTree.serialise() )
+	for i in loadedTree.allBranches():
+		print(i)
+
+	print(loadedTree)
+	print(loadedTree("newTreeName.newTreeBranch").__class__)
+	print(loadedTree("newTreeBranch").__class__)
+	print(loadedTree("newTreeBranch.end"))
+	print(loadedTree("breakTreeBranch"))
+	print(loadedTree("breakTreeName"))
+
+#	print( loadedTree.display())
