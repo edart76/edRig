@@ -766,21 +766,22 @@ def loadObjectClass(objData):
 		return None
 
 
+
+# test for interfaces with the tree structure
+testTree = AbstractTree("TestRoot")
+testTree("asdf").value = "firstKey"
+testTree("parent").value = "nonas"
+testTree("parent.childA").value = 930
+testTree("parent.childB").value = True
+
+testTree["parent.testObj"] = saveObjectClass(testTree)
+
 if __name__ == '__main__':
 
 	class NewTree(AbstractTree):
 		branchesInherit = True
 	class BreakTree(AbstractTree):
 		branchesInherit = False
-
-	# test for interfaces with the tree structure
-	testTree = AbstractTree("TestRoot")
-	testTree("asdf").value = "firstKey"
-	testTree("parent").value = "nonas"
-	testTree("parent.childA").value = 930
-	testTree("parent.childB").value = True
-
-	testTree["parent.testObj"] = saveObjectClass(testTree)
 
 	newTree = NewTree("newTreeName", val=21)
 	newTree["newTreeBranch.end"] = "jljlkjl"

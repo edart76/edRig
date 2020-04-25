@@ -463,3 +463,16 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		return branchItem
 
 
+if __name__ == "__main__":
+	# test the tree widget
+
+	from edRig.lib.python import testTree
+
+	win = QtWidgets.QMainWindow()
+
+	widg = TileSettings(None, tree=testTree)
+
+	win.setCentralWidget( widg )
+
+	ref = win.show()
+
