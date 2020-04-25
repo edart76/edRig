@@ -3,11 +3,11 @@ from __future__ import print_function
 import sys, os
 
 # maya modules
-cmds = None
-om = None
+#cmds = None
+#om = None
 
 # houdini modules
-hou = None
+#hou = None
 
 # maya setup
 try:
@@ -19,7 +19,8 @@ try:
 	thisIsMaya = True
 	pass
 except :
-	print("this is not maya")
+	# this is not maya
+	# this system definitely works
 	pass
 
 # # houdini setup
@@ -31,7 +32,8 @@ except :
 # 	pass
 
 # import all the things
-from edRig.dcc import cmds, mel, om, oma, omui, hou
+from edRig.dcc import cmds, mel, om, oma, omui, \
+	hou, stateutils, objecttoolutils
 
 
 sys.dont_write_bytecode = True

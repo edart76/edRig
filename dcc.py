@@ -8,9 +8,10 @@ omui = None
 mel = None
 
 
-#### houdini module
+#### houdini modules
 hou = None
-
+stateutils = None
+objecttoolutils = None
 
 # host values
 thisIsMaya = False
@@ -39,7 +40,7 @@ except :
 
 # houdini setup
 try:
-	import hou
+	import hou, stateutils, objecttoolutils
 	#print("omg this is houdini")
 	thisIsHoudini = True
 except:
