@@ -31,6 +31,10 @@ def makeCtrl(kwargs):
 			ptg.hide( i, True)
 		ctrl.setParmTemplateGroup(ptg)
 
+		# set position
+		pos = pane.cursorPosition()
+		ctrl.setPosition(pos)
+
 	else:
 		# print("click and drag this tool to the network editor")
 		pass
