@@ -1,7 +1,7 @@
 // functions for multiplying, transposing and inverting matrices
 
-// #ifndef _matrix
-// #define _matrix
+#ifndef MATRIX_H
+#define MATRIX_H 1
 
 function float[] M_trans(float A[]; int m; int n)
 {
@@ -102,4 +102,4 @@ function float[] matrix_mult_square(float A[]; float B[]; int rank){
 
 //
 //
-// #endif
+#endif

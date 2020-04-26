@@ -1,6 +1,6 @@
 // functions for working with arrays
 
-#ifndef "ARRAY_H"
+#ifndef ARRAY_H
 
 function int index(int input[]; int item){
     // returns first index of item or -1 if not in array
@@ -13,6 +13,20 @@ function int index(int input[]; int item){
     }
     return output;
 }
+
+function int floatIndex(float input[]; float item){
+    // same for float array
+    int output = -1;
+    for( int i=0; i < len(input); i++){
+        if( input[i] == item ){
+            output = i;
+            break;
+        }
+    }
+    return output;
+}
+
+
 
 function int last(int input[]){
     // convenience to return last value
@@ -76,8 +90,31 @@ function int[] subtract( int whole[]; int toremove[]){
         removevalue(out, x);
     }
     return out;
-
 }
 
-#define "ARRAY_H"
+
+// --- random functions
+function int randomentry( int a[]; float seed){
+    seed = seed * len(a);
+    float val = rand(seed); // random between 0 1
+    int index = int( val * float(len(a) - 1) ); // scale to array size
+    return a[index];
+}
+
+
+// --- point functions
+function int[] pointsmatching( int geo; string ex){
+    // can't find a better way to evaluate arbitrary expressions
+    int out[];
+    for( int i = 0; i < npoints(geo); i++){
+        if( inpointgroup(geo, ex, i)){
+            append(out, i);
+        }
+    }
+    return out;
+}
+
+
+
+#define ARRAY_H 1
 #endif
