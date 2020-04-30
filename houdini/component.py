@@ -41,8 +41,10 @@ def objectMergesForComponents( componentNodes, parent, targetMerge,
 		                     "xformtype" : 1} )
 
 		merge.setNextInput( objMerge )
+		merge.layoutChildren()
 		box.addItem( objMerge )
 		merges.append( objMerge )
+
 
 	# set positions
 	for i, val in enumerate(merges):

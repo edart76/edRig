@@ -8,6 +8,11 @@ import maya.OpenMaya as omOld # the things we do for rigging
 from maya import cmds
 import os
 
+
+
+userSetupPath = "" # can be annoying to know
+
+
 """the objective: remove the student warning every time you breathe on maya
     i'm already poor, i don't need reminding every second of the day
 
@@ -224,3 +229,16 @@ def mainStartup():
 
 	setupViewport()
 	pass
+
+def onMayaOpen(userSetupFile=None):
+	""" runs when software is opened, not when new scene opened """
+	userSetupPath = userSetupFile
+
+	# banish pymel for ever and ever
+	import sys
+	import types
+	core = types.ModuleType("core")
+	sys.modules["pymel.core"] = core
+	# thank you mottosso you sexual tyrannosaurus
+
+

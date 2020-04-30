@@ -1,3 +1,6 @@
+
+#ifndef CONVERT_H
+
 // functions for converting between data structures in vex
 
 // convert vector3 array to sequence of floats
@@ -23,3 +26,13 @@ function vector[] farray_to_varray(float input[]){
         }
     return output;
     }
+
+function string ftoa(float in){
+        return sprintf("%g", in);
+    }
+
+
+
+
+#define CONVERT_H 1
+#endif
