@@ -1,16 +1,22 @@
 """holds callback functions for when maya is opened or closed"""
 
 from edRig.node import AbsoluteNode, ECA
-from edRig import pipeline, attr, callback
+from edRig import pipeline, attr, callback, COMMON_PATH
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
 import maya.OpenMaya as omOld # the things we do for rigging
 from maya import cmds
 import os
 
-
-
 userSetupPath = "" # can be annoying to know
+userSetupPath = "C:/Users/Ed/Documents/maya/2018/scripts\userSetup.py"
+
+# set environment paths
+oldPath = os.environ["MAYA_PLUG_IN_PATH"]
+os.environ["MAYA_PLUG_IN_PATH"] = COMMON_PATH + "/edCode/edPlugin/build/Debug;" + oldPath
+
+# ref from Maya.env
+# MAYA_PLUG_IN_PATH = F:\all_projects_desktop\common\edCode\edPlugin;F:\all_projects_desktop\common\edCode\edPlugin\build\Release;
 
 
 """the objective: remove the student warning every time you breathe on maya

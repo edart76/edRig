@@ -73,6 +73,21 @@ vec3 cartesianToSpherical( vec3 p ){
 
 }
 
+mat3 aimMatrix(vec3 aim, vec3 up, bool yIsUp){
+    // creates matrix to align X to aim, and Y or Z to up
+    vec3 normal = cross(aim, up);
+    vec3 binormal = cross(aim, normal);
+    return transpose( mat3(
+        aim, normal, binormal));
+}
+
+// basic shapes
+int rectangle( vec2 p, vec2 origin, vec2 size){
+    return int(( origin.x < p.x && p.x < size.x) && ( origin.y < p.y && p.y < size.y));
+}
+
+
+
 
 // printing text courtesy of P_Malin
 // actually courtesy of Fabrice Neyret
@@ -84,7 +99,7 @@ int printDigit(vec2 p, float n) {
     int i=int(p.y), b=int(exp2(floor(30.-p.x-n*3.)));
     i = ( p.x<0.||p.x>3.? 0:
     i==5? 972980223: i==4? 690407533: i==3? 704642687: i==2? 696556137:i==1? 972881535: 0 )/b;
- 	return i-i/2*2;
+ 	return i-i/2*2; // what absolute lunatic finds this stuff
     // if you pass this things bigger than 1 digit, cool but useless things happen
 }
 // print a decimal point
@@ -186,8 +201,6 @@ vec2 uvFromFragCoord( vec2 fragCoord, vec2 iResolution){
     // uvs from 0 to 1, (0,0) being in top left
     return fragCoord.xy / iResolution.xy;
 }
-
-
 
 // wholesale raid of inigo quilez' resources
 // praise be to gpu jesus

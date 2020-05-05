@@ -81,7 +81,7 @@ if __name__ == "__main__":
 	""" run test backup """
 
 	rootPath = "F:/all_projects_desktop"
-	outputPath = r"F:\autoBackup\v001"
+	outputPath = r"F:\autoBackup\v003"
 
 	# rootPath = r"F:\all_projects_desktop\testRoot"
 	# outputPath = r"F:\all_projects_desktop\testBackup"

@@ -26,10 +26,14 @@ def makeCtrl(kwargs):
 		ctrl.setColor(yellowCol)
 
 		# hide default parametres
-		ptg = ctrl.parmTemplateGroup()
-		for i in ("copyinput", "cacheinput"):
-			ptg.hide( i, True)
-		ctrl.setParmTemplateGroup(ptg)
+		# only valid in sops
+		try:
+			ptg = ctrl.parmTemplateGroup()
+			for i in ("copyinput", "cacheinput"):
+				ptg.hide( i, True)
+			ctrl.setParmTemplateGroup(ptg)
+		except:
+			pass
 
 		# set position
 		pos = pane.cursorPosition()

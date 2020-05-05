@@ -1,0 +1,80 @@
+// maya-facing front end to shader for pixellated screens
+
+
+
+#define OGSFX 1
+
+#define HIDE_OGSFX_UNIFORMS 0
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 1
+
+#include "templateShaderVertex.glsl"
+#include "screenShaderFragment.glsl"
+
+uniform float focalLength;
+uniform float pixelSize;
+uniform float darkSpace;
+uniform float fadeDistance;
+uniform float fadeEnd;
+
+// test defining colour maps outside glsl files
+uniform texture2D ScreenImage;
+uniform sampler2D ScreenImageSampler <string UIGroup="Textures";>= sampler_state
+{
+	Texture = <ScreenImage>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+
+uniform bool debugColours <string UIGroup="Main";> = False;
+
+
+// code definition
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 0
+#define HIDE_OGSFX_CODE 1
+
+#include "templateShaderVertex.glsl"
+#include "screenShaderFragment.glsl"
+
+
+//**********
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 0
+
+
+
+// link main files
+GLSLShader VS {
+#include "templateShaderVertex.glsl"
+}
+
+GLSLShader FS {
+  #include "screenShaderFragment.glsl"
+}
+
+
+// define technique
+technique Main
+<
+//tell Maya to support transparency for this technique
+//string Transparency = "Transparent";
+
+// Disable consolidation -- the displacement uses the World matrix which is modified when the consolidation is active
+string handlesConsolidatedGeometry = "false";
+>
+{
+
+
+  // eye passes
+  pass p0 { VertexShader (in appdata, out vertexOutput) = VS;
+    PixelShader (in vertexOutput, out fragmentOutput) = FS;
+  }
+}
