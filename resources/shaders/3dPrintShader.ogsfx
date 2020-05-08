@@ -11,7 +11,6 @@
 
 #include "3dPrintShaderVertex.glsl"
 #include "3dPrintShaderFragment.glsl"
-#include "screenCoordShader.glsl"
 
 // test defining colour maps outside glsl files
 uniform texture2D PrintDiffuseMap;
@@ -52,9 +51,15 @@ uniform float layerEdgeRoundness <string UIGroup="Main";>= 0.1;
 uniform float focalLength <string UIGroup="Main";>= 5.0;
 uniform float testRayStep <string UIGroup="Main";> = 0.05;
 
-
 uniform vec3 layerDir <
     string UIGroup = "Main"; > ;
+
+
+uniform int nSlices <string UIGroup="Main";> = 64;
+uniform int nRaySteps <string UIGroup="Main";> = 64;
+uniform float isovalue <string UIGroup="Main";> = 0.5;
+
+
 
 uniform bool debugColours <string UIGroup="Main";> = False;
 

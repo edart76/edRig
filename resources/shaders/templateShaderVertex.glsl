@@ -11,7 +11,17 @@ basic vertex template
 
 // look upon the menagerie of parametres we can have
 // transform object vertices to world-space:
+uniform mat4 gWorld : World < string UIWidget="None"; >;
 uniform mat4 gObjToWorld : World < string UIWidget="None"; >;
+
+// view matrix:
+uniform mat4 gView : View < string UIWidget="None"; >;
+/* evidently rotation is applied before translation -
+gView gives translate values in the frame of the camera's orientation
+*/
+
+uniform mat4 gWorldView : WorldView < string UIWidget="None"; >;
+
 
 // transform object normals, tangents, & binormals to world-space:
 uniform mat4 gWorldITXf : WorldInverseTranspose < string UIWidget="None"; >;
@@ -22,8 +32,6 @@ uniform mat4 gWorldViewProjection : WorldViewProjection < string UIWidget="None"
 // provide tranform from "view" or "eye" coords back to world-space:
 uniform mat4 gViewToWorld : ViewInverse < string UIWidget="None"; >;
 
-// view matrix:
-uniform mat4 gView : View < string UIWidget="None"; >;
 
 // projection matrix:
 uniform mat4 gProjection : Projection < string UIWidget="None"; >;
@@ -41,7 +49,7 @@ uniform int currentFrame : Frame < string UIWidget="None"; >;
 
 #version 440
 // transform object vertices to world-space:
-uniform mat4 gObjToWorld;
+uniform mat4 gWorld;
 
 // transform object normals, tangents, & binormals to world-space:
 uniform mat4 gWorldITXf;
@@ -161,7 +169,7 @@ void main()
     mat3 objectToTangentMat = transpose( tangentToObjectMat );
 
 //    // outputs
-    vec3 Pw = (gObjToWorld * hpos).xyz; // world space position
+    vec3 Pw = (gWorld * hpos).xyz; // world space position
     WorldEyeVec = normalize(gViewToWorld[3].xyz - Pw);
 
 

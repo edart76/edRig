@@ -27,6 +27,10 @@ vec4 fit( vec4 v, float min1, float max1, float min2, float max2){
     return result;
 }
 
+bool inRange(float x, float low, float high){
+    return ( (low < x) && (x < high));
+}
+
 // thank you mr jaybird
 float smoothClamp(float x, float low, float b)
 {
@@ -202,6 +206,8 @@ vec2 uvFromFragCoord( vec2 fragCoord, vec2 iResolution){
     return fragCoord.xy / iResolution.xy;
 }
 
+
+
 // wholesale raid of inigo quilez' resources
 // praise be to gpu jesus
 
@@ -298,4 +304,23 @@ vec3 calcNormal( in vec3 pos )
                       k.xxx * map( pos + k.xxx*h ) );
     // evaluate field at vertices of tetrahedron
 }
+
+// tiled texture utils
+vec2 localTileCoordsToGlobal( vec2 p, int tileIndex, int nRowLength ){
+    /* transform local tile position to global image position
+    expects squarely tiled images */
+    vec2 output;
+    vec2 tileSize = vec2( 1.0 / (nRowLength));
+
+    // multiply out to global image pos
+    vec2 sampleOrigin;
+    sampleOrigin.y = (tileIndex / nRowLength);
+    sampleOrigin.x = mod(tileIndex, nRowLength);
+
+    output = (sampleOrigin + p) * tileSize;
+    return output;
+}
+
+
+
 //#endif
