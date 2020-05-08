@@ -11,11 +11,11 @@
 #define TAU 6.2831853
 
 // pure maths functions
-float fit( float value, float min1, float max1, float min2, float max2){
+float fit( float value, float oldMin, float oldMax, float newMin, float max2){
     // input as percentage of range1
-    float perc = (value - min1) / (max1 - min1);
+    float perc = (value - oldMin) / (oldMax - oldMin);
     // Do the same operation backwards with min2 and max2
-    float result = perc * (max2 - min2) + min2;
+    float result = perc * (max2 - newMin) + newMin;
     return result;
 }
 
@@ -314,8 +314,8 @@ vec2 localTileCoordsToGlobal( vec2 p, int tileIndex, int nRowLength ){
 
     // multiply out to global image pos
     vec2 sampleOrigin;
-    sampleOrigin.y = (tileIndex / nRowLength);
-    sampleOrigin.x = mod(tileIndex, nRowLength);
+    sampleOrigin.y = (tileIndex  / nRowLength) -1;
+    sampleOrigin.x = mod(tileIndex, nRowLength) ;
 
     output = (sampleOrigin + p) * tileSize;
     return output;

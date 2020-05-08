@@ -24,17 +24,6 @@ uniform sampler2D PrintDiffuseSampler <string UIGroup="Textures";>= sampler_stat
 	TEXTURE_WRAP_R = REPEAT;
 };
 
-// sampler for flipbook texture of slices
-uniform texture2D PrintVolumeMap;
-uniform sampler2D PrintVolumeSampler <string UIGroup="Textures";>= sampler_state
-{
-	Texture = <PrintVolumeMap>;
-	TEXTURE_MIN_FILTER = NEAREST;
-	TEXTURE_MAG_FILTER = NEAREST;
-	TEXTURE_WRAP_S = REPEAT;
-	TEXTURE_WRAP_T = REPEAT;
-	TEXTURE_WRAP_R = REPEAT;
-};
 
 
 uniform vec3 baseDiffuse <
@@ -43,21 +32,38 @@ uniform vec3 baseDiffuse <
 >;
 
 // float defining general scale of model, bounding box is fine
-uniform float globalScale <string UIGroup="Main";>= 1.0;
+
 
 uniform float layerHeight <string UIGroup="Main";>= 0.2;
 uniform float layerEdgeRoundness <string UIGroup="Main";>= 0.1;
 
-uniform float focalLength <string UIGroup="Main";>= 5.0;
-uniform float testRayStep <string UIGroup="Main";> = 0.05;
 
 uniform vec3 layerDir <
     string UIGroup = "Main"; > ;
 
 
-uniform int nSlices <string UIGroup="Main";> = 64;
-uniform int nRaySteps <string UIGroup="Main";> = 64;
-uniform float isovalue <string UIGroup="Main";> = 0.5;
+// ---- volume raytracing settings
+
+uniform float globalScale <string UIGroup="volumeSettings";>= 1.0;
+uniform int nSlices <string UIGroup="volumeSettings";> = 64;
+uniform int nRaySteps <string UIGroup="volumeSettings";> = 64;
+uniform float isovalue <string UIGroup="volumeSettings";> = 0.5;
+uniform vec3 volumeOffset <string UIGroup="volumeSettings";>;
+
+uniform float focalLength <string UIGroup="volumeSettings";>= 5.0;
+uniform float testRayStep <string UIGroup="volumeSettings";> = 0.05;
+
+// sampler for flipbook texture of slices
+uniform texture2D PrintVolumeMap;
+uniform sampler2D PrintVolumeSampler <string UIGroup="volumeSettings";>= sampler_state
+{
+	Texture = <PrintVolumeMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = CLAMP_TO_EDGE;
+	TEXTURE_WRAP_T = CLAMP_TO_EDGE;
+	TEXTURE_WRAP_R = CLAMP_TO_EDGE;
+};
 
 
 

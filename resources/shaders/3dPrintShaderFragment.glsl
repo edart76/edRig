@@ -54,6 +54,7 @@ uniform float layerHeight;
 uniform float focalLength;
 uniform float testRayStep;
 uniform float isovalue;
+uniform vec3 volumeOffset;
 
 // volume slice texture variables
 uniform int nSlices;
@@ -74,6 +75,16 @@ out vec4 colourOut;
 #define MAX_RAY_STEPS 16
 
 
+float mapIsovalue(float sampledValue){
+    // maps a sampled value in 0, 1 to -1, 1
+    // with specified isovalue as midpoint
+    if( sampledValue < isovalue ){
+        return fit(sampledValue, 0.0, isovalue, -1.0, 0.0);
+    }
+    else{
+        return fit(sampledValue, isovalue, 1.0, 0.0, 1.0);
+    }
+}
 
 // main shader function
 void main()
@@ -89,40 +100,26 @@ void main()
     and cannot rely on screenspace coordinates for it
     */
 
-    float rayStep = testRayStep;
+    float rayStep = testRayStep * globalScale;
     vec3 ro, rayDir; // rayOrigin, rayDirection
+    vec4 focalView = vec4(0.0, 0.0, 0.0, focalLength);
+
+    // object orient matrix
+    mat3 objOrient = mat3(gObjToWorld); // extract upper 3x3 matrix
 
     // worldspace position of original hit
     vec4 worldOrigin = ( (gObjToWorld) * vec4(posOut, 1.0) );
 
-    //worldOrigin = inverse(gObjToWorld) * ( (gObjToWorld) * vec4(posOut, 1.0) );
-    //worldOrigin = vec4(posOut, 1.0);
-
-    mat3 objOrient = mat3(gObjToWorld); // extract upper 3x3 matrix
-    mat3 viewWorldOrient = mat3(gViewToWorld);
-    mat3 viewOrient = mat3(gView);
-
     // worldspace direction of ray, from camera to worldOrigin
-    vec4 focalView = vec4(0.0, 0.0, 0.0, focalLength);
     vec3 worldRayDir = normalize( worldOrigin.xyz - ( (gViewToWorld) * focalView ).xyz );
 
-    //worldRayDir = normalize( worldOrigin.xyz - ( nverse(transpose(gObjToWorld)) * (gViewToWorld) * focalView).xyz );
-
-    // focalLengths other than 1 give strange results at close range
-    // I'm sorry that I don't understand the reason
+    // worldspace object centre
+    vec3 worldObjOrigin = (((gObjToWorld)) * vec4(0, 0, 0, 1)).xyz;
 
     // usually we want
-    //rayDir = normalize( (inverse((gObjToWorld)) * vec4(worldRayDir, 0.0)));
-    rayDir = normalize(worldRayDir);
-    //rayDir = normalize( transpose(objOrient) * worldRayDir);
+    rayDir = inverse(objOrient) * worldRayDir;
+    ro = inverse(objOrient) * (worldOrigin.xyz - worldObjOrigin) - volumeOffset;
 
-    //worldOrigin = (transpose(gObjToWorld) * worldOrigin);
-
-
-    ro = worldOrigin.xyz;
-
-    //ro = (gProjection * worldOrigin).xyz;
-    //ro = posOut;
 
     /* the above system limits content to within the 3d confines of the volume proxy
     could be very entertaining to reconstruct a screenspace approach, to display content
@@ -145,31 +142,34 @@ void main()
 
     alpha = 0.0;
 
-    vec3 worldObjOrigin = (((gObjToWorld)) * vec4(0, 0, 0, 1)).xyz;
 
+    colour = vec3(0.01);
 
     // raytracing loop
     // starting position
-    colour = vec3(0.01);
-    vec3 t = worldOrigin.xyz - worldObjOrigin;
-    t = inverse(objOrient) * t;
-    rayDir = inverse(objOrient) * rayDir;
+    vec3 t = ro;
+
     for( i; i < nRaySteps; i++){
 
         if(alpha > 1.0){
             break;
         }
 
-        t = t + normalize(rayDir) * rayStep;
 
         // get local ray position
         //vec3 rayLocalPos = t - worldObjOrigin;
 
         vec3 rayPos = t / globalScale;
 
-        if(length(rayPos) > 1.0){
-            continue;
-        }
+        // if( length(rayPos) > 2){
+        //     // allow rays outside volume only on hemisphere facing camera
+        //     if( dot(rayPos, rayDir) > 0.0){
+        //         continue;
+        //     }
+        //
+        // }
+
+
 
         // get ray position in relation to slice textures
         // find nearest slice
@@ -178,41 +178,50 @@ void main()
         rayPos = (rayPos + vec3(1.0)) / 2.0;
 
 
-        int sliceIndex = int( rayPos.y * nSlices );
+        int sliceIndex = int( (rayPos.z) * nSlices );
+
 
         // local position in slice
-        vec2 localPos = (rayPos.xz - vec2(1));
-        localPos = rayPos.xz;
+        vec2 localPos = vec2(1.0) - rayPos.xy;
+        localPos.x = 1.0 - localPos.x;
+        //localPos = rayPos.xy;
 
-
-
-        vec2 samplePos = localTileCoordsToGlobal( localPos, sliceIndex, nSlicesRow);
-
-        // check if ray is beyond cage
-        if( !inRange(samplePos.x, 0.0, 1.0) || !inRange(samplePos.y, 0.0, 1.0)){
+        if( !inRange(localPos.x, 0.0, 1.0) || !inRange(localPos.y, 0.0, 1.0)){
             continue;
         }
 
+        vec2 samplePos = localTileCoordsToGlobal( localPos, sliceIndex, nSlicesRow);
+
         // sample next tile to interpolate
-        vec2 nextSamplePos = localTileCoordsToGlobal( localPos, sliceIndex + 1, nSlicesRow);
+        vec2 posZSamplePos = localTileCoordsToGlobal( localPos, sliceIndex + 1, nSlicesRow);
 
+        // first determine intersection
         vec4 sampleResult = texture2D(PrintVolumeSampler, samplePos);
-        vec4 nextSampleResult = texture2D(PrintVolumeSampler, nextSamplePos);
+        vec4 posZSampleResult = texture2D(PrintVolumeSampler, posZSamplePos);
 
-        float sampleValue = mix(sampleResult.x, nextSampleResult.x, fract(rayPos.y * nSlices) );
-        sampleValue = sampleResult.x;
+        float sampleMix = fract(rayPos.y / float(nSlices));
+        float sampleValue = mix(sampleResult.x, posZSampleResult.x, 0.5 );
 
-        //colour.x += sampleResult.x * 0.01;
+        sampleValue = smoothMinCubic(sampleResult.x, posZSampleResult.x, 0.2);
+        sampleValue = smoothMin(sampleResult.x, posZSampleResult.x, 0.2);
+
 
         if(sampleValue < isovalue)
-        //if( length(t) < 0.5)
         {
-            //alpha = 1.0;
+            //alpha += 0.5;
             //alpha += 0.5 - abs(sampleResult.x);
-            colour *= 1.1;
+            //colour +=0.1;
             alpha += 0.1;
+            //alpha = 1.01;
             //break;
         }
+
+        float stepLength = rayStep * abs(sampleValue);
+
+
+
+        t = t + normalize(rayDir) * stepLength;
+
 
         //alpha += sampleResult.x;
 
