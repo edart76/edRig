@@ -85,6 +85,13 @@ mat3 aimMatrix(vec3 aim, vec3 up, bool yIsUp){
         aim, normal, binormal));
 }
 
+mat3 aimZMatrix( vec3 aim, vec3 up, bool yIsUp){
+    // same as above, but z is aim
+    vec3 normal = cross(aim, up);
+    vec3 binormal = cross(aim, normal);
+    return transpose( mat3( binormal, normal, aim ));
+}
+
 // basic shapes
 int rectangle( vec2 p, vec2 origin, vec2 size){
     return int(( origin.x < p.x && p.x < size.x) && ( origin.y < p.y && p.y < size.y));
@@ -293,11 +300,23 @@ float f( in vec3 pos);
 
 float map( in vec3 pos);
 
+
+mat4 tetrahedronVertices(){
+    // return 4 vertices of tetrahedron relative to centre
+    // summit aligned to +y, main edge in yz plane
+    vec4 v1 = vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 v2 = vec4(0.0, -1.0/3, sqrt(8.0/9), 1.0);
+    vec4 v3 = vec4(sqrt(2.0/3), -1.0/3, -sqrt(2.0/9), 1.0);
+    vec4 v4 = vec4(-sqrt(2.0/3), -1.0/3, -sqrt(2.0/9), 1.0);
+    return mat4(v1, v2, v3, v4);
+}
+
 vec3 calcNormal( in vec3 pos )
 // central "tetrahedral" differences
 {
     const float h = 0.0001; // tiny dPos
     const vec2 k = vec2(1,-1);
+
     return normalize( k.xyy * map( pos + k.xyy*h ) +
                       k.yyx * map( pos + k.yyx*h ) +
                       k.yxy * map( pos + k.yxy*h ) +

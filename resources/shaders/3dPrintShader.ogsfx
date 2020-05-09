@@ -52,6 +52,7 @@ uniform vec3 volumeOffset <string UIGroup="volumeSettings";>;
 
 uniform float focalLength <string UIGroup="volumeSettings";>= 5.0;
 uniform float testRayStep <string UIGroup="volumeSettings";> = 0.05;
+uniform float tetDifferencesRange <string UIGroup="volumeSettings";> = 0.05;
 
 // sampler for flipbook texture of slices
 uniform texture2D PrintVolumeMap;

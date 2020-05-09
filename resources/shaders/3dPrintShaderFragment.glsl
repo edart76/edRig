@@ -55,11 +55,11 @@ uniform float focalLength;
 uniform float testRayStep;
 uniform float isovalue;
 uniform vec3 volumeOffset;
+uniform float tetDifferencesRange;
 
 // volume slice texture variables
 uniform int nSlices;
 uniform int nRaySteps;
-
 
 //outputs
 out vec4 colourOut;
@@ -74,6 +74,87 @@ out vec4 colourOut;
 // ray settings
 #define MAX_RAY_STEPS 16
 
+// image data
+ivec2 sliceRes = textureSize(PrintVolumeSampler, 0);
+// lod0 gives base resolution
+int nSlicesRow = int(sqrt(nSlices));
+
+struct VolumeSample
+{
+    /* data describing the sdf at a certain point */
+    //vec3 pos;
+    float value;
+    vec3 normal;
+};
+
+vec2 samplePointFromPosition( vec3 rayPos){
+    // convert 3d ray position to image coords
+    int sliceIndex = int( (rayPos.z) * nSlices );
+    // local position in slice
+    vec2 localPos = vec2(1.0) - rayPos.xy;
+    localPos.x = 1.0 - localPos.x;
+    if( !inRange(localPos.x, 0.0, 1.0) || !inRange(localPos.y, 0.0, 1.0)){
+        return vec2(-1.0); // outside of image
+    }
+    vec2 samplePos = localTileCoordsToGlobal( localPos, sliceIndex, nSlicesRow);
+    return samplePos;
+}
+
+vec4 sampleVolumeSimple(vec3 rayPos){
+    // less expensive way to sample scalar field value
+    // no smoothing
+    // use for secondary effects like depth
+    vec2 samplePos = samplePointFromPosition(rayPos);
+    return texture2D(PrintVolumeSampler, samplePos );
+}
+
+
+mat4 tet = tetrahedronVertices();
+
+
+// ignore optimisation for now
+VolumeSample sampleVolumeAtPosition(vec3 rayPos, vec3 rayDir){
+    // sample volume at and around ray position, return VolumeSample struct
+    VolumeSample output;
+
+    // scale and orient tetrahedron vertices
+    mat4 sampleTet = tet * tetDifferencesRange * 0.01;
+    vec3 up = normalize(cross(rayDir, cross(rayPos, rayDir)));
+    up = vec3(1.0, 0.0, 0.0);
+    mat3 tetAim = aimZMatrix(rayDir, up, true);
+    tetAim = aimMatrix(rayDir, up, true);
+    mat4 tetTransform = mat4(tetAim );
+    //tetTransform[3] = vec4(rayPos, 1.0);
+
+    //sampleTet = sampleTet * tetTransform ;
+
+    mat4 sampleResults;
+    // load sampled values into matrix
+    for( int i = 0; i < 4; i++){
+        vec3 tetPoint = tetAim * sampleTet[i].xyz;
+        //tetPoint = (tetAim) * sampleTet[i].xyz;
+        tetPoint = sampleTet[i].xyz;
+        sampleResults[i] = sampleVolumeSimple( tetPoint + rayPos);
+    }
+
+    // interpolate
+    // linear for now, maybe try 3/3/1 subdivision later on
+    vec4 interpolated = (sampleResults[0] + sampleResults[1] + sampleResults[2] + sampleResults[3]) / 4;
+
+    // calculate normal
+    const vec2 k = vec2(1,-1);
+    vec3 normal = normalize(
+        k.xyy * sampleResults[0].xyz +
+        k.yyx * sampleResults[1].xyz +
+        k.yxy * sampleResults[2].xyz +
+        k.xxx * sampleResults[3].xyz ).zxy;
+
+    // set results
+    output.value = interpolated.x;
+    output.normal = normal;
+
+    return output;
+}
 
 float mapIsovalue(float sampledValue){
     // maps a sampled value in 0, 1 to -1, 1
@@ -134,20 +215,19 @@ void main()
     // transform positions - X axis is direction of layers
     vec3 layerPos = layerAim * posOut;
 
-
     int i = 0;
-    ivec2 sliceRes = textureSize(PrintVolumeSampler, 0);
-    // lod0 gives base resolution
-    int nSlicesRow = int(sqrt(nSlices));
 
     alpha = 0.0;
 
 
-    colour = vec3(0.01);
+    colour = vec3(0.0);
 
     // raytracing loop
     // starting position
     vec3 t = ro;
+
+    float depth = 0.0;
+    float rayWeight = 0.0; // tracks total depth of ray
 
     for( i; i < nRaySteps; i++){
 
@@ -155,55 +235,21 @@ void main()
             break;
         }
 
-
-        // get local ray position
-        //vec3 rayLocalPos = t - worldObjOrigin;
-
         vec3 rayPos = t / globalScale;
 
-        // if( length(rayPos) > 2){
-        //     // allow rays outside volume only on hemisphere facing camera
-        //     if( dot(rayPos, rayDir) > 0.0){
-        //         continue;
-        //     }
-        //
-        // }
-
-
-
-        // get ray position in relation to slice textures
-        // find nearest slice
-
-        // remap local pos from -1 1 to 1 0
+        // // remap local pos from -1 1 to 1 0
         rayPos = (rayPos + vec3(1.0)) / 2.0;
 
+        vec2 localPos = samplePointFromPosition(rayPos);
 
-        int sliceIndex = int( (rayPos.z) * nSlices );
-
-
-        // local position in slice
-        vec2 localPos = vec2(1.0) - rayPos.xy;
-        localPos.x = 1.0 - localPos.x;
-        //localPos = rayPos.xy;
-
-        if( !inRange(localPos.x, 0.0, 1.0) || !inRange(localPos.y, 0.0, 1.0)){
+        if( localPos.x == -1.0){ // position not valid
             continue;
         }
 
-        vec2 samplePos = localTileCoordsToGlobal( localPos, sliceIndex, nSlicesRow);
+        // ignore optimisation for now
+        VolumeSample raySample = sampleVolumeAtPosition(rayPos, rayDir);
 
-        // sample next tile to interpolate
-        vec2 posZSamplePos = localTileCoordsToGlobal( localPos, sliceIndex + 1, nSlicesRow);
-
-        // first determine intersection
-        vec4 sampleResult = texture2D(PrintVolumeSampler, samplePos);
-        vec4 posZSampleResult = texture2D(PrintVolumeSampler, posZSamplePos);
-
-        float sampleMix = fract(rayPos.y / float(nSlices));
-        float sampleValue = mix(sampleResult.x, posZSampleResult.x, 0.5 );
-
-        sampleValue = smoothMinCubic(sampleResult.x, posZSampleResult.x, 0.2);
-        sampleValue = smoothMin(sampleResult.x, posZSampleResult.x, 0.2);
+        float sampleValue = raySample.value;
 
 
         if(sampleValue < isovalue)
@@ -211,16 +257,31 @@ void main()
             //alpha += 0.5;
             //alpha += 0.5 - abs(sampleResult.x);
             //colour +=0.1;
-            alpha += 0.1;
-            //alpha = 1.01;
-            //break;
+            //alpha += 0.1;
+
+            //colour.x = (dot(raySample.normal, rayDir));
+            //colour.x = abs(dot(raySample.normal, vec3(0.0, 1.0, 0.0)));
+            // break;
+
+            rayWeight += abs(sampleValue - isovalue) * 3;
+            //rayWeight += 0.21;
+
         }
 
-        float stepLength = rayStep * abs(sampleValue);
+        if(rayWeight > 1.0){
+            alpha = 1.01;
+            colour.x = depth * (( 1 + dot( raySample.normal, rayDir))/2);
+            colour.x = (( 1 + dot( raySample.normal, rayDir))/2);
+            break;
+        }
+
+        float stepLength = rayStep * (abs(sampleValue - isovalue) + 0.01);
+
 
 
 
         t = t + normalize(rayDir) * stepLength;
+        depth += stepLength;
 
 
         //alpha += sampleResult.x;
