@@ -141,7 +141,7 @@ VolumeSample sampleVolumeAtPosition(vec3 rayPos, vec3 rayDir){
     // linear for now, maybe try 3/3/1 subdivision later on
     vec4 interpolated = (sampleResults[0] + sampleResults[1] + sampleResults[2] + sampleResults[3]) / 4;
 
-    // calculate normal
+    // calculate normal with iquilez' tetrahedal differences
     const vec2 k = vec2(1,-1);
     vec3 normal = normalize(
         k.xyy * sampleResults[0].xyz +

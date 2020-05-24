@@ -506,6 +506,76 @@ def getLatestVersions( files=None, versions=2, path=None ):
 			allVersions.pop(0)
 	return r
 
+def getAllLatestVersions(files=None, versions=1, path=None):
+	""" no limitation, return all latest distinct versions """
+	if path:
+		files = os.listdir(path)
+
+	# versions sorted with greatest first
+	allVersions = sorted([ isVersion(i) for i in files], reverse=True)
+	# match each file with version
+	versionMap = [ ( i, isVersion(i) ) for i in files ]
+
+	# if there are no versions
+	if not any([ i[1] for i in versionMap ]):
+		return []
+	r = []
+	for n in range( versions ): # iterate through versions
+		if len(allVersions) >= n:
+			for f in versionMap:
+				# if file version matches iteration
+				if f[1] == n:
+					r.append(f[0])
+
+
+def sortVersions(files=None, path=None):
+	""" orders file versions within the same folder
+	sorts by common strings preceding 'v032' version token
+	returns dict of {fileTag : {versionNumber : (description, full file name) } }
+	"""
+	if path:
+		files = os.listdir(path)
+	outDict = {}
+
+	pattern = re.compile( r"(v(\d|\s)*)")
+
+	for fileName in files:
+		version = isVersion(fileName)
+		if not version:
+			continue
+
+		reresult = re.findall(pattern, fileName)
+		tokens = [i for i in reresult if i]
+
+		versionString = "v" + "".join(i for i in tokens[0][0] if i.isdigit() )
+		versionString = tokens[0][0]
+
+		# let the filth begin
+		title = ""
+		desc = ""
+		index = fileName.index(versionString)
+		s = fileName.split(versionString)
+
+		if not s: # v049 is file's entire name
+			title = ""
+			desc = ""
+		elif index == 0: # v049 tag is first, no title
+			title = ""
+			desc = s[0]
+		elif len(s) == 1: # tag is last
+			title = s[0]
+			desc = ""
+		else:
+			title = s[0]
+			desc = s[1]
+		# possibly the most revolting thing I've ever done
+
+		if not title in outDict.keys():
+			outDict[title] = {}
+		outDict[title].update({version : (desc, fileName)})
+	return outDict
+
+
 def isVersion(fileName):
 	""" run regex (v\W*\w){1} to check for "v001" or similar
 	return the version number or 0 """

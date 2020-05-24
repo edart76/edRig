@@ -12,7 +12,7 @@ need to investigate
 
 import os, shutil
 
-from edRig.pipeline import getLatestVersions
+from edRig.pipeline import getLatestVersions, sortVersions
 
 blacklist = "backup"
 
@@ -30,7 +30,7 @@ blacklistExtensions = [
 ]
 
 
-def makeBackup( rootFolder, outputFilePath):
+def makeBackup( rootFolder, outputFilePath, test=False):
 
 	"""iterate recursively over all files and folders
 	unless containing blacklist items
@@ -55,10 +55,18 @@ def makeBackup( rootFolder, outputFilePath):
 			n in i for n in blacklistExtensions])]
 		if not localFiles:
 			continue
-		saves = getLatestVersions(localFiles)
-
-		if not saves:
+		#saves = getLatestVersions(localFiles)
+		versions = sortVersions(localFiles)
+		if not versions:
 			continue
+		# 	returns dict of {fileTag : {versionNumber :
+		#       (description, full file name) } }
+
+		saves = []
+		for title, data in versions.iteritems():
+			maxVersion = max(data.keys())
+			saves.append(data[maxVersion][1])
+
 		treeDict[x[0]] = saves
 		#print
 		#print "saves {}".format(saves)
@@ -73,6 +81,11 @@ def makeBackup( rootFolder, outputFilePath):
 			fullFilePath = fullDirPath + "\\" + i
 			destFilePath = fullFilePath.replace(rootFolder, outputFilePath)
 			# shutil.copyfile(fullPath, destPath)
+			if test:
+				#print("source {}".format(fullFilePath))
+				print("dest   {}".format(destFilePath))
+				#print("")
+				continue
 			try:
 				shutil.copy2(fullFilePath, destFilePath)
 			except:
@@ -85,12 +98,16 @@ if __name__ == "__main__":
 	""" run test backup """
 
 	rootPath = "F:/all_projects_desktop"
-	outputPath = r"F:\autoBackup\v002"
+	outputPath = r"F:\autoBackup\v003"
 
 	# rootPath = r"F:\all_projects_desktop\testRoot"
 	# outputPath = r"F:\all_projects_desktop\testBackup"
 
-	makeBackup( rootPath, outputPath )
+
+
+	makeBackup( rootPath, outputPath, test=False )
+
+
 
 
 

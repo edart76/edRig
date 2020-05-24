@@ -12,7 +12,6 @@
 #include "3dPrintShaderVertex.glsl"
 #include "3dPrintShaderFragment.glsl"
 
-// test defining colour maps outside glsl files
 uniform texture2D PrintDiffuseMap;
 uniform sampler2D PrintDiffuseSampler <string UIGroup="Textures";>= sampler_state
 {
@@ -24,6 +23,7 @@ uniform sampler2D PrintDiffuseSampler <string UIGroup="Textures";>= sampler_stat
 	TEXTURE_WRAP_R = REPEAT;
 };
 
+uniform texture1D TestArray;
 
 
 uniform vec3 baseDiffuse <

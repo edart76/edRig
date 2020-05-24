@@ -1,6 +1,6 @@
 // maya-facing front end to shader for pixellated screens
 
-
+# version 460
 
 #define OGSFX 1
 

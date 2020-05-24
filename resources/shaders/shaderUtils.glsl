@@ -5,17 +5,18 @@
 #endif
 // preprocessor include guard doesn't seem to work properly
 
+#include "matrixUtils.glsl"
 
 #define EPS 0.00001
 #define PI 3.14159265
 #define TAU 6.2831853
 
 // pure maths functions
-float fit( float value, float oldMin, float oldMax, float newMin, float max2){
+float fit( float value, float oldMin, float oldMax, float newMin, float newMax){
     // input as percentage of range1
     float perc = (value - oldMin) / (oldMax - oldMin);
     // Do the same operation backwards with min2 and max2
-    float result = perc * (max2 - newMin) + newMin;
+    float result = perc * (newMax - newMin) + newMin;
     return result;
 }
 
@@ -44,7 +45,61 @@ float softClamp(float x, float low, float b)
     return mid + smoothClamp((x - mid)*0.5, low - mid, b - mid);
 }
 
+// random hash function, as shown by Spatial on StackOverflow
+uint hash( uint x ){
+    x += ( x << 10u);
+    x ^= ( x >> 6u);
+    x += ( x << 3u);
+    x ^= ( x >> 11u);
+    x += ( x << 15u);
+    return x;
+}
 
+// return unique hash value for vector
+uint hash( uvec2 v ) { return hash( v.x ^ hash(v.y)                         ); }
+uint hash( uvec3 v ) { return hash( v.x ^ hash(v.y) ^ hash(v.z)             ); }
+uint hash( uvec4 v ) { return hash( v.x ^ hash(v.y) ^ hash(v.z) ^ hash(v.w) ); }
+
+// return corresponding hash vector
+uvec2 hashVec( uvec2 v ){
+    uint x = hash( v );
+    return uvec2(x, x ^ hash(v.y) ); }
+
+float floatConstruct( uint m){
+    const uint ieeeMantissa = 0x007FFFFFu; //binary32 ieee mantissa bitmask
+    const uint ieeeOne =      0x3F800000u; // 1.0 in ieee binary32
+
+    m &= ieeeMantissa; // keep only mantissa bits
+    m |= ieeeOne;
+    float f = uintBitsToFloat( m ); // returns range [1:2]
+    return f - 1.0; // range [0:1]
+}
+
+// main rng functions
+float random( float x ) { return floatConstruct(hash(floatBitsToUint(x))); }
+float random( vec2  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
+float random( vec3  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
+float random( vec4  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
+
+vec2 randomVec( vec2 v){
+    uvec2 uv = hashVec(floatBitsToUint(v));
+    return vec2( floatConstruct(uv.x), floatConstruct(uv.y)); }
+
+
+// weird option returning random int
+int LFSR_rand(int n){
+    n = (n << 13) ^ n;
+    return (n * (n * n * 15731 + 789221) & 0x7fffffff);
+}
+
+// the basic rand function with sin
+float randSin(vec2 seed){
+    return fract(sin(dot(seed.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec2 randSinVec(vec2 seed){
+    return vec2( randSin(seed), 0.5);
+}
 
 float logToBase( float x, float base ){
     // using change of base formula
@@ -74,7 +129,13 @@ vec3 cartesianToSpherical( vec3 p ){
     float v = 0.5 - ( asin( pN.y) / PI );
     float w = length( p );
     return vec3( u, v, w);
+}
 
+mat2 rotate2d( float angle ){
+    // actually had to look this up, never say I'm not a total fraud
+    float amp = 2 * PI;
+    return mat2( cos(angle*amp), -sin(angle*amp),
+                 sin(angle*amp), cos(angle*amp) );
 }
 
 mat3 aimMatrix(vec3 aim, vec3 up, bool yIsUp){
@@ -328,7 +389,7 @@ vec3 calcNormal( in vec3 pos )
 vec2 localTileCoordsToGlobal( vec2 p, int tileIndex, int nRowLength ){
     /* transform local tile position to global image position
     expects squarely tiled images */
-    vec2 output;
+    vec2 result;
     vec2 tileSize = vec2( 1.0 / (nRowLength));
 
     // multiply out to global image pos
@@ -336,8 +397,8 @@ vec2 localTileCoordsToGlobal( vec2 p, int tileIndex, int nRowLength ){
     sampleOrigin.y = (tileIndex  / nRowLength) -1;
     sampleOrigin.x = mod(tileIndex, nRowLength) ;
 
-    output = (sampleOrigin + p) * tileSize;
-    return output;
+    result = (sampleOrigin + p) * tileSize;
+    return result;
 }
 
 

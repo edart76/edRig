@@ -1,0 +1,137 @@
+#version 430
+
+// maya-facing front end to skin shader
+
+
+
+#define OGSFX 1
+
+// look at this repulsive code
+#define HIDE_OGSFX_UNIFORMS 0
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 1
+
+#include "skinShaderVertex.glsl"
+#include "skinShaderFragment.glsl"
+
+uniform texture2D SkinFlowMap;
+uniform sampler2D SkinFlowSampler <string UIGroup="Textures";>= sampler_state
+{
+	Texture = <SkinFlowMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture2D SkinDataMap;
+uniform sampler2D SkinDataSampler <string UIGroup="Textures";>= sampler_state
+{
+	Texture = <SkinDataMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform vec3 baseDiffuse <
+	string UIGroup="Main";
+	string UIWidget = "ColorPicker";
+>;
+
+
+// stroke settings
+uniform int nStrokes <string UIGroup="strokeSettings";>= 16;
+uniform int nGridCells <string UIGroup="strokeSettings";>= 4;
+
+uniform float strokeSize <string UIGroup="strokeSettings";>= 1.0;
+uniform float strokeRotation <string UIGroup="strokeSettings";>= 1.0;
+
+uniform float jitterPosition <string UIGroup="strokeSettings";>= 0.5;
+uniform float jitterScale <string UIGroup="strokeSettings";>= 0.5;
+uniform float jitterRotation <string UIGroup="strokeSettings";>= 0.5;
+
+// image settings kind of
+uniform float minStrokeScale <string UIGroup="strokeSettings";>= 0.2;
+uniform float flowWeight <string UIGroup="imageSettings";>= 0.2;
+
+// stroke shape settings
+uniform float strokeTipWeight <string UIGroup="strokeShapeSettings";>= 0.5;
+uniform float strokeWidth <string UIGroup="strokeShapeSettings";>= 3.0;
+uniform float strokeNoise <string UIGroup="strokeShapeSettings";>= 0.5;
+
+// raytracing settings
+
+uniform float focalLength <string UIGroup="raySettings";>= 5.0;
+uniform int nRaySteps <string UIGroup="raySettings";>= 16;
+
+
+uniform bool debugColours <string UIGroup="Debug";> = False;
+
+
+// code definition
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 0
+#define HIDE_OGSFX_CODE 1
+
+#include "skinShaderVertex.glsl"
+#include "skinShaderGeometry.glsl"
+#include "skinShaderFragment.glsl"
+
+
+//**********
+//	Code handling:
+//
+//	We need to load the vertex stage and fragment stage in two
+//	different GLSLShader blocks in order to specify them in the
+//	technique definition below:
+//
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 0
+
+
+
+// link main files
+GLSLShader VS {
+#include "skinShaderVertex.glsl"
+}
+
+GLSLShader FS {
+  #include "skinShaderFragment.glsl"
+}
+
+GLSLShader GS {
+	#include "skinShaderGeometry.glsl"
+}
+
+
+GLSLShader PassVertex {
+    void main(){
+
+    }
+}
+
+
+// define technique
+technique Main
+<
+//tell Maya to support transparency for this technique
+string Transparency = "Transparent";
+
+// Disable consolidation -- the displacement uses the World matrix which is modified when the consolidation is active
+string handlesConsolidatedGeometry = "false";
+>
+{
+
+
+  // eye passes
+  pass p0 {
+  	VertexShader (in appdata, out vertexOutput) = VS;
+    PixelShader (in vertexOutput, out fragmentOutput) = FS;
+  }
+}
