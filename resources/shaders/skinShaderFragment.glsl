@@ -183,17 +183,18 @@ void main()
     // vec2 jitterPoint = randomVec(originCoord);
     // vec2 point = vec2(0.5) + jitterPoint * jitterPosition;
     //point = randSinVec(originCoord);
-    float d = length( point - localCoord);
+    //float d = length( point - localCoord);
 
     vec2 col = vec2(0.0);
 
 
     // get and test stroke data for this cell
-    float sdf = strokeSDF( localCoord - point, originCoord );
+    //float sdf = strokeSDF( localCoord - point, originCoord );
 
+    float d = 10000.0;
+    float sdf = 10000.0;
 
-
-    // test neighbouring cells
+    // run over 3x3 cell area
     int cellRange = 1;
     for( int dX = -cellRange; dX <= cellRange; dX++){
         for( int dY = -cellRange; dY <= cellRange; dY++){

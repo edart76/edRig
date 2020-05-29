@@ -2,7 +2,7 @@
 
 from edRig.lib.python import AbstractTree, Signal
 from edRig import attr
-from node_calculator import core as noca # big oofs in chat
+#from node_calculator import core as noca # big oofs in chat
 # from edRig import DCC_ENVIRONMENT
 
 """need to evaluate entries in an AbstractTree, and raise a signal error

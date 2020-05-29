@@ -137,588 +137,588 @@ class AbstractGraphExecutionManager(GeneralExecutionManager):
 			#self.printTraceback(exc_type, exc_val, exc_tb)
 		self.graph.setState("neutral")
 
-class AbstractGraph(object):
-	"""graph documenting a collection of abstract nodes
-	absolute emphasis on topology and connectivity"""
-
-	# register of all active graphs to async lookup and interaction
-	graphRegister = AbstractTree(name="graphs")
-
-	states = ["neutral", "executing", "complete", "failed", "approved"]
-
-	def __init__(self, parent=None, name="main"):
-		""":param parent : AbstractGraph"""
-
-		self.graphName = name
-		self.parent = parent
-		# add to register
-		if parent:
-			self.graphRegister[parent.name + "." + self.graphName] = self
-		else:
-			self.graphRegister[self.graphName] = self
-
-		self.nodeGraph = {} # node catalogue indexed by UID
-		"""{1040 : {
-				"node" : AbstractNode,
-				"feeding" : set() # list of nodes fed by outputs
-				"fedBy" : set(), # same but backwards
-				}
-			}
-
-		this is intended for very quick and easy traversal of the graph
-		tuples of nodes and attrs stored by edges
-				"""
-
-		self.edges = []
-		self.selectedNodes = []
-		self.nodeSets = {}
-
-		self.registeredNodes = {} # dict of className : class
-
-		self.initGraph()
-
-		self.state = "neutral"
-		"""used to check if execution is in progress; prevents any change to topology
-		if it is. states are neutral, executing, (routing, for massive graphs?)"""
-
-
-		# node internal storage
-		self.nodeMemory = {}
-
-		# signals
-		self.sync = Signal()
-		self.edgesChanged = Signal()
-		self.stateChanged = Signal()
-		self.nodeChanged = Signal()
-		self.nodeSetsChanged = Signal()
-		self.wireSignals()
-
-	def initGraph(self):
-		"""override for specific implementations"""
-
-		# register real classes that nodes can represent
-		from edRig.tesserae.oplist import ValidList
-		self.realClasses = ValidList.ops
-		self.registerNodeClasses()
-		self._asset = TempAsset # maybe?
-
-
-	def log(self, message):
-		print(message)
-
-	def setAsset(self, assetItem):
-		self._asset = assetItem
-
-	def clearSession(self):
-		self.nodeGraph.clear()
-		self.edges = []
-
-	# signals
-	def onNodeAttrsChanged(self, node):
-		"""checks if any connections to node are now invalid"""
-		legal = self.checkNodeConnections(node)
-		if not legal:
-			self.edgesChanged()
-		self.nodeChanged(node)
-
-	def wireSignals(self):
-		"""as usual, sync drives everything"""
-		self.sync.connect(self.edgesChanged)
-		self.sync.connect(self.stateChanged)
-		# self.sync.connect(self.nodeChanged) # not yet, no specific node
-
-	@property
-	def asset(self):
-		if self.parent:
-			return self.parent.asset
-		else:
-			return self._asset
-
-	@property
-	def dataPath(self):
-		# self.log("graph datapath, asset is {}, path is {}".format(
-		# 	self.asset, self.asset.dataPath) )
-		if self.asset:
-			return self.asset.dataPath
-
-		return ROOT_PATH+"/temp/tempData"
-
-	def registerNodeClasses(self):
-		"""generates abstract class for each known real class"""
-		for i in self.realClasses:
-			abstractClass = AbstractNode.generateAbstractClass(i)
-			self.registeredNodes[i.__name__] = abstractClass
-
-	@property
-	def registeredClassNames(self):
-		return [i for i in self.registeredNodes.keys()]
-
-	@property
-	def knownUIDs(self):
-		return self.nodeGraph.keys()
-
-	@property
-	def knownNames(self):
-		return [i["node"].nodeName for i in self.nodeGraph.values()]
-
-	@property
-	def nodes(self):
-		return set(i["node"] for i in self.nodeGraph.values())
-
-	def createNode(self, nodeType, real=None):
-		"""accepts string of node class name to create"""
-
-		if not nodeType in self.registeredClassNames:
-			raise RuntimeError("nodeType "+nodeType+" not registered in graph")
-		newAbsClass = self.registeredNodes[nodeType]
-		newAbsInstance = newAbsClass(
-			self, name=newAbsClass.__name__, realInstance=real)
-		return newAbsInstance
-
-
-	def addNode(self, node):
-		"""adds a node to the active graph"""
-		if self.state != "neutral":
-			self.log ("cannot add node during execution")
-		if node.uid in self.knownUIDs:
-			print("uid {} already exists, retrying".format(node.uid))
-			node.uid += 1
-			return self.addNode(node)
-		elif node.nodeName in self.knownNames:
-			# print("name {} already exists - rename it NOW".format(node.nodeName))
-			newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
-			node.rename(newName)
-		self.nodeGraph[node.uid] = {
-			"node" : node,
-			"feeding" : set(), # lists of AbstractNodes, use methods to process
-			"fedBy" : set(), # only single level
-		}
-		return node
-
-	def addEdge(self, sourceAttr, destAttr, newEdge=None):
-		"""adds edge between two attributes
-		DOES NOT CHECK LEGALITY"""
-		if self.state != "neutral":
-			return False
-		self.log( "")
-		self.log( " ADDING EDGE")
-		newEdge = newEdge or AbstractEdge(
-			source=sourceAttr, dest=destAttr, graph=self)
-		# in regeneration the edge object is already created
-		sourceAttr.addConnection(newEdge)
-		destAttr.addConnection(newEdge)
-		self.edges.append(newEdge)
-
-		sourceAttr.node.outEdges.add(newEdge)
-		destAttr.node.inEdges.add(newEdge)
-		sourceEntry = self.getNode(sourceAttr.node, entry=True)
-		destEntry = self.getNode(destAttr.node, entry=True)
-
-		sourceEntry["feeding"] = sourceEntry["feeding"].union({destAttr.node})
-		destEntry["fedBy"] = destEntry["fedBy"].union({sourceAttr.node})
-		self.log("source feeding is {}".format(sourceEntry["feeding"]))
-
-		return newEdge
-
-	def deleteEdge(self, edge):
-		if self.state != "neutral":
-			return False
-		sourceNode = edge.source[0]
-		sourceEntry = self.getNode(sourceNode, True)
-		self.log("feeding before delete is {}".format(sourceEntry["feeding"]) )
-		if edge in self.edges:
-			self.edges.remove(edge)
-
-		sourceNode = edge.source[0]
-		destNode = edge.dest[0]
-		sourceNode.outEdges.remove(edge)
-		destNode.inEdges.remove(edge)
-		# update entries how?
-		# WITH TOPOLOGY OF COURSE
-
-		# two nodes are disconnected if the whole sets of their edges are disjoint
-		# print "source feeding is {}".format(sourceNode.feeding)
-		# print "source fedBy is {}".format(sourceNode.fedBy)
-		if sourceNode.edges.isdisjoint(destNode.edges):
-			self.log("sets are disjoint")
-			sourceEntry = self.getNode(sourceNode, True)
-			destEntry = self.getNode(destNode, True)
-			#print "feeding is {}".format(sourceEntry["feeding"])
-			sourceEntry["feeding"].difference({destNode})
-			destEntry["fedBy"].difference({sourceNode})
-
-
-	def deleteNode(self, node):
-		if self.state != "neutral":
-			return False
-		entry = self.getNode(node, entry=True)
-
-		node = entry["node"]
-		for i in node.edges:
-			self.deleteEdge(i)
-
-		node.delete()
-		self.nodeGraph.pop(node.uid)
-		# goodnight sweet prince
-		del node
-
-
-	### CONNECTIVITY AND TOPOLOGY ###
-	def getNodesInHistory(self, node, entries=True):
-		"""returns all preceding nodes"""
-		return self.getInlineNodes(node, history=True,
-		                           future=False, entries=entries)
-
-	def getNodesInFuture(self, node, entries=True):
-		"""returns all proceeding nodes"""
-		return self.getInlineNodes(node, history=False,
-		                           future=True, entries=entries)
-
-	def getCombinedHistory(self, nodes, entries=False):
-		"""returns common history between a set of nodes"""
-		history = set()
-		for i in nodes:
-			history = history.union(i.history)
-		if not entries:
-			return history
-		""" real talk: I don't know what entries flag does"""
-
-	def getCombinedFuture(self, nodes, entries=False):
-		"""returns common future between a set of nodes"""
-		future = set()
-		for i in nodes:
-			future = future.union(i.future)
-		if not entries:
-			return future
-
-	def getInlineNodes(self, node, history=True, future=True, entries=False):
-		"""gets all nodes directly in the path of selected node
-		forwards and backwards is handy way of working out islands"""
-		#print "node is {}".format(node)
-		inline = set()
-		node = self.getNode(node, entry=True)
-		for n, k, in zip([history, future], ["fedBy", "feeding"]):
-			# print "{} so far is {}".format(k, inline)
-			if n:
-				found = set()
-				for i in node[k]:
-					found.add(i) #?
-					newNodes = self.getInlineNodes(i, history, future, entries)
-					found = found.union(newNodes)
-				inline = inline.union(found)
-		if entries:
-			return inline
-		else:
-			return [i["node"] for i in inline]
-
-	def getContainedEdges(self, nodes=None):
-		"""get edges entirely contained in a set of nodes"""
-		nodes = self.getNodesBetween(nodes, include=False)
-		edges = set()
-		for i in nodes:
-			nodeEdges = i.edges
-			edges = edges.union(nodeEdges)
-			# imperfect - contained nodes may have escaping connections
-		return edges
-
-	def getSeedNodes(self):
-		"""get nodes with no history
-		do not trust them"""
-		seeds = set()
-		for i in self.nodes:
-			if not i.history:
-				seeds.add(i)
-		return seeds
-
-	def getEndNodes(self):
-		"""get nodes with no future
-		pity them"""
-		lost = set()
-		for i in self.nodes:
-			if not i.future: # i know the feeling
-				lost.add(i) # don't cry, it doesn't help
-		return lost # things might not get better
-		# but they can't get worse
-
-
-	def checkLegalConnection(self, source, dest):
-		"""checks that a connection wouldn't undermine DAG-ness"""
-		if self.state != "neutral": # graph is executing
-			return False
-		if source.node.uid == dest.node.uid:
-			self.log("put some effort into it for god's sake")
-			return False
-		elif source in source.node.inputs or dest in dest.node.outputs:
-			self.log("attempted connection in wrong order")
-			return False
-		elif source.node in dest.node.future:
-			self.log("source node in destination's future")
-			return False
-		elif dest.node in source.node.history:
-			self.log("dest node in source's past")
-			return False
-		return True
-
-	def checkNodeConnections(self, node):
-		"""called whenever attributes change, to check there aren't any
-		dangling edges"""
-		removeList = []
-		for i in node.edges:
-			if not any([n in node.outputs + node.inputs for
-						n in i.sourceAttr, i.destAttr]):
-				removeList.append(i)
-
-		if removeList:
-			for i in removeList:
-				self.deleteEdge(i)
-				self.edgesChanged()
-			return False # going for semantics here
-		return True
-
-
-
-	def getNodesBetween(self, nodes=[], entry=False, include=True):
-		"""get nodes only entirely contained by selection
-		include sets whether to return passed nodes or not
-		return node items"""
-		starters = set(self.getNode(i, entry=False) for i in nodes)
-		for i in starters:
-			#""" do fancy topology shit """
-			"""get all inline nodes for all search nodes
-			if any node appears only in search history or only in search
-			future,	cannot be contained. """
-
-		allHistory = self.getCombinedHistory(starters)
-		allFuture = self.getCombinedFuture(starters)
-
-		betweenSet = allHistory.intersection(allFuture) # gg easy ????
-
-		if include:
-			betweenSet = betweenSet.union(nodes)
-		else:
-			betweenSet = betweenSet.difference(nodes)
-
-		return betweenSet
-
-
-	### node execution ###
-	def getExecPath(self, nodes):
-		"""creates execution path from unordered nodes"""
-		if nodes:
-			newPath = ExecutionPath.getExecPathToNodes(self, nodes)
-		else:
-			newPath = ExecutionPath.getExecPathToAll(self)
-		self.log("exec path is {}".format(i.nodeName for i in newPath.sequence))
-		return newPath
-
-	def executeNodes(self, nodes=None, index=-1):
-		"""executes nodes in given sequence to given index"""
-
-		execPath = self.getExecPath(nodes=nodes)
-		#self.setState("executing")
-		# enter graph-level execution state here
-		with AbstractGraphExecutionManager(self):
-			for i in execPath.sequence:
-				nodeIndex = index
-				if index == -1: # all steps
-					nodeIndex = len(i.executionStages()) # returns ["plan", "build"] etc
-				# for n in range(nodeIndex):
-				# 	kSuccess = i.execute(index=n)
-				"""currently no support for executing all nodes to stage n before
-				all to n+1"""
-				try:
-					kSuccess = i.execToStage(index)
-					# enter and exit node-level execution state
-					self.log("all according to kSuccess")
-				except RuntimeError("NOT ACCORDING TO KSUCCESS"):
-					pass
-
-		# exit graph-level execution
-		#self.setState("neutral")
-		self.log("execution complete")
-
-	def resetNodes(self, nodes=None):
-		"""resets nodes to pre-executed state"""
-		if not nodes:
-			nodes = self.nodes
-		for i in nodes:
-			i.reset()
-		"""currently no support for specific order during reset, as in maya there
-		is no need. however, it could be done"""
-		self.sync()
-
-	def reset(self):
-		self.resetNodes(self.nodes)
-		maya.clearAllOpNodes()
-
-		self.setState("neutral")
-		self.stateChanged()
-
-	def getExecActions(self, nodes=None):
-		"""returns available execution actions for target nodes, or all"""
-		return {"execute nodes" : ActionItem(execDict={
-			"func" : self.executeNodes, "kwargs" : {"nodes" : nodes}},
-			name="execute nodes"),
-			"reset nodes": ActionItem(execDict={  # everything
-				"func": self.resetNodes, "kwargs" : {"nodes" : nodes}},
-				name="reset nodes"),
-			"rig it like you dig it" : ActionItem(execDict={ # everything
-				"func" : self.executeNodes}, name="rig it like you dig it"),
-			"reset all": ActionItem(execDict={  # everything
-				"func": self.reset}, name="reset all")
-		}
-
-	def setState(self, state):
-		"""didn't know this was also a magic method but whatevs"""
-		if not state in self.states:
-			raise RuntimeError("tried to set invalid state {}".format(state))
-		self.state = state
-		self.stateChanged()
-
-
-	### node querying
-	def nodesFromName(self, name):
-		"""may by its nature return multiple nodes"""
-		return [i for i in self.nodes if i.nodeName == name]
-
-	def nodeFromUID(self, uid):
-		return self.nodeGraph[uid]["node"]
-
-	def getNode(self, node, entry=False):
-		"""returns an AbstractNode object from
-		an AbstractNode, node name, node UID, or AbstractAttr(?)
-		:returns AbstractNode"""
-		if isinstance(node, AbstractNode):
-			node = node
-		elif isinstance(node, str):
-			node = self.nodesFromName(node)[0] # don't do this
-		elif isinstance(node, int):
-			node = self.nodeFromUID(node)
-		elif isinstance(node, AbstractAttr):
-			node = node.node
-		elif isinstance(node, dict) and "node" in node.keys(): # node entry
-			node = node["node"]
-		# node is now absolutely definitely a node
-		if not entry:
-			return node
-		return [i for i in self.nodeGraph.values() if i["node"]==node][0]
-
-
-	### node sets
-	@property
-	def nodeSetNames(self):
-		return self.nodeSets.keys()
-
-	def addNodeToSet(self, node, setName):
-		"""adds node to set - creates set if it doesn't exist
-		:param node : AbstractNode
-		:param setName : str"""
-		origSet = self.nodeSets.get(setName)
-		if not origSet:
-			self.nodeSets[setName] = set()
-		self.nodeSets[setName].add(node)
-
-	def removeNodeFromSet(self, node, setName):
-		""":param node : AbstractNode
-		:param setName : str"""
-		targetSet = self.nodeSets.get(setName)
-		if not targetSet:
-			# i aint even mad
-			self.log("target set {} not found".format(setName))
-			return
-		if not node in targetSet:
-			# you aint even mad
-			self.log("target node {} not in set {}".format(node.nodeName, setName))
-			return
-		targetSet.remove(node)
-
-		if not targetSet:
-			# we aint even mad?
-			self.nodeSets.pop(setName)
-
-	def getNodesInSet(self, setName):
-		nodes = set()
-		targetSet = self.nodeSets.get(setName)
-		if targetSet:
-			nodes = {i for i in targetSet}
-		return nodes
-
-	def getSetsFromNode(self, node):
-		node = self.getNode(node)
-		sets = set()
-		for i in self.nodeSets.iteritems():
-			if node in i[1]:
-				sets.add(i)
-
-
-	### node memory
-	def getNodeMemoryCell(self, node):
-		""" retrieves or creates key in memory dict of
-		uid : {
-			name : node name,
-			data : node memory """
-
-		uid = self.getNode(node).uid
-		# test = self.nodeMemory.get(uid)
-		# if not test:
-		return self.nodeMemory.get(uid) or self.makeMemoryCell(node)
-
-	def makeMemoryCell(self, node):
-		node = self.getNode(node)
-		cell = {
-			"name" : node.nodeName,
-			"data" : {},
-		}
-		self.nodeMemory[node.uid] = cell
-		return cell
-
-
-	# serialisation and regeneration
-	def serialise(self):
-		"""oof ouchie"""
-		graph = {"nodes" : {},
-		         "edges" : [],
-		         "name" : self.graphName,
-		         "asset" : self.asset.name,
-		         "memory" : self.nodeMemory}
-		for uid, entry in self.nodeGraph.iteritems():
-			graph["nodes"][uid] = entry["node"].serialise()
-			# don't worry about fedBy and feeding - these will be reconstructed
-			# from edges
-		graph["edges"] = [i.serialise() for i in self.edges]
-		graph["nodeSets"] = {k : [i.nodeName for i in v] for k, v in self.nodeSets.iteritems()}
-		# add another section for groupings when necessary
-
-		#return pprint.pformat(graph, indent=3)
-		return graph
-
-	@staticmethod
-	def fromDict(regen):
-		"""my bones"""
-
-		newGraph = AbstractGraph(name=regen["name"]) # parent will be tricky
-		if "asset" in regen.keys():
-			newGraph.setAsset(pipeline.assetFromName(regen["asset"]))
-		for uid, nodeInfo in regen["nodes"].iteritems():
-			newNode = AbstractNode.fromDict(nodeInfo, newGraph)
-			newNode.uid = uid
-			newGraph.addNode(newNode)
-		for i in regen["edges"]:
-			newEdge = AbstractEdge.fromDict(i, newGraph)
-			newGraph.addEdge(sourceAttr=newEdge.sourceAttr,
-			                 destAttr=newEdge.destAttr, newEdge=newEdge)
-		for k, v in regen["nodeSets"]:
-			newGraph.nodeSets[k] = set([newGraph.getNode(n) for n in v])
-		newGraph.nodeMemory = regen["memory"]
-		return newGraph
-
-	### initial startup when tesserae is run for the first time
-	@staticmethod
-	def startup(name=None):
-		"""returns a fresh graph object"""
-		# do other stuff if necessary
-		return AbstractGraph(name=name)
-
+# class AbstractGraph(object):
+# 	"""graph documenting a collection of abstract nodes
+# 	absolute emphasis on topology and connectivity"""
+#
+# 	# register of all active graphs to async lookup and interaction
+# 	graphRegister = AbstractTree(name="graphs")
+#
+# 	states = ["neutral", "executing", "complete", "failed", "approved"]
+#
+# 	def __init__(self, parent=None, name="main"):
+# 		""":param parent : AbstractGraph"""
+#
+# 		self.graphName = name
+# 		self.parent = parent
+# 		# add to register
+# 		if parent:
+# 			self.graphRegister[parent.name + "." + self.graphName] = self
+# 		else:
+# 			self.graphRegister[self.graphName] = self
+#
+# 		self.nodeGraph = {} # node catalogue indexed by UID
+# 		"""{1040 : {
+# 				"node" : AbstractNode,
+# 				"feeding" : set() # list of nodes fed by outputs
+# 				"fedBy" : set(), # same but backwards
+# 				}
+# 			}
+#
+# 		this is intended for very quick and easy traversal of the graph
+# 		tuples of nodes and attrs stored by edges
+# 				"""
+#
+# 		self.edges = []
+# 		self.selectedNodes = []
+# 		self.nodeSets = {}
+#
+# 		self.registeredNodes = {} # dict of className : class
+#
+# 		self.initGraph()
+#
+# 		self.state = "neutral"
+# 		"""used to check if execution is in progress; prevents any change to topology
+# 		if it is. states are neutral, executing, (routing, for massive graphs?)"""
+#
+#
+# 		# node internal storage
+# 		self.nodeMemory = {}
+#
+# 		# signals
+# 		self.sync = Signal()
+# 		self.edgesChanged = Signal()
+# 		self.stateChanged = Signal()
+# 		self.nodeChanged = Signal()
+# 		self.nodeSetsChanged = Signal()
+# 		self.wireSignals()
+#
+# 	def initGraph(self):
+# 		"""override for specific implementations"""
+#
+# 		# register real classes that nodes can represent
+# 		from edRig.tesserae.oplist import ValidList
+# 		self.realClasses = ValidList.ops
+# 		self.registerNodeClasses()
+# 		self._asset = TempAsset # maybe?
+#
+#
+# 	def log(self, message):
+# 		print(message)
+#
+# 	def setAsset(self, assetItem):
+# 		self._asset = assetItem
+#
+# 	def clearSession(self):
+# 		self.nodeGraph.clear()
+# 		self.edges = []
+#
+# 	# signals
+# 	def onNodeAttrsChanged(self, node):
+# 		"""checks if any connections to node are now invalid"""
+# 		legal = self.checkNodeConnections(node)
+# 		if not legal:
+# 			self.edgesChanged()
+# 		self.nodeChanged(node)
+#
+# 	def wireSignals(self):
+# 		"""as usual, sync drives everything"""
+# 		self.sync.connect(self.edgesChanged)
+# 		self.sync.connect(self.stateChanged)
+# 		# self.sync.connect(self.nodeChanged) # not yet, no specific node
+#
+# 	@property
+# 	def asset(self):
+# 		if self.parent:
+# 			return self.parent.asset
+# 		else:
+# 			return self._asset
+#
+# 	@property
+# 	def dataPath(self):
+# 		# self.log("graph datapath, asset is {}, path is {}".format(
+# 		# 	self.asset, self.asset.dataPath) )
+# 		if self.asset:
+# 			return self.asset.dataPath
+#
+# 		return ROOT_PATH+"/temp/tempData"
+#
+# 	def registerNodeClasses(self):
+# 		"""generates abstract class for each known real class"""
+# 		for i in self.realClasses:
+# 			abstractClass = AbstractNode.generateAbstractClass(i)
+# 			self.registeredNodes[i.__name__] = abstractClass
+#
+# 	@property
+# 	def registeredClassNames(self):
+# 		return [i for i in self.registeredNodes.keys()]
+#
+# 	@property
+# 	def knownUIDs(self):
+# 		return self.nodeGraph.keys()
+#
+# 	@property
+# 	def knownNames(self):
+# 		return [i["node"].nodeName for i in self.nodeGraph.values()]
+#
+# 	@property
+# 	def nodes(self):
+# 		return set(i["node"] for i in self.nodeGraph.values())
+#
+# 	def createNode(self, nodeType, real=None):
+# 		"""accepts string of node class name to create"""
+#
+# 		if not nodeType in self.registeredClassNames:
+# 			raise RuntimeError("nodeType "+nodeType+" not registered in graph")
+# 		newAbsClass = self.registeredNodes[nodeType]
+# 		newAbsInstance = newAbsClass(
+# 			self, name=newAbsClass.__name__, realInstance=real)
+# 		return newAbsInstance
+#
+#
+# 	def addNode(self, node):
+# 		"""adds a node to the active graph"""
+# 		if self.state != "neutral":
+# 			self.log ("cannot add node during execution")
+# 		if node.uid in self.knownUIDs:
+# 			print("uid {} already exists, retrying".format(node.uid))
+# 			node.uid += 1
+# 			return self.addNode(node)
+# 		elif node.nodeName in self.knownNames:
+# 			# print("name {} already exists - rename it NOW".format(node.nodeName))
+# 			newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
+# 			node.rename(newName)
+# 		self.nodeGraph[node.uid] = {
+# 			"node" : node,
+# 			"feeding" : set(), # lists of AbstractNodes, use methods to process
+# 			"fedBy" : set(), # only single level
+# 		}
+# 		return node
+#
+# 	def addEdge(self, sourceAttr, destAttr, newEdge=None):
+# 		"""adds edge between two attributes
+# 		DOES NOT CHECK LEGALITY"""
+# 		if self.state != "neutral":
+# 			return False
+# 		self.log( "")
+# 		self.log( " ADDING EDGE")
+# 		newEdge = newEdge or AbstractEdge(
+# 			source=sourceAttr, dest=destAttr, graph=self)
+# 		# in regeneration the edge object is already created
+# 		sourceAttr.addConnection(newEdge)
+# 		destAttr.addConnection(newEdge)
+# 		self.edges.append(newEdge)
+#
+# 		sourceAttr.node.outEdges.add(newEdge)
+# 		destAttr.node.inEdges.add(newEdge)
+# 		sourceEntry = self.getNode(sourceAttr.node, entry=True)
+# 		destEntry = self.getNode(destAttr.node, entry=True)
+#
+# 		sourceEntry["feeding"] = sourceEntry["feeding"].union({destAttr.node})
+# 		destEntry["fedBy"] = destEntry["fedBy"].union({sourceAttr.node})
+# 		self.log("source feeding is {}".format(sourceEntry["feeding"]))
+#
+# 		return newEdge
+#
+# 	def deleteEdge(self, edge):
+# 		if self.state != "neutral":
+# 			return False
+# 		sourceNode = edge.source[0]
+# 		sourceEntry = self.getNode(sourceNode, True)
+# 		self.log("feeding before delete is {}".format(sourceEntry["feeding"]) )
+# 		if edge in self.edges:
+# 			self.edges.remove(edge)
+#
+# 		sourceNode = edge.source[0]
+# 		destNode = edge.dest[0]
+# 		sourceNode.outEdges.remove(edge)
+# 		destNode.inEdges.remove(edge)
+# 		# update entries how?
+# 		# WITH TOPOLOGY OF COURSE
+#
+# 		# two nodes are disconnected if the whole sets of their edges are disjoint
+# 		# print "source feeding is {}".format(sourceNode.feeding)
+# 		# print "source fedBy is {}".format(sourceNode.fedBy)
+# 		if sourceNode.edges.isdisjoint(destNode.edges):
+# 			self.log("sets are disjoint")
+# 			sourceEntry = self.getNode(sourceNode, True)
+# 			destEntry = self.getNode(destNode, True)
+# 			#print "feeding is {}".format(sourceEntry["feeding"])
+# 			sourceEntry["feeding"].difference({destNode})
+# 			destEntry["fedBy"].difference({sourceNode})
+#
+#
+# 	def deleteNode(self, node):
+# 		if self.state != "neutral":
+# 			return False
+# 		entry = self.getNode(node, entry=True)
+#
+# 		node = entry["node"]
+# 		for i in node.edges:
+# 			self.deleteEdge(i)
+#
+# 		node.delete()
+# 		self.nodeGraph.pop(node.uid)
+# 		# goodnight sweet prince
+# 		del node
+#
+#
+# 	### CONNECTIVITY AND TOPOLOGY ###
+# 	def getNodesInHistory(self, node, entries=True):
+# 		"""returns all preceding nodes"""
+# 		return self.getInlineNodes(node, history=True,
+# 		                           future=False, entries=entries)
+#
+# 	def getNodesInFuture(self, node, entries=True):
+# 		"""returns all proceeding nodes"""
+# 		return self.getInlineNodes(node, history=False,
+# 		                           future=True, entries=entries)
+#
+# 	def getCombinedHistory(self, nodes, entries=False):
+# 		"""returns common history between a set of nodes"""
+# 		history = set()
+# 		for i in nodes:
+# 			history = history.union(i.history)
+# 		if not entries:
+# 			return history
+# 		""" real talk: I don't know what entries flag does"""
+#
+# 	def getCombinedFuture(self, nodes, entries=False):
+# 		"""returns common future between a set of nodes"""
+# 		future = set()
+# 		for i in nodes:
+# 			future = future.union(i.future)
+# 		if not entries:
+# 			return future
+#
+# 	def getInlineNodes(self, node, history=True, future=True, entries=False):
+# 		"""gets all nodes directly in the path of selected node
+# 		forwards and backwards is handy way of working out islands"""
+# 		#print "node is {}".format(node)
+# 		inline = set()
+# 		node = self.getNode(node, entry=True)
+# 		for n, k, in zip([history, future], ["fedBy", "feeding"]):
+# 			# print "{} so far is {}".format(k, inline)
+# 			if n:
+# 				found = set()
+# 				for i in node[k]:
+# 					found.add(i) #?
+# 					newNodes = self.getInlineNodes(i, history, future, entries)
+# 					found = found.union(newNodes)
+# 				inline = inline.union(found)
+# 		if entries:
+# 			return inline
+# 		else:
+# 			return [i["node"] for i in inline]
+#
+# 	def getContainedEdges(self, nodes=None):
+# 		"""get edges entirely contained in a set of nodes"""
+# 		nodes = self.getNodesBetween(nodes, include=False)
+# 		edges = set()
+# 		for i in nodes:
+# 			nodeEdges = i.edges
+# 			edges = edges.union(nodeEdges)
+# 			# imperfect - contained nodes may have escaping connections
+# 		return edges
+#
+# 	def getSeedNodes(self):
+# 		"""get nodes with no history
+# 		do not trust them"""
+# 		seeds = set()
+# 		for i in self.nodes:
+# 			if not i.history:
+# 				seeds.add(i)
+# 		return seeds
+#
+# 	def getEndNodes(self):
+# 		"""get nodes with no future
+# 		pity them"""
+# 		lost = set()
+# 		for i in self.nodes:
+# 			if not i.future: # i know the feeling
+# 				lost.add(i) # don't cry, it doesn't help
+# 		return lost # things might not get better
+# 		# but they can't get worse
+#
+#
+# 	def checkLegalConnection(self, source, dest):
+# 		"""checks that a connection wouldn't undermine DAG-ness"""
+# 		if self.state != "neutral": # graph is executing
+# 			return False
+# 		if source.node.uid == dest.node.uid:
+# 			self.log("put some effort into it for god's sake")
+# 			return False
+# 		elif source in source.node.inputs or dest in dest.node.outputs:
+# 			self.log("attempted connection in wrong order")
+# 			return False
+# 		elif source.node in dest.node.future:
+# 			self.log("source node in destination's future")
+# 			return False
+# 		elif dest.node in source.node.history:
+# 			self.log("dest node in source's past")
+# 			return False
+# 		return True
+#
+# 	def checkNodeConnections(self, node):
+# 		"""called whenever attributes change, to check there aren't any
+# 		dangling edges"""
+# 		removeList = []
+# 		for i in node.edges:
+# 			if not any([n in node.outputs + node.inputs for
+# 						n in i.sourceAttr, i.destAttr]):
+# 				removeList.append(i)
+	#
+	# 	if removeList:
+	# 		for i in removeList:
+	# 			self.deleteEdge(i)
+	# 			self.edgesChanged()
+	# 		return False # going for semantics here
+	# 	return True
+	#
+	#
+	#
+	# def getNodesBetween(self, nodes=[], entry=False, include=True):
+	# 	"""get nodes only entirely contained by selection
+	# 	include sets whether to return passed nodes or not
+	# 	return node items"""
+	# 	starters = set(self.getNode(i, entry=False) for i in nodes)
+	# 	for i in starters:
+	# 		#""" do fancy topology shit """
+	# 		"""get all inline nodes for all search nodes
+	# 		if any node appears only in search history or only in search
+	# 		future,	cannot be contained. """
+	#
+	# 	allHistory = self.getCombinedHistory(starters)
+	# 	allFuture = self.getCombinedFuture(starters)
+	#
+	# 	betweenSet = allHistory.intersection(allFuture) # gg easy ????
+	#
+	# 	if include:
+	# 		betweenSet = betweenSet.union(nodes)
+	# 	else:
+	# 		betweenSet = betweenSet.difference(nodes)
+	#
+	# 	return betweenSet
+	#
+	#
+	# ### node execution ###
+	# def getExecPath(self, nodes):
+	# 	"""creates execution path from unordered nodes"""
+	# 	if nodes:
+	# 		newPath = ExecutionPath.getExecPathToNodes(self, nodes)
+	# 	else:
+	# 		newPath = ExecutionPath.getExecPathToAll(self)
+	# 	self.log("exec path is {}".format(i.nodeName for i in newPath.sequence))
+	# 	return newPath
+	#
+	# def executeNodes(self, nodes=None, index=-1):
+	# 	"""executes nodes in given sequence to given index"""
+	#
+	# 	execPath = self.getExecPath(nodes=nodes)
+	# 	#self.setState("executing")
+	# 	# enter graph-level execution state here
+	# 	with AbstractGraphExecutionManager(self):
+	# 		for i in execPath.sequence:
+	# 			nodeIndex = index
+	# 			if index == -1: # all steps
+	# 				nodeIndex = len(i.executionStages()) # returns ["plan", "build"] etc
+	# 			# for n in range(nodeIndex):
+	# 			# 	kSuccess = i.execute(index=n)
+	# 			"""currently no support for executing all nodes to stage n before
+	# 			all to n+1"""
+	# 			try:
+	# 				kSuccess = i.execToStage(index)
+	# 				# enter and exit node-level execution state
+	# 				self.log("all according to kSuccess")
+	# 			except RuntimeError("NOT ACCORDING TO KSUCCESS"):
+	# 				pass
+	#
+	# 	# exit graph-level execution
+	# 	#self.setState("neutral")
+	# 	self.log("execution complete")
+	#
+	# def resetNodes(self, nodes=None):
+	# 	"""resets nodes to pre-executed state"""
+	# 	if not nodes:
+	# 		nodes = self.nodes
+	# 	for i in nodes:
+	# 		i.reset()
+	# 	"""currently no support for specific order during reset, as in maya there
+	# 	is no need. however, it could be done"""
+	# 	self.sync()
+	#
+	# def reset(self):
+	# 	self.resetNodes(self.nodes)
+	# 	maya.clearAllOpNodes()
+	#
+	# 	self.setState("neutral")
+	# 	self.stateChanged()
+	#
+	# def getExecActions(self, nodes=None):
+	# 	"""returns available execution actions for target nodes, or all"""
+	# 	return {"execute nodes" : ActionItem(execDict={
+	# 		"func" : self.executeNodes, "kwargs" : {"nodes" : nodes}},
+	# 		name="execute nodes"),
+	# 		"reset nodes": ActionItem(execDict={  # everything
+	# 			"func": self.resetNodes, "kwargs" : {"nodes" : nodes}},
+	# 			name="reset nodes"),
+	# 		"rig it like you dig it" : ActionItem(execDict={ # everything
+	# 			"func" : self.executeNodes}, name="rig it like you dig it"),
+	# 		"reset all": ActionItem(execDict={  # everything
+	# 			"func": self.reset}, name="reset all")
+	# 	}
+	#
+	# def setState(self, state):
+	# 	"""didn't know this was also a magic method but whatevs"""
+	# 	if not state in self.states:
+	# 		raise RuntimeError("tried to set invalid state {}".format(state))
+	# 	self.state = state
+	# 	self.stateChanged()
+	#
+	#
+	# ### node querying
+	# def nodesFromName(self, name):
+	# 	"""may by its nature return multiple nodes"""
+	# 	return [i for i in self.nodes if i.nodeName == name]
+	#
+	# def nodeFromUID(self, uid):
+	# 	return self.nodeGraph[uid]["node"]
+	#
+	# def getNode(self, node, entry=False):
+	# 	"""returns an AbstractNode object from
+	# 	an AbstractNode, node name, node UID, or AbstractAttr(?)
+	# 	:returns AbstractNode"""
+	# 	if isinstance(node, AbstractNode):
+	# 		node = node
+	# 	elif isinstance(node, str):
+	# 		node = self.nodesFromName(node)[0] # don't do this
+	# 	elif isinstance(node, int):
+	# 		node = self.nodeFromUID(node)
+	# 	elif isinstance(node, AbstractAttr):
+	# 		node = node.node
+	# 	elif isinstance(node, dict) and "node" in node.keys(): # node entry
+	# 		node = node["node"]
+	# 	# node is now absolutely definitely a node
+	# 	if not entry:
+	# 		return node
+	# 	return [i for i in self.nodeGraph.values() if i["node"]==node][0]
+	#
+	#
+	# ### node sets
+	# @property
+	# def nodeSetNames(self):
+	# 	return self.nodeSets.keys()
+	#
+	# def addNodeToSet(self, node, setName):
+	# 	"""adds node to set - creates set if it doesn't exist
+	# 	:param node : AbstractNode
+	# 	:param setName : str"""
+	# 	origSet = self.nodeSets.get(setName)
+	# 	if not origSet:
+	# 		self.nodeSets[setName] = set()
+	# 	self.nodeSets[setName].add(node)
+	#
+	# def removeNodeFromSet(self, node, setName):
+	# 	""":param node : AbstractNode
+	# 	:param setName : str"""
+	# 	targetSet = self.nodeSets.get(setName)
+	# 	if not targetSet:
+	# 		# i aint even mad
+	# 		self.log("target set {} not found".format(setName))
+	# 		return
+	# 	if not node in targetSet:
+	# 		# you aint even mad
+	# 		self.log("target node {} not in set {}".format(node.nodeName, setName))
+	# 		return
+	# 	targetSet.remove(node)
+	#
+	# 	if not targetSet:
+	# 		# we aint even mad?
+	# 		self.nodeSets.pop(setName)
+	#
+	# def getNodesInSet(self, setName):
+	# 	nodes = set()
+	# 	targetSet = self.nodeSets.get(setName)
+	# 	if targetSet:
+	# 		nodes = {i for i in targetSet}
+	# 	return nodes
+	#
+	# def getSetsFromNode(self, node):
+	# 	node = self.getNode(node)
+	# 	sets = set()
+	# 	for i in self.nodeSets.iteritems():
+	# 		if node in i[1]:
+	# 			sets.add(i)
+	#
+	#
+	# ### node memory
+	# def getNodeMemoryCell(self, node):
+	# 	""" retrieves or creates key in memory dict of
+	# 	uid : {
+	# 		name : node name,
+	# 		data : node memory """
+	#
+	# 	uid = self.getNode(node).uid
+	# 	# test = self.nodeMemory.get(uid)
+	# 	# if not test:
+	# 	return self.nodeMemory.get(uid) or self.makeMemoryCell(node)
+	#
+	# def makeMemoryCell(self, node):
+	# 	node = self.getNode(node)
+	# 	cell = {
+	# 		"name" : node.nodeName,
+	# 		"data" : {},
+	# 	}
+	# 	self.nodeMemory[node.uid] = cell
+	# 	return cell
+	#
+	#
+	# # serialisation and regeneration
+	# def serialise(self):
+	# 	"""oof ouchie"""
+	# 	graph = {"nodes" : {},
+	# 	         "edges" : [],
+	# 	         "name" : self.graphName,
+	# 	         "asset" : self.asset.name,
+	# 	         "memory" : self.nodeMemory}
+	# 	for uid, entry in self.nodeGraph.iteritems():
+	# 		graph["nodes"][uid] = entry["node"].serialise()
+	# 		# don't worry about fedBy and feeding - these will be reconstructed
+	# 		# from edges
+	# 	graph["edges"] = [i.serialise() for i in self.edges]
+	# 	graph["nodeSets"] = {k : [i.nodeName for i in v] for k, v in self.nodeSets.iteritems()}
+	# 	# add another section for groupings when necessary
+	#
+	# 	#return pprint.pformat(graph, indent=3)
+	# 	return graph
+	#
+	# @staticmethod
+	# def fromDict(regen):
+	# 	"""my bones"""
+	#
+	# 	newGraph = AbstractGraph(name=regen["name"]) # parent will be tricky
+	# 	if "asset" in regen.keys():
+	# 		newGraph.setAsset(pipeline.assetFromName(regen["asset"]))
+	# 	for uid, nodeInfo in regen["nodes"].iteritems():
+	# 		newNode = AbstractNode.fromDict(nodeInfo, newGraph)
+	# 		newNode.uid = uid
+	# 		newGraph.addNode(newNode)
+	# 	for i in regen["edges"]:
+	# 		newEdge = AbstractEdge.fromDict(i, newGraph)
+	# 		newGraph.addEdge(sourceAttr=newEdge.sourceAttr,
+	# 		                 destAttr=newEdge.destAttr, newEdge=newEdge)
+	# 	for k, v in regen["nodeSets"]:
+	# 		newGraph.nodeSets[k] = set([newGraph.getNode(n) for n in v])
+	# 	newGraph.nodeMemory = regen["memory"]
+	# 	return newGraph
+	#
+	# ### initial startup when tesserae is run for the first time
+	# @staticmethod
+	# def startup(name=None):
+	# 	"""returns a fresh graph object"""
+	# 	# do other stuff if necessary
+	# 	return AbstractGraph(name=name)
+	#
 
 
 class AbstractGraph2(AbstractTree):
@@ -779,6 +779,7 @@ class AbstractGraph2(AbstractTree):
 
 	def initGraph(self):
 		"""override for specific implementations"""
+		from edRig.tesserae.oplist import ValidList
 
 		# register real classes that nodes can represent
 		self.realClasses = ValidList.ops
@@ -1294,9 +1295,11 @@ class AbstractGraph2(AbstractTree):
 		return newGraph
 
 	### initial startup when tesserae is run for the first time
-	@staticmethod
-	def startup(name=None):
+	#@staticmethod
+	@classmethod
+	def startup(cls, name="main"):
 		"""returns a fresh graph object"""
 		# do other stuff if necessary
-		return AbstractGraph(name=name)
+		return cls(name=name)
 
+AbstractGraph = AbstractGraph2

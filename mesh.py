@@ -2,6 +2,7 @@
 # interfacing between weights and maps etc
 # additionally for working with nurbs shapes
 from edRig import core, attr, transform, naming
+from edRig.lib.python import AbstractTree
 from edRig.node import AbsoluteNode, ECA
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
@@ -165,6 +166,11 @@ this isn't tom and jerry, so we assume we will have fewer joints in the skin
 than vertices in the mesh
 
 """
+
+class DeformerWeights(object):
+	""" per-point varying weights """
+
+
 
 class DeformerWrapper(object):
 	"""interface for setting and getting weights"""

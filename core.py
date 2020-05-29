@@ -458,11 +458,10 @@ def isEqual(x, y, tolerance=0.0001):
 
 def MObjectFrom(node):
 	# get the MObject from anything
-	sel = om.MSelectionList()
-	#sel.add(node)
 	if not cmds.ls(node):
 		print("node {} not found".format(node))
 		return None
+	sel = om.MSelectionList()
 	sel.add( cmds.ls(node)[0] )
 	ref = sel.getDependNode(0)
 	return ref

@@ -19,6 +19,7 @@ from edRig.tesserae.ops.memory import Memory2
 
 # test
 from edRig.tesserae.expression import EVALUATOR
+#EVALUATOR = None
 
 class AbstractAbstractNode(type):
 	"""abstract class for abstract nodes"""

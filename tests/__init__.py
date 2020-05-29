@@ -11,7 +11,7 @@ def test(func):
 	principle back to a lib python class if we need to add functions
 	to a catalogue again"""
 	testFuncs.append(func)
-	print "outer func {}".format(func)
+	#print "outer func {}".format(func)
 	def wrapper():
 		scene.newScene()
 		return func()

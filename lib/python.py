@@ -345,8 +345,9 @@ class AbstractTree(object):
 	def _setParent(self, tree):
 		"""sets new abstractTree to be parent"""
 		self._parent = tree
-		self.valueChanged = tree.valueChanged
-		self.structureChanged = tree.structureChanged
+		if tree: # setting to none can happen
+			self.valueChanged = tree.valueChanged
+			self.structureChanged = tree.structureChanged
 
 	def addChild(self, branch):
 		if branch in self.branches:
