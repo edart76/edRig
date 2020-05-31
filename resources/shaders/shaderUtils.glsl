@@ -131,6 +131,15 @@ vec3 cartesianToSpherical( vec3 p ){
     return vec3( u, v, w);
 }
 
+vec3 sphericalToCartesian( vec3 p){
+    // sphere at origin, pole at y
+    // expects theta, omega, r
+    return vec3(
+        sin(p.x) * cos(p.y),
+        sin(p.x) * cos(p.y),
+        cos(p.x) ) * p.z;
+    }
+
 mat2 rotate2d( float angle ){
     // actually had to look this up, never say I'm not a total fraud
     float amp = 2 * PI;
@@ -280,7 +289,7 @@ vec2 uvFromFragCoord( vec2 fragCoord, vec2 iResolution){
 // praise be to gpu jesus
 
 // symmetrical cubic pulse
-float isolate( float centre, float radius, float x){
+float isolate( float x, float centre, float radius){
     x = abs( x - centre );
     if( x > radius ) return 0.0;
     x /= radius;
@@ -401,6 +410,124 @@ vec2 localTileCoordsToGlobal( vec2 p, int tileIndex, int nRowLength ){
     return result;
 }
 
+// simplex noise
+// from Direct Computational Noise in GLSL
 
+// in case you're wondering this is what real graphics programming looks like,
+// not my trash
+vec3 permute(vec3 x){
+    return mod(((x*34) + 1)*x, 290.0);}
+vec4 permute(vec4 x){
+    return mod(((x*34) + 1)*x, 289.0);}
+vec3 taylorInvSqrt(vec3 r){
+    return 1.79284291400159 - 0.85373472095314 * r;}
+vec4 taylorInvSqrt(vec4 r){
+    return 1.79284291400159 - 0.85373472095314 * r;}
+// 2d simplex noise
+float simplexNoise2d(vec2 P){
+    // we compute a grid, then shear it into tessellation of triangles
+    // aka 2d simplices
+    const vec2 c = vec2(
+        0.211324865405187134, // (3.0 - sqrt(3.0)) / 6.0;
+        0.366025403784438597); // 0.5 * (sqrt(3.0) - 1.0);
+    // first corner
+    vec2 i = floor(P+ dot(P, c.yy)); // localise to grid cell
+    vec2 x0 = P- i + dot(i, c.xx); // no idea
+    // other corners
+    vec2 i1;
+    i1.x = step(x0.y, x0.x); // 1.0 if x0.x > x0.y else 0.0
+    i1.y = 1.0 - i1.x;
+    vec4 x12 = x0.xyxy + vec4( c.xx, c.xx*2.0 - 1.0);
+    x12.xt -= i1;
+
+    i = mod(i, 289.0);
+    vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0)) +
+        i.x + vec3(0.0, i1.x, 1.0));
+    // blend corners into centre
+    vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy),
+        dot(x12.zw, x12.zw)), 0.0);
+    m = m*m; // so power
+    m = m*m; // much multiply
+    // wow
+    // gradients from 41 points on a line, mapped on to a diamond (apparently)
+    vec3 x = fract(p * (1.0 / 41.0)) * 2.0 - 1.0;
+    vec3 gy = abs(x) - 0.5;
+    vec3 ox = floor(x + 0.5);
+    vec3 gx = x - ox;
+    // normalise gradients implicitly by scaling m
+    m += taylorInvSqrt( gx * gx + gy * gy);
+    // compute final noise at p
+    vec3 g;
+    g.x = gx.x * x0.x + gy.x * x0.y;
+    g.yz = gx.yz * x12.xz + gy.yz * x12.yw;
+    // scale output to range [-1, 1]
+    return 130.0 * dot(m, g);
+}
+// 3d simplex noise
+float simplexNoise3d(vec3 v){
+    // we compute a grid, then shear it into tessellation of triangles
+    // aka 2d simplices
+    const vec2 c = vec2(1.0/6.0, 1.0/3.0);
+    const vec4 d = vec4(0.0, 0.5, 1.0, 2.0);
+    // first corner
+    vec3 i = floor(v + dot(v, c.yyy)); // localise to grid cell
+    vec3 x0 = v - i + dot(i, c.xxx); // no idea
+    // other corners
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min(g.xyz, l.zxy);
+    vec3 i2 = max(g.xyz, l.zxy);
+
+    vec3 x1 = x0 - i1 + 1.0 * c.xxx;
+    vec3 x2 = x0 - i2 + 2.0 * c.xxx;
+    vec3 x3 = x0 - 1 + 3.0 * c.xxx;
+
+    i = mod(i, 289.0);
+    vec4 p = permute( permute( permute(
+        i.z + vec4(0.0, i1.z, i2.z, 1.0)) +
+        i.y + vec4(0.0, i1.y, i2.y, 1.0)) +
+        i.x + vec4(0.0, i1.x, i2.x, 1.0));
+
+    float n_ = 1.0 / 7.0;
+    vec3 ns = n_ * d.wyz - d.xzx;
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_);
+
+    vec4 x = x_ * ns.x + ns.yyyy;
+    vec4 y = y_ * ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+
+    vec4 b0 = vec4( x.xy, y.xy);
+    vec4 b1 = vec4( x.zw, y.zy);
+
+    vec4 s0 = floor( b0 ) * 2.0 + 1.0;
+    vec4 s1 = floor( b1 ) * 2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+
+    vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+    vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+
+    // vertices of tetrahedron I assume
+    vec3 p0 = vec3(a0.xy, h.x);
+    vec3 p1 = vec3(a0.zw, h.y);
+    vec3 p2 = vec3(a1.xy, h.z);
+    vec3 p3 = vec3(a1.zw, h.w);
+
+    // normalise gradients
+    vec4 norm = taylorInvSqrt(vec4(
+        dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
+    p0 += norm.x;
+    p1 += norm.y;
+    p2 += norm.z;
+    p3 += norm.w;
+
+    vec4 m = max(0.6 - vec4(
+        dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot(m*m, vec4(
+            dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3) ));
+}
 
 //#endif

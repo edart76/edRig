@@ -4,7 +4,7 @@ import core as core
 from core import ECN, con
 from edRig.node import AbsoluteNode, ECA
 import maya.api.OpenMaya as om
-from edRig import attr, plug
+from edRig import attr, plug, transform
 from edRig.plug import conOrSet
 
 import pprint
@@ -442,24 +442,28 @@ def matrixPlugFromPci(pci, upVector=None):
 	vp = ECA("vp", "biNormal", "cross")
 
 	con(pci+".normalizedTangent", vp + ".input1")
-
-	if upVector:
-		conOrSet( upVector, vp + ".input2")
-	else:
-		con(pci + ".normalizedNormal", vp + ".input2")
-
-	sources = [pci + ".normalizedTangent",
-	           pci + ".normalizedNormal",
-	           vp + ".output",
-	           pci + ".position",]
-
-	for source, row in zip(sources, "0123"):
-
-		for ax, column in zip("XYZ", "012"):
-			con( source + ax,
-			     mat + ".in" + row + column)
-
-	return mat + ".output"
+	if not upVector:
+		upVector = pci + ".normalizedNormal"
+	mat = transform.buildTangentMatrix(
+		pci + ".position", pci + ".normalizedTangent", upVector)
+	return mat
+	# if upVector:
+	# 	conOrSet( upVector, vp + ".input2")
+	# else:
+	# 	con(pci + ".normalizedNormal", vp + ".input2")
+	#
+	# vp.set("operation", 2) # binormal
+	# sources = [pci + ".normalizedTangent",
+	#            pci + ".normalizedNormal",
+	#            vp + ".output",
+	#            pci + ".position",]
+	#
+	# for source, row in zip(sources, "0123"):
+	#
+	# 	for ax, column in zip("XYZ", "012"):
+	# 		con( source + ax,
+	# 		     mat + ".in" + row + column)
+	#return mat + ".output"
 
 
 def liveMatrixAtU(crvShape, u=0.5, constantU=True, purpose="anyPurpose",

@@ -69,6 +69,19 @@ def fourByFourFromPlugs(plugs, name="constructedMat"):
 		cmds.connectAttr(val, matPlugs[i])
 	return mat
 
+def fourByFourFromCompoundPlugs(xPlug=None, yPlug=None, zPlug=None, posPlug=None,
+                                name="constructedMat"):
+	""" usually we have plug compounds for each axis
+	also this is hardcoded to XYZ child names, rip"""
+	mat = ECA("fourByFourMatrix", n="constructedMat")
+	sources = [xPlug, yPlug, zPlug, posPlug]
+	for source, row in zip(sources, "0123"):
+		if not source : continue
+		for ax, column in zip("XYZ", "012"):
+			con( source + ax,
+			     mat + ".in" + row + column)
+	return mat + ".output"
+
 def getFourByFourInputs(matNode=None):
 	"""maps 0-15 index to annoying 01 - 31 plug naming"""
 	matNode = matNode or ""
@@ -168,7 +181,7 @@ def matchMatrix(transform, matchMat, pos=True, rot=True):
 		rot = mat.rotation(space)
 		tFn.setRotation(rot, om.MSpace.kTransform)
 
-def matchTranformation(targetNode, followerNode, translation=True, rotation=True):
+def matchTransformation(targetNode, followerNode, translation=True, rotation=True):
 	followerMTransform = AbsoluteNode(followerNode).MFnTransform
 	targetMTransform = AbsoluteNode(targetNode).MFnTransform
 	targetMTMatrix = om.MTransformationMatrix(om.MMatrix(cmds.xform(targetNode, matrix=True, ws=1, q=True)))
@@ -196,6 +209,7 @@ def buildMatrix(translate=(0,0,0),xAxis=(1,0,0),yAxis=(0,1,0),zAxis=(0,0,1)):
 					translate[0], translate[1], translate[2], 1
 	))
 	return mat
+
 
 def liveDistanceBetweenPoints(pointAttrA, pointAttrB, name="distanceBetween", mode="3d"):
 	pointA = core.nodeFromAttr(pointAttrA)
@@ -231,6 +245,24 @@ def driveShapeWithPivot(shape, tf=None):
 	con(initShape+".local", geoTf+".inputGeometry")
 	con(geoTf+".outputGeometry", shape+".create")
 	cmds.setAttr(initShape+".visibility", 0)
+
+def buildTangentMatrix(positionPlug, tangentPlug, upPlug):
+	""" builds tangent matrix through basic double-cross method
+	use for curves, meshes, surfaces etc """
+	binormal = ECA("vectorProduct", n="binormal")
+	normal = ECA("vectorProduct", n="normal")
+	attr.conOrSet(tangentPlug, binormal + ".input1")
+	attr.conOrSet(upPlug, binormal + ".input2")
+	attr.conOrSet(tangentPlug, normal + ".input1")
+	binormal.con("output", normal + ".input2")
+	for i in [binormal, normal]:
+		i.set("operation", 2)
+		i.set("normalizeOutput", 1)
+	matPlug = fourByFourFromCompoundPlugs(
+		tangentPlug, normal + ".output", binormal + ".output", positionPlug,
+		name="tangentMat")
+	return matPlug
+
 
 
 def matrixConstraint(driver, driven, offset=True, translate=True, rotate=True,

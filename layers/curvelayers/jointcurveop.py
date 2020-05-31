@@ -133,13 +133,14 @@ class JointCurveOp(SpookyLayerOp):
 			upVec = plug.vecFromTo( pci + ".position", upPci + ".position")
 			jntMat = curve.matrixPlugFromPci(pci, upVector=upVec)
 
-			self.joints[i].disconnect("inverseScale")
+			# self.joints[i].disconnect("inverseScale")
 
-			self.joints[i].parentTo(self.opGrp)
+			self.joints[i].parentTo(self.opGrp, r=1)
 
 			transform.decomposeMatrixPlug(jntMat, self.joints[i])
+			self.joints[i].set("inverseScale", (1, 1, 1))
 
-			self.joints[i].setDrawingOverride(referenced=1)
+			#self.joints[i].setDrawingOverride(referenced=1)
 		pass
 
 	def matchCurveToJoints(self):

@@ -421,5 +421,3 @@ however, in future some blade runner mirror eyes would be sweet
 within this material in high light, trace back into the eyeball
 
 */
-
-
