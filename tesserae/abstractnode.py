@@ -142,7 +142,14 @@ class AbstractNode(AbstractTree):
 		works off uid
 		abstractNodes only have access to data - graph may know more
 		:rtype AbstractTree """
-		return self.graph.getNodeMemoryCell(self)
+		data = self.graph.getNodeMemoryCell(self)
+		# check that memory class is placed correctly
+		# temp
+		if not data.get("memory"):
+			print("did not find memory cell, creating new")
+			memory = Memory2()
+			data.addChild(memory)
+		return data
 
 
 	def makeReal(self, realInstance):
@@ -216,7 +223,6 @@ class AbstractNode(AbstractTree):
 		self.nodeName = name
 		#name = self._processName(name)
 		# if we ever want to add "-op" to the end of real items or something
-		print "RENAMED NODE TO {}".format(name)
 		self.real.rename(name) # it's just that easy
 		pipeline.renameFile(old=origPath, new=self.dataPath)
 
@@ -227,7 +233,7 @@ class AbstractNode(AbstractTree):
 
 	def log(self, message):
 		"""if we implement proper logging replace everything here"""
-		print message
+		self.graph.log(message)
 
 	# toplogy
 	@property
@@ -267,6 +273,7 @@ class AbstractNode(AbstractTree):
 	def execute(self, index):
 		"""builds a single stage of the real component's execution order
 		ATOMIC - CALLED BY EXEC TO STAGE"""
+		# test
 		func = self.getExecFunction(index)
 		with self.real.executionManager(): # real-level
 			return func(self.real)
@@ -479,27 +486,6 @@ class AbstractNode(AbstractTree):
 		self.setRealInstance(newReal, define=False)
 		self.sync()
 
-	# graph io
-
-	def searchData(self, infoName, internal=True):
-		print("abstractNode running searchData")
-		#if internal:
-		memoryCell = self.graph.getNodeMemoryCell(self)
-		print("found internal memoryCell {}".format(memoryCell))
-		return memoryCell["data"].get(infoName)
-
-
-	def saveOutData(self, infoName="info", data=None, internal=True):
-		""" NEW INTERNAL MODE
-		in the interest of not drowning in files, a mechanism for storing all
-		data in one single .tes file
-		"""
-		print("abstractNode saving out data {}".format(data))
-		#if internal:
-		memoryCell = self.graph.getNodeMemoryCell(self)
-		memoryCell["data"][infoName] = data
-		return
-
 
 	def serialise(self):
 		"""converts node and everything it contains to dict"""
@@ -543,23 +529,13 @@ class AbstractNode(AbstractTree):
 		newInst.inputRoot = AbstractAttr.fromDict(regenDict=fromDict["inputRoot"],
 		                                          node=newInst)
 		newInst.settings = AbstractTree.fromDict(fromDict["settings"])
-		# print ""
-		# print "ABSTRACT FROMDICT KEYS ARE {}".format(fromDict.keys())
 
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]
 			realInstance = realClass.fromDict(realDict, abstract=newInst)
-			print "realInstance is {}".format(realInstance)
 			newInst.setRealInstance(realInstance, define=False)
 			newInst.real.makeBaseActions()
 
-			# regenerate memory
-			if "memory" in fromDict["real"]:
-				# newInst.real.memory = Memory2.fromDict(fromDict["memory"])
-				# newInst.saveOutData(infoName="memory", data=fromDict["real"]["memory"])
-				pass
-
-		#print("abstract fromDict newInst root {}".format(newInst.inputRoot))
 		return newInst
 
 	@staticmethod

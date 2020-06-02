@@ -25,13 +25,10 @@ class LayerOp(Op):
 		super(LayerOp, self).__init__(*args, **kwargs)
 		print "layer sync is {}".format(self.sync)
 		self.controller = None
-		#self.memory = Memory()
-		#self.memory = Memory2()
 
 		self.saveData = None
 		self.dataFileExists = False
-		# print "checking dataFileExists"
-		# self.checkDataFileExists()
+
 
 	@property
 	def memory(self):
@@ -77,33 +74,10 @@ class LayerOp(Op):
 
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		super(LayerOp, self).setAbstract(abstract, inDict, outDict, define)
-		# patch methods
-		# self.__dict__["saveOutData"] = self.abstract.saveOutData
-		# self.__dict__["searchData"] = self.abstract.searchData
-		#self.loadMemory()
-
-		#self.checkDataFileExists()
-
-	# def saveOutMemory(self):
-	# 	self.saveOutData(infoName="memory", data=self.memory.serialise(),
-	# 	                 internal=True)
-
-	#
-	# def loadMemory(self):
-	# 	print("layerOp loadMemory")
-	# 	goss = self.searchData("memory")
-	# 	if not goss:
-	# 		print("unable to load memory")
-	# 		self.memory = Memory2()
-	# 		return
-	# 	print "loaded memory is {}".format(goss)
-	# 	self.memory = self.memory.fromDict(goss)
 
 	def memoryActions(self):
 		openDict = self.memory.renewableMemory()
-		#print "op openDict is {}".format(openDict) # add proper list support here
-		#print "op memory is {}".format(pprint.pformat(self.memory))
-		#pprint.pprint(self.memory, indent=3)
+
 		returnDict = OrderedDict()
 		# add "all" options
 		if len(openDict.keys()) > 1:
@@ -177,10 +151,7 @@ class LayerOp(Op):
 		else:
 			self.log( "infoName {} not found in memory {}".format(infoName,
 			                                                  self.memory.infoNames()) )
-		#self.memory.setNodes(infoName, nodes)
 		self.memory.remember(infoName, infoType, nodes, **kwargs)
-
-		#self.saveOutMemory()
 
 
 	def getAllActions(self):
@@ -189,8 +160,6 @@ class LayerOp(Op):
 		base = {}
 		base = super(LayerOp, self).getAllActions()
 
-		#base.update({"memory": self.memoryActions()})
-		#
 		try:
 			base.update({"memory": self.memoryActions()})
 		except Exception as e:
@@ -234,28 +203,14 @@ class LayerOp(Op):
 		beauty.setColour(target, beauty.colourPresets["guides"])
 
 
-
 	# serialisation and regeneration
 	def serialise(self):
 		orig = super(LayerOp, self).serialise()
-		#orig["memory"] = self.memory.serialise()
-
 		return orig
 
 	@classmethod
 	def fromDict(cls, regenDict, abstract=None):
-		print "layerOpFromDict"
-		print "regendict is {}".format(regenDict)
 		opInstance = Op.fromDict(regenDict, abstract)
-		#opInstance = Op.fromDict()
-		if "memory" in regenDict.keys():
-			print "regen memory"
-			#opInstance.memory.reconstructMemory({"memory" : copy.deepcopy(regenDict["memory"])})
-			opInstance.memory = Memory2.fromDict(regenDict["memory"])
-			print("regen instance memory {}".format(opInstance.memory.display()))
-			print "done"
-		# if isinstance(opInstance, LayerOp):
-		# 	opInstance.loadMemory()
-		print("final fromDict memory is {}".format(opInstance.memory.display()))
+
 		return opInstance
 

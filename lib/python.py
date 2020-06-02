@@ -7,22 +7,6 @@ from abc import ABCMeta
 import types
 
 
-# from Tkinter import *
-#
-# import Tkinter, tkFileDialog
-#
-# def fileDialog(defaultPath="", title="Select File"):
-# 	""" absolute most basic file selection possible"""
-# 	path = defaultPath or "/"
-# 	root = Tkinter.Tk()
-# 	root.withdraw()
-# 	return tkFileDialog.askopenfilename(
-# 		initialdir=path, title=title
-# 	)
-#
-
-
-
 
 class Decorator(object):
 	"""base decorator class for functions
@@ -349,16 +333,18 @@ class AbstractTree(object):
 			self.valueChanged = tree.valueChanged
 			self.structureChanged = tree.structureChanged
 
-	def addChild(self, branch):
+	def addChild(self, branch, force=False):
 		if branch in self.branches:
 			print("cannot add existing branch")
 			return branch
 		if branch.name in self.keys():
-			print("cannot add duplicate child of name {}".format(branch.name))
-			newName = self.getValidName(branch.name)
-			branch._setName(newName)
-			# raise RuntimeError(
-			# 	"cannot add duplicate child of name {}".format(branch.name))
+			if force: # override old branch with new
+				pass
+			else:
+				print("cannot add duplicate child of name {}".format(branch.name))
+				newName = self.getValidName(branch.name)
+				branch._setName(newName)
+
 		self._map[branch.name] = branch
 		branch._setParent(self)
 		self.structureChanged()
@@ -585,8 +571,7 @@ class AbstractTree(object):
 		return new
 
 	def serialise(self):
-		# print("key {} index {}".format(self.name, self.ownIndex()))
-		# print("keys are {}".format(self.keys()))
+
 		serial = {
 			"?NAME" : self.name,
 			"?INDEX" : self.ownIndex()
@@ -602,23 +587,8 @@ class AbstractTree(object):
 			if self.parent.__class__ != self.__class__:
 				objData = saveObjectClass(self)
 				serial["objData"] = objData
-
-			if 0: # doesn't work yet
-				# class type saving
-
-				# save class if parent type DOES inherit,
-				# and this type is not parent
-				if self.parent.branchesInherit:
-					if self.parent.__class__ != self.__class__:
-						objData = saveObjectClass(self)
-						serial["objData"] = objData
-
-				# save class if parent type DOES NOT inherit,
-				# and this is not a normal AbstractTree
-				else:
-					if self.__class__ != AbstractTree:
-						objData = saveObjectClass(self)
-						serial[ "objData" ] = objData
+				# it now costs exactly one extra line to define the child class
+				# it's worth it to avoid the pain of adaptive definition
 
 		# always returns dict
 		return serial

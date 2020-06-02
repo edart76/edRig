@@ -67,7 +67,7 @@ class Memory2(AbstractTree):
 
 	def _initialiseCell(self, infoName, infoType, nodes=None):
 		if not infoName in self.infoNames():
-			print "allocating blank space for infoName {}".format(infoName)
+			#print "allocating blank space for infoName {}".format(infoName)
 			self._allocateSpace(infoName, nodes=nodes)
 
 		if not infoType in self[infoName].keys():
@@ -79,9 +79,9 @@ class Memory2(AbstractTree):
 		"""add information to op's memory if none exists
 		we remember lists here
 		main entrypoint"""
-		print("remember infoName {}, infotype {}, nodes {}".format(
-			infoName, infoType, nodes)
-		)
+		# print("remember infoName {}, infotype {}, nodes {}".format(
+		# 	infoName, infoType, nodes)
+		# )
 
 		# multi memory support
 		if isinstance(infoType, list):
@@ -106,7 +106,7 @@ class Memory2(AbstractTree):
 
 	def recall(self, infoName, infoType="all", **kwargs):
 		"""retrieve saved info AND APPLY IT """
-		print("memory recall infoName {}, infoType {}".format(infoName, infoType))
+		#print("memory recall infoName {}, infoType {}".format(infoName, infoType))
 		if not infoType in self.infoKinds and infoType != "all":
 			raise RuntimeError("infoType {} is not recognised".format(infoType))
 		if infoType == "all":
@@ -122,13 +122,11 @@ class Memory2(AbstractTree):
 	def refresh(self, infoName="", infoType="", *args, **kwargs):
 		"""updates existing memory with info from scene
 		DOES NOT create new info if none exists"""
-		print("memory refresh - nodesFromInfoName {} are {}".format(
-			infoName, self.nodesFromInfoName(infoName)) )
+
 		gatheredGoss = [self._gatherInfo(infoType, target=i)
 		                for i in self.nodesFromInfoName(infoName)]
 		self[infoName][infoType] = gatheredGoss
-		# print( "{}-{} is now {}".format(infoName, infoType,
-		#                                self[infoName][infoType]) )
+
 
 	def remove(self, infoName, infoType=None):
 		"""clears memory selectively without going into the datafile
@@ -141,11 +139,11 @@ class Memory2(AbstractTree):
 	def renewableMemory(self):
 		"""returns all memory slots that have a value - eg that
 		can be renewed from scene"""
-		print("renewable memory")
-		print(self.display())
+		# print("renewable memory")
+		# print(self.display())
 		returnDict = {}
 		for i in self.branches:
-			print("i branch {} value {}".format(i.name, i.value))
+			#print("i branch {} value {}".format(i.name, i.value))
 			if not isinstance(i.value, dict):
 				continue
 			if i.name == "nodes":
@@ -153,9 +151,9 @@ class Memory2(AbstractTree):
 			if i.get("closed"):
 				continue
 			returnDict[i.name] = []
-			print("i branches {}".format(i.branches))
+			#print("i branches {}".format(i.branches))
 			for n in i.value.keys():
-				print("n branch {}".format(n))
+				#print("n branch {}".format(n))
 				if n == "nodes" or n== "closed":
 					continue
 				returnDict[i.name].append(n)
@@ -261,15 +259,6 @@ class Memory2(AbstractTree):
 			info = allInfo[infoType]
 
 
-		# print("allInfo {}".format(allInfo))
-		# print("target {}".format(target))
-
-		# if infoType == "xform" :
-		# 	info = info[space]
-
-		# print("target {}".format(target))
-		# print("info {}".format(info))
-
 		#print "info to apply is {}".format(info)
 		# it's really, really for the best if you just work by sequence
 		for target, info in zip(target, info):
@@ -328,9 +317,7 @@ class Memory2(AbstractTree):
 			"weight": [],
 			"shape": [],
 		}
-		# return {infoType : typeDict[infoType],
-		# 		#"CLOSED" : False,
-		#         }
+
 		return typeDict[infoType]
 
 	def setClosed(self, infoName, infoType=None, status=True):

@@ -38,11 +38,7 @@ class OpExecutionManager(GeneralExecutionManager):
 		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()
 		           and not n.parent]
 		newDags = [i for i in newDags if i not in self.excludeList]
-		#print "{}".format(self.op.setupGrp)
-		# print "new {}".format(new)
-		# print "newDags {}".format(newDags)
-		#
-		# print "opgrp is {}".format(self.op.opGrp)
+
 		self.op.opGrp
 		for i in new:
 			#print "i is {}".format(i)
@@ -508,7 +504,7 @@ class Op(MayaReal):
 		elif i.dataType in attr.INTERFACE_ATTRS:
 			dtdict = attr.INTERFACE_ATTRS[i.dataType]
 			dtdict = {i.name : dtdict }
-			print("new attr dict is {}".format(dtdict))
+			#print("new attr dict is {}".format(dtdict))
 			attr.makeAttrsFromDict(node,
 	                              attrDict=dtdict,
 	                              parent=parentPlug)
@@ -540,7 +536,7 @@ class Op(MayaReal):
 			prev = attrItem.getConnectedAttrs()[0]
 			#if hasattr(prev, name="plug"):
 			test = getattr(prev, "plug")
-			print "test {}".format(test)
+			#print "test {}".format(test)
 			if test:
 				cmds.connectAttr(prev.plug(), attrItem.plug(), f=True)
 
@@ -551,28 +547,18 @@ class Op(MayaReal):
 		#print "output connections {}".format(attrItem.getConnections())
 		for i in attrItem.getConnectedAttrs():
 			test = getattr(i, "plug")
-			print "test {}".format(test)
+			# "test {}".format(test)
 			if test:
 				cmds.connectAttr(attrItem.plug(), i.plug(), f=True)
 
 	def connectIoPlugs(self):
 		"""tries to connect attrItems on both sides of node"""
 		for i in self.inputRoot.getAllLeaves():
-			#print "inputConnections {}".format(i.getConnectedAttrs())
-			#try:
 			self.connectInputPlug(i)
-			# except Exception as e:
-			# 	self.log("unable to connect attrItem " + i.name +
-			# 	         "error {}".format(e))
-			# 	raise e
+
 		for i in self.outputRoot.getAllLeaves():
-			#print "outputConnections {}".format(i.getConnectedAttrs())
-			#try:
 			self.connectOutputPlug(i)
-			# except Exception as e:
-			# 	self.log("unable to connect attrItem " + i.name +
-			# 	         "error {}".format(e))
-			# 	raise e
+
 
 	@staticmethod
 	def dataTypeForNodeType( nodeType ):
@@ -594,7 +580,7 @@ class Op(MayaReal):
 		if actionDict:
 			self.actions.update(actionDict)
 		elif actionItem:
-			print "adding action {}".format(actionItem)
+			#print "adding action {}".format(actionItem)
 			self.actions.update({actionItem.name : actionItem})
 		elif func:  # just add the function
 			name = name or func.__name__
@@ -630,8 +616,6 @@ class Op(MayaReal):
 			"opName" : self.opName,
 		}
 
-		# opDict["inputRoot"] = self.inputRoot.serialise()
-		# opDict["outputRoot"] = self.outputRoot.serialise()
 		return opDict
 
 	@staticmethod
@@ -639,21 +623,11 @@ class Op(MayaReal):
 		"""regenerates op from dict"""
 		opCls = pipeline.loadObjectClass(regenDict["objInfo"])
 		opInstance = opCls(name=regenDict["opName"])
-		# try:
-		# 	opInstance = opCls(name=regenDict["opName"])
-		# except Exception as e:
-		# 	print "ERROR in reconstructing op {}".format(regenDict["NAME"])
-		# 	print "error is {}".format(str(e))
-		# 	return None
 
 		if abstract:
 			opInstance.inputRoot = abstract.inputRoot
 			opInstance.outputRoot = abstract.outputRoot
 
-		# print("op fromdict input {}".format(opInstance.inputRoot))
-
-		#opInstance.data = regenDict.get("data")
-		#opInstance.addAction(func=opInstance.showGuides)
 		opInstance.makeBaseActions()
 		return opInstance
 

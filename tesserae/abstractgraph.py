@@ -144,6 +144,8 @@ class AbstractGraph2(AbstractTree):
 	# register of all active graphs to async lookup and interaction
 	graphRegister = AbstractTree(name="graphs")
 
+	branchesInherit = False
+
 	states = ["neutral", "executing", "complete", "failed", "approved"]
 
 	def __init__(self, parent=None, name="main"):
@@ -183,9 +185,6 @@ class AbstractGraph2(AbstractTree):
 		if it is. states are neutral, executing, (routing, for massive graphs?)"""
 
 
-		# node internal storage
-		self.nodeMemory = {}
-
 		# signals
 		self.sync = Signal()
 		self.edgesChanged = Signal()
@@ -193,6 +192,10 @@ class AbstractGraph2(AbstractTree):
 		self.nodeChanged = Signal()
 		self.nodeSetsChanged = Signal()
 		self.wireSignals()
+
+	@property
+	def nodeMemory(self):
+		return self("nodeMemory")
 
 	def initGraph(self):
 		"""override for specific implementations"""
@@ -338,8 +341,7 @@ class AbstractGraph2(AbstractTree):
 		# WITH TOPOLOGY OF COURSE
 
 		# two nodes are disconnected if the whole sets of their edges are disjoint
-		# print "source feeding is {}".format(sourceNode.feeding)
-		# print "source fedBy is {}".format(sourceNode.fedBy)
+
 		if sourceNode.edges.isdisjoint(destNode.edges):
 			self.log("sets are disjoint")
 			sourceEntry = self.getNode(sourceNode, True)
@@ -395,11 +397,9 @@ class AbstractGraph2(AbstractTree):
 	def getInlineNodes(self, node, history=True, future=True, entries=False):
 		"""gets all nodes directly in the path of selected node
 		forwards and backwards is handy way of working out islands"""
-		#print "node is {}".format(node)
 		inline = set()
 		node = self.getNode(node, entry=True)
 		for n, k, in zip([history, future], ["fedBy", "feeding"]):
-			# print "{} so far is {}".format(k, inline)
 			if n:
 				found = set()
 				for i in node[k]:
@@ -658,29 +658,15 @@ class AbstractGraph2(AbstractTree):
 			data : node memory """
 
 		uid = self.getNode(node).uid
-		# test = self.nodeMemory.get(uid)
-		# if not test:
 		return self.nodeMemory.get(uid) or self.makeMemoryCell(node)
 
 	def makeMemoryCell(self, node):
 		node = self.getNode(node)
-		# cell = {
-		# 	"name" : node.nodeName,
-		# 	"data" : {},
-		# }
-		cell = AbstractTree(name=node.nodeName, val=None)
+		cell = self.nodeMemory(node.uid)
+		cell["nodeName"] = node.nodeName
 		cell("data")
-		self.nodeMemory[node.uid] = cell
-		return cell
 
-	# def makeNodeDataCell(self, node):
-	# 	node = self.getNode(node)
-	# 	cell = {
-	# 		"name" : node.nodeName,
-	# 		"data" : {},
-	# 	}
-	# 	self.nodeMemory[node.uid] = cell
-	# 	return cell
+		return cell
 
 
 	# serialisation and regeneration
@@ -690,19 +676,16 @@ class AbstractGraph2(AbstractTree):
 		         "edges" : [],
 		         "name" : self.graphName,
 		         "asset" : self.asset.name,
-		         #"memory" : self.nodeMemory,
-		         "memory" : {},
+		         "memory" : self.nodeMemory.serialise(),
 		         }
 		for uid, entry in self.nodeGraph.iteritems():
 			graph["nodes"][uid] = entry["node"].serialise()
 			# don't worry about fedBy and feeding - these will be reconstructed
 			# from edges
-			#graph["memory"][uid]
 		graph["edges"] = [i.serialise() for i in self.edges]
 		graph["nodeSets"] = {k : [i.nodeName for i in v] for k, v in self.nodeSets.iteritems()}
 		# add another section for groupings when necessary
 
-		#return pprint.pformat(graph, indent=3)
 		return graph
 
 	@staticmethod
@@ -710,6 +693,10 @@ class AbstractGraph2(AbstractTree):
 		"""my bones"""
 
 		newGraph = AbstractGraph(name=regen["name"]) # parent will be tricky
+		# regen memory
+		memory = AbstractTree.fromDict(regen["memory"])
+		newGraph.addChild(memory, force=True)
+
 		if "asset" in regen.keys():
 			newGraph.setAsset(pipeline.assetFromName(regen["asset"]))
 		for uid, nodeInfo in regen["nodes"].iteritems():
@@ -722,7 +709,6 @@ class AbstractGraph2(AbstractTree):
 			                 destAttr=newEdge.destAttr, newEdge=newEdge)
 		for k, v in regen["nodeSets"]:
 			newGraph.nodeSets[k] = set([newGraph.getNode(n) for n in v])
-		newGraph.nodeMemory = regen["memory"]
 		return newGraph
 
 	### initial startup when tesserae is run for the first time
