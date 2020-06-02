@@ -26,12 +26,18 @@ class LayerOp(Op):
 		print "layer sync is {}".format(self.sync)
 		self.controller = None
 		#self.memory = Memory()
-		self.memory = Memory2()
+		#self.memory = Memory2()
 
 		self.saveData = None
 		self.dataFileExists = False
 		# print "checking dataFileExists"
 		# self.checkDataFileExists()
+
+	@property
+	def memory(self):
+		""" looks up memory from abstract's data
+		:rtype Memory2"""
+		return self.data("memory")
 
 
 	def renameOp(self, newName, renameData=False):
@@ -72,26 +78,26 @@ class LayerOp(Op):
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		super(LayerOp, self).setAbstract(abstract, inDict, outDict, define)
 		# patch methods
-		self.__dict__["saveOutData"] = self.abstract.saveOutData
-		self.__dict__["searchData"] = self.abstract.searchData
+		# self.__dict__["saveOutData"] = self.abstract.saveOutData
+		# self.__dict__["searchData"] = self.abstract.searchData
 		#self.loadMemory()
 
 		#self.checkDataFileExists()
 
-	def saveOutMemory(self):
-		self.saveOutData(infoName="memory", data=self.memory.serialise(),
-		                 internal=True)
+	# def saveOutMemory(self):
+	# 	self.saveOutData(infoName="memory", data=self.memory.serialise(),
+	# 	                 internal=True)
 
-
-	def loadMemory(self):
-		print("layerOp loadMemory")
-		goss = self.searchData("memory")
-		if not goss:
-			print("unable to load memory")
-			self.memory = Memory2()
-			return
-		print "loaded memory is {}".format(goss)
-		self.memory = self.memory.fromDict(goss)
+	#
+	# def loadMemory(self):
+	# 	print("layerOp loadMemory")
+	# 	goss = self.searchData("memory")
+	# 	if not goss:
+	# 		print("unable to load memory")
+	# 		self.memory = Memory2()
+	# 		return
+	# 	print "loaded memory is {}".format(goss)
+	# 	self.memory = self.memory.fromDict(goss)
 
 	def memoryActions(self):
 		openDict = self.memory.renewableMemory()
@@ -120,14 +126,14 @@ class LayerOp(Op):
 	def refreshMemoryAndSave(self, infoName=None, infoType=None):
 		"""save out memory with every refresh"""
 		self.memory.refresh(infoName=infoName, infoType=infoType)
-		self.saveOutMemory()
+		#self.saveOutMemory()
 
 	def refreshAllMemory(self):
 		"""refreshes all open memory cells"""
 		for k, v in self.memory.renewableMemory().iteritems():
 			for i in v:
 				self.memory.refresh(infoName=k, infoType=i)
-		self.saveOutMemory()
+		#self.saveOutMemory()
 
 	def remember(self, infoName=None, infoType=None, nodes=None,
 	             relative=None, **kwargs):
@@ -174,7 +180,7 @@ class LayerOp(Op):
 		#self.memory.setNodes(infoName, nodes)
 		self.memory.remember(infoName, infoType, nodes, **kwargs)
 
-		self.saveOutMemory()
+		#self.saveOutMemory()
 
 
 	def getAllActions(self):
@@ -232,7 +238,7 @@ class LayerOp(Op):
 	# serialisation and regeneration
 	def serialise(self):
 		orig = super(LayerOp, self).serialise()
-		orig["memory"] = self.memory.serialise()
+		#orig["memory"] = self.memory.serialise()
 
 		return orig
 

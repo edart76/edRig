@@ -136,6 +136,14 @@ class AbstractNode(AbstractTree):
 	def graph(self, val):
 		self._graph = val
 
+	@property
+	def data(self):
+		""" returns a corresponding graph data slot
+		works off uid
+		abstractNodes only have access to data - graph may know more
+		:rtype AbstractTree """
+		return self.graph.getNodeMemoryCell(self)
+
 
 	def makeReal(self, realInstance):
 		"""creates and or binds real instance to abstract"""
@@ -472,26 +480,14 @@ class AbstractNode(AbstractTree):
 		self.sync()
 
 	# graph io
-	def checkDataFileExists(self):
-		if edRig.pipeline.checkJsonFileExists(self.dataPath):
-			print "data file for {} exists".format(self.nodeName)
-			self.dataFileExists = True
-		else:
-			print "data file for {} does not exist, making new one".format(self.nodeName)
-			edRig.pipeline.makeBlankFile(path=self.dataPath)
-			self.dataFileExists = True
 
 	def searchData(self, infoName, internal=True):
 		print("abstractNode running searchData")
-		if internal:
-			memoryCell = self.graph.getNodeMemoryCell(self)
-			print("found internal memoryCell {}".format(memoryCell))
-			return memoryCell["data"].get(infoName)
+		#if internal:
+		memoryCell = self.graph.getNodeMemoryCell(self)
+		print("found internal memoryCell {}".format(memoryCell))
+		return memoryCell["data"].get(infoName)
 
-		print "abstract getting legacy data" + infoName
-		#self.checkDataFileExists()
-		#return attrio.getData(infoName, self.dataPath)
-		pass
 
 	def saveOutData(self, infoName="info", data=None, internal=True):
 		""" NEW INTERNAL MODE
@@ -499,15 +495,10 @@ class AbstractNode(AbstractTree):
 		data in one single .tes file
 		"""
 		print("abstractNode saving out data {}".format(data))
-		if internal:
-			memoryCell = self.graph.getNodeMemoryCell(self)
-			memoryCell["data"][infoName] = data
-			return
-
-		# golly gee willakers
-		print "abstract saving legacy data " + infoName
-		self.checkDataFileExists()
-		#attrio.updateData(infoName, data, path=self.dataPath)
+		#if internal:
+		memoryCell = self.graph.getNodeMemoryCell(self)
+		memoryCell["data"][infoName] = data
+		return
 
 
 	def serialise(self):
@@ -535,7 +526,7 @@ class AbstractNode(AbstractTree):
 
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]
-			realClass = pipeline.loadObjectClass(realDict)
+			realClass = pipeline.loadObjectClass(realDict["objInfo"])
 
 		if realClass:
 			newClass = cls.generateAbstractClass(realClass)

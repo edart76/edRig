@@ -395,3 +395,16 @@ class Memory2(AbstractTree):
 		self.nodes = [ str(i) for i in self.nodes]
 		return super(Memory2, self).serialise()
 
+"""
+graph nodeData is one contiguous tree, with persistent references
+to all nodes' memory
+
+real ops have access to:
+data { # abstractTree containing all data belonging to this node
+	memory : Memory2 # memory branch
+
+
+"""
+
+
+

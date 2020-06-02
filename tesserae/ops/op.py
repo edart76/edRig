@@ -195,6 +195,11 @@ class Op(MayaReal):
 	def internal(self):
 		return self.abstract.internal
 
+	@property
+	def data(self):
+		""" looks up abstract's data """
+		return self.abstract.data
+
 	def executionManager(self):
 		return OpExecutionManager(self)
 
@@ -580,17 +585,6 @@ class Op(MayaReal):
 			return "2D"
 		raise RuntimeError("no dataType for nodeType {}".format(nodeType))
 
-	# io
-	def searchData(self, infoName, internal=True):
-		print( "op legacy searchData called")
-		# return attrio.getData(infoName, self.dataFilePath)
-		pass
-
-	def saveOutData(self, infoName="info", data=None, internal=True):
-		# golly gee willakers
-		print "op saving data with legacy method saveOutData"
-		# self.checkDataFileExists()
-		# attrio.updateData(infoName, data, path=self.dataFilePath)
 
 	# actions
 	def getAllActions(self):
@@ -630,8 +624,11 @@ class Op(MayaReal):
 
 	# serialisation and regeneration
 	def serialise(self):
-		opDict = pipeline.saveObjectClass(self) # name, class and module
-		opDict["opName"] = self.opName
+		objInfo = pipeline.saveObjectClass(self) # name, class and module
+		opDict = {
+			"objInfo" : objInfo,
+			"opName" : self.opName,
+		}
 
 		# opDict["inputRoot"] = self.inputRoot.serialise()
 		# opDict["outputRoot"] = self.outputRoot.serialise()
@@ -640,21 +637,22 @@ class Op(MayaReal):
 	@staticmethod
 	def fromDict(regenDict, abstract=None):
 		"""regenerates op from dict"""
-		opCls = pipeline.loadObjectClass(regenDict)
-		try:
-			opInstance = opCls(name=regenDict["opName"])
-		except Exception as e:
-			print "ERROR in reconstructing op {}".format(regenDict["NAME"])
-			print "error is {}".format(str(e))
-			return None
+		opCls = pipeline.loadObjectClass(regenDict["objInfo"])
+		opInstance = opCls(name=regenDict["opName"])
+		# try:
+		# 	opInstance = opCls(name=regenDict["opName"])
+		# except Exception as e:
+		# 	print "ERROR in reconstructing op {}".format(regenDict["NAME"])
+		# 	print "error is {}".format(str(e))
+		# 	return None
 
 		if abstract:
 			opInstance.inputRoot = abstract.inputRoot
 			opInstance.outputRoot = abstract.outputRoot
 
-		print("op fromdict input {}".format(opInstance.inputRoot))
+		# print("op fromdict input {}".format(opInstance.inputRoot))
 
-		opInstance.data = regenDict.get("data")
+		#opInstance.data = regenDict.get("data")
 		#opInstance.addAction(func=opInstance.showGuides)
 		opInstance.makeBaseActions()
 		return opInstance
