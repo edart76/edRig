@@ -9,7 +9,7 @@ from edRig.structures import ActionItem
 # t i m e _ t o _ h a c k
 
 """ I think I've made a mistake with this in giving the main tree object 
-and the treeModel kind of equal priority, updatbing each other - 
+and the treeModel kind of equal priority, updating each other - 
 however, if I were to assume that the model has priority for the duration,
 I would need extra interface infrastructure to interact with it during 
 a node's execution
@@ -36,8 +36,8 @@ class TileSettings(QtWidgets.QTreeView):
 	def __init__(self, parent=None, tree=None):
 		""":param tree : AbstractTree"""
 		super(TileSettings, self).__init__(parent)
-		self.setAnimated(True) # attend first to swag
-		self.setAutoExpandDelay(0.1)
+		#self.setAnimated(True) # attend first to swag
+		#self.setAutoExpandDelay(0.01)
 
 		self.setAcceptDrops(True)
 		self.setDragDropMode(
@@ -48,6 +48,7 @@ class TileSettings(QtWidgets.QTreeView):
 		# self.makeMenu()
 		# self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		# self.customContextMenuRequested.connect(self.onContextPoint)
+		self.sizeChanged = Signal()
 
 
 		self.highlights = {} # dict of tree addresses to highlight
@@ -64,14 +65,13 @@ class TileSettings(QtWidgets.QTreeView):
 		header = self.header()
 		header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 		header.setStretchLastSection(False)
-		#self.setFirstColumnSpanned(0, self.rootIndex(), True)
-		#header.setSectionResizeMode(5, QtWidgets.QHeaderView.Stretch)
+
 		self.setUniformRowHeights(True)
 		self.setIndentation(10)
 		self.setAlternatingRowColors(True)
 		self.showDropIndicator()
 
-		#self.setSizeAdjustPolicy( QtWidgets.QAbstractScrollArea.AdjustToContents)
+		self.setSizeAdjustPolicy( QtWidgets.QAbstractScrollArea.AdjustToContents)
 
 		self.initActions()
 
@@ -79,27 +79,12 @@ class TileSettings(QtWidgets.QTreeView):
 		self.collapsed.connect( self.resizeToTree )
 		self.expanded.connect( self.resizeToTree )
 
-
-		#self.setSizePolicy( shrinkingPolicy )
-		#self.setSizePolicy( expandingPolicy )
-		#self.header().setSizePolicy( expandingPolicy )
-
 	def resizeToTree(self):
-		#self.header().resizeToContents()
-
-		# get all visible indices and expand to include them
-		# count = 0
-		# indexList = self.modelObject.persistentIndexList()
-		# print(indexList)
-		#
-		# for modelIndex in indexList:
-		# 	if not self.isRowHidden(0, modelIndex):
-		# 		count += 1
-		# print("visible count is {}".format(count))
-
-		# for now expand to maximum size, can't find a good way of
-
-		width = self.size().width()
+		# get rough idea of how long max tree entry is
+		maxLen = 0
+		for k, v in self.tree.iterBranches():
+			maxLen = max(maxLen, len(k) + len(str(v.value)))
+		width = maxLen*7 + 30
 
 		#height = self.viewportSizeHint().height()
 		count = len( self.tree.root.allBranches() )
@@ -109,6 +94,7 @@ class TileSettings(QtWidgets.QTreeView):
 		index = self.rootIndex()
 		#height = ( self.rowHeight( index ) + 2 ) * count
 		self.resize( width, height )
+		self.sizeChanged()
 
 		pass
 
@@ -122,9 +108,6 @@ class TileSettings(QtWidgets.QTreeView):
 		self.menu.add_action(func=self.pasteEntry)
 
 
-	def test(self):
-		print "hey"
-
 	def copyEntry(self):
 		#print "copying"
 		clip = QtGui.QGuiApplication.clipboard()
@@ -135,12 +118,7 @@ class TileSettings(QtWidgets.QTreeView):
 			print( "no entries selected to copy" )
 			return
 		index = indices[0] # only copying single entry for now
-		# obj = self.modelObject.data( index )
-		# print( "obj {}, type {}".format(obj, type(obj)))
-		# only unicode string representation
-		# need standardItem from model index
-		# item = self.modelObject.itemFromIndex( index )
-		# print( "item {}".format(item))
+
 
 		mime = self.modelObject.mimeData( [index] )
 		# print( "copy mime {}".format(mime.text()))
@@ -175,16 +153,6 @@ class TileSettings(QtWidgets.QTreeView):
 
 
 
-
-
-		# self.modelObject.beginInsertRows()
-		# self.modelObject.beginInsertColumns()
-		#
-		# # add new tree stuff
-		#
-		# self.modelObject.endInsertColumns()
-		# self.modelObject.endInsertRows()
-
 		""" get selected object or next free index
 		deserialise mime data to tree branches
 		add tree children
@@ -211,14 +179,6 @@ class TileSettings(QtWidgets.QTreeView):
 		menu = self.menu.exec_( self.viewport().mapToGlobal(qPoint) )
 		print "settingsMenu is {}".format(menu)
 
-	# def mousePressEvent(self, event):
-	# 	if event.button() == QtCore.Qt.LeftButton:
-	# 		super(TileSettings, self).mousePressEvent(event)
-	# 		return
-	# 	if event.button == QtCore.Qt.RightButton:
-	# 		self.makeMenu()
-	# 		menu = self.menu.exec_( event.globalPos() )
-	# 		print menu
 
 
 
@@ -254,8 +214,13 @@ class TileSettings(QtWidgets.QTreeView):
 		self.setModel(self.modelObject)
 
 		self.resizeToTree()
+		self.expandAll()
 
 		return self.modelObject
+
+
+	def sync(self):
+		self.setTree(self.tree)
 
 
 	def addHighlight(self, address, kind):

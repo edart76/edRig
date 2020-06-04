@@ -131,9 +131,7 @@ class ConfirmDialogue(QtWidgets.QMessageBox):
 
 
 """ this entire action/embeddedAction/context system is AWFUL
-on refactoring, begin with this - convert actionItems to partials,
-and some kind of acgnostic wrapper to remove ambiguity in passing
-embedded or normal actions around """
+convert to use abstractTree as base structure """
 
 
 class EmbeddedAction(QtWidgets.QAction):

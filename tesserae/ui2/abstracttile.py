@@ -46,6 +46,9 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 			self.abstract.__class__.__name__, self)
 
 		self.settingsWidg = self.addSettings(self.abstract.settings)
+		self.settingsWidg.expandAll()
+		# daring
+		self.settingsWidg.contentChanged.connect(self._resizeSettings)
 		self.memoryWidg = None # soon
 
 		# flags?
@@ -54,12 +57,11 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 		#print "abstract inputs are {}".format(self.abstract.inputs)
 
-		self.sync()
-
-
 		# arrange items
 		self.arrangeText()
 		#self.arrangeEntries()
+
+		self.sync()
 
 		self.setTextColour((200, 200, 200))
 
@@ -78,11 +80,11 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 	def _resizeSettings(self, *args, **kwargs):
 		self.syncSize()
 		self.settingsWidg.resizeToTree()
-		#self.settingsProxy.resize(self.width, self.settingsWidg.height() )
-		self.settingsProxy.resize(self.settingsWidg.width(),
-		                          self.settingsWidg.height() )
-		#self.settingsProxy.resize(self.width, 500 )
-		# self.settingsProxy.adjustSize() # does not work properly
+
+		self.settingsProxy.setGeometry( QtCore.QRect(0.0, 0.0,
+		                               self.settingsWidg.width(),
+		                               self.settingsWidg.height() ) )
+
 		self.settingsProxy.setPos(0, self.height )
 
 	def addSettings(self, tree):
@@ -90,10 +92,6 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.settingsProxy = QtWidgets.QGraphicsProxyWidget(self)
 		self.settingsWidg = tilesettings.TileSettings(parent=None,
 		                                              tree= tree)
-
-		# def _resizeSettings(*args, **kwargs):
-		# 	self.settingsProxy.resize(self.width, settingsWidg.height() * 1.5)
-
 		self.settingsProxy.setWidget(self.settingsWidg)
 
 		# connect collapse and expand signals to update size properly
@@ -106,10 +104,6 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 	def sync(self):
 		"""update attrBlocks"""
-		self.abstract.log("")
-		self.abstract.log("begin abstractTile sync")
-		# self.abstract.log("abstract attrs are {}, {}".format(
-		# 	self.abstract.inputs, self.abstract.outputs))
 
 		# remove old entries
 		for i in self.attrBlocks:
@@ -135,6 +129,9 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.width, self.height = self.syncSize()
 		# for i in self.entries.values():
 		# 	i.setRect(0,0, self.width, self.entryHeight)
+
+		self.settingsWidg.sync()
+		self._resizeSettings()
 
 		self.arrange()
 
@@ -322,11 +319,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 	@height.setter
 	def height(self, height=0.0):
-		# w, h = self.syncSize()
-		# h = 70 if h < 70 else h
-		# self._height = height if height > h else h
-		#height = height if height > h else h
-		#self._height = height
+
 		self._height = height
 
 	def serialise(self):

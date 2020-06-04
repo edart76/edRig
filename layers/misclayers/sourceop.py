@@ -7,7 +7,8 @@ from edRig.lib.python import AbstractTree
 
 from edRig.tesserae import graph
 
-
+# direct ps2 import, until it becomes a problem
+from PySide2 import QtWidgets
 
 
 class SourceOp(LayerOp):
@@ -120,18 +121,26 @@ class SourceOp(LayerOp):
 	@property
 	def assetPath(self):
 		""" path to current asset root """
-		# if graph:
-		# 	return graph.asset.path
+		if graph():
+			return graph().asset.path
 		return COMMON_PATH
 
 	def setFilePath(self):
 		""" sets file path with gui menu """
-		#path = fileDialog(defaultPath=self.assetPath)
-		path = None
+		print("asset path {}".format(self.assetPath))
+		path = QtWidgets.QFileDialog.getOpenFileName(
+			caption="open file",
+			dir=self.assetPath,
+		)[0] # returns the path and the filter for some reason
 		if not path:
+			self.log("no path given")
 			return
+		print(path)
 		path = pipeline.convertRootPath(path, toRelative=True)
+		print(path)
 		self.settings["fileA"] = path
+		print(self.settings["fileA"])
+		self.sync()
 
 	def getLatestVersion(self, path):
 		""" returns the latest v*** version in given folder """
