@@ -78,7 +78,10 @@ def fourByFourFromCompoundPlugs(xPlug=None, yPlug=None, zPlug=None, posPlug=None
 	for source, row in zip(sources, "0123"):
 		if not source : continue
 		for ax, column in zip("XYZ", "012"):
-			con( source + ax,
+			if isinstance(source, tuple):
+				sourcePlug = source[ int( column ) ]
+			else: sourcePlug = source + ax
+			con( sourcePlug,
 			     mat + ".in" + row + column)
 	return mat + ".output"
 

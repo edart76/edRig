@@ -131,6 +131,22 @@ def vectorMatrixMultiply(vector=None, matrix=None, normalise=False,
 	attr.setAttr( node + ".operation", "point Matrix Product")
 	return node + ".output"
 
+def crossProduct(vecA, vecB, normalise=False, name="crossProduct"):
+	node = ECA("vectorProduct", n=name)
+	conOrSet(vecA, node + ".input1")
+	conOrSet(vecB, node + ".input2")
+	conOrSet(normalise, node + ".normalizeOutput")
+	attr.setAttr(node + ".operation", "cross Product")
+	return node + ".output"
+
+def normalisePlug(vector, name="normalisePlug"):
+	node = ECA("vectorProduct", n=name)
+	conOrSet(vector, node + ".input1")
+	node.set("operation", 0)
+	node.set("normalizeOutput", 1)
+	return node + ".output"
+
+
 
 trigModes = {"sine" : math.sin,
          "cosine" : math.cos,

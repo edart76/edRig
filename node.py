@@ -37,6 +37,16 @@ def invokeNode(name="", type="", parent="", func=None):
 	return node
 
 
+# prefix stuff
+class PrefixBlock(object):
+	""" context handler for adding prefixes to current stack """
+	def __init__(self, prefix=""):
+		self.prefix = prefix
+	def __enter__(self):
+		AbsoluteNode.prefixStack.append(self.prefix)
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		AbsoluteNode.prefixStack.pop(-1)
+
 #class AbsoluteNode(str):
 #class AbsoluteNode(object):
 class AbsoluteNode(StringLike):
@@ -80,6 +90,13 @@ class AbsoluteNode(StringLike):
 	once created as one wrapper, node cannot be converted to another 
 	"""
 
+	# naming prefix system test
+	prefixStack = [""]
+
+	@classmethod
+	def prefix(cls):
+		""" returns the current prefix stack for absoluteNode """
+		return "".join(cls.prefixStack)
 
 	def __new__(cls, node, useCache=True):
 		""" new mechanism now used only to check validity and cache -
@@ -608,6 +625,11 @@ class AbsoluteNode(StringLike):
 def ECA(type, name="", colour=None, *args, **kwargs):
 	# node = cmds.createNode(type, n=name)
 	name = kwargs.get("n") or name
+
+	name = AbsoluteNode.prefix() + name
+	# check for current name stacks
+	# ?
+
 	node = ECN(type, name, *args, **kwargs)
 	a = AbsoluteNode(node)
 	# avoid annoying material errors

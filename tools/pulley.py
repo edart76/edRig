@@ -1,11 +1,45 @@
 """ create live networks of connected wheels and cables under tension """
 from edRig import cmds, om
 
-from edRig import AbsoluteNode, ECA, attr, plug, transform
+from edRig import AbsoluteNode, ECA, attr, plug, transform, curve
+
+
+class PulleySystem(object):
+	""" trash name
+	class for connected systems of lines under tension,
+	threaded around wheels
+	"""
+	def __init__(self, name="pulleySystem"):
+		self.wheels = []
+
+	def addWheel(self, name="newWheel"):
+		""" assumed to be added in order """
+		wheel = Wheel(name=name)
+		self.wheels.append(wheel)
+
+	def orderWheels(self):
+		nWheels = len(self.wheels)
+		for i, val in enumerate(self.wheels):
+			nextIndex = (i + 1) % nWheels
+			prevIndex = i - 1
+			print("index {} next {} prev {}".format(i, nextIndex, prevIndex))
+			val.next = self.wheels[ nextIndex ]
+			val.prev = self.wheels[ prevIndex ]
+
+	def build(self):
+		self.orderWheels()
+		for i in self.wheels:
+			i.build()
+
+	def link(self):
+		for i in self.wheels:
+			i.link()
 
 
 class Wheel(object):
-	""" individual wheel in pulley system """
+	""" individual wheel in pulley system
+	search "homothetic circles" and it should point
+	the right way"""
 
 	def __init__(self, basePoint=None, name="wheel"):
 		""":type basePoint : AbsoluteNode
@@ -14,64 +48,75 @@ class Wheel(object):
 		"""
 		self.point = basePoint
 		self.name = name
+		self.next = None # next wheel
+		self.prev = None # previous wheel
+
+		self.outputNext = None
+		self.outputPrev = None
+
+		self.group = None
+		self.pin = None
+
+		self.curves = []
 		pass
 
-	def setup(self):
+	def build(self):
+
 		""" creates base node network """
 
 		# main group for everything
 		self.group = ECA("transform", n=self.name + "_main")
 
 		# main pin input
-		self.pin = ECA("transform", n=self.name + "pointInput")
+		self.pin = ECA("locator", n=self.name + "pointInput")
 		self.pin.parentTo(self.group)
 
 		# base orient node to track cross product between input vectors
-		orient = ECA("transform", n="vectorOrient")
+		orient = ECA("transform", n=self.name + "vectorOrient")
 		orient.parentTo(self.pin)
+		self.orient = orient
 
 		# proxy and temp control, canted rotation not implemented yet
 		self.proxy = self.makeProxy()
 		self.proxy.parentTo(orient)
 
-		# main vector inputs
-		vecAIn = ECA("transform", name="vecA_input")
-		vecBIn = ECA("transform", name="vecB_input")
-		vecAIn.set("translateX", 1)
-		vecBIn.set("translateY", 1)
-		for i in vecAIn, vecBIn:
-			i.parentTo(self.pin)
-			# positions are in pin-space, can use translation directly
-			i.addAttr("radius") # radius of each neighbour wheel
 
-		# vector setup
-		self.vectorSetup(main=vecAIn, aux=vecBIn)
-
-		# connect everything
-		transform.decomposeMatrixPlug(self.point.outWorld, self.pin, r=0, s=0)
-
-
-	def vectorSetup(self, main=None, aux=None):
-		""" creates all the vector homothetic stuff
-		main is the axis that all the machinery will align to, our angular
-		zero value
-		this may not be a good idea, or it may not
-		:param main : AbsoluteNode
-		:param aux : AbsoluteNode"""
-		vectorGrp = ECA("transform", n="vectorAligned")
-		transform.aimToVector(vectorGrp, main + ".translate")
-
-
-
-
-	def link(self, before=None, after=None):
-		""" :param before : Wheel
-		:param after : Wheel
+	def link(self):
+		"""
 		connects wheel to pulley system
 		before and after can be the same wheel
 		for now we only support two linked wheels - more can be achieved
 		more easily with hacks if necessary
 		"""
+
+		# main vector inputs
+		# to centres of adjacent wheels
+		vecToPrev = plug.vecFromTo(self.pin + ".translate",
+		                           self.prev.pin + ".translate")
+		vecToNext = plug.vecFromTo(self.pin + ".translate",
+		                           self.next.pin + ".translate")
+		vecWithout = plug.vecFromTo(self.prev.pin + ".translate",
+		                            self.next.pin + ".translate")
+
+		# normal between points
+		inNormal = plug.crossProduct(vecToPrev, vecToNext, normalise=True)
+		vecToPrevN = plug.normalisePlug(vecToPrev)
+
+		orientMat = transform.buildTangentMatrix(
+			#self.pin + ".translate",
+			(0, 0, 0),
+			vecToPrevN, inNormal)
+
+		transform.decomposeMatrixPlug(orientMat, target=self.orient )
+
+		# draw lines to track which wheels are connected
+		prevLine = curve.curveFromCvPlugs([self.prev.pin + ".translate",
+		                                  self.pin + ".translate"], useApi=0,
+		                                  name=self.name + ".prevLine")
+
+
+
+
 
 	def makeProxy(self):
 		""" create a polygon cylinder representing
@@ -79,10 +124,12 @@ class Wheel(object):
 		move to dedicated proxy/polygon lib sometime maybe """
 
 		proxy = AbsoluteNode( cmds.polyCylinder(
-			axis=[0,1,0], ch=0, n=self.name + "_proxy")[0] )
-		proxy.addAttr("radius", min=0)
-		proxy.con("radius", "scaleX")
-		proxy.con("radius", "scaleZ")
+			axis=[0,1,0], ch=0, n=self.name + "_proxy",
+		height=0.1, radius=0.4)[0] )
+		proxy.addAttr(attrName="radius", min=0, dv=0.3)
+		#proxy.con("radius", "scaleX")
+		#proxy.con("radius", "scaleZ")
+		#self.pin.con("scaleX", proxy + ".radius")
 
 		return proxy
 
