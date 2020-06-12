@@ -81,22 +81,30 @@ class Wheel(object):
 		self.pin.con( self.pin + ".scaleX", self.pin + ".radius") # for now
 		self.pin.parentTo(self.group)
 
+
+
 		# radius flipping setup
 		self.pin.addAttr(attrName="flip", attrType="bool")
 		choice = ECA("choice", n=self.name + "radiusSwitch")
-
-		radiusFlip = plug.multPlugs(self.pin + ".radius", -1)
-		choice.con(self.pin + ".radius", "input[0]")
-		choice.con(radiusFlip, "input[1]")
+		flipMdl = ECA("multDoubleLinear", n=self.name + "radiusFlip")
+		flipMdl.set("input1", 1)
+		flipMdl.set("input2", -1)
+		choice.con(flipMdl + ".input1", "input[0]")
+		choice.con(flipMdl + ".input2", "input[1]")
 		choice.con(self.pin + ".flip", "selector")
-		adl = ECA("adl", n=self.name + "radiusOut")
-		adl.con(choice + ".output", "input1")
-		self.radius = adl + ".output"
+		# 1 / -1 used in other places in setup
+		self.radius = plug.multPlugs(self.pin + ".radius", choice + ".output")
+
 
 		# base orient node to track cross product between input vectors
 		orient = ECA("transform", n=self.name + "vectorOrient")
 		orient.parentTo(self.pin)
 		self.orient = orient
+
+		# arc midpoint
+		self.midpoint = ECA("locator", n=self.name + "arcMidpoint")
+		self.midpoint.con(self.radius, "translateX")
+		self.midpoint.parentTo(self.orient)
 
 		# proxy and temp control, canted rotation not implemented yet
 		self.proxy = self.makeProxy()
@@ -114,6 +122,8 @@ class Wheel(object):
 		before and after can be the same wheel
 		for now we only support two linked wheels - more can be achieved
 		more easily with hacks if necessary
+		there are probably inefficiencies in here among the linear stuff,
+		but at least it's all pretty parallel
 		"""
 
 		# main vector inputs
@@ -128,13 +138,14 @@ class Wheel(object):
 		# normal between points
 		inNormal = plug.crossProduct(vecToPrev, vecToNext, normalise=True)
 		vecToPrevN = plug.normalisePlug(vecToPrev)
+		vecToNextN = plug.normalisePlug(vecToNext)
 
-		orientMat = transform.buildTangentMatrix(
-			#self.pin + ".translate",
-			(0, 0, 0),
-			vecToPrevN, inNormal)
+		prevOrientMat = transform.buildTangentMatrix(
+			(0, 0, 0), vecToPrevN, inNormal)
+		nextOrientMat = transform.buildTangentMatrix(
+			(0, 0, 0), vecToNextN, inNormal)
 
-		transform.decomposeMatrixPlug(orientMat, target=self.orient )
+		transform.decomposeMatrixPlug(prevOrientMat, target=self.orient )
 
 		# draw lines to track which wheels are connected
 		nextLine = curve.curveFromCvPlugs([self.next.pos,
@@ -148,6 +159,15 @@ class Wheel(object):
 		"""
 
 		totalRadii = plug.addLinearPlugs(self.radius, self.next.radius)
+		r2OverTotal = plug.dividePlug(self.next.radius, totalRadii)
+		lhs = plug.multPlugs(r2OverTotal, self.pos)
+		r1OverTotal = plug.dividePlug(self.radius, totalRadii)
+		rhs = plug.multPlugs(r1OverTotal, self.next.pos)
+		centre = plug.addPlugs(lhs, rhs)
+
+		# marker for now
+		marker = ECA("locator", n=self.name + "hCentreMarker")
+		marker.con(centre, "translate")
 
 
 
@@ -161,9 +181,6 @@ class Wheel(object):
 		proxy = AbsoluteNode( cmds.polyCylinder(
 			axis=[0,1,0], ch=0, n=self.name + "_proxy",
 		height=0.1, radius=0.4)[0] )
-		#proxy.con("radius", "scaleX")
-		#proxy.con("radius", "scaleZ")
-		#self.pin.con("scaleX", proxy + ".radius")
 
 		return proxy
 
