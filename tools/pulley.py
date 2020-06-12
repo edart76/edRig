@@ -45,6 +45,9 @@ class Wheel(object):
 		""":type basePoint : AbsoluteNode
 		:param basePoint : AbsoluteNode
 		central point from which main vector will compute
+
+		each wheel deals with itself and the relationship to its next
+
 		"""
 		self.point = basePoint
 		self.name = name
@@ -58,6 +61,11 @@ class Wheel(object):
 		self.pin = None
 
 		self.curves = []
+
+		# interface parametres
+		self.pos = None
+		self.radius = None
+
 		pass
 
 	def build(self):
@@ -69,7 +77,21 @@ class Wheel(object):
 
 		# main pin input
 		self.pin = ECA("locator", n=self.name + "pointInput")
+		self.pin.addAttr(attrName="radius", min=0, dv=0.3)
+		self.pin.con( self.pin + ".scaleX", self.pin + ".radius") # for now
 		self.pin.parentTo(self.group)
+
+		# radius flipping setup
+		self.pin.addAttr(attrName="flip", attrType="bool")
+		choice = ECA("choice", n=self.name + "radiusSwitch")
+
+		radiusFlip = plug.multPlugs(self.pin + ".radius", -1)
+		choice.con(self.pin + ".radius", "input[0]")
+		choice.con(radiusFlip, "input[1]")
+		choice.con(self.pin + ".flip", "selector")
+		adl = ECA("adl", n=self.name + "radiusOut")
+		adl.con(choice + ".output", "input1")
+		self.radius = adl + ".output"
 
 		# base orient node to track cross product between input vectors
 		orient = ECA("transform", n=self.name + "vectorOrient")
@@ -79,6 +101,11 @@ class Wheel(object):
 		# proxy and temp control, canted rotation not implemented yet
 		self.proxy = self.makeProxy()
 		self.proxy.parentTo(orient)
+
+		# curve setup
+		self.arc = ECA("makeThreePointCircularArc", n=self.name + "Arc")
+
+		self.pos = self.pin + ".translate"
 
 
 	def link(self):
@@ -110,9 +137,17 @@ class Wheel(object):
 		transform.decomposeMatrixPlug(orientMat, target=self.orient )
 
 		# draw lines to track which wheels are connected
-		prevLine = curve.curveFromCvPlugs([self.prev.pin + ".translate",
+		nextLine = curve.curveFromCvPlugs([self.next.pos,
 		                                  self.pin + ".translate"], useApi=0,
 		                                  name=self.name + ".prevLine")
+
+		# find homothetic centres
+		""" equation goes like this
+		centre = (r2 / (r1 + r2) ) * pos1 + (r1 / (r1 + r2) ) * pos2
+		angles of tangents are common to both discs
+		"""
+
+		totalRadii = plug.addLinearPlugs(self.radius, self.next.radius)
 
 
 
@@ -126,7 +161,6 @@ class Wheel(object):
 		proxy = AbsoluteNode( cmds.polyCylinder(
 			axis=[0,1,0], ch=0, n=self.name + "_proxy",
 		height=0.1, radius=0.4)[0] )
-		proxy.addAttr(attrName="radius", min=0, dv=0.3)
 		#proxy.con("radius", "scaleX")
 		#proxy.con("radius", "scaleZ")
 		#self.pin.con("scaleX", proxy + ".radius")

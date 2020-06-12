@@ -35,20 +35,26 @@ def isPlug(target):
 
 def plugHType(plug):
 	"""returns either leaf, array or compound"""
+	if not isPlug(plug): return None
 	node, attr = tokenisePlug(plug)
-	# only the last token is considered
-	# if "." in attr:
-	# 	attr = attr.split(".")[-1]
 
-	try:
-		found = cmds.attributeQuery(attr, node=node, listChildren=True)
-		if found: return "compound"
-	except:
-		pass
-
-	if "[" in plug:
+	mPlug = getMPlug(plug)
+	if mPlug.isArray:
+		return "array"
+	elif mPlug.isCompound:
+		return "compound"
+	else:
 		return "leaf"
-	return "leaf"
+	#
+	# try:
+	# 	found = cmds.attributeQuery(attr, node=node, listChildren=True)
+	# 	if found: return "compound"
+	# except:
+	# 	pass
+	#
+	# if "[" in plug:
+	# 	return "leaf"
+	# return "leaf"
 
 
 def getMPlug(plugName):
@@ -62,7 +68,10 @@ def getMObject(node):
 	return sel.getDependNode(0)
 
 def con(a, b, f=True):
-	"""let's try this again"""
+	"""let's try this again
+	single to compound -> single connected to all compound
+
+	"""
 	source = a
 
 	if b[-1] == "]": # assume already defined

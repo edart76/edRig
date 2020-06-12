@@ -29,15 +29,35 @@ def dividePlug(numerator, divisor):
 	return mdv + ".output"
 
 def multPlugs(*plugs):
-	"""multiplies all plugs - optimise to multDoubleLinear here if possible"""
+	"""multiplies all plugs - optimise to multDoubleLinear here if possible
+	sequential pairs of nodes are created for each plug"""
 	a = plugs[0]
+	# use mdv if compound, mdl if not
+	if any( [attr.plugHType(plug) == "compound" for plug in plugs]):
+		nodeType = "multiplyDivide"
+	else: nodeType = "multDoubleLinear"
+
 	for i in plugs[1:]:
 		#mult = ECA("multiplyDivide")
-		mult = ECA("mdl")
+		mult = ECA(nodeType, n="multPlugs")
 		mult.conOrSet(a, mult + ".input1")
 		mult.conOrSet(i, mult + ".input2")
 		a = mult + ".output"
 	return a
+
+def addLinearPlugs(*plugs):
+	""" specify individual linear values """
+	add = ECA("plusMinusAverage", n="addLinearPlugs")
+	for i, val in enumerate(plugs):
+		add.conOrSet(val, add + ".input1D[{}]".format(i))
+	return add + ".output1D"
+
+def addCompoundPlugs(*plugs):
+	""" easier to use plusMinusAverage node here than the above"""
+	add = ECA("plusMinusAverage", n="addCompoundPlugs")
+	for i, val in enumerate(plugs):
+		add.conOrSet(val, add + ".input3D[{}]".format(i))
+	return add + ".output3D"
 
 def plugCondition(val1, val2, operation="greaterThan"):
 	"""compares conditions"""
