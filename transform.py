@@ -73,7 +73,7 @@ def fourByFourFromCompoundPlugs(xPlug=None, yPlug=None, zPlug=None, posPlug=None
                                 name="constructedMat"):
 	""" usually we have plug compounds for each axis
 	also this is hardcoded to XYZ child names, rip"""
-	mat = ECA("fourByFourMatrix", n="constructedMat")
+	mat = ECA("fourByFourMatrix", n=name)
 	sources = [xPlug, yPlug, zPlug, posPlug]
 	for source, row in zip(sources, "0123"):
 		if not source : continue
@@ -345,7 +345,7 @@ def unpackTRS(t, r, s):
 	attrs = {"translate" : t, "rotate" : r, "scale" : s}
 	return [k for k, v in attrs.items() if k]
 
-def decomposeMatrixPlug(plug, target=None, t=1, r=1, s=1):
+def decomposeMatrixPlug(plug, target=None, t=1, r=1, s=1, shear=0):
 	"""basic atomic decomposition"""
 	decomp = ECA("decomposeMatrix", "decomposeMat"+plug)
 	cmds.connectAttr(plug, decomp+".inputMatrix")
@@ -356,6 +356,10 @@ def decomposeMatrixPlug(plug, target=None, t=1, r=1, s=1):
 			for n in "XYZ":
 				cmds.connectAttr(decomp+".output"+i.capitalize()+n,
 				                 target+"."+i+n, f=1)
+	if shear:
+		cmds.connectAttr(decomp + ".outputShearX", target + ".shearXY")
+		cmds.connectAttr(decomp + ".outputShearY", target + ".shearXZ")
+		cmds.connectAttr(decomp + ".outputShearZ", target + ".shearYZ")
 	return decomp
 
 def multMatrixPlugs(plugs, name="matMult"):

@@ -12,10 +12,10 @@ def conOrSet(driver, driven):
 	"""if EITHER is a static value, the opposite will be set as a plug"""
 	attr.conOrSet(driver, driven)
 
-def vecFromTo(startPlug, endPlug):
+def vecFromTo(startPlug, endPlug, name=None):
 	"""get vector between two plugs"""
-	vec = ECA("plusMinusAverage", name="vecFrom_{}_{}".format(
-		startPlug, endPlug))
+	name = name or "vecFrom_{}_{}".format(startPlug, endPlug)
+	vec = ECA("plusMinusAverage", name=name)
 	vec.set("operation", "subtract") #smart enum setting bois :D
 	vec.con(endPlug, vec+".input3D[0]")
 	vec.con(startPlug, vec+".input3D[1]")
@@ -122,6 +122,9 @@ def periodicSignalFromPlug(plug, period=1.0, amplitude=1.0,
 
 def invertMatrixPlug(plug):
 	"""returns an inverse matrix plug"""
+	node = ECA("inverseMatrix")
+	node.con(plug, "inputMatrix")
+	return node + ".outputMatrix"
 
 def blendFloatPlugs(plugList=None, blender=None, name="blendPlugs"):
 	"""blends float plugs together"""
@@ -131,6 +134,16 @@ def blendFloatPlugs(plugList=None, blender=None, name="blendPlugs"):
 		conOrSet(val, blend + ".input[{}]".format(i) )
 	conOrSet(blender, blend + ".attributesBlender")
 	return blend + ".output"
+
+def blendMatrixPlugs(matrixList=None, driverList=None, name="blendMatrices"):
+	""" blends matrix plugs with drivers"""
+	node = ECA("wtAddMatrix", n=name)
+	for i in range(len(matrixList)):
+		plug = node + ".wtMatrix[{}]".format(i)
+		conOrSet(matrixList[i], plug + ".matrixIn")
+		conOrSet(driverList[i], plug + ".weightIn")
+	return node + ".matrixSum"
+
 
 def blendRotationPlugs(a, b=(0,0,0), name="angleBlend"):
 	""" creates an animBlendNodeAdditiveRotation to avoid unit conversions """
@@ -150,6 +163,22 @@ def vectorMatrixMultiply(vector=None, matrix=None, normalise=False,
 	conOrSet( normalise, node + ".normalizeOutput",)
 	attr.setAttr( node + ".operation", "point Matrix Product")
 	return node + ".output"
+	# BE WARNED
+	# vectors from sheared matrices are not normalised properly
+	# why would they be
+
+	# node = ECA("pointMatrixMult", n=name)
+	# conOrSet(vector, node + ".inPoint")
+	# conOrSet(matrix, node + ".inMatrix")
+	# conOrSet(normalise, node + ".vectorMultiply")
+	# return node + ".output"
+
+def multMatrixPlugs(plugs, name="matMult"):
+	"""multiplies matrix plugs in given sequence"""
+	node = ECA("multMatrix", n=name)
+	for i, val in enumerate(plugs):
+		cmds.connectAttr(val, node+".matrixIn[{}]".format(i))
+	return node + ".matrixSum"
 
 def crossProduct(vecA, vecB, normalise=False, name="crossProduct"):
 	node = ECA("vectorProduct", n=name)
@@ -203,8 +232,19 @@ def trigPlug(plug=None, mode="sine", res=16, inputDegrees=True):
 	if not plug:
 		return crv
 	crv.con(plug, crv+".input")
-	return plug + ".output"
+	return crv + ".output"
 
+def plugToDegrees(plug):
+	node = ECA("multDoubleLinear", name="toDegrees")
+	node.set("input2", 180.0 / 3.14159265)
+	node.conOrSet(plug, "input1")
+	return node + ".output"
+
+def plugToRadians(plug):
+	node = ECA("multDoubleLinear", name="toRadians")
+	node.set("input2", 3.14159265 / 180.0)
+	node.conOrSet(plug, "input1")
+	return node + ".output"
 
 class RampPlug(object):
 	"""don't you love underscores and capital letters?

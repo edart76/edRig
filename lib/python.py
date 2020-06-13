@@ -3,6 +3,7 @@ from __future__ import print_function
 import inspect,importlib, pprint, pkgutil
 from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
+from functools import partial, wraps
 from abc import ABCMeta
 import types
 
@@ -19,6 +20,26 @@ class Decorator(object):
 
 	def __call__(self, *args, **kwargs):
 		raise NotImplementedError
+
+class ContextDecorator(object):
+	""" class to wrap functions with context through decorator """
+	def __init__(self, *decoratorArgs, **decoratorKwargs):
+		""" called when object or decorator is created """
+		self.args = decoratorArgs
+		self.kwargs = decoratorKwargs
+	def __enter__(self):
+		raise NotImplementedError
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		raise NotImplementedError
+
+	def __call__(self, fn):
+		""" called to wrap function, returns wrapper """
+		@wraps(fn)
+		def wrap( *args, **kwargs):
+			""" receives arguments of function call """
+			with self:
+				return fn( *args, **kwargs)
+		return wrap
 
 def getUserInput(prompt=None, default="eyyy"):
 	prompt = prompt or "user input"

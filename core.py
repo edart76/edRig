@@ -148,7 +148,8 @@ def con(start, end, *args):
 					cmds.connectAttr(i, "{}[{}]".format(end, nextIndex(end)))
 
 	else:
-		print "failed - one of {}, {} doesn't exist".format(start, end)
+		#print "failed - one of {}, {} doesn't exist".format(start, end)
+		return False
 
 
 def nextIndex(attr, startIndex=0):

@@ -1,20 +1,13 @@
 """AbsoluteNode and object-style nod wrappers"""
 import weakref, ctypes
 
-# try:
-# 	from maya import cmds
-# 	import maya.api.OpenMaya as om
-# except:
-# 	cmds = None
-# 	om = None
-
 from edRig.dcc import cmds, om
 
 from edRig.core import MObjectFrom, shapeFrom, tfFrom, stringFromMObject, ECN
 from edRig import attr, naming, beauty
 
 # saviour
-from edRig.lib.python import StringLike
+from edRig.lib.python import StringLike, ContextDecorator
 
 
 # TMP HAAAACK
@@ -36,16 +29,6 @@ def invokeNode(name="", type="", parent="", func=None):
 		cmds.parent(node, parent)
 	return node
 
-
-# prefix stuff
-class PrefixBlock(object):
-	""" context handler for adding prefixes to current stack """
-	def __init__(self, prefix=""):
-		self.prefix = prefix
-	def __enter__(self):
-		AbsoluteNode.prefixStack.append(self.prefix)
-	def __exit__(self, exc_type, exc_val, exc_tb):
-		AbsoluteNode.prefixStack.pop(-1)
 
 #class AbsoluteNode(str):
 #class AbsoluteNode(object):
@@ -97,6 +80,8 @@ class AbsoluteNode(StringLike):
 	def prefix(cls):
 		""" returns the current prefix stack for absoluteNode """
 		return "".join(cls.prefixStack)
+
+	withPrefix = None
 
 	def __new__(cls, node, useCache=True):
 		""" new mechanism now used only to check validity and cache -
@@ -620,6 +605,23 @@ class AbsoluteNode(StringLike):
 		elif self.isDag():
 			cmds.parent(node, self.parent)
 		return node
+
+
+# prefix stuff
+class WithPrefix(ContextDecorator):
+	""" context handler for adding prefixes to current stack """
+
+	def __init__(self, prefix=""):
+		super(WithPrefix, self).__init__(prefix)
+		self.prefix = prefix
+
+	def __enter__(self):
+		AbsoluteNode.prefixStack.append(self.prefix)
+
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		AbsoluteNode.prefixStack.pop(-1)
+
+AbsoluteNode.withPrefix = WithPrefix
 
 
 def ECA(type, name="", colour=None, *args, **kwargs):

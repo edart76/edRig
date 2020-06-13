@@ -77,14 +77,20 @@ def con(a, b, f=True):
 	if b[-1] == "]": # assume already defined
 		dest = b
 	elif plugHType(b) == "array":
-		dest = getNextAvailablePlug(b)
+		#dest = getNextAvailablePlug(b)
+		bMPlug = getMPlug(b)
+		dest = getNextAvailablePlug(bMPlug)
 
 	elif plugHType(a) == "compound" and plugHType(b) == "compound" :
-		dest = b
+		# be safe against weird eval issues
+		for src, dest in zip(unrollPlug(a), unrollPlug(b)):
+			con(src, dest, f)
+		return
 
 	elif plugHType(b) == "compound":
 		for i in unrollPlug(b):
 			con(a, i, f)
+		return
 	else: dest = b
 	#print "source {} dest {}".format(source, dest)
 	cmds.connectAttr(source, dest, f=f)
@@ -99,6 +105,11 @@ def conOrSet(a, b, f=True):
 	sets static value if not"""
 	if isPlug(a):
 		con(a, b, f)
+	elif isinstance(a, tuple):
+		if plugHType(b) == "compound":
+			for i, val in enumerate(a):
+				conOrSet(val, unrollPlug(b, returnLen=len(a))[i] )
+
 	else:
 		setAttr(b, attrValue=a)
 
@@ -509,9 +520,18 @@ def unrollPlug(plug, returnLen=-1):
 
 def getNextAvailablePlug(arrayPlug):
 	"""gets the first free index for an array attribute"""
+	if isinstance(arrayPlug, om.MPlug):
+		length = arrayPlug.numElements()
+		print("length {}".format(length))
+		name = arrayPlug.partialName( includeNodeName=True,
+		                              useFullAttributePath=True)
+		baseName = "[".join(name.split("[")[:-1]) or name
+		return baseName + "[{}]".format(length)
+
 	length = cmds.getAttr(arrayPlug, size=True)
+	print("length {}".format(length))
 	if arrayPlug[-1] == "]" :
-		arrayPlug = "[".join( arrayPlug.split("[") )
+		arrayPlug = "[".join( arrayPlug.split("[")[:-1] )
 	return arrayPlug+"[{}]".format(length)
 
 def getNextAvailableIndex(arrayPlug):
