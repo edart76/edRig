@@ -140,6 +140,8 @@ class Wheel(object):
 
 		# curve setup
 		self.arc = ECA("makeThreePointCircularArc", n=self.name + "Arc")
+		#self.arc = ECA("makeTwoPointCircularArc", n=self.name + "Arc")
+		self.arc.con(self.uRadius, "radius")
 
 		self.pos = self.pin + ".translate"
 
@@ -190,6 +192,8 @@ class Wheel(object):
 		vecToPrevN = plug.normalisePlug(vecToPrev)
 		vecToNextN = plug.normalisePlug(vecToNext)
 
+		self.arc.con(inNormal, "directionVector")
+
 		# prevOrientMat = transform.buildTangentMatrix(
 		# 	(0, 0, 0), vecToPrevN, inNormal)
 		# nextOrientMat = transform.buildTangentMatrix(
@@ -210,10 +214,10 @@ class Wheel(object):
 		# midpoint setup
 		midDir = plug.vectorMatrixMultiply((-1, 0, -1), shearMat, normalise=False)
 		midDir = plug.normalisePlug(midDir)
-		midPos = plug.multPlugs(self.uRadius, midDir)
+		midPos = plug.multPlugs(self.radius, midDir)
 		# we do still need normalisation, shear distorts vector length
 
-		self.midpoint.con(midPos, "translate")
+		#self.midpoint.con(midPos, "translate")
 
 		# draw lines to track which wheels are connected
 		# prevLine = curve.curveFromCvPlugs([self.next.pos,
@@ -281,7 +285,8 @@ class Wheel(object):
 
 		#prevMat = plug.multMatrixPlugs([self.prevRotMat + ".outputMatrix", shearMat])
 		#prevMat = plug.multMatrixPlugs([self.prevRotMat + ".outputMatrix", shearMat])
-		prevMat = plug.multMatrixPlugs([shearMat, self.prevRotMat + ".outMatrix"])
+		inversePrevRot = plug.invertMatrixPlug(self.prevRotMat + ".outMatrix")
+		prevMat = plug.multMatrixPlugs([shearMat, inversePrevRot])
 		#prevMat = shearMat
 		#prevMat = self.prevRotMat + ".outMatrix"
 		prevDir = plug.vectorMatrixMultiply((0, 0, 1), prevMat, normalise=False)
