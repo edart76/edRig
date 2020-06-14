@@ -80,6 +80,7 @@ class Wheel(object):
 		self.pos = None
 		self.radius = None
 		self.prevRotMat = None
+		self.prevRotVec = None
 		self.line = None
 
 		pass
@@ -111,8 +112,8 @@ class Wheel(object):
 		flipMdl.set("input1", 1)
 		flipMdl.set("input2", -1)
 		#flipped by default
-		choice.con(flipMdl + ".input2", "input[1]")
-		choice.con(flipMdl + ".input1", "input[0]")
+		choice.con(flipMdl + ".input2", "input[0]")
+		choice.con(flipMdl + ".input1", "input[1]")
 
 		choice.con(self.pin + ".flip", "selector")
 		# 1 / -1 used in other places in setup
@@ -179,6 +180,7 @@ class Wheel(object):
 		# dangling hook for adjacent wheel to fill in
 		#self.prevRotMat = ECA("composeMatrix", n=self.name + "prevRotMat")
 		self.prevRotMat = ECA("passMatrix", n=self.name + "prevRotMat")
+		self.prevRotVec = ECA("multiplyDivide", n=self.name + "prevRotVector")
 
 
 	def link(self):
@@ -222,8 +224,6 @@ class Wheel(object):
 		vecToNextN = plug.normalisePlug(vecToNext)
 
 
-		# prevOrientMat = transform.buildTangentMatrix(
-		# 	(0, 0, 0), vecToPrevN, inNormal)
 		nextOrientMat = transform.buildTangentMatrix(
 			(0, 0, 0), vecToNextN, inNormal)
 
@@ -233,8 +233,6 @@ class Wheel(object):
 			posPlug=None, name=self.name+"ShearAimMat"
 		)
 
-		# localised transform, lets you take vectors in only 2d x and z
-		# localMat = plug.invertMatrixPlug(prevOrientMat)
 
 		transform.decomposeMatrixPlug(nextOrientMat, target=self.orient )
 
@@ -246,10 +244,6 @@ class Wheel(object):
 
 		self.midpoint.con(midPos, "translate")
 
-		# draw lines to track which wheels are connected
-		# prevLine = curve.curveFromCvPlugs([self.next.pos,
-		#                                   self.pin + ".translate"], useApi=0,
-		#                                   name=self.name + ".prevLine")
 
 		# find homothetic centres
 		""" equation goes like this
@@ -265,63 +259,57 @@ class Wheel(object):
 		both flipped = neither flipped, for angle
 		"""
 
-		totalRadii = plug.addLinearPlugs(self.radius, self.next.uRadius)
-		#totalRadii = plug.addLinearPlugs(self.radius, self.next.radius)
+		r1 = self.radius
+		r2 = self.next.uRadius
+
+		totalRadii = plug.addLinearPlugs(r1, r2)
 		# safety limits
-		totalRadii = plug.setPlugLimits(totalRadii, min=0.0001)
-		#r2OverTotal = plug.dividePlug(self.next.uRadius, totalRadii)
-		r2OverTotal = plug.dividePlug(self.next.radius, totalRadii)
-		r1OverTotal = plug.dividePlug(self.radius, totalRadii)
+		#totalRadii = plug.setPlugLimits(totalRadii, min=0.0001)
+		r2OverTotal = plug.dividePlug(r2, totalRadii)
+		r1OverTotal = plug.dividePlug(r1, totalRadii)
 
 		lhs = plug.multPlugs(r2OverTotal, self.pos)
 		rhs = plug.multPlugs(r1OverTotal, self.next.pos)
 
 		centre = plug.addCompoundPlugs(lhs, rhs)
 
+		# dot product to check sign of difference in weights
+		toCentre = plug.vecFromTo(self.pos, centre)
+		dot = plug.dotProduct(vecToNext, toCentre)
+		dotBool = plug.boolFromNormalisedPlug(dot)
+
+
 		# arccos( dCentre / radius )
 		distance = plug.plugDistance(centre, self.pos)
-
 		overRadius = plug.dividePlug(self.uRadius, distance)+"X"
+
 		acos = plug.trigPlug(overRadius, mode="arccosine", res=24)
 		degrees = plug.plugToDegrees(acos)
-		negDegrees = plug.multPlugs(degrees, -1)
+		#negDegrees = plug.multPlugs(degrees, -1)
+		negDegrees = plug.multPlugs(degrees, plug.multLinearPlugs(dot, -1))
 		comp = ECA("composeMatrix", n=self.name + "nextAngleRotMat")
 
-		#test
-		# self.degreeSwitch.con(degrees, "input[0]")
-		# self.degreeSwitch.con(negDegrees, "input[1]")
-		# comp.con(self.degreeSwitch + ".output", "inputRotateZ")
-
-		comp.con(degrees, "inputRotateZ")
-		#comp.con(negDegrees, "inputRotateZ")
-
-
-		# connect next angle correspondingly
-		self.next.prevRotMat.con(comp + ".outputMatrix", "inMatrix")
+		#comp.con(degrees, "inputRotateZ")
+		comp.con(negDegrees, "inputRotateZ")
 
 		# flip angle setup for next point
 		nextRot = comp + ".outputMatrix"
 		invNextRot = plug.invertMatrixPlug(nextRot)
 		self.nextMatSwitch.con(nextRot, "input[0]")
 		self.nextMatSwitch.con(invNextRot, "input[1]")
-		self.nextMatSwitch.con(self.next.pin + ".flip", "selector")
-		#self.nextMatSwitch.con(flipXOR, "selector")
-		nextRot = self.nextMatSwitch + ".output"
 
 		nextMat = plug.multMatrixPlugs([shearMat, nextRot])
+		self.next.prevRotMat.con(nextMat, "inMatrix")
 
-		nextDir = plug.vectorMatrixMultiply( (1, 0, 0),  nextMat, normalise=False)
-		#nextDir = plug.vectorMatrixMultiply( (radiusMult, 0, 0),  nextMat, normalise=False)
-		#nextDir = plug.vectorMatrixMultiply( (0, 0, -1),  nextMat, normalise=False)
+
+		nextDir = plug.vectorMatrixMultiply( (dot, 0, 0),  nextMat, normalise=False)
+
 		nextDir = plug.normalisePlug(nextDir)
+		self.next.prevRotVec.con(nextDir, "input1")
 		nextPos = plug.multPlugs(self.uRadius, nextDir)
-
 		self.nextPoint.con(nextPos, "translate")
 
 
-
-		#prevMat = plug.multMatrixPlugs([self.prevRotMat + ".outputMatrix", shearMat])
-		#prevMat = plug.multMatrixPlugs([self.prevRotMat + ".outputMatrix", shearMat])
 		prevRot = self.prevRotMat + ".outMatrix"
 		invPrevRot = plug.invertMatrixPlug(prevRot)
 		self.prevMatSwitch.con(invPrevRot, "input[0]")
@@ -329,20 +317,12 @@ class Wheel(object):
 
 
 		# connect to flip on previous wheel
-		# self.prevMatSwitch.con(self.prev.pin + ".flip", "selector")
-		self.prevMatSwitch.con(self.pin + ".flip", "selector")
-		#self.prevMatSwitch.con(flipXOR, "selector")
+
 		prevFlip = plug.reversePlug(flipXOR) + "X"
 		prevFlipMult = plug.normaliseBoolPlug(prevFlip)
-		#self.prevMatSwitch.con( prevFlip, "selector")
 
 
-		prevRot = self.prevMatSwitch + ".output"
-		prevMat = plug.multMatrixPlugs([shearMat, prevRot])
-		#test
-
-		prevDir = plug.vectorMatrixMultiply((0, 0, 1), prevMat, normalise=False)
-		#prevDir = plug.vectorMatrixMultiply((0, 0, prevFlipMult), prevMat, normalise=False)
+		prevDir = self.prevRotVec + ".output"
 		prevDir = plug.normalisePlug(prevDir)
 		prevPos = plug.multPlugs(self.uRadius, prevDir)
 

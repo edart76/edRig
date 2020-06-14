@@ -28,10 +28,11 @@ def testPulley(nWheels=4, randRange=10.0, flat=True):
 		# for a in axes:
 		# 	point.set("translate" + a, random.random() * randRange )
 		point.set("translate", positions[i])
-		point.set("flip", 1)
+		point.set("radius", 1 + random.random())
+		#point.set("flip", 1)
 	system.link()
-
-	cmds.setAttr("test0wheelpointInput.radius", 0.0001)
+	cmds.setAttr("test1wheelpointInput.radius", 3.0)
+	#cmds.setAttr("test0wheelpointInput.radius", 0.0001)
 
 
 

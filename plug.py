@@ -70,10 +70,12 @@ def plugCondition(val1, val2, operation="greaterThan",
                   ifFalse=None, ifTrue=None):
 	"""compares conditions, returns either supplied options or
 	0 1 if none given"""
+	tokens = [u'equal', u'not Equal', u'greater Than',
+	          u'greater or Equal', u'less Than', u'less or Equal']
 	operators = ["equal", "notEqual", "greaterThan", "greaterOrEqual",
 	             "lessThan", "lessOrEqual"]
 	node = ECA("condition")
-	node.set("operation", operation)
+	node.set("operation", tokens[ operators.index(operation)] )
 	node.conOrSet(val1, "firstTerm")
 	node.conOrSet(val2, "secondTerm")
 	if any((ifFalse, ifTrue)):
@@ -219,6 +221,14 @@ def crossProduct(vecA, vecB, normalise=False, name="crossProduct"):
 	attr.setAttr(node + ".operation", "cross Product")
 	return node + ".output"
 
+def dotProduct(vecA, vecB, normalise=True, name="dotProduct"):
+	node = ECA("vectorProduct", n=name)
+	conOrSet(vecA, node + ".input1")
+	conOrSet(vecB, node + ".input2")
+	conOrSet(normalise, node + ".normalizeOutput")
+	attr.setAttr(node + ".operation", "dot Product")
+	return node + ".outputX"
+
 def normalisePlug(vector, name="normalisePlug"):
 	node = ECA("vectorProduct", n=name)
 	conOrSet(vector, node + ".input1")
@@ -309,6 +319,11 @@ def normaliseBoolPlug(plug):
 	choice.con(values + ".input2", "input[1]")
 	choice.con(plug, "selector")
 	return choice + ".output"
+
+def boolFromNormalisedPlug(plug):
+	"""converts -1 1 signal to 0 1"""
+	return plugCondition(plug, 0, operation="greaterThan")
+
 
 
 class RampPlug(object):
