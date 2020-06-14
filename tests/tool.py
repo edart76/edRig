@@ -13,7 +13,7 @@ def testPulley(nWheels=4, randRange=10.0, flat=True):
 	""" scatter random wheels of random radius and connect them """
 	system = pulley.PulleySystem("testSystem")
 	for i in range(nWheels):
-		system.addWheel(name="test{}wheel".format(i))
+		wheel = system.addWheel(name="test{}wheel".format(i))
 	system.build()
 
 	positions = [(3, 0, 0),
@@ -28,8 +28,10 @@ def testPulley(nWheels=4, randRange=10.0, flat=True):
 		# for a in axes:
 		# 	point.set("translate" + a, random.random() * randRange )
 		point.set("translate", positions[i])
+		point.set("flip", 1)
 	system.link()
 
+	cmds.setAttr("test0wheelpointInput.radius", 0.0001)
 
 
 

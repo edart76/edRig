@@ -45,6 +45,13 @@ def multPlugs(*plugs):
 		a = mult + ".output"
 	return a
 
+def multLinearPlugs(*plugs):
+	""" optimise the above using combinationShape node """
+	node = ECA("combinationShape")
+	for i, val in enumerate(plugs):
+		node.conOrSet(val, node + ".inputWeight[{}]".format(i))
+	return node + ".outputWeight"
+
 def addLinearPlugs(*plugs):
 	""" specify individual linear values """
 	add = ECA("plusMinusAverage", n="addLinearPlugs")
@@ -59,8 +66,25 @@ def addCompoundPlugs(*plugs):
 		add.conOrSet(val, add + ".input3D[{}]".format(i))
 	return add + ".output3D"
 
-def plugCondition(val1, val2, operation="greaterThan"):
-	"""compares conditions"""
+def plugCondition(val1, val2, operation="greaterThan",
+                  ifFalse=None, ifTrue=None):
+	"""compares conditions, returns either supplied options or
+	0 1 if none given"""
+	operators = ["equal", "notEqual", "greaterThan", "greaterOrEqual",
+	             "lessThan", "lessOrEqual"]
+	node = ECA("condition")
+	node.set("operation", operation)
+	node.conOrSet(val1, "firstTerm")
+	node.conOrSet(val2, "secondTerm")
+	if any((ifFalse, ifTrue)):
+		node.conOrSet(ifFalse or (0, 0, 0), "colorIfFalse")
+		node.conOrSet(ifTrue or (1, 1, 1), "colorIfTrue")
+		return node + ".outColor"
+	node.set("colorIfFalseR", 0)
+	node.set("colorIfTrueR", 1)
+	return node + ".outColorR"
+
+
 
 def plugMin(*args):
 	"""gets minimum of a set of plugs"""
@@ -81,16 +105,19 @@ def plugDistance(a, b=None):
 
 def setPlugLimits(plug, min=None, max=None):
 	""" still not sure on triple plugs """
-	for i in [n for n in (min, max)if n]:
-		cnd = ECA("condition")
-		if i == min:
-			cnd.set("operation", 2)
-		conOrSet(plug, cnd + ".firstTerm")
-		conOrSet(plug, cnd + ".colorIfFalse")
-		conOrSet(i, cnd + ".colorIfTrue")
-		conOrSet(i, cnd + ".secondTerm")
-		plug = cnd + "outColor"
-	return plug
+	node = ECA("clamp")
+	for i in [min, max]:
+		tag = "max"
+		if i == min: tag = "min"
+		if i != None:
+			node.conOrSet(i, tag)
+		else:
+			node.conOrSet(plug, tag)
+	node.conOrSet(plug, "input")
+	return node + ".output"
+	#
+	# return plug
+
 
 def setPlugRange(plug, min=0, max=1,
                  oldMin=0, oldMax=1, name=None):
@@ -110,15 +137,25 @@ def setPlugRange(plug, min=0, max=1,
 def reversePlug(plug):
 	"""returns 1 - plug"""
 	rev = ECA("reverse", n=plug+"_reverse")
-	attr.con(plug, rev+".inputX")
-	return rev+".outputX"
+	attr.con(plug, rev+".input")
+	return rev+".output"
 
 def periodicSignalFromPlug(plug, period=1.0, amplitude=1.0,
                            profile="linear"):
 	"""creates a repeating 0-1 signal from float plug using
-	animCurve node"""
+	animCurve node
+	used for modulo operations"""
 	profiles = ("linear", "sine", "cosine", "tan")
 	curve = ECA("animCurveUU")
+	curve.con(plug, "input")
+	fn = oma.MFnAnimCurve(curve.MObject)
+	fn.addKey(0.0, 0.0)
+	fn.addKey(period, amplitude)
+	fn.setTangentTypes([0, 1],
+	                   tangentInType=2, tangentOutType=2) # linear, linear
+	fn.setPostInfinityType(3) # cycle
+	fn.setPreInfinityType(3) # cycle
+	return curve + ".output"
 
 def invertMatrixPlug(plug):
 	"""returns an inverse matrix plug"""
@@ -167,12 +204,6 @@ def vectorMatrixMultiply(vector=None, matrix=None, normalise=False,
 	# vectors from sheared matrices are not normalised properly
 	# why would they be
 
-	# node = ECA("pointMatrixMult", n=name)
-	# conOrSet(vector, node + ".inPoint")
-	# conOrSet(matrix, node + ".inMatrix")
-	# conOrSet(normalise, node + ".vectorMultiply")
-	# return node + ".output"
-
 def multMatrixPlugs(plugs, name="matMult"):
 	"""multiplies matrix plugs in given sequence"""
 	node = ECA("multMatrix", n=name)
@@ -194,8 +225,6 @@ def normalisePlug(vector, name="normalisePlug"):
 	node.set("operation", 0)
 	node.set("normalizeOutput", 1)
 	return node + ".output"
-
-
 
 trigModes = {"sine" : math.sin,
          "cosine" : math.cos,
@@ -245,6 +274,42 @@ def plugToRadians(plug):
 	node.set("input2", 3.14159265 / 180.0)
 	node.conOrSet(plug, "input1")
 	return node + ".output"
+
+
+# logic stuff
+# expects bool signals as input
+def orPlugs(a, b):
+	add = addLinearPlugs(a, b)
+	capped = setPlugLimits(add, max=1)
+	return capped
+
+def xorPlugs(*plugs):
+	""" probably more elegant way of doing this, just need something now """
+	values = ECA("addDoubleLinear", n="XORplugs_negativePositiveOne")
+	values.set("input1", 1)
+	values.set("input2", -1)
+	choices = []
+	for i, plug in enumerate(plugs):
+		choice = ECA("choice", n="XORplugs{}_choice".format(i))
+		choice.con(plug, "selector")
+		choice.con(values + ".input2", "input[0]")
+		choice.con(values + ".input1", "input[1]")
+		choices.append( choice + ".output")
+	total = multLinearPlugs(*choices)
+	total = setPlugLimits(total, min=0, max=1)
+	return reversePlug(total) + "X"
+
+def normaliseBoolPlug(plug):
+	""" converts 0 1 signal to -1 1"""
+	values = ECA("addDoubleLinear", n="normalise_negativePositiveOne")
+	values.set("input1", -1)
+	values.set("input2", 1)
+	choice = ECA("choice")
+	choice.con(values + ".input1", "input[0]")
+	choice.con(values + ".input2", "input[1]")
+	choice.con(plug, "selector")
+	return choice + ".output"
+
 
 class RampPlug(object):
 	"""don't you love underscores and capital letters?
