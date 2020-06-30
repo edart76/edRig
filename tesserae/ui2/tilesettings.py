@@ -438,58 +438,6 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		relation between branch and value items cannot be done,
 		as they must both appear on same row"""
 
-	# def columnCount(self):
-	# 	return 2
-	#
-	# def column(self):
-	# 	return 0
-	#
-	# def rowCount(self):
-	# 	return len(self.tree.branches)
-	# 	#return 1
-	#
-	# def row(self):
-	# 	return len(self.parents())
-
-	""" for all row operations we EXPECT a row unit to be [branchItem, valueItem] """
-	#
-	# def removeRows(self, row, count):
-	# 	""" remove tree objects from parent """
-	# 	for i in range(count):
-	# 		index = row + i
-	# 		self.removeRow(index)
-	#
-	# def removeRow(self, row):
-	# 	branch = self.tree.branches[row]
-	# 	branch.remove()
-	# 	return super(AbstractBranchItem, self).removeRow(row)
-	#
-	# def insertRows(self, row, items):
-	# 	""" overloaded function, items may be int or list of items """
-	# 	self.model().beginInsertRows(row, row + len(items))
-	# 	if isinstance(items, int):
-	# 		return super(AbstractBranchItem, self).insertRows(row, items)
-	# 	# add branch items to tree
-	# 	for i in range(len(items)):
-	# 		index = row + i
-	# 		super(AbstractBranchItem, self).insertRows(index, items[i])
-	# 	self.model().endInsertRows()
-	# def insertRow(self, row, item):
-	# 	print("inserting row {}".format(item))
-	# 	print("at index {}".format(row))
-	# 	super(AbstractBranchItem, self).insertRow(row, item)
-	# 	tree = item.data(objRole)
-	# 	print( "tree {}".format(tree.display()))
-	# 	if tree not in self.tree.branches:
-	# 		self.tree.addChild(tree, index=row)
-	# 	#self.model().itemChanged.emit(self)
-	# 	return
-	#
-	# def appendRows(self, items):
-	# 	for i in items:
-	# 		self.appendRow(i)
-	# def appendRow(self, item):
-	# 	return self.insertRow( self.rowCount() - 1, item)
 
 	def parents(self):
 		""" returns chain of branch items to root """
@@ -638,21 +586,6 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		return len(self.tree.root.allBranches())
 		#return len(self.itemFromIndex(index).tree.branches)
 		pass
-	#
-	# # def createIndex(self, row, column):
-	# # 	pass
-	#
-	# def data(self, index, role=QtCore.Qt.DisplayRole):
-	# 	pass
-	#
-	# def itemFromIndex(self, index):
-	# 	pass
-	#
-	# def indexFromItem(self, item):
-	# 	""" :param item : abstractTree branch """
-	#
-	# 	pass
-
 
 	def rowFromTree(self, tree):
 		""" returns index corresponding to tree """
