@@ -40,7 +40,7 @@ uniform int currentFrame : Frame < string UIWidget="None"; >;
 
 #else
 
-#version 440
+//#version 440
 // transform object vertices to world-space:
 uniform mat4 gObjToWorld;
 

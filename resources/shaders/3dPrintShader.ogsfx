@@ -1,6 +1,7 @@
 // maya-facing front end to 3d-printed slicer shader
 
 
+# version 430
 
 #define OGSFX 1
 

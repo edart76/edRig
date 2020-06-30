@@ -1,6 +1,6 @@
 """general lib for nifty python things like decorators and debugs"""
 from __future__ import print_function
-import inspect,importlib, pprint, pkgutil
+import inspect,importlib, pprint, pkgutil, string
 from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
 from functools import partial, wraps
@@ -41,6 +41,7 @@ class ContextDecorator(object):
 				return fn( *args, **kwargs)
 		return wrap
 
+
 def getUserInput(prompt=None, default="eyyy"):
 	prompt = prompt or "user input"
 	try:
@@ -51,6 +52,38 @@ def getUserInput(prompt=None, default="eyyy"):
 		name = default
 	return name
 
+def incrementName(name, currentNames=None):
+	"""checks if name is already in children, returns valid one"""
+	if name[-1].isdigit(): # increment digit like basic bitch
+		new = int(name[-1]) + 1
+		return name[:-1] + str(new)
+	if name[-1] in string.ascii_uppercase: # ends with capital letter
+		if name[-1] == "Z": # start over
+			name += "A"
+		else: # increment with letter, not number
+			index = string.ascii_uppercase.find(name[-1])
+			name = name[:-1] + string.ascii_uppercase[index+1]
+	else: # ends with lowerCase letter
+		name += "B"
+
+	# check if name already taken
+	if currentNames and name in currentNames:
+		return incrementName(name, currentNames)
+	#print( "found name is {}".format(name))
+	return name
+
+def camelCase(name):
+	return name[0].lower() + name[1:]
+
+def camelJoin():
+	pass
+
+""" stack introspection
+FrameInfo(frame, filename, lineno, function, code_context, index)
+function: function name
+code_context : list of lines from where stack was called
+index : index of calling line within that list
+"""
 # thank you code recipe 576925
 def caller():
 	"""whatever called this"""
@@ -63,10 +96,26 @@ def callee():
 def debug(var):
 	"""prints the name and value of var, in the scope it comes from
 	eg a = 23, debug (a) - 'a is 23' """
-	callerFrame = inspect.stack()[1][0]
-	name = [k for k, v in callerFrame.f_locals.iteritems() if v is var][0]
-	print("{} is {}".format(name, pprint.pformat(var)))
-	return name # part of me is sad this isn't more crazy
+	callerStack = inspect.stack()[1]
+	callerFrame = callerStack[0] # frame object from stack above this one
+	try:
+		#pprint.pprint(inspect.stack())
+		#pprint.pprint( callerFrame.f_locals)
+		name = [k for k, v in callerFrame.f_locals.iteritems() if v is var]
+		""" this fails if a local variable is not explicitly created before
+		debugging """
+		if name:
+			name = name[0]
+		else:
+			# fallback to literally whatever is written between brackets
+			callingLine = callerStack[4][ callerStack[5] ]
+			content = callingLine.split("debug(")[-1][:-2]
+			name = content
+		print("{} is {}".format(name, pprint.pformat(var)))
+		return name # part of me is sad this isn't more crazy
+	finally:
+		del callerFrame
+		del callerStack
 
 def outerVars():
 	"""returns a dict of variable names from the outer scope of the call
@@ -317,6 +366,10 @@ class AbstractTree(object):
 		self._setParent(val)
 
 	@property
+	def siblings(self):
+		return self.parent.branches if self.parent else []
+
+	@property
 	def root(self):
 		"""returns root tree object"""
 		return self.parent.root if self.parent else self
@@ -354,9 +407,9 @@ class AbstractTree(object):
 			self.valueChanged = tree.valueChanged
 			self.structureChanged = tree.structureChanged
 
-	def addChild(self, branch, force=False):
+	def addChild(self, branch, index=None, force=False):
 		if branch in self.branches:
-			print("cannot add existing branch")
+			print("cannot add existing branch, named " + branch.name)
 			return branch
 		if branch.name in self.keys():
 			if force: # override old branch with new
@@ -366,7 +419,17 @@ class AbstractTree(object):
 				newName = self.getValidName(branch.name)
 				branch._setName(newName)
 
-		self._map[branch.name] = branch
+		if index is None:
+			self._map[branch.name] = branch
+		else: # more complex ordered dict management
+			newMap = OrderedDict()
+			oldBranches = self._map.values()
+			if index > len(oldBranches) - 1:
+				index = len(oldBranches)
+			oldBranches.insert(index, branch)
+			for newBranch in oldBranches:
+				newMap[newBranch.name] = newBranch
+			self._map = newMap
 		branch._setParent(self)
 		self.structureChanged()
 		return branch
@@ -378,7 +441,9 @@ class AbstractTree(object):
 		"""same implementation as normal dict"""
 		return self._map.get(lookup, default)
 
-	def index(self, lookup, *args, **kwargs):
+	def index(self, lookup=None, *args, **kwargs):
+		if lookup is None: # get tree's own index
+			return self.ownIndex()
 		if lookup in self._map.keys():
 			return self._map.keys().index(lookup, *args, **kwargs)
 		else:
@@ -404,21 +469,23 @@ class AbstractTree(object):
 	def iterBranches(self):
 		return self._map.iteritems()
 
-	def allBranches(self):
+	def allBranches(self, includeSelf=False):
 		""" returns list of all tree objects
 		depth first """
+		#found = [ self ] if includeSelf else []
 		found = [ self ]
 		for i in self.branches:
 			found.extend(i.allBranches())
 		return found
 
 	def getAddress(self, prev=""):
-		"""returns string path from root to this tree"""
-		path = ".".join( (self.name, prev) )
+		"""returns string path from root to this tree
+		does not include root"""
 		if self.root == self:
-			return path
-		else:
-			return self.parent.getAddress(prev=path)
+			return prev
+		path = ".".join( (self.name, prev) ) if prev else self.name
+		# else:
+		return self.parent.getAddress(prev=path)
 
 	def search(self, path, onlyChildren=True, found=None):
 		""" searches branches for trees matching a partial path,
@@ -473,7 +540,8 @@ class AbstractTree(object):
 		if not name in self.keys():
 			return name
 		else:
-			#return self.getValidName(naming.incrementName(name))
+			#return self.getValidName(incrementName(name))
+			return incrementName(name, currentNames=self.keys())
 			pass
 
 	def remove(self, address=None):
@@ -481,12 +549,17 @@ class AbstractTree(object):
 		if not address:
 			if self.parent:
 				self.parent._map.pop(self.name)
-				self.structureChanged()
+				#self.structureChanged()
+				self.parent.structureChanged()
+				return
+		branch = self(address)
+		branch.remove()
+		branch.parent.structureChanged()
 
 
 	def __getitem__(self, address):
 		""" allows lookups of string form "root.branchA.leaf"
-		:returns AbstractTree"""
+		"""
 		return self(address).value
 
 	def __setitem__(self, key, value):
@@ -496,12 +569,15 @@ class AbstractTree(object):
 
 	def __call__(self, address):
 		""" allows lookups of string form "root.branchA.leaf"
-		:returns AbstractTree"""
+		:returns AbstractTree
+		:rtype AbstractTree"""
 		if isinstance(address, basestring): # if you look up [""] this will break
-			address = address.split(".") # effectively maya attribute syntax
+			address = str(address).split(".") # effectively maya attribute syntax
+		#print("address {}".format(address))
 		if not address: # empty list
 			return self
 		first = address.pop(0)
+		#print("first {}".format(first))
 		if not first in self._map: # add it if doesn't exist
 
 			if self.readOnly:
@@ -510,7 +586,6 @@ class AbstractTree(object):
 
 			# check if branch should inherit directly, or
 			# remain basic tree object
-
 			if self.branchesInherit:
 				obj = self.__class__(first, None)
 			else:
@@ -520,6 +595,16 @@ class AbstractTree(object):
 			branch = self._map[first]
 		return branch(address)
 
+	def __repr__(self):
+		return "<{} ({}) : {}>".format(self.__class__, self.name, self.value)
+
+
+	""" shaky support for 'array attribute' branch generation """
+	def makeChildBranch(self, name=None, *args, **kwargs):
+		""" to be overridden """
+		defaultKwargs = { "val" : None }
+		newBranch = self.__class__(name=name, **defaultKwargs)
+		return newBranch
 
 	def matchBranchesToSequence(self, sequence,
 	                            create=True, destroy=True):
@@ -534,7 +619,8 @@ class AbstractTree(object):
 			if i in self.keys():
 				newMap[i] = self._map.pop(i)
 			elif create:
-				newBranch = AbstractTree(name=i, val=None)
+				#newBranch = self.__class__(name=i, val=None)
+				newBranch = self.makeChildBranch(name=i)
 				newBranch.parent = self
 				newMap[i] = newBranch
 		for i in self.branches:
@@ -543,6 +629,34 @@ class AbstractTree(object):
 			else:	newMap[i.name] = i
 		self._map = newMap
 
+	def setIndex(self, index):
+		""" reorders tree branch to given index
+		negative indices not yet supported """
+		if not self.parent:
+			return
+		if index < 0: # ?
+			index = len(self.siblings) + index
+		newMap = OrderedDict()
+		oldKeys = self.parent._map.keys()
+		oldKeys.remove(self.name)
+		oldKeys.insert(index, self.name)
+		for key in oldKeys:
+			newMap[key] = self.parent._map[key]
+		self.parent._map = newMap
+
+
+	### basic hashing system, after stackOverflow
+	# def __key(self):
+	# 	debug(self)
+	# 	return (self._name, str(self._value), self._map)
+	#
+	# def __hash__(self):
+	# 	return hash(self.__key())
+	#
+	# def __eq__(self, other):
+	# 	if isinstance(other, AbstractTree):
+	# 		return self.__key() == other.__key()
+	# 	return NotImplemented
 
 	@classmethod
 	def fromDict(cls, regenDict):
@@ -559,14 +673,22 @@ class AbstractTree(object):
 		#print("objdict is {}".format(objData))
 		if objData:
 			cls = loadObjectClass( objData )
+			cls = cls or AbstractTree
 
 		# if branch is same type as parent, no info needed
 		# a tree of one type will mark all branches as same type
 		# until a new type is flagged
 		val = regenDict.get("?VALUE") or None
-		new = cls(name=regenDict["?NAME"], val=val)
-		new.extras = regenDict.get("?EXTRAS") or {}
+		name = regenDict.get("?NAME") or None
 		children = regenDict.get("?CHILDREN") or []
+		if not (val or name or children): # skip branch
+			print("regenDict {}".format(regenDict))
+			print("no name, val or children found")
+			#return
+			pass
+		new = cls(name=name, val=val)
+		new.extras = regenDict.get("?EXTRAS") or {}
+
 
 		# regnerate children with correct indices
 		length = len(children)
@@ -586,6 +708,8 @@ class AbstractTree(object):
 						childCls = AbstractTree
 
 				branch = cls.fromDict(i)
+				if branch is None:
+					continue
 				#branch = childCls.fromDict(i)
 				# print("regen branch {}".format(branch))
 				new.addChild(branch)
@@ -595,7 +719,7 @@ class AbstractTree(object):
 
 		serial = {
 			"?NAME" : self.name,
-			"?INDEX" : self.ownIndex()
+			"?INDEX" : self.ownIndex() # index likely not needed
 		}
 		if self.value:
 			serial["?VALUE"] = self.value
@@ -783,17 +907,20 @@ if __name__ == '__main__':
 	breakTree["breakTreeBranch.end"] = "break this"
 	testTree.addChild(breakTree)
 
-	print(testTree.display())
+	#print(testTree.display())
 
-	loadedTree = AbstractTree.fromDict( testTree.serialise() )
-	for i in loadedTree.allBranches():
-		print(i)
+	debug(newTree)
+	debug(testTree("parent").address)
 
-	print(loadedTree)
-	print(loadedTree("newTreeName.newTreeBranch").__class__)
-	print(loadedTree("newTreeBranch").__class__)
-	print(loadedTree("newTreeBranch.end"))
-	print(loadedTree("breakTreeBranch"))
-	print(loadedTree("breakTreeName"))
+	# loadedTree = AbstractTree.fromDict( testTree.serialise() )
+	# for i in loadedTree.allBranches():
+	# 	print(i)
+
+	# print(loadedTree)
+	# print(loadedTree("newTreeName.newTreeBranch").__class__)
+	# print(loadedTree("newTreeBranch").__class__)
+	# print(loadedTree("newTreeBranch.end"))
+	# print(loadedTree("breakTreeBranch"))
+	# print(loadedTree("breakTreeName"))
 
 #	print( loadedTree.display())

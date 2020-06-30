@@ -36,6 +36,10 @@ def getMayaWindow():
 	pointer = omui.MQtUtil.mainWindow()
 	return shiboken2.wrapInstance(long(pointer), QtWidgets.QWidget)
 
+def getMayaMainWindow():
+	pointer = omui.MQtUtil.mainWindow()
+	return shiboken2.wrapInstance(long(pointer), QtWidgets.QMainWindow)
+
 
 '''
 Template class for docking a Qt widget to maya 2017+.
@@ -112,6 +116,31 @@ class MayaDockWindow(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 
 	def dockCloseEventTriggered(self):
 		pass
+
+
+
+""" base class for uis in maya to avoid awful focus and event issues """
+class KeyPressEater(QtCore.QObject):
+	def eventFilter(self, obj, event):
+		if event.type() == QtCore.QEvent.KeyPress:
+			return True
+		return QtCore.QObject.eventFilter(self, obj, event)
+
+
+# class BaseMayaUi(QtWidgets.QDialog):
+class BaseMayaUi(QtWidgets.QWidget):
+	""" yep QDialogue looks weird to me too """
+	def __init__(self, parent=None):
+		super(BaseMayaUi, self).__init__(parent)
+		self.setWindowFlags(QtCore.Qt.Window)
+		self.eater = KeyPressEater(self) 
+		self.installEventFilter( self.eater )
+
+	def closeEvent(self, event):
+		self.removeEventFilter(self.eater)
+		return super(BaseMayaUi, self).closeEvent(event)
+
+
 
 class ConfirmDialogue(QtWidgets.QMessageBox):
 	"""convenience for confirmation"""

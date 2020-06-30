@@ -70,6 +70,9 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		self.actions = {}
 		self.abstract.sync.connect(self.sync)
 
+		# set reference to this tile on abstractNode
+		self.abstract.ui = self
+
 	@property
 	def inBlock(self):
 		return self.attrBlocks[0]
@@ -335,7 +338,7 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 	should read and arrange attributes recursively from tree leaves
 	doesn't do that yet """
 	def __init__(self, parent=None, attrItem=None, scene=None,
-	             text=True):
+	             text=True, depth=0):
 		if not attrItem:
 			raise RuntimeError("no attrItem supplied!")
 		#print("attritem {} type {}".format( attrItem.name, type(attrItem)))
@@ -346,6 +349,9 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		self.attr = attrItem
 		self.name = attrItem.name
 		self.dataType = attrItem.dataType
+		self.depth = depth
+
+
 
 		# base visual dimensions
 		self.edgePad = 5
@@ -357,9 +363,10 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 
 		self.setRect(0,0,self.parent.boundingRect().width() - self.edgePad,
 		             self.unitHeight)
+		depth += 1
 
 		self.children = [ TileEntry(
-			parent=self, attrItem=i, scene=self.scene)
+			parent=self, attrItem=i, scene=self.scene, depth=depth)
 				for i in attrItem.children if isinstance(i, AbstractAttr) ]
 
 
@@ -417,7 +424,7 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		"""recursively lay out tree structure
 		not sure this is totally solid yet but for now it works
 		 """
-
+		depth = self.depth
 		f = 1 if self.role == "output" else -1
 
 		y = n * (self.unitHeight + 3)
@@ -785,38 +792,6 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 	def style(self, style):
 		self._style = style
 
-#
-	# def setEnd(self, end):
-	# 	"""expects objects that have a .scenePos() method
-	# 	like graphicsItems and mouse events"""
-	# 	self.end = end
-	# 	self.updatePath()
-	#
-	# def updatePath(self):
-	# 	startPoint = self.start.scenePos()
-	# 	if not self.end:
-	# 		return
-	# 	endPoint = self.end.scenePos()
-	#
-	# 	# draw pleasing curve shape varying with distance
-	# 	diffPoint = startPoint.__sub__(endPoint)
-	# 	length = math.sqrt(pow(diffPoint.x(), 2) + pow(diffPoint.y(), 2))
-	#
-	# 	# c1 = QtCore.QPointF(startPoint.x() + 2*length, startPoint.y())
-	# 	# c2 = QtCore.QPointF(endPoint.x() - 2*length, endPoint.y())
-	# 	# self.path.cubicTo(c1, c2, endPoint)
-	# 	self.path.lineTo(endPoint)
-	# 	self.painter.drawPath(self.path)
-	#
-	# 	self.setPath(self.path)
-	# 	style = QtWidgets.QStyleOptionGraphicsItem(1)
-	# 	self.paint(self.painter, style)
-	#
-	# def makePen(self, style):
-	# 	"""eventually modify the appearance of the line based on
-	# 	knob characteristics, style etc"""
-	# 	return QtGui.QPen()
-	#
 	def delete(self):
 		self.scene().removeItem(self)
 		del self

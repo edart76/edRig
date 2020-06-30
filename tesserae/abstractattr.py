@@ -36,7 +36,9 @@ class AbstractAttr(AbstractTree):
 
 		self.extras["desc"] = desc
 
+		self._connections = []
 		self.connections = [] # override with whatever the hell you want
+		# edges saved separately by graph, not within attr tree
 
 		self.connectionChanged = Signal()
 		self.childrenChanged = Signal()
@@ -73,10 +75,12 @@ class AbstractAttr(AbstractTree):
 
 	@property
 	def connections(self):
-		return self["connections"]
+		#return self["connections"]
+		return self._connections
 	@connections.setter
 	def connections(self, val):
-		self["connections"] = val
+		#self["connections"] = val
+		self._connections = val
 
 	@property
 	def dataType(self):
@@ -106,6 +110,8 @@ class AbstractAttr(AbstractTree):
 	# plug properties
 	@property
 	def plug(self):
+		if self._plug is None:
+			return None
 		return self._plug()
 	@plug.setter
 	def plug(self, val):
@@ -257,6 +263,9 @@ class AbstractAttr(AbstractTree):
 		# remove attribute
 		target.remove()
 
+	# def remove(self, address=None):
+	# 	""" also take care of removing """
+
 
 	def copyAttr(self, name="new"):
 		"""used by array attrs - make sure connections are clean
@@ -266,18 +275,6 @@ class AbstractAttr(AbstractTree):
 		for i in newAttr.getAllChildren():
 			i.connections = []
 		return newAttr
-
-
-	def serialise(self, pretty=False):
-		data = super(AbstractAttr, self).serialise() # no string
-		return data
-
-	@classmethod
-	def fromDict(cls, regenDict=None, node=None):
-		tree = super(AbstractAttr, cls).fromDict(regenDict)
-		#tree = AbstractTree.fromDict(regenDict)
-		tree._node = node
-		return tree
 
 
 	# ---- ARRAY BEHAVIOUR ----
@@ -315,7 +312,7 @@ class AbstractAttr(AbstractTree):
 		print( "newNames {}".format(newNames))
 
 		for i in excessChildren:
-			self.removeAttr(i)
+			self.remove(i)
 
 		for i in newNames:
 			print( "newName i {}".format(i))
@@ -330,10 +327,30 @@ class AbstractAttr(AbstractTree):
 			#self.children.append(newAttr)
 			self.addChild(newAttr)
 
-		# lastly reorder children to match list
-		# newChildren = []
-		# for i in nameList:
-		# 	child = self.attrFromName(i)
-		# 	newChildren.append(child)
-		# self.children = newChildren
-		# this is difficult
+
+
+class ArrayAttr(AbstractAttr):
+	""" test for better array / compound behaviour """
+
+	def __init__(self, name=None, val=None, node=None):
+		super(ArrayAttr, self).__init__(name, val, node=node)
+
+		self.extras["spec"] = []
+
+	@property
+	def spec(self):
+		return self.extras["spec"]
+	@spec.setter
+	def spec(self, val):
+		self.extras["spec"] = []
+
+	def makeChildBranch(self, name=None, *args, **kwargs):
+		return AbstractAttr(name=name, node=self.node,
+		                    role=self.role, dataType=self.dataType,
+		                    hType="leaf")
+
+	# def matchBranchesToSequence(self, sequence,
+	#                             create=True, destroy=True):
+	# 	pass
+
+	""" """

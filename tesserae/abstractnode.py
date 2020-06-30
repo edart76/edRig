@@ -124,6 +124,7 @@ class AbstractNode(AbstractTree):
 		self.colour = self.real.colour
 		# self.redraw = False
 		# colour-changing nodes could be done if you make this a property
+		self.ui = None # reference to AbstractTile for this node
 
 		pass
 
@@ -366,7 +367,8 @@ class AbstractNode(AbstractTree):
 			attr = self.getOutput(name=name)
 		else:
 			attr = self.getInput(name=name)
-		attr.parent.removeAttr(name)
+		#attr.parent.removeAttr(name)
+		attr.parent.remove(name)
 		if emit: # for bulk attribute reordering call signal by hand
 			self.attrsChanged()
 
@@ -524,10 +526,14 @@ class AbstractNode(AbstractTree):
 		newInst.uid = fromDict["uid"]
 		newInst.rename(fromDict["nodeName"])
 
-		newInst.outputRoot = AbstractAttr.fromDict(regenDict=fromDict["outputRoot"],
-		                                           node=newInst)
-		newInst.inputRoot = AbstractAttr.fromDict(regenDict=fromDict["inputRoot"],
-		                                          node=newInst)
+		# newInst.outputRoot = AbstractAttr.fromDict(regenDict=fromDict["outputRoot"],
+		#                                            node=newInst)
+		newInst.outputRoot = AbstractAttr.fromDict(regenDict=fromDict["outputRoot"])
+		newInst.outputRoot._node = newInst
+		# newInst.inputRoot = AbstractAttr.fromDict(regenDict=fromDict["inputRoot"],
+		#                                           node=newInst)
+		newInst.inputRoot = AbstractAttr.fromDict(regenDict=fromDict["inputRoot"])
+		newInst.inputRoot._node = newInst
 		newInst.settings = AbstractTree.fromDict(fromDict["settings"])
 
 		if "real" in fromDict.keys():

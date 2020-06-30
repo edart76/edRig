@@ -43,6 +43,8 @@ class OpExecutionManager(GeneralExecutionManager):
 		for i in new:
 			#print "i is {}".format(i)
 			#print "i isDag {}".format(i.isDag())
+			# force unlock nodes
+			cmds.lockNode(i, lock=False)
 			attr.edTag(i)
 			self.op.opTag(i)
 		for i in newDags:

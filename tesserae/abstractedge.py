@@ -15,6 +15,11 @@ class AbstractEdge(object):
 			self.destNode = dest.node
 		self.dataType = self.sourceAttr.dataType
 
+
+	def __str__(self):
+		""" dirty solution to remove edge objects from serialisation process """
+		return str( self.serialise() )
+
 	# for anything dealing with nodes and attributes, return node first
 	@property
 	def source(self):

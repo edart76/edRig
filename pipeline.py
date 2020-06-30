@@ -235,7 +235,7 @@ def ioinfo(name="", mode="in", info=None, path=None):
 			# file.write(pprint.pformat(json.dumps(info), indent=3))
 			# #file.write(pprint.pformat(info, indent=3))
 			# file.write(json.dumps(pprint.pformat(info, indent=3)))
-			file.write(pprint.pformat(info, indent=2))
+			file.write(str(pprint.pformat(info, indent=2)) )
 			file.close()
 
 	else:

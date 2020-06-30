@@ -67,10 +67,12 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 				self.deletePipe(i)
 		print "finished sync"
 
+		self.updatePipePaths()
+
 		#super(AbstractScene, self).update()
 
 	def makeTile(self, abstract=None, pos=(0,0)):
-		print "making tile for {}".format(abstract)
+		#print "making tile for {}".format(abstract)
 		tile = AbstractTile(abstractNode=abstract, scene=self)
 		self.addItem(tile)
 		if isinstance(pos, QtCore.QPointF):
@@ -83,7 +85,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		if not tile in self.tiles.values():
 			self.tiles[abstract] = tile
 
-		print "added tile"
+		#print "added tile"
 		return tile
 
 	def makePipe(self, edge=None, start=None, end=None):
@@ -171,15 +173,18 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		if self.activeView:
 			self.activeView.sceneMousePressEvent(event)
 		super(AbstractScene, self).mousePressEvent(event)
-		keep_selection = any([
-			event.button() == QtCore.Qt.MiddleButton,
-			event.button() == QtCore.Qt.RightButton,
-			event.modifiers() == QtCore.Qt.AltModifier
-		])
-		if keep_selection:
-			for node in selected_nodes:
-				print "selected node is {}".format(node)
-				node.setSelected(True)
+		# keep_selection = any([
+		# 	event.button() == QtCore.Qt.MiddleButton,
+		# 	event.button() == QtCore.Qt.RightButton,
+		# 	event.modifiers() == QtCore.Qt.AltModifier
+		# ])
+		# if keep_selection:
+		# 	for node in selected_nodes:
+		# 		print "selected node is {}".format(node)
+		# 		node.setSelected(True)
+		#
+		# for pipe in self.selectedPipes():
+		# 	pipe.setSelected(True)
 
 	def mouseMoveEvent(self, event):
 		if self.activeView:

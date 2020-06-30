@@ -41,7 +41,7 @@ attribute fragmentOutput {
 
 #else // not ogsfx, only beautiful glsl
 
-#version 440
+//#version 440
 
 // inputs
 in vec3 WorldNormal;

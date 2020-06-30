@@ -1,7 +1,8 @@
 // maya-facing front end to super-duper WePresent eye shader
 // we will attempt not to pollute the pure glsl code too much
 
-// also literally never done this before - WCGW
+# version 430
+
 
 #define VERTEXPATH <"eyeShaderVertex.glsl">
 #define FRAGMENTPATH "eyeShaderFragment.glsl"
