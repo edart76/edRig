@@ -438,8 +438,19 @@ class AbstractTree(object):
 		""" only called when adding an inherited branch? """
 
 	def get(self, lookup, default=None):
-		"""same implementation as normal dict"""
-		return self._map.get(lookup, default)
+		"""same implementation as normal dict
+		addresses will recurse into child branches """
+		#return self._map.get(lookup, default)
+		if isinstance(lookup, basestring):
+			lookup = lookup.split(".")
+		name = lookup.pop(0)
+		if name not in self._map.keys():
+			return None
+		if lookup:
+			return self._map[name].get(lookup)
+		return self._map[name]
+
+
 
 	def index(self, lookup=None, *args, **kwargs):
 		if lookup is None: # get tree's own index
@@ -551,10 +562,11 @@ class AbstractTree(object):
 				self.parent._map.pop(self.name)
 				#self.structureChanged()
 				self.parent.structureChanged()
-				return
+				return self
 		branch = self(address)
 		branch.remove()
 		branch.parent.structureChanged()
+		return branch
 
 
 	def __getitem__(self, address):
@@ -694,8 +706,8 @@ class AbstractTree(object):
 		length = len(children)
 		for n in range(length):
 			for i in children:
-				if not i["?INDEX"] == n:
-					continue
+				# if not i["?INDEX"] == n:
+				# 	continue
 
 				""" check some rules on deserialisation """
 				# is there any kind of override?
@@ -719,7 +731,7 @@ class AbstractTree(object):
 
 		serial = {
 			"?NAME" : self.name,
-			"?INDEX" : self.ownIndex() # index likely not needed
+			#"?INDEX" : self.ownIndex() # index likely not needed
 		}
 		if self.value:
 			serial["?VALUE"] = self.value

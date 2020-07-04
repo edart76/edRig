@@ -79,6 +79,7 @@ class TileSettings(QtWidgets.QTreeView):
 		self.selectedEntry = None
 		self.actions = {}
 		self.modelObject = None
+		#self.selectionModel = None
 
 
 		# appearance
@@ -107,6 +108,10 @@ class TileSettings(QtWidgets.QTreeView):
 
 		#self.setSizePolicy(expandingPolicy)
 
+	def data(self, index, role=QtCore.Qt.DisplayRole):
+		""" convenience """
+		return self.model().data(index, role)
+
 	def resizeToTree(self):
 		# get rough idea of how long max tree entry is
 		maxLen = 0
@@ -132,6 +137,24 @@ class TileSettings(QtWidgets.QTreeView):
 	# 	""" minimum size has to encompass all visible branches """
 
 
+	def setTree(self, tree):
+		"""associates widget with AbstractTree object"""
+		self.tree = tree
+		self.root = tree.root
+		tree.valueChanged.connect(self.contentChanged)
+		tree.structureChanged.connect(self.contentChanged)
+
+		self.modelObject = AbstractTreeModel(tree=self.tree)
+		self.setModel(self.modelObject)
+		self.setSelectionModel( QtCore.QItemSelectionModel(self.modelObject) )
+
+		# self.resizeToTree()
+		self.expandAll()
+		self.setRootIndex( self.model().invisibleRootItem().child(0, 0).index())
+
+
+		return self.modelObject
+
 
 
 	def makeMenu(self):
@@ -147,17 +170,17 @@ class TileSettings(QtWidgets.QTreeView):
 	def display(self):
 		print(self.tree.display())
 
-	def moveCursor(self, action, modifiers):
-		index = self.currentIndex()
-		columns = self.model().columnCount(index)
-		rows = self.model().rowCount(index.parent())
-		if action == self.MoveNext:
-			if index.column() + 1 < columns:
-				return index.sibling(index.row(), index.column() + 1)
-			elif index.row() + 1 < rows:
-				return self.model()
-
-		return super(TileSettings, self).moveCursor(action, modifiers)
+	# def moveCursor(self, action, modifiers):
+	# 	index = self.currentIndex()
+	# 	columns = self.model().columnCount(index)
+	# 	rows = self.model().rowCount(index.parent())
+	# 	if action == self.MoveNext:
+	# 		if index.column() + 1 < columns:
+	# 			return index.sibling(index.row(), index.column() + 1)
+	# 		elif index.row() + 1 < rows:
+	# 			return self.model()
+	#
+	# 	return super(TileSettings, self).moveCursor(action, modifiers)
 
 
 	def copyEntry(self):
@@ -202,19 +225,8 @@ class TileSettings(QtWidgets.QTreeView):
 
 		commonParentItem.tree.addChild(pasteTree)
 		self.modelObject.buildFromTree(pasteTree, commonParentItem)
-
-
-
-		""" get selected object or next free index
-		deserialise mime data to tree branches
-		add tree children
-		setTree on the new tree object
-		"""
 		pass
 
-	# def mousePressEvent(self, *args):
-	# 	print "mouse settings"
-	# 	#super(TileSettings, self).mousePressEvent(*args)
 
 	def contextMenuEvent(self, event):
 		print "settings context event"
@@ -230,8 +242,6 @@ class TileSettings(QtWidgets.QTreeView):
 		self.makeMenu()
 		menu = self.menu.exec_( self.viewport().mapToGlobal(qPoint) )
 		print "settingsMenu is {}".format(menu)
-
-
 
 
 	def showMenu(self, *args, **kwargs):
@@ -251,9 +261,41 @@ class TileSettings(QtWidgets.QTreeView):
 
 	def saveAppearance(self):
 		""" saves expansion and selection state """
+		self.savedSelectedTrees = []
+		self.savedExpandedTrees = []
+		for i in self.selectionModel().selectedRows():
+			branch = self.modelObject.treeFromRow(i)
+			self.savedSelectedTrees.append(branch)
+		#print("allrows {}".format(self.modelObject.allRows()))
+		for i in self.modelObject.allRows():
+			#print("treeFromRow {}".format(self.modelObject.treeFromRow(i)))
+			if self.isExpanded(i):
+				#print()
+				branch = self.modelObject.treeFromRow(i)
+				if branch:
+					self.savedExpandedTrees.append(branch)
+
 
 	def restoreAppearance(self):
 		""" restores expansion and selection state """
+		for i in self.savedSelectedTrees:
+			if not self.model().rowFromTree(i):
+				continue
+
+			self.selectionModel().select(
+				self.model().rowFromTree(i),
+				QtCore.QItemSelectionModel.Select | QtCore.QItemSelectionModel.Rows
+			)
+		for i in self.savedExpandedTrees:
+			if not self.model().rowFromTree(i):
+				continue
+			#self.expand( self.modelObject.rowFromTree(i) )
+			pass
+		self.expandAll()
+
+		self.setRootIndex( self.model().invisibleRootItem().child(0, 0).index())
+
+
 
 	def keyPressEvent(self, event):
 		""" bulk of navigation operations,
@@ -276,8 +318,9 @@ class TileSettings(QtWidgets.QTreeView):
 		going with battery of if statements
 
 		"""
+
 		sel = self.selectionModel().selectedRows()
-		#print("sel {}".format(sel))
+		self.saveAppearance()
 		# don't override anything if editing is in progress
 		if self.state() == QtWidgets.QTreeView.EditingState or len(sel) == 0:
 			return super(TileSettings, self).keyPressEvent(event)
@@ -285,32 +328,37 @@ class TileSettings(QtWidgets.QTreeView):
 		try:
 			# very important that event methods don't error,
 			# messes up whole maya ui if they do
-			# print(self.modelObject.treeIndices())
 
-			if event.modifiers() and QtCore.Qt.ControlModifier:
+			if event.modifiers() == QtCore.Qt.ControlModifier:
 				if event.key() == QtCore.Qt.Key_D: # duplicate
 					for row in sel:
 						self.modelObject.duplicateRow(row)
 						return True
 
-				# shifting row up or down
-				if QtCore.Qt.ShiftModifier:
-					if event.key() in [QtCore.Qt.Key_Up, QtCore.Qt.Key_Left]:
-						for row in sel:
-							self.modelObject.shiftRow(row, up=True)
-					elif event.key() in [QtCore.Qt.Key_Down, QtCore.Qt.Key_Right]:
-						for row in sel:
-							self.modelObject.shiftRow(row, up=False)
-					self.expandAll()
-					return True
+			# shifting row up or down
+			if event.modifiers() == QtCore.Qt.ShiftModifier | QtCore.Qt.ControlModifier:
+				if event.key() in [QtCore.Qt.Key_Up, QtCore.Qt.Key_Left]:
+					for row in sel:
+						self.modelObject.shiftRow(row, up=True)
+				elif event.key() in [QtCore.Qt.Key_Down, QtCore.Qt.Key_Right]:
+					for row in sel:
+						self.modelObject.shiftRow(row, up=False)
+				#self.expandAll()
+				return True
 
 
-			elif event.key() == QtCore.Qt.Key_Delete:
+			if event.key() == QtCore.Qt.Key_Delete:
 				for row in sel:
 					self.modelObject.deleteRow(row)
-					self.expandAll()
 					return True
 
+			if event.key() == QtCore.Qt.Key_P:
+				if event.modifiers() == QtCore.Qt.ShiftModifier:
+					for row in sel: # unparent row
+						self.model().unParentRow(row)
+				elif len(sel) > 1: # parent
+					self.model().parentRows( sel[:-1], sel[-1])
+				return True
 
 			# direction keys to move cursor
 			if event.key() == QtCore.Qt.Key_Left:
@@ -327,53 +375,21 @@ class TileSettings(QtWidgets.QTreeView):
 				pass
 
 
-			# for i in sel:
-			# 	#print("i {}".format(i)) # returns model indices
-			# 	#print(self.modelObject.itemData(i))
-			# 	address = self.modelObject.data(i, objRole)
-			# 	print(address)
-			# 	# print(self.tree[address])
-			# 	# print(self.tree(address).value) # works
-			# 	""" itemData returns
-			# 	{0: u'parent'} - string name of branch with no address data
-			# 	"""
-			# 	# print(self.modelObject.treeIndices())
+			return super(TileSettings, self).keyPressEvent(event)
 
-
-			# delete rows
-			elif event.key() == QtCore.Qt.Key_Delete:
-				for i in sel:
-					branch = self.modelObject.branchFromIndex(i)
-					branch.remove()
-				refresh = True
-
-
-			if refresh:
-				#self.sync()
-				pass
 
 		except Exception as e:
 			raise
 		finally:
-			return super(TileSettings, self).keyPressEvent(event)
+			self.model().sync()
+			self.restoreAppearance()
+			#return super(TileSettings, self).keyPressEvent(event)
+			pass
+
+
 
 	def focusNextPrevChild(self, direction):
 		return False
-
-	def setTree(self, tree):
-		"""associates widget with AbstractTree object"""
-		self.tree = tree
-		self.root = tree.root
-		tree.valueChanged.connect(self.contentChanged)
-		tree.structureChanged.connect(self.contentChanged)
-
-		self.modelObject = AbstractTreeModel(tree=self.tree)
-		self.setModel(self.modelObject)
-
-		# self.resizeToTree()
-		self.expandAll()
-
-		return self.modelObject
 
 
 	def sync(self):
@@ -564,38 +580,61 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		""" returns tree object associated with qModelIndex """
 		return self.itemFromIndex(index).tree
 
-	def columnCount(self, index):
-		"""  only ever key : value """
-		return 2
-		pass
+	# def columnCount(self, index):
+	# 	"""  only ever key : value """
+	# 	return 2
+	# 	pass
+	#
+	# def rowCount(self, index):
+	# 	# called on resizeevents too
+	#
+	# 	#print("rowcount index {}".format(index))
+	#
+	# 	# root item gives
+	# 	# <PySide2.QtCore.QModelIndex(-1,-1,0x0,QObject(0x0))  at 0x000000005B01BE88> #
+	# 	if index.column() == index.row() == -1:
+	# 		# root item
+	# 		return len(self.tree.root.allBranches()) # loops infinitely
+	# 		return 1
+	#
+	# 	# no rows under value
+	# 	if index.column() > 0: # this is a value item
+	# 		return 0
+	# 	#return len(self.tree.root.allBranches())
+	# 	#return len(self.itemFromIndex(index).tree.branches)
+	# 	return len(self.treeFromRow(index).branches)
+	# 	pass
 
-	def rowCount(self, index):
-		# called on resizeevents too
+	def allRows(self, _parent=None):
+		""" return flat list of all row indices """
 
-		#print("rowcount index {}".format(index))
+		if _parent is None: _parent = QtCore.QModelIndex()
+		rows = []
 
-		# root item gives
-		# <PySide2.QtCore.QModelIndex(-1,-1,0x0,QObject(0x0))  at 0x000000005B01BE88> #
-		if index.column() == index.row() == -1:
-			# root item
-			return len(self.tree.root.allBranches())
+		for i in range( self.rowCount(_parent)):
+			index = self.index(i, 0, _parent)
+			rows.append(index)
+			rows.extend(self.allRows(index))
 
-		# no rows under value
-		if index.column() > 0: # this is a value item
-			return 0
-		return len(self.tree.root.allBranches())
-		#return len(self.itemFromIndex(index).tree.branches)
-		pass
+		return rows
+
 
 	def rowFromTree(self, tree):
-		""" returns index corresponding to tree """
-		branchItem = AbstractBranchItem(tree)
-		valueItem = AbstractValueItem(tree)
-		return [branchItem, valueItem]
+		""" returns index corresponding to tree
+		inelegant search for now """
+		#print("row from tree {}".format(tree))
+		for i in self.allRows():
+			#print("found {}".format(self.treeFromRow(i)))
+			if self.treeFromRow(i) == tree:
+				#print("found match")
+				return i
 
 	def treeFromRow(self, row):
 		""":rtype AbstractTree """
-		return self.tree( self.data(row, objRole) )
+		#return self.tree( self.data(row, objRole) )
+		return self.tree.get( self.data(row, objRole) )
+		# found = self.tree.search( self.data(row, objRole) )
+		# return found[0] if found else None
 
 
 	def duplicateRow(self, row):
@@ -618,8 +657,7 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		startIndex = tree.index()
 		newIndex = max(0, min( len(parent.branches), startIndex + (-1 if up else 1)))
 		tree.setIndex(newIndex)
-		self.sync()
-
+		#self.sync()
 
 
 	def deleteRow(self, row):
@@ -627,10 +665,25 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 
 		tree = self.tree( self.data(row, objRole) )
 		tree.remove()
-		# self.beginRemoveRows(row.parent(), row.row() - 1, row.row())
-		# self.removeRow( row )
-		# self.endRemoveRows()
-		self.sync()
+
+
+	def unParentRow(self, row):
+		""" parent row to its parent's parent """
+		branch = self.tree( self.data(row, objRole) )
+		parent = branch.parent
+		if parent:
+			grandparent = parent.parent
+			if grandparent:
+				branch.remove()
+				grandparent.addChild(branch)
+
+	def parentRows(self, rows, target):
+		""" parent all selected rows to last select target """
+		parent = self.tree( self.data(target, objRole) )
+		for i in rows:
+			branch = self.tree( self.data(i, objRole) )
+			branch.remove()
+			parent.addChild(branch)
 
 
 
@@ -655,9 +708,11 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		#self.root.tree = tree.root
 		#self.beginResetModel()
 		self.appendRow(rootRow)
+
 		for i in self.tree.branches:
 			self.buildFromTree(i, parent=self.root)
 		#self.endResetModel()
+		self.setHorizontalHeaderLabels(["branch", "value"])
 
 
 		#print("rowCount {}".format(self.rowCount(self.invisibleRootItem().index())))
@@ -682,12 +737,14 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		never directly other way round
 		"""
 		# store currently selected rows and columns, order doesn't matter
-		selectionModel = QtCore.QItemSelectionModel(model=self)
-		print(selectionModel.selectedIndexes())
-		oldHashes = [ hash(self.itemFromIndex(i).tree) for i in selectionModel.selectedIndexes()]
-		selectionModel.clear()
+		#selectionModel = QtCore.QItemSelectionModel(model=self)
+		#print(selectionModel.selectedIndexes())
+		#oldHashes = [ hash(self.itemFromIndex(i).tree) for i in selectionModel.selectedIndexes()]
+		#selectionModel.clear()
+		#print("model start sync")
 		self.clear()
 		self.setTree(self.tree)
+		#print("model end sync")
 		# for index in self.treeIndices():
 		# 	if hash(self.itemFromIndex(index).tree) in oldHashes:
 		# 		selectionModel.select(index, QtCore.QItemSelectionModel.Select)
