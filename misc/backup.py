@@ -10,7 +10,7 @@ need to investigate
 """
 
 
-import os, shutil
+import os, shutil, pprint
 
 from edRig.pipeline import getLatestVersions, sortVersions
 
@@ -39,6 +39,8 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 	then iterate and delete files not needed
 	"""
 
+	paths = [] # stupid basic progress reporting
+
 	if os.path.exists(outputFilePath):
 		#print "already exists"
 		#os.rmdir(outputFilePath)
@@ -52,7 +54,7 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 	for x in os.walk(rootFolder):
 		# ( fullFolderPath, subFolderNames, files
 		localFiles = [i for i in x[2] if not any([
-			n in i for n in blacklistExtensions])]
+			i.endswith(n) for n in blacklistExtensions])]
 		if not localFiles:
 			continue
 		#saves = getLatestVersions(localFiles)
@@ -66,6 +68,10 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 		for title, data in versions.iteritems():
 			maxVersion = max(data.keys())
 			saves.append(data[maxVersion][1])
+
+		if "ophelia" in x[0]:
+			pprint.pprint(versions)
+			print(saves)
 
 		treeDict[x[0]] = saves
 		#print
@@ -81,16 +87,34 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 			fullFilePath = fullDirPath + "\\" + i
 			destFilePath = fullFilePath.replace(rootFolder, outputFilePath)
 			# shutil.copyfile(fullPath, destPath)
+			paths.append( (fullFilePath, destFilePath))
 			if test:
 				#print("source {}".format(fullFilePath))
-				print("dest   {}".format(destFilePath))
+				#print("dest   {}".format(destFilePath))
 				#print("")
 				continue
-			try:
-				shutil.copy2(fullFilePath, destFilePath)
-			except:
-				print "error encountered copying file {}".format(fullFilePath)
-				continue
+
+	n = len(paths)
+	nSegment = n / 100
+	nCurrent = 0
+	percentDone = 0.0
+	for i, val in enumerate(paths):
+		if nCurrent == nSegment:
+			percentDone = percentDone + 10.0
+			print("at {} percent".format(percentDone))
+			nCurrent = 0
+		else:
+			nCurrent = nCurrent + 1
+
+
+		try:
+			#shutil.copy2(fullFilePath, destFilePath)
+			shutil.copy2(val[0], val[1])
+		except:
+			print "error encountered copying file {}".format(val[0])
+			continue
+
+
 
 
 if __name__ == "__main__":
@@ -98,7 +122,7 @@ if __name__ == "__main__":
 	""" run test backup """
 
 	rootPath = "F:/all_projects_desktop"
-	outputPath = r"F:\autoBackup\v003"
+	outputPath = r"F:\autoBackup\v005"
 
 	# rootPath = r"F:\all_projects_desktop\testRoot"
 	# outputPath = r"F:\all_projects_desktop\testBackup"

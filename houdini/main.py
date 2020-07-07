@@ -68,6 +68,10 @@ def makeComponentBase(kwargs):
 	geo.setParmTemplateGroup(ptg)
 
 
+def makeObjField(kwargs):
+	""" create network box at obj level, with geo node that dynamically
+	merges whatever you put there """
+
 
 
 

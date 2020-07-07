@@ -14,6 +14,23 @@ def getComponentsInNetworkBox(parent, networkBoxName="components"):
 		box = core.networkBoxFromComment(parent, networkBoxName)
 	return box.nodes(recurse=True)
 
+"""
+def onPathChanged(kwargs=None):
+    this = hou.pwd()
+    parent = this.parm("objNetwork").evalAsNode()
+    boxName = this.parm( "networkBox" ).evalAsString()
+    
+    components = component.getComponentsInNetworkBox(
+        parent, boxName )
+        
+    #print("components are {}".format(components))
+        
+    targetMerge = this.node("merge_all")
+    newMerges = component.objectMergesForComponents(
+        components, this, targetMerge,
+        boxName="merge_components")
+
+"""
 
 def objectMergesForComponents( componentNodes, parent, targetMerge,
                                boxName="merge_components"):
