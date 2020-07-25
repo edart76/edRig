@@ -9,6 +9,14 @@ from edRig import cmds, om, pipeline, scene
 from edRig.node import AbsoluteNode, ECA, ObjectSet
 
 from edRig import hou # it's happening
+from edRig.core import debug
+
+def getBridgeSet():
+	""" creates basic bridge sets for scene """
+	if not cmds.objExists("bridge_set"):
+		print("bridge set not found, creating")
+		return ObjectSet.create("bridge_set")
+	return ObjectSet("bridge_set")
 
 
 def sync():
@@ -16,12 +24,11 @@ def sync():
 	pipeline.reloadAllReferences()
 
 	path = pipeline.getScenePath()
-	print("scenePath {}".format(path))
-	if cmds.objExists("bridge_set"):
-		syncBridgeSets()
+	#print("scenePath {}".format(path))
+	syncBridgeSets()
 
 def syncBridgeSets():
-	topSet = ObjectSet("bridge_set")
+	topSet = getBridgeSet()
 	topSetItems = topSet.objects()
 	print("topSetItems {}".format(topSetItems))
 
@@ -29,37 +36,41 @@ def syncBridgeSets():
 
 	# every set in a bridge set for now signifies an export
 	for i in topSetItems:
+
+		debug(i)
+
 		if i.nodeType() == "objectSet":
 			#print(i)
 			combineTargets = ObjectSet(i(), useCache=False).objects()
 			# combine objects and export
 			duplicates = [ cmds.duplicate(n, name=n+"_duplicate")[0] for n in combineTargets]
 
-			for n in duplicates:
-				prepSyncGeo(n)
+		else: # one export for every top-level model in the set
+			duplicates = cmds.duplicate(i, name=i + "_duplicate")
 
+		for n in duplicates:
+			prepSyncGeo(n)
 
-			# make bridge folder adjacent to scene
-			parentDir = pipeline.FilePathTree(path).parent
-			bridgeDir = parentDir.makeChildFolder("bridge")
-			outputObjPath = bridgeDir + "/{}_mayaOutput.obj".format(i.name)
-			outputFbxPath = bridgeDir + "/{}_mayaOutput.fbx".format(i.name)
-			outputAbcPath = bridgeDir + "/{}_mayaOutput.abc".format(i.name)
+		# make bridge folder adjacent to scene
+		parentDir = pipeline.FilePathTree(path).parent
+		bridgeDir = parentDir.makeChildFolder("bridge")
+		outputObjPath = bridgeDir + "/{}_mayaOutput.obj".format(i.name)
+		outputFbxPath = bridgeDir + "/{}_mayaOutput.fbx".format(i.name)
+		outputAbcPath = bridgeDir + "/{}_mayaOutput.abc".format(i.name)
 
-			#pipeline.exportToObj(combined, outputObjPath)
-			pipeline.exportToObj(duplicates, outputObjPath)
-			pipeline.exportToFbx(duplicates, outputFbxPath)
-			pipeline.exportToAlembic(duplicates, outputAbcPath)
+		#pipeline.exportToObj(duplicates, outputObjPath)
+		pipeline.exportToFbx(duplicates, outputFbxPath)
+		#pipeline.exportToAlembic(duplicates, outputAbcPath)
 
-			#cmds.delete(combined)
-			for n in duplicates:
-				if cmds.objExists(n):
-					cmds.delete(n)
+		#cmds.delete(combined)
+		for n in duplicates:
+			if cmds.objExists(n):
+				cmds.delete(n)
 
-			# add new namespace in anticipation
+		# add new namespace in anticipation
 
-			scene.addNamespace("bridge_:{}_".format(i.name))
-			# framestore readable underscore convention
+		scene.addNamespace("bridge_:{}_".format(i.name))
+		# framestore readable underscore convention
 
 def prepSyncGeo(geo):
 	""" run any passes needed for geometry to pass through bridge properly """

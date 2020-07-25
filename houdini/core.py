@@ -30,8 +30,11 @@ def networkBoxFromComment(parent, comment=""):
 def itemsInNetworkBox(parent, boxName="objects"):
 	""" returns nodes contained in specified network box
 	no checking yet for specific node types
-	:type parent : hou.Node /obj """
-	box = getNetworkBox(parent, boxName)
+	:type parent : hou.Node or hou.NetworkBox """
+	if isinstance(parent, hou.NetworkBox):
+		box = parent
+	else:
+		box = getNetworkBox(parent, boxName)
 	return box.nodes(recurse=True)
 
 
@@ -53,6 +56,19 @@ def checkIfMergesDirty(itemsToMerge, existingMerges):
 	if set(existingPaths) != set(newPaths): # any discrepancy?
 		return True
 	return False
+
+
+def addPathParm(node, parmName="path", path=None):
+	""" adds path to node, optionally populates it """
+
+	parm = hou.StringParmTemplate(
+		name=parmName, label=parmName, num_components=1,
+		default_value=path, string_type=hou.stringParmType.NodeReference
+	)
+	parmGroup = node.parmTemplateGroup()
+	parmGroup.addParmTemplate( parm )
+	return parm
+
 
 def populateMerge(targetMerge=None, items=None, singleObjMerge=False,
                   boxName="Merge_Objects", mergePrefix="merge",

@@ -154,14 +154,6 @@ def removeFromAsset(assetName=None, targetNode=None):
 
 
 
-
-
-
-
-
-
-
-
 SceneGlobals = Globals()
 
 def ls(*args, **kwargs):
@@ -222,12 +214,12 @@ def alembicExport(targetSets=None, startFrame=None, endFrame=None):
 # --- NAMESPACES
 def addNamespace(name):
 	""" wrapper to squash errors on existing and nested namespaces """
-	print("name {}".format(name))
-	print("split {}".format(name.split(":")))
-	for i, val in enumerate(name.split(":")):
+	# print("name {}".format(name))
+	# print("split {}".format(name.split(":")))
+	for i, val in enumerate(name.split(":")): # add recursively
 
 		space = ":".join(name.split(":")[:i+1])
-		print("namespace {}".format(space))
+		#print("namespace {}".format(space))
 		if not cmds.namespace(exists=space):
 			cmds.namespace(addNamespace=space)
 			# add network node to let namespace survive save and load

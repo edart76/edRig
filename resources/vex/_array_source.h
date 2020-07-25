@@ -5,22 +5,19 @@
 // ghetto templating system
 
 // returns first index of item or -1 if not in array
-#define INDEXFN(type)\
-function int index(type input[]; type item){ \
-    int output = -1; \
-    for( int i=0; i < len(input); i++){ \
-        if( input[i] == item ){ \
-            output = i; \
-            break; \
-        } \
-    } \
-    return output; \
+// template this
+// _<_ replace(type, ARRAYTYPES)
+function int index(type input[]; type item){
+    int output = -1;
+    for( int i=0; i < len(input); i++){
+        if( input[i] == item ){
+            output = i;
+            break;
+        }
+    }
+    return output;
 }
-
-INDEXFN(int)
-INDEXFN(float)
-INDEXFN(vector)
-INDEXFN(string)
+// _>_
 
 function int floatIndex(float input[]; float item){
     // same for float array

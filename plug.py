@@ -70,7 +70,7 @@ def plugCondition(val1, val2, operation="greaterThan",
                   ifFalse=None, ifTrue=None):
 	"""compares conditions, returns either supplied options or
 	0 1 if none given"""
-	tokens = [u'equal', u'not Equal', u'greater Than',
+	tokens = [u'equal', u'not Equal', u'greater Than', # please kill me
 	          u'greater or Equal', u'less Than', u'less or Equal']
 	operators = ["equal", "notEqual", "greaterThan", "greaterOrEqual",
 	             "lessThan", "lessOrEqual"]
@@ -86,6 +86,10 @@ def plugCondition(val1, val2, operation="greaterThan",
 	node.set("colorIfTrueR", 1)
 	return node + ".outColorR"
 
+def plugZeroSafety( val, safetyValue=0.0001):
+	""" to prevent maya freaking out about division by zero """
+	return plugCondition(val, 0.0, operation="equal",
+	                     ifFalse=val, ifTrue=safetyValue)
 
 
 def plugMin(*args):

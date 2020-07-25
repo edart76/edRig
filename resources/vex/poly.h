@@ -1,5 +1,8 @@
 
+#ifndef _POLY_H
 #include "array.h"
+
+
 
 // ---- points -----
 function int iscornerpoint( int geo; int pointId ){
@@ -16,6 +19,23 @@ function float sumpointdistances( int geo; int points[]){
         sum += distance( a, b );
     }
     return sum;
+}
+
+// ---- lines ----
+function int connectpointsbyattr( int geo; int ptnum; float range; string attr){
+    vector pos = point(geo, "P", ptnum);
+    int neighbours[] = nearpoints(geo, pos, range, 30 );
+        foreach( int pt; neighbours){
+            if( pt > @ptnum){
+                int id = point(0, "id", pt);
+                if( id == @id){
+                    int line = addprim(0, "polyline", @ptnum, pt);
+                    return line;
+                    //break;
+                    }
+                }
+            }
+    return -1;
 }
 
 
@@ -239,3 +259,6 @@ function vector halfedgemidpoint( int geo; int hedge ){
     vector endPos = point( geo, "P", hedge_dstpoint( geo, hedge ) );
     return (endPos + startPos) / 2.0 ;
 };
+
+#define _POLY_H
+#endif
