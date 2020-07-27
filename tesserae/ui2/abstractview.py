@@ -98,7 +98,12 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def saveToScene(self):
 		"""saves current file path"""
 		currentInfo = pipeline.getSceneData()
+		#print("saving to scene")
+		#print(currentInfo("tesserae"))
+		#print(currentInfo("tesserae.savePath"))
+		#print(currentInfo["tesserae.savePath"])
 		if self.savePath:
+
 			currentInfo["tesserae.savePath"] = self.savePath
 			currentInfo["tesserae.filePath"] = self.filePath
 			currentInfo["tesserae.asset"] = self.currentAsset.path
@@ -109,6 +114,10 @@ class AbstractView(QtWidgets.QGraphicsView):
 		""" loads current file path
 		if force, loads entire graph"""
 		info = pipeline.getSceneData()
+		#print("loading from scene")
+		#print(info("tesserae"))
+		#print(info("tesserae.savePath"))
+		#print(info["tesserae.savePath"])
 		if info["tesserae.asset"]:
 			self.graph.setAsset( pipeline.AssetItem( info["tesserae.asset"]) )
 		self.savePath = info["tesserae.savePath"]

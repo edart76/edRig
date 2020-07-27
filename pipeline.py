@@ -3,8 +3,9 @@
 it's probably not ready for use outside of helping manage tesserae"""
 import os, sys, importlib, pprint, io, tempfile
 import re
+from collections import OrderedDict
 
-from edRig.lib.python import AbstractTree, saveObjectClass, loadObjectClass
+from edRig.lib.python import AbstractTree
 
 from edRig import ROOT_PATH, COMMON_PATH, cmds, mel, hou
 
@@ -531,7 +532,10 @@ def getAllLatestVersions(files=None, versions=1, path=None):
 def sortVersions(files=None, path=None):
 	""" orders file versions within the same folder
 	sorts by common strings preceding 'v032' version token
-	returns dict of {fileTag : {versionNumber : (description, full file name) } }
+	returns dict of {fileTag : odict{versionNumber : (description, full file name) } }
+	:param files : files to sort
+	or
+	:param path : directory
 	"""
 	if path:
 		files = os.listdir(path)
@@ -571,7 +575,8 @@ def sortVersions(files=None, path=None):
 		# possibly the most revolting thing I've ever done
 
 		if not title in outDict.keys():
-			outDict[title] = {}
+			#outDict[title] = {}
+			outDict[title] = OrderedDict()
 		outDict[title].update({version : (desc, fileName)})
 	return outDict
 
@@ -640,51 +645,6 @@ def convertRootPath(path, toRelative=False, toAbsolute=False):
 	elif ROOT_PATH in path or toRelative:
 		return path.replace(ROOT_PATH, "ROOT")
 
-
-# def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True,
-# 					legacy=False):
-# 	""" saves a module and class reference for any object
-# 	if relative, will return path from root folder"""
-# 	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
-# 	if uniqueKey: # not always necessary
-# 		for i in range(len(keys)): keys[i] = "?" + keys[i]
-#
-# 	path = convertRootPath(obj.__class__.__module__, toRelative=relative)
-# 	if legacy: # old inefficient dict method
-# 		return {
-# 			keys[0]: obj.__name__,
-# 			keys[1]: obj.__class__.__name__,
-# 			keys[2]: path,
-# 			keys[3]: regenFunc
-# 		}
-# 	data = (obj.__name__, obj.__class__.__name__, path, regenFunc)
-# 	return data
-#
-# def loadObjectClass(objData):
-# 	""" recreates a class object from any known module """
-# 	if isinstance(objData, dict):
-# 		for i in ("?MODULE", "?CLASS"):
-# 			if not objData.get(i):
-# 				print("objectData {} has no key {}, cannot reload class".format(objData, i))
-# 				return None
-# 		path = objData["?MODULE"]
-# 		className = objData["?CLASS"]
-#
-# 	elif isinstance(objData, (tuple, list)):
-# 		# sequence [ name, class, modulepath, regenFn ]
-# 		path = objData[2]
-# 		className = objData[1]
-#
-# 	module = convertRootPath( path, toAbsolute=True)
-# 	loadedModule = safeLoadModule(module)
-# 	try:
-# 		newClass = getattr(loadedModule, className)
-# 		return newClass
-# 	except Exception as e:
-# 		print("ERROR in reloading class {} from module {}")
-# 		print("has it moved, or module files been shifted?")
-# 		print( "error is {}".format(str(e)) )
-# 		return None
 
 def reloadAllReferences():
 	""" syncs a maya scene to update all references """
@@ -777,9 +737,12 @@ def getSceneData():
 	:returns AbstractTree """
 	node = getDataNode()
 	data = cmds.getAttr( node + ".dict" )
+	#print(data)
 	if not data:
 		return AbstractTree(name="data")
-	return AbstractTree.fromDict(eval(data))
+	sceneTree = AbstractTree.fromDict(eval(data))
+	#print(sceneTree.display())
+	return sceneTree
 
 def saveSceneData(tree):
 	""" OVERRIDES scene data with dict provided """

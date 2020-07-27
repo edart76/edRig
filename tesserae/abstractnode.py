@@ -11,7 +11,8 @@ import functools
 
 from edRig.tesserae.abstractattr import AbstractAttr
 from edRig.tesserae.lib import GeneralExecutionManager
-from edRig.lib.python import Signal, AbstractTree
+from edRig.lib.python import Signal, AbstractTree, \
+	loadObjectClass, saveObjectClass
 
 # temp, find a better order for this
 from edRig.tesserae.ops.memory import Memory2
@@ -514,7 +515,7 @@ class AbstractNode(AbstractTree):
 
 		if "real" in fromDict.keys():
 			realDict = fromDict["real"]
-			realClass = pipeline.loadObjectClass(realDict["objInfo"])
+			realClass = loadObjectClass(realDict["objInfo"])
 
 		if realClass:
 			newClass = cls.generateAbstractClass(realClass)

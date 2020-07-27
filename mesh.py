@@ -70,11 +70,13 @@ def setMeshInfo(target, parent, info):
 def getWeights(targetMesh, targetDeformer, attr):
 	"""gets normal weights"""
 
-def getSkinWeights(shape, skin, influenceList=None):
+def getSkinWeights(shape, skin, influenceList=None, weightAttr="weightList"):
 	"""returns large tuple of form
 	( (weights list for influence i), (for i+1)) etc"""
-	skin = AbsoluteNode(core.shapeFrom(skin))
-	skinFn = oma.MFnSkincluster(skin.MObject)
+	skin = AbsoluteNode(skin)
+	plug = skin.getMPlug("weightList")
+
+
 
 def getPaintable(shape):
 	pass

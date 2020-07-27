@@ -13,3 +13,5 @@ def templateReplaceString(sourcestring, targetstring,
 		targetstring += sourcestring.replace(templateToken, value)
 	return targetstring
 
+
+

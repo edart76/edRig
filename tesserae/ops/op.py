@@ -11,7 +11,8 @@ from edRig.structures import ActionItem
 from edRig.pipeline import safeLoadModule
 from edRig.tesserae.real import MayaReal, RealAttrInterface
 from edRig.tesserae.lib import GeneralExecutionManager
-from edRig.lib.python import debug, outerVars, AbstractTree
+from edRig.lib.python import debug, outerVars, AbstractTree, \
+	saveObjectClass, loadObjectClass
 from edRig.layers.setups import InvokedNode
 
 class OpExecutionManager(GeneralExecutionManager):
@@ -612,7 +613,7 @@ class Op(MayaReal):
 
 	# serialisation and regeneration
 	def serialise(self):
-		objInfo = pipeline.saveObjectClass(self) # name, class and module
+		objInfo = saveObjectClass(self) # name, class and module
 		opDict = {
 			"objInfo" : objInfo,
 			"opName" : self.opName,
@@ -623,7 +624,7 @@ class Op(MayaReal):
 	@staticmethod
 	def fromDict(regenDict, abstract=None):
 		"""regenerates op from dict"""
-		opCls = pipeline.loadObjectClass(regenDict["objInfo"])
+		opCls = loadObjectClass(regenDict["objInfo"])
 		opInstance = opCls(name=regenDict["opName"])
 
 		if abstract:

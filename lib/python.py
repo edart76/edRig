@@ -583,6 +583,7 @@ class AbstractTree(object):
 		""" allows lookups of string form "root.branchA.leaf"
 		:returns AbstractTree
 		:rtype AbstractTree"""
+		#debug(address)
 		if isinstance(address, basestring): # if you look up [""] this will break
 			address = str(address).split(".") # effectively maya attribute syntax
 		#print("address {}".format(address))
@@ -704,27 +705,27 @@ class AbstractTree(object):
 
 		# regnerate children with correct indices
 		length = len(children)
-		for n in range(length):
-			for i in children:
-				# if not i["?INDEX"] == n:
-				# 	continue
+		#for n in range(length):
+		for i in children:
+			# if not i["?INDEX"] == n:
+			# 	continue
 
-				""" check some rules on deserialisation """
-				# is there any kind of override?
-				if i.get("objData"):
-					childCls = loadObjectClass(i["objData"])
+			""" check some rules on deserialisation """
+			# is there any kind of override?
+			if i.get("objData"):
+				childCls = loadObjectClass(i["objData"])
+			else:
+				if cls.branchesInherit:
+					childCls = cls
 				else:
-					if cls.branchesInherit:
-						childCls = cls
-					else:
-						childCls = AbstractTree
+					childCls = AbstractTree
 
-				branch = cls.fromDict(i)
-				if branch is None:
-					continue
-				#branch = childCls.fromDict(i)
-				# print("regen branch {}".format(branch))
-				new.addChild(branch)
+			branch = cls.fromDict(i)
+			if branch is None:
+				continue
+			#branch = childCls.fromDict(i)
+			# print("regen branch {}".format(branch))
+			new.addChild(branch)
 		return new
 
 	def serialise(self):
@@ -919,12 +920,15 @@ if __name__ == '__main__':
 	breakTree["breakTreeBranch.end"] = "break this"
 	testTree.addChild(breakTree)
 
-	#print(testTree.display())
 
 	debug(newTree)
 	debug(testTree("parent").address)
 
-	# loadedTree = AbstractTree.fromDict( testTree.serialise() )
+	print(testTree.display())
+	loadedTree = AbstractTree.fromDict( testTree.serialise() )
+
+	print(loadedTree.display())
+
 	# for i in loadedTree.allBranches():
 	# 	print(i)
 
