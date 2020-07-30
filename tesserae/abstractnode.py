@@ -8,6 +8,7 @@ from edRig.core import shortUUID
 from edRig import pipeline, attrio
 # from edRig.tesserae.ops.op import Op
 import functools
+import glob
 
 from edRig.tesserae.abstractattr import AbstractAttr
 from edRig.tesserae.lib import GeneralExecutionManager

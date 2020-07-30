@@ -1,6 +1,6 @@
 """general lib for nifty python things like decorators and debugs"""
 from __future__ import print_function
-import inspect,importlib, pprint, pkgutil, string
+import inspect,importlib, pprint, pkgutil, string, re, os
 from weakref import WeakSet, WeakKeyDictionary
 from collections import OrderedDict
 from functools import partial, wraps
@@ -779,6 +779,16 @@ def flatten(in_list, ltypes=(list, tuple)):
 				in_list[ i : i+1 ] = in_list[i]
 		i += 1
 	return ltype( in_list )
+
+
+# string stuff
+def stripNonAlphaNumeric(line, replace="_"):
+	""" replaces all non-alphaNumeric characters with given item """
+	return re.sub('[\W_]+', replace, line)
+
+def conformPathSeparators(line):
+	""" ensures that any slash of any kind is os.path.separator"""
+	return line.replace("\\", os.path.sep).replace("/", os.path.sep)
 
 def itersubclasses(cls, _seen=None):
 	"""

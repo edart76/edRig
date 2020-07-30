@@ -1,5 +1,7 @@
 
 from edRig import hou
+from edRig.lib import python
+reload(python)
 
 
 def returnNode(parent, node_type, node_name):
@@ -121,4 +123,55 @@ def populateMerge(targetMerge=None, items=None, singleObjMerge=False,
 
 		box.fitAroundContents()
 
+
+def makeMultiFileMerge(targetMerge=None, paths=None,
+                  boxName=None, rootPath=None):
+	""" no alternative this time - required to create separate node per file
+	in paths, all feeding into single merge node
+	"""
+
+	""" PASSTHROUGH target merge at start and end of operation, or it will
+	update each time """
+	parent = targetMerge.parent()
+	fileNodes = []
+
+	targetMerge.bypass(1)
+
+	# find network box
+	box = getNetworkBox(parent, boxName)
+	for i in box.nodes():
+		i.destroy()
+
+	rootPath = python.conformPathSeparators(rootPath)
+	for path in paths:
+		path = python.conformPathSeparators(path)
+		#print(path.split(rootPath)[-1])
+		nodeName = python.stripNonAlphaNumeric(
+			path.split(rootPath)[-1]).split(".")[0]
+		fileNode = parent.createNode("file", nodeName + "_file")
+		try:
+			fileNode.parm("file").set(path)
+		except:
+			print("could not set path {}".format(path))
+			fileNode.destroy()
+			continue
+		fileNodes.append(fileNode)
+		box.addItem(fileNode)
+		# targetMerge.setNextInput( fileNode )
+		fileNode.moveToGoodPosition()
+
+		# set up group to add original path as group on geo
+		groupNode = parent.createNode("group", nodeName+"_group")
+		groupNode.parm("groupname").set(nodeName)
+		groupNode.setInput(fileNode)
+		box.addItem(groupNode)
+
+		targetMerge.setNextInput(groupNode)
+
+
+	targetMerge.moveToGoodPosition(move_outputs=True)
+	box.fitAroundContents()
+	targetMerge.bypass(0)
+
+	return fileNodes
 

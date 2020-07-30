@@ -5,7 +5,7 @@ import os, sys, importlib, pprint, io, tempfile
 import re
 from collections import OrderedDict
 
-from edRig.lib.python import AbstractTree
+from edRig.lib.python import AbstractTree, debug
 
 from edRig import ROOT_PATH, COMMON_PATH, cmds, mel, hou
 
@@ -460,6 +460,22 @@ class AssetItem(str):
 		"""returns folder for saving data of various TilePile operations"""
 		return self["assemblyData"]
 
+
+class FileVersion(object):
+	""" smaller wrapper for individual files """
+	def __init__(self, filePath):
+		self._path = filePath
+
+
+	@property
+	def path(self):
+		return self._path
+
+	def setTokens(self):
+		""" set version tokens from given path """
+		pattern = re.compile(r"(v(\d|\s)*)")
+
+
 TempAsset = AssetItem(ROOT_PATH+"/temp")
 rootTree = FilePathTree(ROOT_PATH)
 
@@ -529,16 +545,22 @@ def getAllLatestVersions(files=None, versions=1, path=None):
 					r.append(f[0])
 
 
-def sortVersions(files=None, path=None):
+def sortVersions(files=None, path=None, formats=None):
 	""" orders file versions within the same folder
 	sorts by common strings preceding 'v032' version token
 	returns dict of {fileTag : odict{versionNumber : (description, full file name) } }
 	:param files : files to sort
 	or
 	:param path : directory
+	:param formats : list of file format suffixes
 	"""
 	if path:
-		files = os.listdir(path)
+		if isDir(path):
+			files = os.listdir(path)
+		else:
+			print("path {} is not valid directory".format(path))
+			return {}
+	if not files: return {}
 	outDict = {}
 
 	pattern = re.compile( r"(v(\d|\s)*)")
@@ -547,6 +569,12 @@ def sortVersions(files=None, path=None):
 		version = isVersion(fileName)
 		if not version:
 			continue
+
+		if formats:
+			#debug( formats )
+			#debug(fileName)
+			if not any([i.lower() in fileName.lower() for i in formats]):
+				continue
 
 		reresult = re.findall(pattern, fileName)
 		tokens = [i for i in reresult if i]
@@ -557,6 +585,7 @@ def sortVersions(files=None, path=None):
 		# let the filth begin
 		title = ""
 		desc = ""
+		format = ""
 		index = fileName.index(versionString)
 		s = fileName.split(versionString)
 
@@ -578,7 +607,50 @@ def sortVersions(files=None, path=None):
 			#outDict[title] = {}
 			outDict[title] = OrderedDict()
 		outDict[title].update({version : (desc, fileName)})
+		# outDict[title] = sorted(outDict[title]) #returns only list
 	return outDict
+
+def getTokens(path):
+	""" get name, version, description and format tokens from file path """
+	if not os.path.isfile(path):
+		return None
+	if not isVersion(path):
+		return None
+
+	fileFormat = path.split(".")[-1]
+	path = ".".join(path.split(".")[:-1])
+
+	pattern = re.compile( r"(v(\d|\s)*)")
+	reresult = re.findall(pattern, path)
+	debug(reresult)
+	tokens = [i for i in reresult if i]
+
+	if not tokens: return None
+
+	versionString = tokens[0][0]
+	version = int("".join(i for i in tokens[0][0] if i.isdigit()))
+	index = path.index(versionString)
+	s = path.split(versionString)
+
+	if not s:  # v049 is file's entire name
+		title = ""
+		desc = ""
+	elif index == 0:  # v049 tag is first, no title
+		title = ""
+		desc = s[0]
+	elif len(s) == 1:  # tag is last
+		title = s[0]
+		desc = ""
+	else:
+		title = s[0]
+		desc = s[1]
+
+	return {
+		"title" : title,
+		"format" : format,
+		"desc" : desc,
+		"version" : version
+	}
 
 
 def isVersion(fileName):
