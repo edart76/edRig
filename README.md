@@ -1,6 +1,6 @@
 # edRig
 
-come watch an idiot fumble its way to mediocrity in python and maya and glsl
+come watch an idiot fumble its way to mediocrity in python and maya and glsl and vex
 
 includes such dubious highlights as
 # Tesserae
