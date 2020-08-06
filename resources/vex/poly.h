@@ -1,5 +1,5 @@
 
-#ifndef _POLY_H
+#ifndef _ED_POLY_H
 #include "array.h"
 
 
@@ -112,7 +112,7 @@ function int[] primhalfedgesexcept( int geo; int prim; int except){
     return edges;
 }
 
-function int[] edgeprims( int geo; int hedge ){
+function int[] hedgeprims( int geo; int hedge ){
     // returns all primitives containing this half edge or equivalents
     int out[];
     foreach( int h; allhedgeequivalents(geo, hedge)){
@@ -157,7 +157,6 @@ function int[] nexthedgesinloop(int geo; int starthedge){
         //newprim = seedprim;
 
         // iterate newprim edges
-        //foreach( int newhedge; primhalfedges(geo, newprim)){
         foreach( int newhedge; primhalfedgesexcept(geo, newprim, testhedge)){
             //newhedge = hedge_primary(geo, newhedge);
 
@@ -176,6 +175,10 @@ function int[] nexthedgesinloop(int geo; int starthedge){
             int newhedgepts[] = hedgepoints( geo, newhedge);
             int crossover[] = intersect( newhedgepts, points);
             if( len(crossover) > 0){
+                // check for pole vertices
+                if( neighbourcount(geo, crossover[0] ) != 4){
+                    continue;
+                }
                 append(foundhedges, hedge_primary(geo, newhedge));
                 //break;
             }
@@ -260,5 +263,5 @@ function vector halfedgemidpoint( int geo; int hedge ){
     return (endPos + startPos) / 2.0 ;
 };
 
-#define _POLY_H
+#define _ED_POLY_H
 #endif

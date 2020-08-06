@@ -12,7 +12,17 @@ function string[] pointgroupsmatching( int geo; string ex){
     return result;
 }
 
-
+function string[] groupsfromprim( int geo; int primnum){
+    // return all groups containing target prim
+    string primgrps[] = detailintrinsic( geo, "primitivegroups");
+    string result[] = {};
+    foreach( string grp; primgrps){
+        if( inprimgroup(0, grp, primnum)){
+            append(result, grp);
+        }
+    }
+    return result;
+}
 
 
 

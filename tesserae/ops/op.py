@@ -5,7 +5,7 @@ from edRig import cmds, om
 from edRig.core import ECN, shortUUID
 from edRig.node import AbsoluteNode, ECA, invokeNode
 from edRig import scene, attr, transform, pipeline
-from edRig.tesserae.abstractnode import AbstractAttr
+# from edRig.tesserae.abstractnode import AbstractAttr
 
 from edRig.structures import ActionItem
 from edRig.pipeline import safeLoadModule
@@ -159,11 +159,14 @@ class Op(MayaReal):
 		if self.abstract:
 			self.inputRoot = abstract.inputRoot
 			self.outputRoot = abstract.outputRoot
+			self.defineAttrs()
 		else:
-			print "no abstract passed"
-			self.inputRoot = AbstractAttr(role="input", hType="root", name="inputRoot")
-			self.outputRoot = AbstractAttr(role="output", hType="root", name="outputRoot")
-		self.defineAttrs() # override this specific method with attr construction
+			#print "no abstract passed"
+			#raise RuntimeError("no abstract passed")
+			# self.inputRoot = AbstractAttr(role="input", hType="root", name="inputRoot")
+			# self.outputRoot = AbstractAttr(role="output", hType="root", name="outputRoot")
+			pass
+		# self.defineAttrs() # override this specific method with attr construction
 
 		# abstract interface
 		# signals and methods directly from abstract
@@ -496,14 +499,16 @@ class Op(MayaReal):
 		elif i.dataType == "nD":
 			""" acgnostic datatype """
 
-			if i.getConnections():
-				dt = i.getConnections()[0].dataType
-				newItem = AbstractAttr(name=i.name, dataType=dt, hType="leaf")
-				self.makeOpIoNodeAttrs(node, newItem, parentItem)
-			else:
-				# dt = "matrix"
-				# plug = attr.addAttr(node, attrName=i.name, attrType=dt)
-				plug = attr.addUntypedAttr(node, attrName=i.name)
+			# if i.getConnections():
+			# 	dt = i.getConnections()[0].dataType
+			# 	newItem = AbstractAttr(name=i.name, dataType=dt, hType="leaf")
+			# 	self.makeOpIoNodeAttrs(node, newItem, parentItem)
+			# else:
+			# 	# dt = "matrix"
+			# 	# plug = attr.addAttr(node, attrName=i.name, attrType=dt)
+			# 	pass
+			plug = attr.addUntypedAttr(node, attrName=i.name)
+
 		elif i.dataType in attr.INTERFACE_ATTRS:
 			dtdict = attr.INTERFACE_ATTRS[i.dataType]
 			dtdict = {i.name : dtdict }

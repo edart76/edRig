@@ -2,8 +2,8 @@
 import edRig.pipeline
 from edRig.tesserae.ops.op import Op
 from edRig import core, attrio, utils, transform, control, beauty
-from edRig.layers.setups import Memory, OpAttrItem
-from edRig.tesserae.ops.memory import Memory2
+
+#from edRig.tesserae.ops.memory import Memory2
 from edRig.structures import ActionItem
 import functools, inspect
 import copy

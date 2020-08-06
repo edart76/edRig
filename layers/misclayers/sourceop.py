@@ -1,7 +1,7 @@
 
 """ import stuff from scene or file """
 
-from edRig import cmds, om, core, pipeline, COMMON_PATH, AbsoluteNode, ECA
+from edRig import cmds, om, core, pipeline, COMMON_PATH, AbsoluteNode, ECA, scene
 from edRig.tesserae.ops.layer import LayerOp
 from edRig.lib.python import AbstractTree
 
@@ -23,7 +23,7 @@ class SourceOp(LayerOp):
 		"""
 		self.settings["fileA"] = "/"
 		#self.settings["fileA.C_body"] = "2D"
-		self.settings["fileA.body"] = "C_body_mesh"
+		self.settings["fileA.body"] = "C_body"
 		self.settings["fileA._version"] = "latest"
 
 	def defineAttrs(self):
@@ -104,7 +104,7 @@ class SourceOp(LayerOp):
 		""" import 3d file """
 		path = pipeline.convertRootPath(path, toAbsolute=True)
 		found = False
-		for i in "mb", "ma", "obj":
+		for i in "mb", "ma", "obj", "fbx":
 			path = pipeline.checkSuffix(path, suffix=i)
 			if pipeline.checkFileExists(path):
 				found = True
@@ -113,10 +113,9 @@ class SourceOp(LayerOp):
 			self.log( "no source found at {}".format(path) )
 			return
 
-		# if version == "latest":
-		# 	path = self.getLatestVersion(path)
-		# reference
-		cmds.file( path, i=1 )
+		print(path)
+		scene.importModel(path)
+
 
 	@property
 	def assetPath(self):

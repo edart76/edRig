@@ -586,17 +586,13 @@ class AbstractTree(object):
 		#debug(address)
 		if isinstance(address, basestring): # if you look up [""] this will break
 			address = str(address).split(".") # effectively maya attribute syntax
-		#print("address {}".format(address))
 		if not address: # empty list
 			return self
 		first = address.pop(0)
-		#print("first {}".format(first))
 		if not first in self._map: # add it if doesn't exist
-
 			if self.readOnly:
 				raise RuntimeError( "readOnly tree accessed improperly - "
 				                    "no address {}".format(first))
-
 			# check if branch should inherit directly, or
 			# remain basic tree object
 			if self.branchesInherit:
@@ -683,7 +679,6 @@ class AbstractTree(object):
 		# support subclass serialisation and regen -
 		# check first for a saved class or module name
 		objData = regenDict.get("objData") or {}
-		#print("objdict is {}".format(objData))
 		if objData:
 			cls = loadObjectClass( objData )
 			cls = cls or AbstractTree
@@ -697,28 +692,21 @@ class AbstractTree(object):
 		if not (val or name or children): # skip branch
 			print("regenDict {}".format(regenDict))
 			print("no name, val or children found")
-			#return
 			pass
 		new = cls(name=name, val=val)
 		new.extras = regenDict.get("?EXTRAS") or {}
 
-
-		# regnerate children with correct indices
-		length = len(children)
-		#for n in range(length):
+		# regnerate children
 		for i in children:
-			# if not i["?INDEX"] == n:
-			# 	continue
-
-			""" check some rules on deserialisation """
-			# is there any kind of override?
-			if i.get("objData"):
-				childCls = loadObjectClass(i["objData"])
-			else:
-				if cls.branchesInherit:
-					childCls = cls
-				else:
-					childCls = AbstractTree
+			# """ check some rules on deserialisation """
+			# # is there any kind of override?
+			# if i.get("objData"):
+			# 	childCls = loadObjectClass(i["objData"])
+			# else:
+			# 	if cls.branchesInherit:
+			# 		childCls = cls
+			# 	else:
+			# 		childCls = AbstractTree
 
 			branch = cls.fromDict(i)
 			if branch is None:
@@ -728,11 +716,10 @@ class AbstractTree(object):
 			new.addChild(branch)
 		return new
 
-	def serialise(self):
 
+	def serialise(self):
 		serial = {
 			"?NAME" : self.name,
-			#"?INDEX" : self.ownIndex() # index likely not needed
 		}
 		if self.value:
 			serial["?VALUE"] = self.value
@@ -903,6 +890,12 @@ def loadObjectClass(objData):
 		print("has it moved, or module files been shifted?")
 		print( "error is {}".format(str(e)) )
 		return None
+
+
+def matchSequence():
+	""" ?????????? """
+
+
 
 
 

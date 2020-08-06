@@ -6,7 +6,7 @@ from edRig.lib.python import AbstractTree
 
 from edRig.tesserae.lib import GeneralExecutionManager
 # from edRig.lib.deltastack import DeltaStack, StackDelta
-from edRig.tesserae.abstractnode import AbstractAttr
+# from edRig.tesserae.abstractnode import AbstractAttr
 
 import traceback
 

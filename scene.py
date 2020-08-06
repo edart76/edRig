@@ -1,6 +1,7 @@
 # operations for listing, grouping, adding to sets etc
 from edRig.node import ECA, AbsoluteNode, invokeNode
-from edRig import cmds, om, attr, core
+from edRig import cmds, mel, om, attr, core, pipeline
+from edRig.lib.python import AbstractTree
 import traceback
 
 
@@ -211,6 +212,23 @@ def alembicExport(targetSets=None, startFrame=None, endFrame=None):
 	start and end frame default to scene timeline"""
 
 
+def importFbx(path):
+	""" because importing fbx to maya is dicey, like everything is """
+	cmds.loadPlugin("fbxmaya")
+	mel.eval( """FBXImport -file "{}";""".format(path) )
+
+def importModel(path):
+	""" import model to maya scene, this should probably go in scene """
+	functionMap = {
+		"fbx" : importFbx
+	}
+	importFunction = functionMap.get(pipeline.suffix(path))
+	if importFunction:
+		importFunction(path)
+	else:
+		cmds.file( path, i=1 )
+
+
 # --- NAMESPACES
 def addNamespace(name):
 	""" wrapper to squash errors on existing and nested namespaces """
@@ -258,6 +276,22 @@ def pruneRemnantSpaces():
 		if not hasDag:
 			removeNamespace(i, deleteNodes=1)
 
+
+
+def hierarchyFromTree(tree):
+	""" meant to aid more complex parenting over procedural unordered geo
+	tree values should be lists of geo to be parented to that level;
+	branches are child groups
+	:param tree : AbstractTree
+	:type tree : AbstractTree"""
+	for branch in tree.allBranches():
+		grp = ECA("transform", n=branch.name)
+		if branch.parent:
+			grp.parentTo(branch.name)
+		if branch.value:
+			for node in branch.value:
+				cmds.parent(node, grp)
+	return AbsoluteNode(tree.root)
 
 
 

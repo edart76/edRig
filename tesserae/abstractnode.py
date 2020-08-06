@@ -3,9 +3,9 @@ from collections import OrderedDict
 
 # container interfacing with the graph - concerned with connections
 import edRig.pipeline
-from edRig.structures import AttrItem, ActionItem, ActionList
+from edRig.structures import ActionItem, ActionList
 from edRig.core import shortUUID
-from edRig import pipeline, attrio
+from edRig import pipeline
 # from edRig.tesserae.ops.op import Op
 import functools
 import glob

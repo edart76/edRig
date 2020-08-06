@@ -187,6 +187,34 @@ class FilePathTree(str):
 	def copyTo(self):
 		"""copies filetree to new location?"""
 
+
+class FilePathTree2(AbstractTree):
+	""" recycle AbstractTree branch structure for file operations """
+	def __init__(self):
+		super(FilePathTree2, self).__init__()
+		self._rootPath = None
+
+	@staticmethod
+	def build(rootPath, parent=None):
+		""" create tree """
+		if not parent:
+			parent = FilePathTree2()
+			parent._rootPath = rootPath
+
+		os.path.walk(rootPath)
+
+	@property
+	def rootPath(self):
+		return self.root._rootPath
+
+	@property
+	def path(self):
+		return os.path.join( self.address.replace(".", os.path.sep))
+
+
+
+
+
 def getTempFile(usage="temp"):
 	""""""
 
@@ -218,24 +246,12 @@ def ioinfo(name="", mode="in", info=None, path=None):
 			return goss
 
 		goss = eval(goss)
-		#
-		# try:
-		# 	#goss = eval(ast.literal_eval(str(goss)))
-		# 	goss = eval(goss)
-		# except Exception as e:
-		# 	print "ERROR in attrio reading from file {}".format(path)
-		# 	print "error is {}".format(str(e))
-		#print "goss is {}".format(goss)
-
 		return goss
 
 	elif mode == "out":
 
 		#file = os.open(path, "w+b")
 		with open(path, "w+b") as file:
-			# file.write(pprint.pformat(json.dumps(info), indent=3))
-			# #file.write(pprint.pformat(info, indent=3))
-			# file.write(json.dumps(pprint.pformat(info, indent=3)))
 			file.write(str(pprint.pformat(info, indent=2)) )
 			file.close()
 
@@ -346,6 +362,10 @@ def renameFile(old="", new="", suffix=""):
 			pass
 		except RuntimeError:
 			pass
+
+def suffix(path):
+	""" return filetype suffix, always lower case """
+	return path.lower().split(".")[-1]
 
 def checkSuffix(path, suffix="json"):
 	"""adds selected to suffix to path if not there"""
