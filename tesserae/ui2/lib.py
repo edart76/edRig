@@ -172,11 +172,7 @@ class EmbeddedAction(QtWidgets.QAction):
 		if not self._actionObject:
 			print "no actionObject received for embedded action!"
 			return
-		self.name = self._actionObject.name
-		# if isinstance(self._actionObject, ActionItem):
-		# 	self.triggered.connect(self._actionObject.execute)
-		# elif isinstance(self._actionObject, ActionList):
-		# 	self.triggered.connect(self._actionObject.execute)
+		self.name = str(self._actionObject.name)
 		self.triggered.connect(self._actionObject.execute)
 
 
@@ -195,28 +191,13 @@ class ContextMenu(object):
 		to be implemented with more thorough internal computation"""
 		return self.rootMenu.exec_(pos)
 
-	#
-	# def get_menu(self, name):
-	# 	ctx_menu = self.view.context_menu()
-	# 	root_menu = ctx_menu._menu_obj
-	# 	for action in root_menu.actions():
-	# 		if action.text() != name:
-	# 			continue
-	# 		menu = action.menu()
-	# 		return ContextMenu(self.view, menu)
-
-	def add_action(self, action=None, func=None):
+	def addAction(self, action=None, func=None):
 		# action.setShortcutVisibleInContextMenu(True)
 		if func and not action:
-			temp = ActionItem(execDict={"func" : func})
-			#action = EmbeddedAction(temp, parent=self.rootMenu)
-			action = temp
-		#action.setText( action.name )
-
-		#self.rootMenu.addAction(action)
+			action = ActionItem(execDict={"func" : func})
 		self.addSubAction(action)
 
-	def add_menu(self, name):
+	def addMenu(self, name):
 		menu = QtWidgets.QMenu(None, title=name)
 		menu.setStyleSheet(STYLE_QMENU)
 		self.rootMenu.addMenu(menu)
@@ -235,14 +216,7 @@ class ContextMenu(object):
 		# regen bug affects this
 		if not parent:
 			parent = self.rootMenu
-		# if isinstance(actionObject, ActionList):
-		# 	for i in actionObject.getActions():
-		# 		return self.addSubAction(i, parent=parent)
-		# if actionObject.name == "clear Maya scene":
-		# 	newAction = EmbeddedAction(actionObject=ActionItem({"func" : self.marker}),
-		# 	                           parent=parent)
-		# else:
-		# 	newAction = EmbeddedAction(actionObject=actionObject, parent=parent)
+
 		newAction = EmbeddedAction(actionObject=actionObject, parent=parent)
 		newAction.setText(newAction.name)
 		#print "addSubAction name is {}".format(newAction.name)
@@ -252,7 +226,7 @@ class ContextMenu(object):
 	def marker(self):
 		print "TRIGGERING ACTION"
 
-	def add_command(self, name, func=None, shortcut=None, parent=None):
+	def addCommand(self, name, func=None, shortcut=None, parent=None):
 		if not parent:
 			parent = self.rootMenu
 		action = QtWidgets.QAction(name, self.view)
@@ -264,8 +238,11 @@ class ContextMenu(object):
 		parent.addAction(action, shortcut=shortcut)
 		return action
 
-	def add_separator(self):
+	def addSeparator(self):
 		self.rootMenu.addSeparator()
+
+	def addSection(self, *args):
+		self.rootMenu.addSection(*args)
 
 	def buildMenusFromDict(self, menuDict=None):
 		"""updates context menu with any action passed to it
@@ -300,22 +277,26 @@ class ContextMenu(object):
 
 			elif isinstance(v, ActionItem) or isinstance(v, ActionList)\
 					or v.__class__.__name__ == "ActionItem":
-				#print "buildMenu v is actionItem or actionList {} {}".format(v.name, v)
-				# if not isinstance(v, ActionItem):
-				# 	print "v dict is {}".format(pprint.pformat(v.__dict__))
-				# else:
-				# 	print "real v dict is {}".format(pprint.pformat(v.__dict__))
-				if v._name == "clear Maya scene":
-					# print "v dict is {}".format(pprint.pformat(v.__dict__))
-					#v.items[0]() # works
-					pass
-
 				action = self.addSubAction(parent=parent, actionObject=v)
-				# if v._name == "clear Maya scene":
-				# 	action.triggered() # works
-				#self.add_command(v.name, func=v.execute, parent=parent)
+
 
 		pass
+
+	def buildMenusFromTree(self, tree, parent=None):
+		""" builds recursively from tree
+		only actions at leaves are considered """
+		if tree.branches: # add menu for multiple actions
+			parent = self.addSubMenu(name=tree.name, parent=parent)
+			for branch in tree.branches:
+				self.buildMenusFromTree(branch, parent)
+			return parent
+		else: # add single entry for single action
+			if not isinstance(tree.value, (ActionItem, ActionList)):
+				return None
+			action = self.addSubAction(tree.value, parent)
+
+
+
 
 	def clearCustomEntries(self):
 		"""clear only custom actions eventually -

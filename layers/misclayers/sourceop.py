@@ -1,6 +1,6 @@
 
 """ import stuff from scene or file """
-
+import os
 from edRig import cmds, om, core, pipeline, COMMON_PATH, AbsoluteNode, ECA, scene
 from edRig.tesserae.ops.layer import LayerOp
 from edRig.lib.python import AbstractTree
@@ -21,10 +21,16 @@ class SourceOp(LayerOp):
 		+ - transformName : 2D
 		+ - transformName : 0D
 		"""
-		self.settings["fileA"] = "/"
-		#self.settings["fileA.C_body"] = "2D"
-		self.settings["fileA.body"] = "C_body"
-		self.settings["fileA._version"] = "latest"
+		self.settings["path"] = "/"
+		self.settings["mode"] = "file"
+		self.settings("mode").options = ["file", "folder", "scene"]
+
+		# let user specify hierarchy for procedurally imported objects
+		self.settings["hierarchy"] = None
+
+		# node plug output is by default the same name as geometry
+		self.settings["io.C_body"] = "2D"
+		self.settings["io.C_body.overrideNode"] = "C_body"
 
 	def defineAttrs(self):
 		pass
@@ -58,15 +64,17 @@ class SourceOp(LayerOp):
 
 	# --- execution ---
 	def execute(self):
-		for i in self.settings.branches:
-			if i.value == "scene":
-				self.log("sourcing {} from scene".format(i.name))
-			else:
-				self.loadFile(i.value, version=i["_version"])
-			for n in i.branches:
-				if n.name == "_version":
-					continue
-				self.sourceNodes(n.name, n.value)
+
+		if self.s["mode"] == "scene":
+			self.log("sourcing from scene")
+		else:
+			if self.s["mode"] == "file":
+				self.loadFile(self.s["path"])
+			elif self.s["mode"] == "folder":
+				self.loadFolder(self.s["path"])
+
+		for plug in self.s("io").branches:
+			self.sourceNodes(plug.name, plug.value)
 
 	# connecting nodes from scene
 	def sourceNodes(self, outputName="output", nodeName=""):
@@ -116,6 +124,14 @@ class SourceOp(LayerOp):
 		print(path)
 		scene.importModel(path)
 
+	def loadFolder(self, path, pattern=None):
+		""" loads all model files within folder """
+		path = pipeline.convertRootPath(path, toAbsolute=True)
+		files = [i for i in os.listdir(path) if
+		         os.path.isfile(os.path.join(path, i))]
+		for i in files:
+			scene.importModel(os.path.join(path,i) )
+
 
 	@property
 	def assetPath(self):
@@ -126,19 +142,24 @@ class SourceOp(LayerOp):
 
 	def setFilePath(self):
 		""" sets file path with gui menu """
-		print("asset path {}".format(self.assetPath))
-		path = QtWidgets.QFileDialog.getOpenFileName(
-			caption="open file",
-			dir=self.assetPath,
-		)[0] # returns the path and the filter for some reason
+		#print("asset path {}".format(self.assetPath))
+		if self.settings["mode"] == "file":
+			path = QtWidgets.QFileDialog.getOpenFileName(
+				caption="open file",
+				dir=self.assetPath)[0]
+			# returns the path and the filter for some reason
+		elif self.settings["mode"] == "folder":
+			path = QtWidgets.QFileDialog.getExistingDirectory(
+				caption="open folder",
+				dir=self.assetPath)
+			print("folder path {}".format(path))
+		else: path = ""
 		if not path:
 			self.log("no path given")
 			return
-		print(path)
+
 		path = pipeline.convertRootPath(path, toRelative=True)
-		print(path)
-		self.settings["fileA"] = path
-		print(self.settings["fileA"])
+		self.settings["path"] = path
 		self.sync()
 
 	def getLatestVersion(self, path):

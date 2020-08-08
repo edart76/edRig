@@ -1,7 +1,7 @@
 # operations for listing, grouping, adding to sets etc
 from edRig.node import ECA, AbsoluteNode, invokeNode
 from edRig import cmds, mel, om, attr, core, pipeline
-from edRig.lib.python import AbstractTree
+from edRig.lib.python import AbstractTree, debug
 import traceback
 
 
@@ -217,10 +217,20 @@ def importFbx(path):
 	cmds.loadPlugin("fbxmaya")
 	mel.eval( """FBXImport -file "{}";""".format(path) )
 
+def importObj(path):
+	cmds.loadPlugin("objExport")
+	cmds.file( path, i=1 )
+
+def importAbc(path):
+	cmds.loadPlugin("AbcImport")
+
+
 def importModel(path):
 	""" import model to maya scene, this should probably go in scene """
+	#debug(path)
 	functionMap = {
-		"fbx" : importFbx
+		"fbx" : importFbx,
+		"obj" : importObj,
 	}
 	importFunction = functionMap.get(pipeline.suffix(path))
 	if importFunction:

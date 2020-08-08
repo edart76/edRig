@@ -202,6 +202,10 @@ class Op(MayaReal):
 		""" looks up abstract's data """
 		return self.abstract.data
 
+	@property
+	def s(self): # shorthand
+		return self.settings
+
 	def executionManager(self):
 		return OpExecutionManager(self)
 

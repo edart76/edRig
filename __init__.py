@@ -22,19 +22,20 @@ except :
 	# this is not maya
 	# this system definitely works
 	pass
-
-# # houdini setup
-# try:
-# 	from houdini import hou
-# 	print("omg this is houdini")
-# 	thisIsHoudini = True
-# except:
-# 	pass
+#
+# # # houdini setup
+# # try:
+# # 	from houdini import hou
+# # 	print("omg this is houdini")
+# # 	thisIsHoudini = True
+# # except:
+# # 	pass
 
 # import all the things
 from edRig.dcc import cmds, mel, om, oma, omui, \
 	hou, stateutils, objecttoolutils
 
+from edRig.lib.python import debug
 
 sys.dont_write_bytecode = True
 ROOT_PATH = "F:" + "/" + "all_projects_desktop" # root path of asset system

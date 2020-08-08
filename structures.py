@@ -482,68 +482,8 @@ class ActionBranch(object):
 		"""recursively build a tree of items to feed to qmenu, dict or whatever"""
 
 
-class AbstractTreeThing(object):
-	"""in case of inheritance"""
 
-# class AbstractTreeLeaf(AbstractTreeThing):
-# 	"""man can only build so many different recursive tree structures"""
-# 	def __init__(self, name, parent=None, value=None):
-# 		self.name = name
-# 		if parent:
-# 			assert isinstance(parent, AbstractTreeBranch)
-# 		self._parent = parent
-# 		#self.real = real
-# 		self.value = value
-#
-# 	@property
-# 	def parent(self):
-# 		return self._parent
-#
-# 	@parent.setter
-# 	def parent(self, val):
-# 		self._parent = val
-#
-# 	@property
-# 	def siblings(self):
-# 		return [i for i in self.parent.leaves if i is not self]
-# #
-# # class AbstractTreeList
-# # NOT USED, literally just use a normal list instead
 
-class AbstractTreeBranch(AbstractTreeThing):
-	"""uuuuugghg"""
-	def __init__(self, name, parent=None, real=None):
-		"""you should really not pass this a real component"""
-		self.name = name
-		self.parent = parent
-		self.leaves = [] # AbstractTreeLeaves
-		self.children = [] # AbstractTreeBranches
-
-	@property
-	def isRoot(self):
-		if self.parent:
-			return False
-		else:
-			return True
-
-	def getLeaf(self, name):
-		"""retrieves a specific leaf from anywhere in the tree"""
-		current = [i for i in self.leaves if i.name == name]
-		if not current:
-			for i in self.children:
-				current += i.getLeaf(name)
-		return current
-
-	def getBranch(self, name):
-		branch = None
-		if self.name == name:
-			branch = self
-		else:
-			for i in self.children:
-				branch = i.getBranch
-				if branch:
-					break
-		return branch
 
 """ consider the pattern of
 {keyA : {

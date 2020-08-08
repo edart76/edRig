@@ -1,8 +1,8 @@
 """general lib for nifty python things like decorators and debugs"""
 from __future__ import print_function
 import inspect,importlib, pprint, pkgutil, string, re, os
-from weakref import WeakSet, WeakKeyDictionary
-from collections import OrderedDict
+from weakref import WeakSet, WeakKeyDictionary, proxy
+from collections import OrderedDict, MutableSet
 from functools import partial, wraps
 from abc import ABCMeta
 import types
@@ -99,20 +99,18 @@ def debug(var):
 	callerStack = inspect.stack()[1]
 	callerFrame = callerStack[0] # frame object from stack above this one
 	try:
-		#pprint.pprint(inspect.stack())
-		#pprint.pprint( callerFrame.f_locals)
-		name = [k for k, v in callerFrame.f_locals.iteritems() if v is var]
-		""" this fails if a local variable is not explicitly created before
-		debugging """
-		if name:
-			name = name[0]
-		else:
-			# fallback to literally whatever is written between brackets
-			callingLine = callerStack[4][ callerStack[5] ]
-			content = callingLine.split("debug(")[-1][:-2]
-			name = content
-		print("{} is {}".format(name, pprint.pformat(var)))
-		return name # part of me is sad this isn't more crazy
+		callingLine = callerStack[4][callerStack[5]]
+		#callingLine = "".join(callerStack[4][callerStack[5]:])
+
+		content = re.findall("debug\(([^)]*)\)", callingLine)
+		# regex to find 'debug( *random string here* )
+		if not content:
+			print("debug failed, has the function name been reassigned?")
+			return None
+		content = content[0].strip()
+		print("{} is {}".format(content, pprint.pformat(var)))
+		return content
+
 	finally:
 		del callerFrame
 		del callerStack
@@ -136,14 +134,14 @@ class StringLikeMeta(type):
 	for curiosity, in the end I just overrode them one by one manually"""
 
 	stringMethods = ['__add__', '__contains__',
-	                 '__delslice__', '__doc__', '__eq__',
-	                 '__format__', '__ge__', '__getitem__', #'__hash__',
-	                 '__getslice__', '__gt__', '__iadd__', '__imul__',
-	                 '__iter__', '__le__', '__len__', '__lt__',
-	                 '__mul__', '__ne__', '__new__', '__reduce__',
-	                 '__reduce_ex__', '__repr__', '__reversed__', '__rmul__',
-	                 #'__setattr__', #'__setitem__', #'__setslice__',
-	                 ]
+					 '__delslice__', '__doc__', '__eq__',
+					 '__format__', '__ge__', '__getitem__', #'__hash__',
+					 '__getslice__', '__gt__', '__iadd__', '__imul__',
+					 '__iter__', '__le__', '__len__', '__lt__',
+					 '__mul__', '__ne__', '__new__', '__reduce__',
+					 '__reduce_ex__', '__repr__', '__reversed__', '__rmul__',
+					 #'__setattr__', #'__setitem__', #'__setslice__',
+					 ]
 
 
 	def __new__(mcs, *args, **kwargs):
@@ -166,7 +164,7 @@ class StringLikeMeta(type):
 	# 			new.__dict__[i] = lambda *args, **kwargs : \
 	# 				str.__dict__[i](*args, **kwargs)
 	#
-	 	return new
+		return new
 
 #StringLikeMeta.register(str)
 #StringLikeMeta.register(basestring)
@@ -387,6 +385,16 @@ class AbstractTree(object):
 		if oldVal != val:
 			self.valueChanged(self)
 
+	# extras properties
+	@property
+	def options(self):
+		if not self.extras.get("options"):
+			self.extras["options"] = []
+		return self.extras["options"]
+	@options.setter
+	def options(self, val):
+		self.extras["options"] = val
+
 	@property
 	def branches(self):
 		"""more explicit that it returns the child tree objects
@@ -592,7 +600,7 @@ class AbstractTree(object):
 		if not first in self._map: # add it if doesn't exist
 			if self.readOnly:
 				raise RuntimeError( "readOnly tree accessed improperly - "
-				                    "no address {}".format(first))
+									"no address {}".format(first))
 			# check if branch should inherit directly, or
 			# remain basic tree object
 			if self.branchesInherit:
@@ -616,7 +624,7 @@ class AbstractTree(object):
 		return newBranch
 
 	def matchBranchesToSequence(self, sequence,
-	                            create=True, destroy=True):
+								create=True, destroy=True):
 		"""reorders, adds or deletes branches as necessary
 		for the current tree's branches to match the target
 		create and destroy govern whether new branches will be
@@ -742,6 +750,11 @@ class AbstractTree(object):
 		seq = pprint.pformat( self.serialise() )
 		return seq
 
+	@staticmethod
+	def _setTreeValue(tree, value):
+		""" stub for setting tree values asynchronously """
+		tree.value = value
+
 
 def movingMask(seq, maskWidth=1, nullVal=None):
 	""" generates a symmetrical moving frame over sequence
@@ -795,7 +808,7 @@ def itersubclasses(cls, _seen=None):
 
 	if not isinstance(cls, type):
 		raise TypeError('itersubclasses must be called with '
-		                'new-style classes, not %.100r' % cls)
+						'new-style classes, not %.100r' % cls)
 	if _seen is None: _seen = set()
 	try:
 		subs = cls.__subclasses__()
@@ -895,7 +908,85 @@ def loadObjectClass(objData):
 def matchSequence():
 	""" ?????????? """
 
+def removeDuplicates( baseList ):
+	existing = set()
+	result = []
+	for i in baseList:
+		if i not in existing:
+			result.append(i)
+			existing.add(i)
+	return result
 
+
+class Link(object):
+	__slots__ = 'prev', 'next', 'key', '__weakref__'
+
+class OrderedSet(MutableSet):
+	"""Set the remembers the order elements were added
+	code recipe 576696 """
+
+	def __init__(self, iterable=None):
+		self.__root = root = Link()         # sentinel node for doubly linked list
+		root.prev = root.next = root
+		self.__map = {}                     # key --> link
+		if iterable is not None:
+			self |= iterable
+
+	def __len__(self):
+		return len(self.__map)
+
+	def __contains__(self, key):
+		return key in self.__map
+
+	def add(self, key):
+		# Store new key in a new link at the end of the linked list
+		if key not in self.__map:
+			self.__map[key] = link = Link()
+			root = self.__root
+			last = root.prev
+			link.prev, link.next, link.key = last, root, key
+			last.next = root.prev = proxy(link)
+
+	def discard(self, key):
+		# Remove an existing item using self.__map to find the link which is
+		# then removed by updating the links in the predecessor and successors.
+		if key in self.__map:
+			link = self.__map.pop(key)
+			link.prev.next = link.next
+			link.next.prev = link.prev
+
+	def __iter__(self):
+		# Traverse the linked list in order.
+		root = self.__root
+		curr = root.next
+		while curr is not root:
+			yield curr.key
+			curr = curr.next
+
+	def __reversed__(self):
+		# Traverse the linked list in reverse order.
+		root = self.__root
+		curr = root.prev
+		while curr is not root:
+			yield curr.key
+			curr = curr.prev
+
+	def pop(self, last=True):
+		if not self:
+			raise KeyError('set is empty')
+		key = next(reversed(self)) if last else next(iter(self))
+		self.discard(key)
+		return key
+
+	def __repr__(self):
+		if not self:
+			return '%s()' % (self.__class__.__name__,)
+		return '%s(%r)' % (self.__class__.__name__, list(self))
+
+	def __eq__(self, other):
+		if isinstance(other, OrderedSet):
+			return len(self) == len(other) and list(self) == list(other)
+		return not self.isdisjoint(other)
 
 
 
@@ -904,6 +995,7 @@ testTree = AbstractTree("TestRoot")
 testTree("asdf").value = "firstKey"
 testTree("parent").value = "nonas"
 testTree("parent.childA").value = 930
+testTree("parent.childA").extras["options"] = (930, "eyyy")
 testTree("parent.childB").value = True
 
 testTree["parent.testObj"] = saveObjectClass(testTree)
