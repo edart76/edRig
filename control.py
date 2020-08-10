@@ -313,6 +313,22 @@ class ParametricControl(Control):
 
 
 
+def makeDomainCtrlTemp(domainSurface, name="domainCtl"):
+
+	ctl = cmds.circle(name=name + "_CTL", ch=0)[0]
+	jnt = ECA("joint", n=name + "_jnt", parent=ctl)
+	slideGrp = ECA("transform", n=name+"_slide")
+	staticGrp = ECA("transform", n=name+"_static", parent=slideGrp)
+	cmds.parent(ctl, staticGrp)
+
+	# make control static
+	invMat = plug.invertMatrixPlug( ctl + ".matrix")
+	transform.decomposeMatrixPlug(invMat, staticGrp)
+
+
+
+
+
 
 
 
