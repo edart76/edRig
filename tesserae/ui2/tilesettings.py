@@ -10,10 +10,8 @@ allowing for more granular control"""
 # print(sys.path)
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from edRig.lib.python import Signal, AbstractTree, debug, OrderedSet
-from edRig.tesserae.ui2.lib import ContextMenu, expandingPolicy, getMayaMainWindow, getMayaWindow, \
-	BaseMayaUi
-from edRig.tesserae.expression import EVALUATOR
+from edRig.lib.python import Signal, AbstractTree
+from edRig.tesserae.ui2.lib import ContextMenu, expandingPolicy, getMayaMainWindow, BaseMayaUi
 from edRig.structures import ActionItem
 
 # t i m e _ t o _ h a c k
@@ -281,10 +279,10 @@ class TileSettings(QtWidgets.QTreeView):
 		indices = self.selectedIndexes()
 		if not indices:
 			return
-		parentTree = self.modelObject.itemFromIndex(indices[0]).tree
+		parentItem = self.modelObject.itemFromIndex(indices[0])
 		newBranch = AbstractTree(name="newEntry")
-		parentTree.addChild(newBranch)
-		self.modelObject.buildFromTree(parentTree)
+		parentItem.tree.addChild(newBranch)
+		self.modelObject.buildFromTree(newBranch, parentItem)
 
 
 
@@ -503,7 +501,7 @@ class AbstractBranchDelegate(QtWidgets.QStyledItemDelegate):
 		return super(AbstractBranchDelegate, self).createEditor(parent, options, index)
 
 
-
+rowHeight = 16
 
 class AbstractBranchItem(QtGui.QStandardItem):
 	"""small wrapper allowing standardItems to take tree objects directly"""
@@ -530,7 +528,7 @@ class AbstractBranchItem(QtGui.QStandardItem):
 		elif role == QtCore.Qt.SizeHintRole:
 			return QtCore.QSize(
 				len(self.tree.name) * 7.5,
-				12)
+				rowHeight)
 		base = super(AbstractBranchItem, self).data(role)
 		return base
 
@@ -597,7 +595,7 @@ class AbstractValueItem(QtGui.QStandardItem):
 		if role == QtCore.Qt.SizeHintRole:
 			return QtCore.QSize(
 				len(str(self.tree.value)) * 7.5 + 3,
-				12)
+				rowHeight)
 		base = super(AbstractValueItem, self).data(role)
 		return base
 

@@ -1,26 +1,20 @@
-
-from collections import OrderedDict
-
 # container interfacing with the graph - concerned with connections
-import edRig.pipeline
-from edRig.structures import ActionItem, ActionList
+from edRig.structures import ActionItem
 from edRig.core import shortUUID
 from edRig import pipeline
 # from edRig.tesserae.ops.op import Op
-import functools
-import glob
 
 from edRig.tesserae.abstractattr import AbstractAttr
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.lib.python import Signal, AbstractTree, \
-	loadObjectClass, saveObjectClass
+	loadObjectClass
 
 # temp, find a better order for this
 from edRig.tesserae.ops.memory import Memory2
 
 
 # test
-from edRig.tesserae.expression import EVALUATOR
+#from edRig.expression import EVALUATOR
 #EVALUATOR = None
 
 class AbstractAbstractNode(type):
@@ -63,7 +57,7 @@ class AbstractNode(AbstractTree):
 	realClass = None
 	states = ["neutral", "executing", "complete", "failed", "approved", "guides"]
 
-	evaluatorClass = EVALUATOR
+	#evaluatorClass = EVALUATOR
 
 	@classmethod
 	def nodeType(cls):
@@ -193,7 +187,7 @@ class AbstractNode(AbstractTree):
 		"""putting here as temp, this all needs restructuring"""
 		# settings
 		self.settings = AbstractTree(self.__class__.__name__+"_settings", None)
-		self.evaluator = self.evaluatorClass(graph=self.graph, node=self)
+		#self.evaluator = self.evaluatorClass(graph=self.graph, node=self)
 
 	def setState(self, state):
 		if state not in self.states:
@@ -334,10 +328,9 @@ class AbstractNode(AbstractTree):
 
 	# SETTINGS
 	def evaluateSettings(self):
-		"""ye sure ok whatever
-		real parses settings to find what needs evaluating"""
-		self.evaluator.evaluateSettings(self.settings)
-		# should this be called from real?
+		"""this never worked anyway"""
+		#self.evaluator.evaluateSettings(self.settings)
+		return 1
 
 	# ATTRIBUTES
 	@property

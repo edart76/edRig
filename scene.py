@@ -1,6 +1,6 @@
 # operations for listing, grouping, adding to sets etc
 from edRig.node import ECA, AbsoluteNode, invokeNode
-from edRig import cmds, mel, om, attr, core, pipeline
+from edRig import cmds, mel, om, attr, core, pipeline, naming, expression
 from edRig.lib.python import AbstractTree, debug
 import traceback
 
@@ -214,15 +214,15 @@ def alembicExport(targetSets=None, startFrame=None, endFrame=None):
 
 def importFbx(path):
 	""" because importing fbx to maya is dicey, like everything is """
-	cmds.loadPlugin("fbxmaya")
-	mel.eval( """FBXImport -file "{}";""".format(path) )
+	cmds.loadPlugin("fbxmaya", quiet=1)
+	return mel.eval( """FBXImport -file "{}";""".format(path) )
 
 def importObj(path):
-	cmds.loadPlugin("objExport")
-	cmds.file( path, i=1 )
+	cmds.loadPlugin("objExport", quiet=1)
+	return cmds.file( path, i=1, returnNewNodes=1 )
 
 def importAbc(path):
-	cmds.loadPlugin("AbcImport")
+	cmds.loadPlugin("AbcImport", quiet=1)
 
 
 def importModel(path):
@@ -234,9 +234,12 @@ def importModel(path):
 	}
 	importFunction = functionMap.get(pipeline.suffix(path))
 	if importFunction:
-		importFunction(path)
+		result = importFunction(path)
 	else:
-		cmds.file( path, i=1 )
+		result = cmds.file( path, i=1, returnNewNodes=1 )
+	# result is transforms and shapes
+	# debug(result)
+	return result
 
 
 # --- NAMESPACES
@@ -294,14 +297,23 @@ def hierarchyFromTree(tree):
 	branches are child groups
 	:param tree : AbstractTree
 	:type tree : AbstractTree"""
-	for branch in tree.allBranches():
-		grp = ECA("transform", n=branch.name)
-		if branch.parent:
-			grp.parentTo(branch.name)
-		if branch.value:
-			for node in branch.value:
-				cmds.parent(node, grp)
-	return AbsoluteNode(tree.root)
+	hierarchyGrp = ECA("transform", n=tree.name)
+	for branch in tree.allBranches(includeSelf=False):
+
+		# expression support ooooh it's very spooky
+		permutations = expression.runTemplatedStrings(
+			[branch.name] + branch.listValue)
+		for combo in permutations:
+			branchName = combo[0]
+			nodes = combo[1:]
+
+			grp = ECA("transform", n=branchName)
+			grp.parentTo(branch.parent.name)
+			for node in nodes:
+				if cmds.ls(node):
+					cmds.parent( cmds.ls(node), grp)
+			# ls should be sufficient to handle wildcarding
+	return hierarchyGrp
 
 
 

@@ -99,13 +99,19 @@ def debug(var):
 	callerStack = inspect.stack()[1]
 	callerFrame = callerStack[0] # frame object from stack above this one
 	try:
-		callingLine = callerStack[4][callerStack[5]]
-		#callingLine = "".join(callerStack[4][callerStack[5]:])
-
+		i = 0
+		content = None
+		#while not content and i < 10:
+			# callingLine = callerStack[4][callerStack[5] + i]
+			# i += 1
+			# content = re.findall("debug\(([^)]*)\)", callingLine)
+		callingLine = callerStack[4][callerStack[5] ]
 		content = re.findall("debug\(([^)]*)\)", callingLine)
 		# regex to find 'debug( *random string here* )
 		if not content:
 			print("debug failed, has the function name been reassigned?")
+			print("callerStack {}".format(callerStack))
+			#print("callingLine {}".format(callingLine))
 			return None
 		content = content[0].strip()
 		print("{} is {}".format(content, pprint.pformat(var)))
@@ -385,6 +391,16 @@ class AbstractTree(object):
 		if oldVal != val:
 			self.valueChanged(self)
 
+	@property
+	def listValue(self):
+		""" convenience for iteration - converts tree value to list """
+		if str(self.value).endswith("]") and str(self.value).startswith("["):
+			pass
+		if isinstance(self._value, (int, float, basestring)):
+			return [self._value]
+		if self._value is None: return []
+		return self._value
+
 	# extras properties
 	@property
 	def options(self):
@@ -488,11 +504,11 @@ class AbstractTree(object):
 	def iterBranches(self):
 		return self._map.iteritems()
 
-	def allBranches(self, includeSelf=False):
+	def allBranches(self, includeSelf=True):
 		""" returns list of all tree objects
 		depth first """
-		#found = [ self ] if includeSelf else []
-		found = [ self ]
+		found = [ self ] if includeSelf else []
+		#found = [ self ]
 		for i in self.branches:
 			found.extend(i.allBranches())
 		return found

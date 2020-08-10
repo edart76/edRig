@@ -215,7 +215,7 @@ class Op(MayaReal):
 
 		# settings
 		self.settings = self.abstract.settings
-		self.evaluator = self.abstract.evaluator
+		#self.evaluator = self.abstract.evaluator
 		self.addSetting = self.abstract.addSetting
 
 		# sets

@@ -641,7 +641,7 @@ def ECA(type, name="", colour=None, *args, **kwargs):
 
 
 class RemapValue(AbsoluteNode):
-	"""wrapper for rempValue nds"""
+	"""wrapper for rempValue nodes"""
 	nodeType = "remapValue"
 
 	attrs = ["inputMin", "inputMax", "inputValue", "outValue"]

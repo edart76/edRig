@@ -73,31 +73,49 @@ class SourceOp(LayerOp):
 			elif self.s["mode"] == "folder":
 				self.loadFolder(self.s["path"])
 
+		# hierarchy
+		if self.s("hierarchy").branches:
+			self.makeHierarchy()
+
 		for plug in self.s("io").branches:
-			self.sourceNodes(plug.name, plug.value)
+			self.sourceNodes(plug)
 
 	# connecting nodes from scene
-	def sourceNodes(self, outputName="output", nodeName=""):
+	def sourceNodes(self, sourceBranch):
+		""" expects abstractTree branch with plugName : dataType
+		optional child branch of overrideNode : nodeName """
+		if sourceBranch.get("overrideNode"):
+			nodeName = sourceBranch["overrideNode"]
+		else: nodeName = sourceBranch.name
+
 		if not cmds.ls(nodeName):
 			self.log("no node found of name {}, skipping source".format(nodeName))
 			return None
 		node = AbsoluteNode( nodeName )
 
+		#dataType = sourceBranch.value
+
 		if node.shape:
 			node = node.shape
-			self.log("node {}".format(node))
-			self.log(" node isShape {}".format(node.isShape()))
-			self.log("node shape {}".format(node.shape) )
+			# self.log("node {}".format(node))
+			# self.log(" node isShape {}".format(node.isShape()))
+			# self.log("node shape {}".format(node.shape) )
 			dataType = self.dataTypeForNodeType(node.shape.nodeType())
+
+			sourcePlug = node.outWorld
+			outputPlug = self.getOutput(sourceBranch.name).plug
+			AbsoluteNode.con(sourcePlug, outputPlug)
 		else:
 			dataType = "0D"
 		""" no sophisticated guessing for input nodes
-		if it has a shape, you want the shape """
+		if it has a shape, you want the shape 
+		0D transforms are ignored here
+		
+		"""
 
-		sourcePlug = node.outWorld
-
-		outputPlug = self.getOutput(outputName).plug
-		AbsoluteNode.con(sourcePlug, outputPlug)
+	def makeHierarchy(self):
+		for branch in self.settings("hierarchy").branches:
+			scene.hierarchyFromTree(branch)
 
 
 
@@ -130,7 +148,10 @@ class SourceOp(LayerOp):
 		files = [i for i in os.listdir(path) if
 		         os.path.isfile(os.path.join(path, i))]
 		for i in files:
-			scene.importModel(os.path.join(path,i) )
+			newNodes = scene.importModel(os.path.join(path,i) )
+			name = i.split(".")[0]
+			#grp = ECA("transform", n=name+"_grp", parent=self.opGrp)
+			#cmds.parent(newNodes, grp)
 
 
 	@property

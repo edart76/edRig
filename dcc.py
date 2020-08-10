@@ -13,17 +13,23 @@ hou = None
 stateutils = None
 objecttoolutils = None
 
+#### blender modules
+bpy = None # are there any others that matter
+
 # host values
-thisIsMaya = False
-thisIsHoudini = False
-thisIsPython = False
+hostDict = {
+	"maya" : False,
+	"houdini" : False,
+	"python" : False,
+	"blender" : False
+}
 
 # running without ui
 thisIsHeadless = False
 
 
 
-
+# maya
 try:
 	from maya import cmds, mel
 	import maya.api.OpenMaya as om
@@ -32,20 +38,26 @@ try:
 
 	from edRig.node import AbsoluteNode, ECA
 	from edRig.attr import con
-	thisIsMaya = True
+	hostDict["maya"] = True
 	pass
 except :
-	#print("this is not maya")
 	pass
 
-# houdini setup
+# houdini
 try:
 	import hou, stateutils, objecttoolutils
 	#print("omg this is houdini")
-	thisIsHoudini = True
+	hostDict["houdini"] = True
 except:
 	pass
 
+# blender
+try:
+	import bpy
+	#print("hoots mon he's away doon the blender")
+	hostDict["blender"] = True
+except:
+	pass
 # this mechanism seems to work well
 
 
