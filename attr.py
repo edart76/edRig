@@ -242,16 +242,18 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None,
 		#print "parent is {}".format(parent)
 
 	# check if already exists
+	attrName = kwargs.get("ln") or attrName
+	if not "ln" in kwargs: kwargs["ln"] = attrName
 	if attrName in cmds.listAttr(target):
 		return target+"."+attrName
 
 	if attrType == "int" : attrType = "long"
 	dtList = ["string", "nurbsCurve", "mesh"]
 	if attrType in dtList:
-		plug = cmds.addAttr(target, ln=attrName, dt=attrType, keyable=True,
+		plug = cmds.addAttr(target, dt=attrType, keyable=True,
 		                    **kwargs)
 	else:
-		plug = cmds.addAttr(target, ln=attrName, at=attrType, keyable=True,
+		plug = cmds.addAttr(target, at=attrType, keyable=True,
 		                    **kwargs)
 		# if you know the logic behind at vs dt, please contact me
 	# contact me urgently

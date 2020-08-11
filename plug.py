@@ -3,8 +3,7 @@ import math
 from maya import cmds
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
-from edRig import core, attr, ECA
-#from edRig.node import ECA,PlugObject
+from edRig import core, attr, ECA, debug
 
 
 
@@ -47,6 +46,12 @@ def multPlugs(*plugs):
 
 def multLinearPlugs(*plugs):
 	""" optimise the above using combinationShape node """
+	debug(plugs)
+	if len(plugs) == 2: # special, common case
+		node = ECA("multDoubleLinear")
+		node.conOrSet(plugs[0], node + ".input1")
+		node.conOrSet(plugs[1], node + ".input2")
+		return node + ".output"
 	node = ECA("combinationShape")
 	for i, val in enumerate(plugs):
 		node.conOrSet(val, node + ".inputWeight[{}]".format(i))
@@ -81,7 +86,7 @@ def plugCondition(val1, val2, operation="greaterThan",
 	if any((ifFalse, ifTrue)):
 		node.conOrSet(ifFalse or (0, 0, 0), "colorIfFalse")
 		node.conOrSet(ifTrue or (1, 1, 1), "colorIfTrue")
-		return node + ".outColor"
+		return node + ".outColorR"
 	node.set("colorIfFalseR", 0)
 	node.set("colorIfTrueR", 1)
 	return node + ".outColorR"
@@ -120,6 +125,8 @@ def setPlugLimits(plug, min=None, max=None):
 		else:
 			node.conOrSet(plug, tag)
 	node.conOrSet(plug, "input")
+	if attr.plugHType(plug) == "leaf":
+		return node + ".outputR"
 	return node + ".output"
 	#
 	# return plug

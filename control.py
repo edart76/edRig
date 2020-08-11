@@ -2,10 +2,8 @@
 from edRig import CURRENT_PATH
 from edRig.core import ECN, con
 from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import attr, transform, pipeline, material, beauty, plug
+from edRig import cmds, om, attr, transform, pipeline, material, beauty, plug
 
-import maya.cmds as cmds
-import maya.api.OpenMaya as om
 
 import string
 
@@ -315,21 +313,47 @@ class ParametricControl(Control):
 
 def makeDomainCtrlTemp(domainSurface, name="domainCtl"):
 
-	ctl = cmds.circle(name=name + "_CTL", ch=0)[0]
+	offsetGrp = ECA("transform", name=name+"_valueOffset")
+	ctl = AbsoluteNode(cmds.circle(name=name + "_CTL", ch=0)[0])
 	jnt = ECA("joint", n=name + "_jnt", parent=ctl)
 	slideGrp = ECA("transform", n=name+"_slide")
 	staticGrp = ECA("transform", n=name+"_static", parent=slideGrp)
-	cmds.parent(ctl, staticGrp)
+	ctl.parentTo(offsetGrp) # offset specifies starting position
+	offsetGrp.parentTo(staticGrp)
+
+	surface = AbsoluteNode(domainSurface).shape
+
+	# scaling attribute
+	ctl.addAttr(ln="valueScale", dv=0.3)
 
 	# make control static
-	invMat = plug.invertMatrixPlug( ctl + ".matrix")
+	localMat = plug.multMatrixPlugs([ctl + ".matrix", offsetGrp + ".matrix"])
+	invMat = plug.invertMatrixPlug( localMat)
 	transform.decomposeMatrixPlug(invMat, staticGrp)
 
+	psi = ECA("pointOnSurfaceInfo", n=name+"_psi")
+	surface.con(surface.outWorld, psi + ".inputSurface")
 
+	uPlug = plug.multLinearPlugs(ctl + ".translateX", ctl + ".valueScale")
+	uPlug = plug.addLinearPlugs(uPlug, offsetGrp + ".translateX")
+	uPlug = plug.setPlugLimits(uPlug, 0.001, max=100)
 
+	vPlug = plug.multLinearPlugs(ctl + ".translateY", ctl + ".valueScale")
+	vPlug = plug.addLinearPlugs(vPlug, offsetGrp + ".translateY")
+	vPlug = plug.setPlugLimits(vPlug, 0.001, max=100)
 
+	psi.con(uPlug, "parameterU" )
+	psi.con(vPlug, "parameterV" )
 
+	orientMat = transform.fourByFourFromCompoundPlugs(
+		psi + ".normalizedTangentU",
+		psi + ".normalizedTangentV",
+		psi + ".normalizedNormal",
+		psi + ".position"
+	)
 
+	transform.decomposeMatrixPlug(orientMat, slideGrp)
+	# works alright
 
 
 

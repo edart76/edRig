@@ -128,6 +128,23 @@ def outerVars():
 	return callerFrame.f_locals
 
 
+def rawToList(listString):
+	""" given any raw input string of form [x, 1, ["ed", w] ]
+	coerces alphabetic values to strings and runs recursively on interior lists
+	"""
+	tokens = [i.strip() for i in listString[1:-1].split(",")]
+	result = []
+	for token in tokens:
+		# if token.startswith("[") and token.endswith("]"):
+		# 	result.append(rawToList(token))
+		# no parsers here, cannot handle nested lists
+		if token.isalnum():
+			result.append(str(token))
+		else:
+			result.append(eval(token))
+	return result
+
+
 #class StringLikeMeta(ABCMeta):
 class StringLikeMeta(type):
 
@@ -272,22 +289,22 @@ class StringLike(str): # best I can do for now
 
 #StringLike.register(str)
 
-if __name__ == '__main__':
-
-	print(StringLike)
-	#print type(StringLike)
-
-	#assert issubclass(str, StringLike)
-	test = StringLike("test")
-	assert isinstance("this is a string", str)
-	assert isinstance(test, str)
-	print("jhgf" + test)
-	#print(True)
-	print(test.value)
-	print(test)
-	test.value = "eyyy"
-	print(test)
-	print(test + "ei")
+# if __name__ == '__main__':
+#
+# 	print(StringLike)
+# 	#print type(StringLike)
+#
+# 	#assert issubclass(str, StringLike)
+# 	test = StringLike("test")
+# 	assert isinstance("this is a string", str)
+# 	assert isinstance(test, str)
+# 	print("jhgf" + test)
+# 	#print(True)
+# 	print(test.value)
+# 	print(test)
+# 	test.value = "eyyy"
+# 	print(test)
+# 	print(test + "ei")
 
 
 class Signal(object):
@@ -394,12 +411,14 @@ class AbstractTree(object):
 	@property
 	def listValue(self):
 		""" convenience for iteration - converts tree value to list """
-		if str(self.value).endswith("]") and str(self.value).startswith("["):
-			pass
+		if str(self._value).endswith("]") and str(self._value).startswith("["):
+			""" convert to list and eval """
+			return rawToList(self._value)
+
 		if isinstance(self._value, (int, float, basestring)):
 			return [self._value]
 		if self._value is None: return []
-		return self._value
+		return []
 
 	# extras properties
 	@property
@@ -1016,6 +1035,10 @@ testTree("parent.childB").value = True
 
 testTree["parent.testObj"] = saveObjectClass(testTree)
 
+#testTree["parent.listEntry"] = "[eyyy, test, 4.3, [4e4, i, 33], 2e-10]"
+# cannot do nested list inputs yet
+testTree["parent.listEntry"] = "[eyyy, test, 4.3, 2e-10]"
+
 if __name__ == '__main__':
 
 	class NewTree(AbstractTree):
@@ -1032,13 +1055,17 @@ if __name__ == '__main__':
 	testTree.addChild(breakTree)
 
 
-	debug(newTree)
-	debug(testTree("parent").address)
+	#debug(newTree)
+	#debug(testTree("parent").address)
 
-	print(testTree.display())
+	#print(testTree.display())
 	loadedTree = AbstractTree.fromDict( testTree.serialise() )
 
-	print(loadedTree.display())
+	#print(loadedTree.display())
+
+	print( loadedTree("parent.listEntry").value )
+	print( loadedTree("parent.listEntry").listValue )
+	print( loadedTree("parent.listEntry").listValue[-1] * 100)
 
 	# for i in loadedTree.allBranches():
 	# 	print(i)
