@@ -180,10 +180,11 @@ class ContextMenu(object):
 	"""this is no reason this doesn't inherit from qmenu now,
 	but it already works fine"""
 
-	def __init__(self, view, menu=None):
+	def __init__(self, view, title=None):
 		self.view = view
 		# self.rootMenu = menu or QtWidgets.QMenu("Take action:")
 		self.rootMenu = QtWidgets.QMenu("Take action:", parent=self.view)
+		if title: self.rootMenu.setTitle( title )
 
 	def exec_(self, pos=None):
 		"""allows smaller menus to return only the selected action
@@ -302,3 +303,14 @@ class ContextMenu(object):
 		"""clear only custom actions eventually -
 		for now clear everything"""
 		self.rootMenu.clear()
+
+
+def event(msg=""):
+	def decorate(f):
+		def applicator(*args, **kwargs):
+			try:
+				f(*args, **kwargs)
+			except:
+				print(msg)
+		return applicator
+	return decorate

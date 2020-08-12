@@ -15,6 +15,11 @@ class SourceOp(LayerOp):
 	""" op to load or import resources from scene or file
 	1 op per file source for now """
 
+	@property
+	def geoGrp(self):
+		return self.invokeNode(
+			name="geo_grp", type="transform", parent=self.opGrp)
+
 	def defineSettings(self):
 		"""define which files should be loaded
 		file : path
@@ -114,8 +119,11 @@ class SourceOp(LayerOp):
 		"""
 
 	def makeHierarchy(self):
+		""" construct hierarchy from given tree
+		restrict to only nodes loaded by sourceOp"""
+		withinNodes = cmds.listRelatives(self.geoGrp, ad=1)
 		for branch in self.settings("hierarchy").branches:
-			scene.hierarchyFromTree(branch)
+			scene.hierarchyFromTree(branch, withinNodes=withinNodes)
 
 
 
@@ -149,6 +157,7 @@ class SourceOp(LayerOp):
 		         os.path.isfile(os.path.join(path, i))]
 		for i in files:
 			newNodes = scene.importModel(os.path.join(path,i) )
+			cmds.parent(newNodes, self.geoGrp)
 			name = i.split(".")[0]
 			#grp = ECA("transform", n=name+"_grp", parent=self.opGrp)
 			#cmds.parent(newNodes, grp)

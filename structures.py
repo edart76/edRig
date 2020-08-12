@@ -327,15 +327,18 @@ class AttrItem(AbstractTree):
 # meta tactics would be sexier, but this is safer
 # always ensure safety before sexiness
 class ActionItem(object):
-	def __init__(self, execDict=None, name=None):
+	""" didn't know the word for it at the time
+	but this is a janky partial """
+	def __init__(self, execDict=None, name=None,
+	             fn=None, args=None, kwargs=None):
 		self.items = [None] * 3  # func, args, kwargs
+
+		if fn is not None:
+			self._name = name or fn.__name__
+			self.items = [i for i in [fn, args, kwargs]]
+			return
+
 		self._name = name or execDict["func"].__name__
-		if not execDict:
-			return
-		# this can just be passed a function
-		elif not isinstance(execDict, dict):
-			self.items[0] = execDict
-			return
 		for i, val in enumerate(["func", "args", "kwargs"]):
 			self.items[i] = execDict[val] if val in execDict.keys() else None
 

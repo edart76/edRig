@@ -64,8 +64,8 @@ class TilePileUI(QtWidgets.QMainWindow):
 		self.graphView = None
 
 		self.text = "hello :)"
-		self.width = 1400
-		self.height = 800
+		self.width = 700
+		self.height = 700
 
 		self.rootPath = ROOT_PATH
 

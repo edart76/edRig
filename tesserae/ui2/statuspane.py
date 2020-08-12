@@ -3,12 +3,13 @@ from PySide2 import QtWidgets, QtCore
 from edRig import pipeline
 from edRig.pipeline import FilePathTree
 from edRig.tesserae.ui2.tabsearch import AbstractSearchWidget
-from edRig.tesserae.ui2.lib import ConfirmDialogue
+from edRig.tesserae.ui2.lib import ConfirmDialogue, ContextMenu #event
+from edRig.structures import ActionItem
 import os, tempfile
 
 class StatusPane(QtWidgets.QFrame):
 	"""current status of tesserae, including pipeline interaction
-	may be extended to include data tree"""
+	"""
 
 	assetChanged = QtCore.Signal(list)
 
@@ -35,6 +36,7 @@ class StatusPane(QtWidgets.QFrame):
 		self.setAutoFillBackground(True)
 		self.setGeometry(0,0,200,100)
 
+		self.menu = ContextMenu(self, title="Select asset")
 		# signals
 		self.currentDisplay.search_submitted.connect(self.onAssetChanged)
 
@@ -107,8 +109,18 @@ class StatusPane(QtWidgets.QFrame):
 	def addCorePath(self, path):
 		self.corePaths.append(path)
 
-
-
+	#@event()
+	def contextMenuEvent(self, event):
+		""" let user choose from existing assets """
+		self.menu.clearCustomEntries()
+		for i in pipeline.getExistingAssets().keys():
+			self.menu.addAction(action=
+			    ActionItem(fn=self.onAssetChanged, name=i,
+			               args=[i], kwargs={"force" : True}
+			               ))
+		pos = event.globalPos()
+		menu = self.menu.exec_(pos)
+		return True
 
 
 

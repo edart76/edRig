@@ -99,19 +99,19 @@ def debug(var):
 	callerStack = inspect.stack()[1]
 	callerFrame = callerStack[0] # frame object from stack above this one
 	try:
-		i = 0
-		content = None
-		#while not content and i < 10:
-			# callingLine = callerStack[4][callerStack[5] + i]
-			# i += 1
-			# content = re.findall("debug\(([^)]*)\)", callingLine)
-		callingLine = callerStack[4][callerStack[5] ]
+		# reloading issues prevent us from relying directly
+		# on line content of caller stack
+		callingFile = callerStack[1]
+		with open( callingFile, "r") as f:
+			lines = f.readlines()
+			callingLine = lines[ callerStack[5]]
+		#callingLine = callerStack[4][callerStack[5] ]
 		content = re.findall("debug\(([^)]*)\)", callingLine)
 		# regex to find 'debug( *random string here* )
 		if not content:
 			print("debug failed, has the function name been reassigned?")
 			print("callerStack {}".format(callerStack))
-			#print("callingLine {}".format(callingLine))
+			print("callingLine {}".format(callingLine))
 			return None
 		content = content[0].strip()
 		print("{} is {}".format(content, pprint.pformat(var)))
@@ -130,7 +130,7 @@ def outerVars():
 
 def rawToList(listString):
 	""" given any raw input string of form [x, 1, ["ed", w] ]
-	coerces alphabetic values to strings and runs recursively on interior lists
+	coerces string values to ints and floats and runs recursively on interior lists
 	"""
 	tokens = [i.strip() for i in listString[1:-1].split(",")]
 	result = []
@@ -138,10 +138,11 @@ def rawToList(listString):
 		# if token.startswith("[") and token.endswith("]"):
 		# 	result.append(rawToList(token))
 		# no parsers here, cannot handle nested lists
-		if token.isalnum():
-			result.append(str(token))
-		else:
+		try:
 			result.append(eval(token))
+		except:
+			result.append(str(token))
+
 	return result
 
 

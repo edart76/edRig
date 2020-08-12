@@ -291,7 +291,7 @@ def pruneRemnantSpaces():
 
 
 
-def hierarchyFromTree(tree):
+def hierarchyFromTree(tree, withinNodes=None):
 	""" meant to aid more complex parenting over procedural unordered geo
 	tree values should be lists of geo to be parented to that level;
 	branches are child groups
@@ -304,6 +304,7 @@ def hierarchyFromTree(tree):
 		permutations = expression.runTemplatedStrings(
 			[branch.name] + branch.listValue)
 		for combo in permutations:
+			debug(combo)
 			branchName = combo[0]
 			nodes = combo[1:]
 
@@ -311,7 +312,10 @@ def hierarchyFromTree(tree):
 			grp.parentTo(branch.parent.name)
 			for node in nodes:
 				if cmds.ls(node):
-					cmds.parent( cmds.ls(node), grp)
+					if withinNodes:
+						toParent = [i for i in cmds.ls(node) if i in withinNodes]
+					else: toParent = cmds.ls(node)
+					cmds.parent( toParent, grp)
 			# ls should be sufficient to handle wildcarding
 	return hierarchyGrp
 
