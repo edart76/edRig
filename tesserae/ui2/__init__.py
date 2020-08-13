@@ -1,6 +1,7 @@
 
-import maya.OpenMayaUI as omui
-from PySide2 import QtWidgets
+#import maya.OpenMayaUI as omui
+from edRig import omui
+from edRig import QtWidgets
 #from sip import wrapInstance
 from shiboken2 import wrapInstance
 

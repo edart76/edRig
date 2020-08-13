@@ -114,3 +114,7 @@ resources/shaders/examples/glutglsl5_2.0/minimal.frag
 *.zip
 misc/download.py
 .idea/workspace.xml
+.idea/workspace.xml
+.idea/misc.xml
+.idea/edRig.iml
+.idea/edRig.iml

@@ -959,6 +959,16 @@ def removeDuplicates( baseList ):
 class Link(object):
 	__slots__ = 'prev', 'next', 'key', '__weakref__'
 
+class DataRef(object):
+	""" wrapper for consistent references to primitive data types """
+	def __init__(self, val):
+		self._val = val
+	def __repr__(self):
+		return self._val
+	def __call__(self, *args, **kwargs):
+		self._val = args[0]
+
+
 class OrderedSet(MutableSet):
 	"""Set the remembers the order elements were added
 	code recipe 576696 """
@@ -1072,6 +1082,48 @@ if __name__ == '__main__':
 
 	# for i in loadedTree.allBranches():
 	# 	print(i)
+
+	class Test(object):
+		class _BoolRef(object):
+			""" wrapper for consistent references to bool value """
+
+			def __init__(self, val):
+				self._val = val
+
+			def __repr__(self):
+				return self._val
+			def __str__(self):
+				return str(self._val)
+
+			def __call__(self, *args, **kwargs):
+				self._val = args[0]
+		def __init__(self):
+			self.var = self._BoolRef(False)
+			self._prop = True
+			self.map = [self.var, self.prop]
+
+
+		@property
+		def prop(self):
+			return self._prop
+		@prop.setter
+		def prop(self, val):
+			self._prop = val
+
+
+	test = Test()
+	print(test.var)
+	test.map[0](True)
+	print(test.var)
+	if test.var:
+		print("ye")
+
+	print(test.prop)
+	test.map[1] = False
+	print(test.prop)
+
+
+
 
 	# print(loadedTree)
 	# print(loadedTree("newTreeName.newTreeBranch").__class__)

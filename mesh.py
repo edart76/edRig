@@ -1,12 +1,10 @@
 # fucnctions for renumbering mesh points, getting weights,
 # interfacing between weights and maps etc
 # additionally for working with nurbs shapes
-from edRig import core, attr, transform, naming
+from edRig import core, attr, transform, naming, cmds, om, oma
 from edRig.lib.python import AbstractTree
 from edRig.node import AbsoluteNode, ECA
-import maya.api.OpenMaya as om
-import maya.api.OpenMayaAnim as oma
-from maya import cmds
+
 
 
 def getLiveShapeLayer(target, local=True):

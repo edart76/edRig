@@ -5,6 +5,7 @@ import sys, os
 from edRig.dcc import cmds, mel, om, oma, omui, \
 	hou, stateutils, objecttoolutils, \
 	bpy, \
+	QtCore, QtWidgets, QtGui, \
 	hostDict
 
 from edRig.lib.python import debug

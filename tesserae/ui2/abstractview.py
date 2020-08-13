@@ -8,7 +8,7 @@ from edRig.tesserae.ui2.tabsearch import TabSearchWidget
 from edRig.tesserae.ui2.abstracttile import AbstractTile, Knob, Pipe
 from edRig.tesserae.ui2.style import *
 from edRig.tesserae.ui2.context import ContextMenu
-from edRig.tesserae.ui2.lib import ConfirmDialogue
+from edRig.tesserae.ui2.lib import ConfirmDialogue, KeyState
 from edRig.structures import ActionItem, ActionList
 from edRig import pipeline, ROOT_PATH
 
@@ -35,6 +35,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.scene = AbstractScene(parent=None, graph=self.graph, view=self)
 		self.setScene(self.scene)
 
+		self.keyState = KeyState()
+
 		scene_area = 8000.0
 		scene_pos = (scene_area / 2) * -1
 		self.setSceneRect(scene_pos, scene_pos, scene_area, scene_area)
@@ -47,9 +49,12 @@ class AbstractView(QtWidgets.QGraphicsView):
 			QtWidgets.QRubberBand.Rectangle, self)
 		self.pipes = []
 
-		self.LMB_state = False
+		#self.keyState.LMB = self.keyState.LMB
 		self.RMB_state = False
 		self.MMB_state = False
+		self.shift_state = False
+		self.ctrl_state = False
+		self.alt_state = False
 
 		self._previous_pos = 0,0
 		self.testPipe = None
@@ -141,71 +146,34 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def sync(self):
 		self.scene.sync()
 
-	# capture events #####
-	# def keyPressEvent(self, event):
-	# 	"""test"""
-	# 	#super(AbstractView, self).keyPressEvent(event)
-	# 	print "viewer keyPress is {}".format(event.text())
-	#
-	# 	if event.matches(QtGui.QKeySequence.Delete):
-	# 		# print "deleteCalled"
-	# 		self.nodeDeleteCalled.emit()
-	# 		self.scene.onDeleteCalled()
-	# 		event.accept()
-	# 		#event.ignore()
-	# 	else:
-	# 		pass
-	# 		#super(AbstractView, self).keyPressEvent(event)
-	# 	super(AbstractView, self).keyPressEvent(event)
-
-	# 		#event.accept()
-	# 	# elif event.key() == 0x01000001: # tab
-		# 	self.tabSearchToggle()
-		# 	event.accept()
-		# elif event.key() == 0x53: # s
-		# 	#self.saveAsTilePile()
-		# 	pass
-		# elif event.key() == 0x4e: # n
-		# 	pass
-		# elif event.key() == 0x46: # f
-		# 	pass
-		# elif event.key() == 0x43: # c
-		# 	pass
-		# elif event.key() == 0x56: #v
-		# 	pass
-		# elif event.key() == 0x45: #e
-		# 	pass
-		# else:
-		# 	#super(AbstractView, self).keyPressEvent(event)
-		# 	pass
-		# else:
-		# 	event.accept()
 
 	def wheelEvent(self, event):
-
-		if event.buttons() == QtCore.Qt.MiddleButton:
-			print("middleButton")
-			super(AbstractView, self).wheelEvent(event)
-			return
-		print("")
-		print("view wheel event accepted {}".format(event.isAccepted()))
+		self.keyState.syncModifiers(event)
+		event.ignore()
+		#print("view wheel event accepted {}".format(event.isAccepted()))
 		super(AbstractView, self).wheelEvent(event)
-		print("view wheel event accepted {}".format(event.isAccepted()))
+		#print("view wheel event accepted {}".format(event.isAccepted()))
 
 
 		if event.isAccepted():
 			return
-		adjust = (event.delta() / 120) * 0.1
-		self.setViewerZoom(adjust, event.globalPos())
+		# adjust = (event.delta() / 120) * 0.1
+		# self.setViewerZoom(adjust, event.globalPos())
 
-	def scrollEvent(self, event):
-		print("view scrollEvent")
+	# def scrollEvent(self, event): # never called
+	# 	print("view scrollEvent")
 
 	def scrollContentsBy(self, dx, dy):
 		""" parent class scroll function """
-		print("viewer scrollContentsBy")
-		super(AbstractView, self).scrollContentsBy(dx, dy)
-		pass
+		#print("keystate shift {}".format(self.keyState.shift))
+
+		if self.keyState.shift:
+			#print("scrollContents setViewerZoom")
+			self.setViewerZoom(dx * dy / 1200)
+			return
+		else:
+			super(AbstractView, self).scrollContentsBy(dx, dy)
+			pass
 
 	def contextMenuEvent(self, event):
 		"""i'm really honestly quite sick of this softlocking my program"""
@@ -215,7 +183,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		# just check in every widget if event has been used
 		if event.isAccepted():
 			return
-		self.RMB_state = False
+		#self.RMB_state = False
 		self.buildContext()
 		self.contextMenu.exec_(event.globalPos())
 		# super(AbstractView, self).contextMenuEvent(event)
@@ -224,19 +192,17 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 
 	def mousePressEvent(self, event):
+		self.keyState.mousePressed(event)
 		#print ("view mouse event")
 		# called BEFORE scene event
-		alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
-		shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
-
-		#event.accept() # still passed to scene
-		#event.ignore() # still passed to scene lol
+		alt_modifier = self.keyState.alt
+		shift_modifier = self.keyState.shift
 
 		items = self._items_near(self.mapToScene(event.pos()), None, 20, 20)
 		nodes = [i for i in items if isinstance(i, AbstractTile)]
 
-		if event.button() == QtCore.Qt.LeftButton:
-			self.LMB_state = True
+		if self.keyState.LMB:
+			#self.LMB_state = True
 			# toggle extend node selection.
 			if shift_modifier:
 				for node in nodes:
@@ -246,10 +212,10 @@ class AbstractView(QtWidgets.QGraphicsView):
 					i.setSelected(False)
 				for i in nodes:
 					i.setSelected(True)
-		elif event.button() == QtCore.Qt.RightButton:
-			self.RMB_state = True
-		elif event.button() == QtCore.Qt.MiddleButton:
-			self.MMB_state = True
+		# elif event.button() == QtCore.Qt.RightButton:
+		# 	self.RMB_state = True
+		# elif event.button() == QtCore.Qt.MiddleButton:
+		# 	self.MMB_state = True
 		self._origin_pos = event.pos()
 		self._previous_pos = event.pos()
 		self._prev_selection = self.selectedNodes()
@@ -262,7 +228,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			return
 
 		# show selection selection marquee
-		if self.LMB_state and not items:
+		if self.keyState.LMB and not items:
 			rect = QtCore.QRect(self._previous_pos, QtCore.QSize())
 			rect = rect.normalized()
 			map_rect = self.mapToScene(rect).boundingRect()
@@ -280,14 +246,14 @@ class AbstractView(QtWidgets.QGraphicsView):
 				self.nodesSelected.emit(self.selectedNodes())
 
 	def mouseReleaseEvent(self, event):
-		if event == QtGui.QContextMenuEvent:
-			pass
-		if event.button() == QtCore.Qt.LeftButton:
-			self.LMB_state = False
-		elif event.button() == QtCore.Qt.RightButton:
-			self.RMB_state = False
-		elif event.button() == QtCore.Qt.MiddleButton:
-			self.MMB_state = False
+		self.keyState.mouseReleased(event)
+
+		# if event.button() == QtCore.Qt.LeftButton:
+		# 	self.LMB_state = False
+		# elif event.button() == QtCore.Qt.RightButton:
+		# 	self.RMB_state = False
+		# elif event.button() == QtCore.Qt.MiddleButton:
+		# 	self.MMB_state = False
 
 		# hide selection marquee
 		if self._rubber_band.isVisible():
@@ -299,13 +265,14 @@ class AbstractView(QtWidgets.QGraphicsView):
 		super(AbstractView, self).mouseReleaseEvent(event)
 
 	def mouseMoveEvent(self, event):
-		alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
-		shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
-		if self.MMB_state or (self.LMB_state and alt_modifier):
+		# alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
+		# shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
+		#if self.MMB_state or (self.LMB_state and alt_modifier):
+		if self.keyState.MMB or (self.keyState.LMB and self.keyState.alt):
 			pos_x = (event.x() - self._previous_pos.x())
 			pos_y = (event.y() - self._previous_pos.y())
 			self._set_viewer_pan(pos_x, pos_y)
-		elif self.RMB_state:
+		elif self.keyState.RMB:
 			pos_x = (event.x() - self._previous_pos.x())
 			zoom = 0.1 if pos_x > 0 else -0.1
 			#self.setViewerZoom(zoom)
@@ -313,7 +280,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			# avoid context stuff interfering
 
 
-		if self.LMB_state and self._rubber_band.isVisible():
+		if self.keyState.LMB and self._rubber_band.isVisible():
 			rect = QtCore.QRect(self._origin_pos, event.pos()).normalized()
 			map_rect = self.mapToScene(rect).boundingRect()
 			path = QtGui.QPainterPath()
@@ -322,7 +289,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			self.scene.setSelectionArea(path, QtCore.Qt.IntersectsItemShape)
 			self.scene.update(map_rect)
 
-			if shift_modifier and self._prev_selection:
+			if self.keyState.shift and self._prev_selection:
 				for node in self._prev_selection:
 					if node not in self.selectedNodes():
 						node.selected = True
@@ -344,7 +311,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 				#
 				# self.testPipe.setEnd(event)
 
-		if self.LMB_state:
+		if self.keyState.LMB:
 			# nodes could be moving
 			self.scene.updatePipePaths()
 

@@ -1,10 +1,9 @@
 # move stuff around
 import edRig.node
-from edRig import core, attr
+from edRig import core, attr, cmds, om
 from core import ECN, con
 from edRig.node import AbsoluteNode, ECA
-import maya.cmds as cmds
-import maya.api.OpenMaya as om
+
 
 import math
 

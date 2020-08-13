@@ -1,5 +1,5 @@
 # reusable ui items
-from PySide2 import QtWidgets, QtCore
+from edRig import QtWidgets, QtCore
 from edRig.structures import ActionItem, ActionList
 # from edRig.tesserae.jchan2.widgets.stylesheet import STYLE_QMENU
 from edRig.tesserae.ui2.style import STYLE_QMENU
@@ -140,6 +140,58 @@ class BaseMayaUi(QtWidgets.QWidget):
 		self.removeEventFilter(self.eater)
 		return super(BaseMayaUi, self).closeEvent(event)
 
+
+class KeyState(object):
+	""" holds variables telling if shift, LMB etc are held down
+	currently requires events to update, may not be a good idea to
+	query continuously """
+
+	class _BoolRef(object):
+		""" wrapper for consistent references to bool value """
+		def __init__(self, val):
+			self._val = val
+		def __repr__(self):
+			return self._val
+		def __call__(self, *args, **kwargs):
+			self._val = args[0]
+		def __str__(self):
+			return str(self._val)
+		def __nonzero__(self):
+			return self._val
+
+
+	def __init__(self):
+		self.LMB = self._BoolRef(False)
+		self.RMB = self._BoolRef(False)
+		self.MMB = self._BoolRef(False)
+		self.alt = self._BoolRef(False)
+		self.ctrl = self._BoolRef(False)
+		self.shift = self._BoolRef(False)
+
+		self.mouseMap = {
+			self.LMB : QtCore.Qt.LeftButton,
+			self.RMB : QtCore.Qt.RightButton,
+			self.MMB : QtCore.Qt.MiddleButton }
+		self.keyMap = {
+			self.alt : QtCore.Qt.AltModifier,
+			self.ctrl : QtCore.Qt.ControlModifier,
+			self.shift : QtCore.Qt.ShiftModifier}
+
+	def mousePressed(self, event):
+		for button, v in self.mouseMap.iteritems():
+			if event.button() == v:
+				button(True)
+		self.syncModifiers(event)
+
+	def mouseReleased(self, event):
+		for button, v in self.mouseMap.iteritems():
+			if event.button() == v:
+				button(False)
+		self.syncModifiers(event)
+
+	def syncModifiers(self, event):
+		for key, v in self.keyMap.iteritems():
+			key(event.modifiers() == v)
 
 
 class ConfirmDialogue(QtWidgets.QMessageBox):
@@ -305,7 +357,7 @@ class ContextMenu(object):
 		self.rootMenu.clear()
 
 
-def event(msg=""):
+def eventGuard(msg=""):
 	def decorate(f):
 		def applicator(*args, **kwargs):
 			try:

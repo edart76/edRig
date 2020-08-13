@@ -1,10 +1,8 @@
 # in framestore, they called me the curve guy
-import maya.cmds as cmds
 import core as core
 from core import ECN, con
 from edRig.node import AbsoluteNode, ECA
-import maya.api.OpenMaya as om
-from edRig import attr, plug, transform
+from edRig import attr, plug, transform, cmds, om
 from edRig.plug import conOrSet
 
 import pprint

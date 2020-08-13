@@ -320,10 +320,10 @@ class TileSettings(QtWidgets.QTreeView):
 		return self.menu.exec_(*args, **kwargs)
 
 	def wheelEvent(self, event):
-		print("settings wheel event accepted {}".format(event.isAccepted()))
+		#print("settings wheel event accepted {}".format(event.isAccepted()))
 		super(TileSettings, self).wheelEvent(event)
 		event.accept()
-		return False
+		return True
 
 
 	# def dragEnterEvent(self, event):

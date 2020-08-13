@@ -16,6 +16,12 @@ objecttoolutils = None
 #### blender modules
 bpy = None # are there any others that matter
 
+#### pyside modules, it's convenient to use the same system
+QtCore = None
+QtWidgets = None
+QtGui = None
+
+
 # host values
 hostDict = {
 	"maya" : False,
@@ -26,8 +32,7 @@ hostDict = {
 
 # running without ui
 thisIsHeadless = False
-
-
+qtAvailable = False
 
 # maya
 try:
@@ -60,15 +65,9 @@ except:
 	pass
 # this mechanism seems to work well
 
-
-
-def getMaya():
-	if not cmds:
-		try:
-			from maya import cmds, mel
-			import maya.api.OpenMaya as om
-			import maya.api.OpenMayaAnim as oma
-			import maya.api.OpenMayaUi as omui
-		except ImportError:
-			print("this is not maya")
-
+# qt / pyside2
+try:
+	from PySide2 import QtCore, QtWidgets, QtGui
+	qtAvailable = True
+except:
+	pass

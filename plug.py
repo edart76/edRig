@@ -1,9 +1,8 @@
 """operations working on plugs as live operation components"""
 import math
-from maya import cmds
-import maya.api.OpenMaya as om
-import maya.api.OpenMayaAnim as oma
-from edRig import core, attr, ECA, debug
+
+
+from edRig import core, attr, ECA, debug, cmds, om, oma
 
 
 
