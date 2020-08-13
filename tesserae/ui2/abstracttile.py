@@ -133,8 +133,8 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		# for i in self.entries.values():
 		# 	i.setRect(0,0, self.width, self.entryHeight)
 
-		self.settingsWidg.sync()
-		self._resizeSettings()
+		#self.settingsWidg.sync()
+		#self._resizeSettings()
 
 		self.arrange()
 

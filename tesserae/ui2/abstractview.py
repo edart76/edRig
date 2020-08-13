@@ -192,8 +192,10 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 
 	def mousePressEvent(self, event):
+		super(AbstractView, self).mousePressEvent(event)
+
 		self.keyState.mousePressed(event)
-		#print ("view mouse event")
+		print ("view mousePress event")
 		# called BEFORE scene event
 		alt_modifier = self.keyState.alt
 		shift_modifier = self.keyState.shift
@@ -236,14 +238,16 @@ class AbstractView(QtWidgets.QGraphicsView):
 			self._rubber_band.setGeometry(rect)
 			self._rubber_band.show()
 
-		if not shift_modifier:
-			super(AbstractView, self).mousePressEvent(event)
+		# if not shift_modifier:
+		# 	super(AbstractView, self).mousePressEvent(event)
 
 		if event.button() == QtCore.Qt.LeftButton:
 			# emit specific node selected signal
 			if self.selectedNodes():
 				#self.node_selected.emit()
 				self.nodesSelected.emit(self.selectedNodes())
+
+		# super(AbstractView, self).mousePressEvent(event)
 
 	def mouseReleaseEvent(self, event):
 		self.keyState.mouseReleased(event)

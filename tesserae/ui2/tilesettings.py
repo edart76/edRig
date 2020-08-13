@@ -402,6 +402,8 @@ class TileSettings(QtWidgets.QTreeView):
 
 		"""
 
+		print("settings mousePress event")
+
 		sel = self.selectionModel().selectedRows()
 
 
