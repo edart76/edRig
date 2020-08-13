@@ -32,6 +32,16 @@ shrinkingPolicy = QtWidgets.QSizePolicy(
 	QtWidgets.QSizePolicy.Minimum,
 )
 
+
+class WheelEventFilter(QtCore.QObject):
+	def eventFilter(self, obj, event):
+		if event.type() == QtCore.QEvent.Wheel:
+			print("ate wheel event")
+			return True
+		else:
+			return QtCore.QObject.eventFilter(self, obj, event)
+
+
 # custom qt data roles
 objRole = QtCore.Qt.UserRole + 1
 
@@ -59,6 +69,7 @@ class TileSettings(QtWidgets.QTreeView):
 		#self.setAnimated(True) # attend first to swag
 		#self.setAutoExpandDelay(0.01)
 		self.setSizePolicy(expandingPolicy)
+		#self.installEventFilter(WheelEventFilter(self))
 
 		self.setDragEnabled(True)
 		self.setAcceptDrops(True)
@@ -307,6 +318,12 @@ class TileSettings(QtWidgets.QTreeView):
 
 	def showMenu(self, *args, **kwargs):
 		return self.menu.exec_(*args, **kwargs)
+
+	def wheelEvent(self, event):
+		print("settings wheel event accepted {}".format(event.isAccepted()))
+		super(TileSettings, self).wheelEvent(event)
+		#event.accept()
+		return True
 
 
 	# def dragEnterEvent(self, event):

@@ -104,14 +104,16 @@ def debug(var):
 		callingFile = callerStack[1]
 		with open( callingFile, "r") as f:
 			lines = f.readlines()
-			callingLine = lines[ callerStack[5]]
+			callingLine = lines[ callerStack[2]] # line number
 		#callingLine = callerStack[4][callerStack[5] ]
 		content = re.findall("debug\(([^)]*)\)", callingLine)
 		# regex to find 'debug( *random string here* )
 		if not content:
 			print("debug failed, has the function name been reassigned?")
-			print("callerStack {}".format(callerStack))
-			print("callingLine {}".format(callingLine))
+			#print("callerStack {}".format(callerStack))
+			#print("callerLines {}".format(lines))
+			#print("callingLine {}".format(callingLine))
+			#print("content {}".format(callingLine))
 			return None
 		content = content[0].strip()
 		print("{} is {}".format(content, pprint.pformat(var)))
@@ -1056,7 +1058,7 @@ if __name__ == '__main__':
 	testTree.addChild(breakTree)
 
 
-	#debug(newTree)
+	debug(newTree)
 	#debug(testTree("parent").address)
 
 	#print(testTree.display())

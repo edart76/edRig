@@ -182,8 +182,21 @@ class AbstractView(QtWidgets.QGraphicsView):
 		# 	event.accept()
 
 	def wheelEvent(self, event):
+		#event.ignore()
+
+		#event.ignore()
+		#event.accept()
+		print("view wheel event accepted {}".format(event.isAccepted()))
+		if event.isAccepted():
+			return
 		adjust = (event.delta() / 120) * 0.1
-		self._set_viewer_zoom(adjust)
+		self.setViewerZoom(adjust, event.globalPos())
+		super(AbstractView, self).wheelEvent(event)
+
+	def scrollContentsBy(self, dx, dy):
+		""" parent class scroll function """
+		#print("viewer scrollContentsBy")
+		pass
 
 	def contextMenuEvent(self, event):
 		"""i'm really honestly quite sick of this softlocking my program"""
@@ -286,7 +299,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		elif self.RMB_state:
 			pos_x = (event.x() - self._previous_pos.x())
 			zoom = 0.1 if pos_x > 0 else -0.1
-			#self._set_viewer_zoom(zoom)
+			#self.setViewerZoom(zoom)
 			#self.set_zoom(zoom)
 			# avoid context stuff interfering
 
@@ -403,9 +416,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def checkLegalConnection(self, start, dest):
 		"""checks with graph if attempted connection is legal
 		ONLY WORKS ON KNOBS"""
-		# if not isinstance(pipe.start, Knob):
-		# 	raise RuntimeError("pipe start is {}, pipe ain't got no knob".format(
-		# 		pipe.start))
 		startAttr = start.attr
 		endAttr = dest.attr
 		legality = self.graph.checkLegalConnection(
@@ -478,7 +488,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 
 	# zoom
-	def _set_viewer_zoom(self, value):
+	def setViewerZoom(self, value, pos=None):
 		if value == 0.0:
 			return
 		scale = 0.9 if value < 0.0 else 1.1
@@ -490,6 +500,12 @@ class AbstractView(QtWidgets.QGraphicsView):
 			if scale == 1.1:
 				return
 		self.scale(scale, scale)
+		if not pos: return
+
+		viewPos = QtCore.QPoint(self.transform().m31(), self.transform().m32() )
+		vec = (pos - viewPos) * value
+		#self.translate( vec.x(), vec.y())
+
 
 	def get_zoom(self):
 		transform = self.transform()
@@ -512,7 +528,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			if not (ZOOM_MIN <= value <= ZOOM_MAX):
 				return
 		value = value - zoom
-		self._set_viewer_zoom(value)
+		self.setViewerZoom(value)
 
 	def zoom_to_nodes(self, nodes):
 		rect = self._combined_rect(nodes)
