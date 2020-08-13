@@ -2,9 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0923b4da-4ccc-44bc-bfbd-bc53b01b1c40" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/python.py" beforeDir="false" afterPath="$PROJECT_DIR$/lib/python.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tesserae/ui2/abstractview.py" beforeDir="false" afterPath="$PROJECT_DIR$/tesserae/ui2/abstractview.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tesserae/ui2/tilesettings.py" beforeDir="false" afterPath="$PROJECT_DIR$/tesserae/ui2/tilesettings.py" afterDir="false" />
     </list>
@@ -19,11 +17,20 @@
     <splitter split-orientation="horizontal" split-proportion="0.47968936">
       <split-first>
         <leaf>
-          <file leaf-file-name="abstractview.py" pinned="false" current-in-tab="true">
+          <file leaf-file-name="abstractview.py" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/tesserae/ui2/abstractview.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="520">
-                  <caret line="216" column="37" selection-start-line="216" selection-start-column="37" selection-end-line="216" selection-end-column="37" />
+                <state relative-caret-position="296">
+                  <caret line="83" column="8" selection-start-line="83" selection-start-column="8" selection-end-line="83" selection-end-column="8" />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="tilesettings.py" pinned="false" current-in-tab="true">
+            <entry file="file://$PROJECT_DIR$/tesserae/ui2/tilesettings.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="356">
+                  <caret line="324" column="22" lean-forward="true" selection-start-line="324" selection-start-column="22" selection-end-line="324" selection-end-column="22" />
                 </state>
               </provider>
             </entry>
@@ -35,8 +42,8 @@
           <file leaf-file-name="abstractview.py" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/tesserae/ui2/abstractview.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="423">
-                  <caret line="389" column="4" selection-start-line="389" selection-start-column="4" selection-end-line="389" selection-end-column="4" />
+                <state relative-caret-position="627">
+                  <caret line="202" lean-forward="true" selection-start-line="202" selection-end-line="202" />
                 </state>
               </provider>
             </entry>
@@ -45,8 +52,21 @@
       </split-second>
     </splitter>
   </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>MiddleB</find>
+    </findStrings>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/tesserae/ui2/tilesettings.py" />
+        <option value="$PROJECT_DIR$/tesserae/ui2/abstractview.py" />
+      </list>
+    </option>
   </component>
   <component name="ProjectFrameBounds">
     <option name="x" value="937" />
@@ -117,14 +137,14 @@
     <frame x="937" y="1" width="1804" height="1050" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.12863535" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49893162" visible="true" weight="0.12863535" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Event Log" side_tool="true" />
       <window_info anchor="bottom" id="Maya Log" />
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Version Control" />
       <window_info anchor="bottom" id="Python Console" />
-      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info active="true" id="Structure" order="1" sideWeight="0.50106835" side_tool="true" visible="true" weight="0.12863535" />
       <window_info anchor="bottom" id="Terminal" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info id="Favorites" side_tool="true" />
@@ -141,10 +161,17 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/tesserae/ui2/tilesettings.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="356">
+          <caret line="324" column="22" lean-forward="true" selection-start-line="324" selection-start-column="22" selection-end-line="324" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/tesserae/ui2/abstractview.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="423">
-          <caret line="389" column="4" selection-start-line="389" selection-start-column="4" selection-end-line="389" selection-end-column="4" />
+        <state relative-caret-position="627">
+          <caret line="202" lean-forward="true" selection-start-line="202" selection-end-line="202" />
         </state>
       </provider>
     </entry>

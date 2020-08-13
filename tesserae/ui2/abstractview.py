@@ -182,20 +182,29 @@ class AbstractView(QtWidgets.QGraphicsView):
 		# 	event.accept()
 
 	def wheelEvent(self, event):
-		#event.ignore()
 
-		#event.ignore()
-		#event.accept()
+		if event.buttons() == QtCore.Qt.MiddleButton:
+			print("middleButton")
+			super(AbstractView, self).wheelEvent(event)
+			return
+		print("")
 		print("view wheel event accepted {}".format(event.isAccepted()))
+		super(AbstractView, self).wheelEvent(event)
+		print("view wheel event accepted {}".format(event.isAccepted()))
+
+
 		if event.isAccepted():
 			return
 		adjust = (event.delta() / 120) * 0.1
 		self.setViewerZoom(adjust, event.globalPos())
-		super(AbstractView, self).wheelEvent(event)
+
+	def scrollEvent(self, event):
+		print("view scrollEvent")
 
 	def scrollContentsBy(self, dx, dy):
 		""" parent class scroll function """
-		#print("viewer scrollContentsBy")
+		print("viewer scrollContentsBy")
+		super(AbstractView, self).scrollContentsBy(dx, dy)
 		pass
 
 	def contextMenuEvent(self, event):
