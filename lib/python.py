@@ -242,6 +242,7 @@ class StringLike(str): # best I can do for now
 		return self.__str__()
 	def __str__(self):
 		return str(self._base)
+	# def __class__(self):
 
 	# def __unicode__(self):
 	# 	return unicode(self.__str__())
@@ -391,11 +392,15 @@ class AbstractTree(object):
 
 	@property
 	def siblings(self):
-		return self.parent.branches if self.parent else []
+		if self.parent:
+			return self.parent.branches.remove(self)
+		return []
 
 	@property
 	def root(self):
-		"""returns root tree object"""
+		"""returns root tree object
+		consider possibly denoting arbitrary points in tree as breakpoints,
+		roots only to branches under them """
 		return self.parent.root if self.parent else self
 	@property
 	def address(self):
@@ -436,8 +441,7 @@ class AbstractTree(object):
 	@property
 	def branches(self):
 		"""more explicit that it returns the child tree objects
-		:rtype list( AbstractTree )
-		always returns all branches, regardless of class"""
+		:rtype list( AbstractTree )"""
 		return self.values()
 
 	@property
@@ -635,6 +639,8 @@ class AbstractTree(object):
 		if not address: # empty list
 			return self
 		first = address.pop(0)
+		if first == "^": # aka unix ../
+			return self.parent(address)
 		if not first in self._map: # add it if doesn't exist
 			if self.readOnly:
 				raise RuntimeError( "readOnly tree accessed improperly - "
@@ -713,6 +719,8 @@ class AbstractTree(object):
 	# 		return self.__key() == other.__key()
 	# 	return NotImplemented
 
+	#def __copy__(self):
+
 	@classmethod
 	def fromDict(cls, regenDict):
 		"""expects dict of format
@@ -744,21 +752,9 @@ class AbstractTree(object):
 
 		# regnerate children
 		for i in children:
-			# """ check some rules on deserialisation """
-			# # is there any kind of override?
-			# if i.get("objData"):
-			# 	childCls = loadObjectClass(i["objData"])
-			# else:
-			# 	if cls.branchesInherit:
-			# 		childCls = cls
-			# 	else:
-			# 		childCls = AbstractTree
-
 			branch = cls.fromDict(i)
 			if branch is None:
 				continue
-			#branch = childCls.fromDict(i)
-			# print("regen branch {}".format(branch))
 			new.addChild(branch)
 		return new
 
@@ -1037,7 +1033,6 @@ class OrderedSet(MutableSet):
 		return not self.isdisjoint(other)
 
 
-
 # test for interfaces with the tree structure
 testTree = AbstractTree("TestRoot")
 testTree("asdf").value = "firstKey"
@@ -1079,6 +1074,8 @@ if __name__ == '__main__':
 	print( loadedTree("parent.listEntry").value )
 	print( loadedTree("parent.listEntry").listValue )
 	print( loadedTree("parent.listEntry").listValue[-1] * 100)
+
+
 
 	# for i in loadedTree.allBranches():
 	# 	print(i)
@@ -1122,14 +1119,3 @@ if __name__ == '__main__':
 	test.map[1] = False
 	print(test.prop)
 
-
-
-
-	# print(loadedTree)
-	# print(loadedTree("newTreeName.newTreeBranch").__class__)
-	# print(loadedTree("newTreeBranch").__class__)
-	# print(loadedTree("newTreeBranch.end"))
-	# print(loadedTree("breakTreeBranch"))
-	# print(loadedTree("breakTreeName"))
-
-#	print( loadedTree.display())

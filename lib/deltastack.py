@@ -1,59 +1,233 @@
-from collections import deque, OrderedDict
+
+import copy
+from collections import OrderedDict
+
 
 from edRig.lib.python import AbstractTree
 
 """ so it turns out this is really hard """
 
-class Transformation(object):
-	""" any mapping which modifies, or transforms,
-	a base state, returning the product of
-	base and transformation"""
+""" I see two methods to achieve this 'live inheritance' effect: 
+until now I've approached the DeltaMask as a constant interface and wrapper,
+accounting for and special-casing all instance methods, magic methods, etc
+
+alternatively, consider restricting to applying and regenerating the mask,
+and passing out a reference to it?
+but it has to be a reference to self or it will surely get destroyed when result is regenerated
+
+3 problems must be solved:
+ - how do we actually get the thing to work
+ - how do we serialise it
+ - how do we make a mask of a mask
+"""
+
+
+def isSimple(obj):
+	return isinstance(obj, (basestring, tuple, int, float, bool, None))
+
+
+
+class Proxy(object):
+	""" Transparent proxy for most objects
+	code recipe 496741
+	further modifications from ya boi """
+	#__slots__ = ["_obj", "__weakref__"]
+	_proxyAttrs = ("_baseObj", "_productObj", "_mask")
+
+	def __init__(self, obj):
+		object.__setattr__(self, "_baseObj", obj)
+
+	# proxying (special cases)
+	def __getattribute__(self, name):
+		try: # look up attribute on proxy class first
+			return object.__getattribute__(self, name)
+		except:
+			return getattr(object.__getattribute__(self, "_baseObj"), name)
+
+	def __delattr__(self, name):
+		delattr(object.__getattribute__(self, "_baseObj"), name)
+
+	def __setattr__(self, name, value):
+		if name in self.__class__._proxyAttrs:
+			object.__setattr__(self, name, value)
+		setattr(object.__getattribute__(self, "_baseObj"), name, value)
+
+	def __nonzero__(self):
+		return bool(object.__getattribute__(self, "_baseObj"))
+
+	def __str__(self):
+		return str(object.__getattribute__(self, "_baseObj"))
+
+	def __repr__(self):
+		return repr(object.__getattribute__(self, "_baseObj"))
+
+
+	# factories
+	_special_names = [
+		'__abs__', '__add__', '__and__', '__call__', '__cmp__', '__coerce__',
+		'__contains__', '__delitem__', '__delslice__', '__div__', '__divmod__',
+		'__eq__', '__float__', '__floordiv__', '__ge__', '__getitem__',
+		'__getslice__', '__gt__', '__hash__', '__hex__', '__iadd__', '__iand__',
+		'__idiv__', '__idivmod__', '__ifloordiv__', '__ilshift__', '__imod__',
+		'__imul__', '__int__', '__invert__', '__ior__', '__ipow__', '__irshift__',
+		'__isub__', '__iter__', '__itruediv__', '__ixor__', '__le__', '__len__',
+		'__long__', '__lshift__', '__lt__', '__mod__', '__mul__', '__ne__',
+		'__neg__', '__oct__', '__or__', '__pos__', '__pow__', '__radd__',
+		'__rand__', '__rdiv__', '__rdivmod__', '__reduce__', '__reduce_ex__',
+		'__repr__', '__reversed__', '__rfloorfiv__', '__rlshift__', '__rmod__',
+		'__rmul__', '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__',
+		'__rtruediv__', '__rxor__', '__setitem__', '__setslice__', '__sub__',
+		'__truediv__', '__xor__', 'next',
+	]
+
+	@classmethod
+	def _create_class_proxy(cls, theclass):
+		"""creates a proxy for the given class"""
+
+		def make_method(name):
+			def method(self, *args, **kw):
+				# insert live object lookup here
+				return getattr(object.__getattribute__(self, "_baseObj"), name)(*args, **kw)
+
+			return method
+
+		namespace = {}
+		for name in cls._special_names:
+			if hasattr(theclass, name):
+				namespace[name] = make_method(name)
+		return type("{}({})".format(cls.__name__, theclass.__name__), (cls,), namespace)
+
+	def __new__(cls, obj, *args, **kwargs):
+		"""
+        creates a proxy instance referencing `obj`. (obj, *args, **kwargs) are
+        passed to this class' __init__, so deriving classes can define an
+        __init__ method of their own.
+        note: _class_proxy_cache is unique per deriving class (each deriving
+        class must hold its own cache)
+        """
+		# looks up type-specific proxy class
+		try:
+			cache = cls.__dict__["_class_proxy_cache"]
+		except KeyError:
+			cls._class_proxy_cache = cache = {}
+		try:
+			theclass = cache[obj.__class__]
+		except KeyError:
+			cache[obj.__class__] = theclass = cls._create_class_proxy(obj.__class__)
+
+		# the above can be skipped with concrete subclasses
+
+		# create new proxy instance with type-specific
+		# proxy class
+		ins = object.__new__(theclass)
+
+		# run init on created instance
+		theclass.__init__(ins, obj, *args, **kwargs)
+		return ins
+
+
+
+
+class DeltaMask(object):
+	""" specifically for tree as test case,
+	will hopefully learn something useful on the way """
 
 	OBJ_CLASS = None
-
-	def __init__(self, obj):
-		self._obj = obj
-
-	def transformed(self):
-		""" :returns result of transformation on object
-		:rtype : self.OBJ_CLASS"""
-		raise NotImplementedError
-
-	def __getattr__(self, item):
-		return self._obj.__getattr__(item)
-
-class Delta(Transformation):
-
-	def __init__(self, obj):
-		super(Delta, self).__init__(obj)
-		self.mask = {
-			"added" : {},
-			"modified" : {},
-			"removed" : {}
+	def __init__(self, obj=None):
+		self._baseObj = None # base object reference
+		self._productObj = None
+		self._mask = {
+			#"attrs" : {},
+			"items" : {},
 		}
-
-	@property
-	def obj(self):
-		""" defines type of returned object """
-		return self._obj
+		if obj is not None:
+			self.setObject(obj)
 
 
-class ListDelta(Delta):
+	def setObject(self, obj):
+		""" mask can be assigned to any object asynchronously """
+		self._baseObj = obj
+
+	def setMask(self, maskDict):
+		self._mask = maskDict
+
+
+	def result(self):
+		if self._productObj:
+			self.extractMask()
+		# update with shallow copy of base object
+		self._productObj = copy.copy(self._baseObj)
+		self.applyMask()
+		self.wrapProduct()
+		return self
+
+
+	def extractMask(self):
+		pass
+	def applyMask(self):
+		pass
+	def wrapProduct(self):
+		""" updates this proxy to point to a new object
+		references to this mask object will
+		always be valid """
+
+
+	def collapse(self):
+		""" flatten delta mask to entirely new object """
+		pass
+
+
+
+	# saving and loading
+	def serialise(self):
+		""" no reference to object """
+		return self._mask
+
+	@classmethod
+	def fromDict(cls, data):
+		deltaMask = cls()
+		deltaMask.setMask(data)
+
+
+
+class ListDelta(DeltaMask):
 	""" at some point maybe refit this to abstractTree as well"""
 	OBJ_CLASS = list
 
-	def transformed(self):
-		""" is a list just a map with indices as keys?"""
+	def absIndex(self, index):
+		""" converts negative list index to positive value """
+		if index < 0:
+			return len(self._obj) + index
+		return index
+	
+	def result(self):
+		length = max( max(self.map.keys()), len(self._obj))
+		newObj = list(self._obj) + [None] * ( length - len(self._obj) )
+		for k, v in self._mask.iteritems():
+			newObj[k] = v
+		return newObj
 
-	@property
-	def obj(self):
-		""":rtype list"""
-		return super(ListDelta, self).obj or []
 
-	def append(self, item):
-		pass
+
+class AbstractTreeDelta(DeltaMask):
+	""" if values are modified, use primitive type masks
+	if new branches are added, create new abstractTrees, not masks
+	trigger warning: code duplication """
+	OBJ_CLASS = AbstractTree
+
+	def __init__(self, obj=None):
+		super(AbstractTreeDelta, self).__init__(obj)
+		self._mask = {
+			"value" : None, # raw data or deltamask
+
+		}
+
+	def __call__(self, address):
+		""" wrapping base tree lookup"""
 
 	pass
+
+
 
 
 class DictDelta(Delta):
@@ -84,9 +258,7 @@ class DictDelta(Delta):
 		""":rtype dict"""
 		return super(DictDelta, self).obj or {}
 
-class AbstractTreeDelta(DictDelta):
-	OBJ_CLASS = AbstractTree
-	pass
+
 
 class OrderedDictDelta(DictDelta):
 	OBJ_CLASS = OrderedDict
@@ -99,118 +271,6 @@ DELTA_CLASSES = {
 	AbstractTree : AbstractTreeDelta,
 	OrderedDict : OrderedDictDelta
 }
-
-
-
-
-# class DeltaStack(object):
-# 	"""experimental system of keeping track of successive differences in
-# 	a system's state
-# 	may end up forming backbone of inheritance system"""
-# 	def __init__(self, baseState=None):
-# 		#self._stack = []
-# 		self._stack = deque()
-# 		self._index = 0 # represents current level within deltas - usually latest
-# 		self.baseState = baseState
-# 		"""stack may contain mix of stackItems and other DeltaStacks -
-# 		all that matters is the order"""
-# 		pass
-#
-# 	@property
-# 	def stack(self):
-# 		return self._stack
-# 	@stack.setter
-# 	def stack(self, val):
-# 		self._stack = val
-#
-# 	@property
-# 	def index(self): # don't use this yet
-# 		raise NotImplementedError()
-# 		#return self._index
-# 	@property
-# 	def endIndex(self):
-# 		return len(self.stack) - 1
-# 	@property
-# 	def topDelta(self):
-# 		return self.stack[self.endIndex]
-#
-# 	@property
-# 	def childDeltas(self):
-# 		return [i for i in self.stack if isinstance(i, DeltaStack)]
-#
-# 	def setBaseState(self, state):
-# 		"""how abstract can we keep this?"""
-# 		self.stack = deque()
-# 		self.baseState = state
-#
-# 	def extend(self, delta):
-# 		self.stack.append(delta)
-#
-# 	def reduce(self):
-# 		return self.stack.pop()
-#
-# 	"""add support for walking between delta levels later if necessary - assume
-# 	that combined delta stack is always representative of system"""
-# 	def undo(self):
-# 		"""return system to previous level"""
-# 		self.topDelta.undo()
-# 		self.reduce()
-#
-# 	def sum(self):
-# 		"""?????
-# 		apply all deltas sequentially i guess"""
-#
-# 	def transformedState(self):
-# 		"""more explicit than above"""
-# 		return self.sum()
-#
-# 	def __getattr__(self, item):
-# 		pass
-#
-# 	def __setattr__(self, key, value):
-# 		"""creates a new delta"""
-#
-# 		# parse key somehow to find proper level to assign delta
-#
-# 		# create delta by comparing current state with assigned state
-# 		delta = self.createDelta(before=self.transformedState(),
-# 		                  after=self.makeState(value))
-# 		self.stack.append(delta)
-#
-# 		pass
-#
-# 	# saving
-# 	def serialise(self):
-# 		pass
-#
-# 	@staticmethod
-# 	def fromDict(regenDict):
-# 		pass
-#
-#
-# 	# ----
-# 	# methods for stack creation
-# 	@staticmethod
-# 	def trackObject(target):
-# 		"""returns new DeltaStack with object as live base state"""
-# 		return DeltaStack(baseState=target)
-#
-#
-# class StackDelta(object):
-# 	"""atomic class representing a modification to a system"""
-# 	operations = ["addition", "subtraction", "modification"] # only one
-# 	"""should only hold, apply and undo deltas - no knowledge of base state
-# 	or anything outside changes it represents"""
-#
-# 	def __init__(self, operation):
-# 		if not operation in self.operations:
-# 			raise RuntimeError("invalid StackDelta operation " + operation)
-# 		self.operation = operation
-#
-# 	def undo(self):
-# 		"""called to remove delta from system"""
-# 		raise NotImplementedError()
-#
 
 
 """test case let's go
