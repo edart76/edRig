@@ -119,3 +119,5 @@ misc/download.py
 .idea/edRig.iml
 .idea/edRig.iml
 .idea/workspace.xml
+.idea/*
+.idea
