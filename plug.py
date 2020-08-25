@@ -78,8 +78,10 @@ def plugCondition(val1, val2, operation="greaterThan",
 	          u'greater or Equal', u'less Than', u'less or Equal']
 	operators = ["equal", "notEqual", "greaterThan", "greaterOrEqual",
 	             "lessThan", "lessOrEqual"]
+	ops = ["==", "!=", ">", ">=", "<", "<="]
 	node = ECA("condition")
-	node.set("operation", tokens[ operators.index(operation)] )
+	index = ops.index(operation) if operation in ops else operators.index(operation)
+	node.set("operation", index )
 	node.conOrSet(val1, "firstTerm")
 	node.conOrSet(val2, "secondTerm")
 	if any((ifFalse, ifTrue)):

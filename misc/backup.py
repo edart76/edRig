@@ -69,9 +69,9 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 			maxVersion = max(data.keys())
 			saves.append(data[maxVersion][1])
 
-		if "ophelia" in x[0]:
-			pprint.pprint(versions)
-			print(saves)
+		# if "ophelia" in x[0]:
+		# 	pprint.pprint(versions)
+		# 	print(saves)
 
 		treeDict[x[0]] = saves
 		#print
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 	""" run test backup """
 
 	rootPath = "F:/all_projects_desktop"
-	outputPath = r"F:\autoBackup\v005"
+	outputPath = r"F:\autoBackup\v007"
 
 	# rootPath = r"F:\all_projects_desktop\testRoot"
 	# outputPath = r"F:\all_projects_desktop\testBackup"

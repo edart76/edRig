@@ -3,7 +3,7 @@ import copy
 from collections import OrderedDict
 
 
-from edRig.lib.python import AbstractTree
+from edRig.lib.python import AbstractTree, debug
 
 """ so it turns out this is really hard """
 
@@ -32,35 +32,38 @@ class Proxy(object):
 	code recipe 496741
 	further modifications from ya boi """
 	#__slots__ = ["_obj", "__weakref__"]
-	_proxyAttrs = ("_baseObj", "_productObj", "_mask")
+	_class_proxy_cache = {}
+	_proxyAttrs = ("_proxyObj", )
+	_proxyObjKey = "_proxyObj" # attribute pointing to object
 
 	def __init__(self, obj):
-		object.__setattr__(self, "_baseObj", obj)
+		object.__setattr__(self, self._proxyObjKey, obj)
 
 	# proxying (special cases)
 	def __getattribute__(self, name):
 		try: # look up attribute on proxy class first
 			return object.__getattribute__(self, name)
 		except:
-			return getattr(object.__getattribute__(self, "_baseObj"), name)
+			return getattr(object.__getattribute__(
+				self, self._proxyObjKey), name)
 
 	def __delattr__(self, name):
-		delattr(object.__getattribute__(self, "_baseObj"), name)
+		delattr(object.__getattribute__(self, self._proxyObjKey), name)
 
 	def __setattr__(self, name, value):
 		if name in self.__class__._proxyAttrs:
 			object.__setattr__(self, name, value)
-		setattr(object.__getattribute__(self, "_baseObj"), name, value)
+		else:
+			setattr(object.__getattribute__(self, self._proxyObjKey), name, value)
 
 	def __nonzero__(self):
-		return bool(object.__getattribute__(self, "_baseObj"))
+		return bool(object.__getattribute__(self, self._proxyObjKey))
 
 	def __str__(self):
-		return str(object.__getattribute__(self, "_baseObj"))
+		return str(object.__getattribute__(self, self._proxyObjKey))
 
 	def __repr__(self):
-		return repr(object.__getattribute__(self, "_baseObj"))
-
+		return repr(object.__getattribute__(self, self._proxyObjKey))
 
 	# factories
 	_special_names = [
@@ -87,7 +90,9 @@ class Proxy(object):
 		def make_method(name):
 			def method(self, *args, **kw):
 				# insert live object lookup here
-				return getattr(object.__getattribute__(self, "_baseObj"), name)(*args, **kw)
+				return getattr(
+					object.__getattribute__(self, cls._proxyObjKey),
+					name)(*args, **kw)
 
 			return method
 
@@ -106,10 +111,10 @@ class Proxy(object):
         class must hold its own cache)
         """
 		# looks up type-specific proxy class
-		try:
-			cache = cls.__dict__["_class_proxy_cache"]
-		except KeyError:
-			cls._class_proxy_cache = cache = {}
+		#try:
+		cache = cls.__dict__["_class_proxy_cache"]
+		# except KeyError:
+		# 	cls._class_proxy_cache = cache = {}
 		try:
 			theclass = cache[obj.__class__]
 		except KeyError:
@@ -127,21 +132,58 @@ class Proxy(object):
 
 
 
+class Delta(Proxy):
+	""" delta-tracking wrapper
+	also adapted from 496741 """
+	_class_proxy_cache = {} # will likely need specific classes anyway
 
-class DeltaMask(object):
-	""" specifically for tree as test case,
-	will hopefully learn something useful on the way """
+	_proxyAttrs = ("_baseObj", "_proxyObj", "_mask")
 
-	OBJ_CLASS = None
-	def __init__(self, obj=None):
-		self._baseObj = None # base object reference
-		self._productObj = None
-		self._mask = {
-			#"attrs" : {},
-			"items" : {},
-		}
-		if obj is not None:
-			self.setObject(obj)
+	def __init__(self, obj):
+		self._baseObj = obj # reference to base object to draw from
+		self._proxyObj = copy.copy(obj)
+		self._mask = {}
+		self.extractMask()
+
+	def extractMask(self):
+		""" compares proxy object to base, collates delta to mask """
+	def applyMask(self):
+		""" applies delta mask to product object """
+
+	def product(self):
+		self.extractMask()
+		self._proxyObj = copy.copy(self._baseObj)
+		self.applyMask()
+		return self
+
+
+
+
+if __name__ == '__main__':
+	baseDict = {"baseKey" : 69,
+	            "baseKeyB" : "eyy"}
+	debug(baseDict)
+
+	replaceDict = {"replacedDict" : 3e4}
+
+	testDict = Proxy(baseDict)
+	testDict["proxyTest"] = True
+	debug(testDict)
+	testDict._proxyObj = replaceDict
+	debug(testDict)
+
+	proxyDict = Delta(baseDict)
+	debug(proxyDict)
+
+	baseDict["newBaseKey"] = 49494
+	debug(proxyDict)
+
+	proxyDict["newProxyKey"] = "FAJLS"
+	print("baseDict is {}".format(baseDict))
+	debug(proxyDict)
+
+
+class DeltaMask(Proxy):
 
 
 	def setObject(self, obj):
@@ -189,7 +231,6 @@ class DeltaMask(object):
 		deltaMask.setMask(data)
 
 
-
 class ListDelta(DeltaMask):
 	""" at some point maybe refit this to abstractTree as well"""
 	OBJ_CLASS = list
@@ -219,7 +260,6 @@ class AbstractTreeDelta(DeltaMask):
 		super(AbstractTreeDelta, self).__init__(obj)
 		self._mask = {
 			"value" : None, # raw data or deltamask
-
 		}
 
 	def __call__(self, address):
@@ -230,7 +270,7 @@ class AbstractTreeDelta(DeltaMask):
 
 
 
-class DictDelta(Delta):
+class DictDelta(DeltaMask):
 	OBJ_CLASS = dict
 
 	def transformed(self):
