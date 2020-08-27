@@ -7,17 +7,12 @@ from edRig.lib.python import AbstractTree, debug
 
 """ so it turns out this is really hard """
 
-""" I see two methods to achieve this 'live inheritance' effect: 
-until now I've approached the DeltaMask as a constant interface and wrapper,
-accounting for and special-casing all instance methods, magic methods, etc
+""" live inheritance is achieved by passing out a proxy object wrapper,
+and repeatedly regenerating proxy object data, 
+while comparing to given base object
 
-alternatively, consider restricting to applying and regenerating the mask,
-and passing out a reference to it?
-but it has to be a reference to self or it will surely get destroyed when result is regenerated
-
-3 problems must be solved:
- - how do we actually get the thing to work
- - how do we serialise it
+2 problems must be solved:
+ - how do we deal with complex and deep objects
  - how do we make a mask of a mask
 """
 
@@ -32,7 +27,7 @@ class Proxy(object):
 	code recipe 496741
 	further modifications from ya boi """
 	#__slots__ = ["_obj", "__weakref__"]
-	_class_proxy_cache = {}
+	_class_proxy_cache = {} # { class : { class cache } }
 	_proxyAttrs = ("_proxyObj", )
 	_proxyObjKey = "_proxyObj" # attribute pointing to object
 
@@ -100,7 +95,8 @@ class Proxy(object):
 		for name in cls._special_names:
 			if hasattr(theclass, name):
 				namespace[name] = make_method(name)
-		return type("{}({})".format(cls.__name__, theclass.__name__), (cls,), namespace)
+		return type("{}({})".format(cls.__name__, theclass.__name__),
+		            (cls,), namespace)
 
 	def __new__(cls, obj, *args, **kwargs):
 		"""
@@ -111,23 +107,20 @@ class Proxy(object):
         class must hold its own cache)
         """
 		# looks up type-specific proxy class
-		#try:
-		cache = cls.__dict__["_class_proxy_cache"]
-		# except KeyError:
-		# 	cls._class_proxy_cache = cache = {}
+		cache = Proxy.__dict__["_class_proxy_cache"]
 		try:
-			theclass = cache[obj.__class__]
+			genClass = cache[cls][type(obj)]
 		except KeyError:
-			cache[obj.__class__] = theclass = cls._create_class_proxy(obj.__class__)
-
-		# the above can be skipped with concrete subclasses
+			genClass = cls._create_class_proxy(type(obj))
+			#cache[cls] = {obj.__class__ : theclass}
+			cache[cls] = { type(obj) : genClass }
 
 		# create new proxy instance with type-specific
 		# proxy class
-		ins = object.__new__(theclass)
+		ins = object.__new__(genClass)
 
 		# run init on created instance
-		theclass.__init__(ins, obj, *args, **kwargs)
+		genClass.__init__(ins, obj, *args, **kwargs)
 		return ins
 
 
@@ -135,14 +128,13 @@ class Proxy(object):
 class Delta(Proxy):
 	""" delta-tracking wrapper
 	also adapted from 496741 """
-	_class_proxy_cache = {} # will likely need specific classes anyway
 
 	_proxyAttrs = ("_baseObj", "_proxyObj", "_mask")
 
 	def __init__(self, obj):
 		self._baseObj = obj # reference to base object to draw from
 		self._proxyObj = copy.copy(obj)
-		self._mask = {}
+		self._mask = { "added" : {}, "modified" : {} }
 		self.extractMask()
 
 	def extractMask(self):
@@ -156,10 +148,120 @@ class Delta(Proxy):
 		self.applyMask()
 		return self
 
+	def serialise(self):
+		pass
+
+	@classmethod
+	def deserialise(cls, data, baseObj):
+		""" loads delta object from dict and reapplies to baseObj """
+		pass
+
+
+class DictDelta(Delta):
+	def extractMask(self):
+		self._mask["added"] = {
+			pK : pV for pK, pV in self._proxyObj.iteritems() if \
+				pK not in self._baseObj }
+		self._mask["modified"] = {
+			pK : pV for pK, pV in self._proxyObj.iteritems() if \
+				self._baseObj.get(pK) != pV }
+		# added and modified functionally the same here
+
+	def applyMask(self):
+		self._proxyObj.update(self._mask["added"])
+		self._proxyObj.update(self._mask["modified"])
+
+class ListDelta(Delta):
+	""" basic, indices not working """
+	def extractMask(self):
+		self._mask["added"] = {
+			self._proxyObj.index(i) : i for i in self._proxyObj \
+				if not i in self._baseObj }
+	def applyMask(self):
+		for index, val in self._mask["added"]:
+			try:
+				self._proxyObj.insert(index, val)
+			except:
+				self._proxyObj.append(val)
+
+class TreeDelta(Delta):
+	""" final boss
+	deep trees even more difficult, as copying doesn't work
+	need to keep consistent objects throughout operations"""
+	def extractMask(self):
+		# added trees are easiest, no child deltas needed
+		self._mask["added"] = {
+			branch.index : branch for branch in self._baseObj.branches \
+				if not branch.name in self._baseObj._map
+		} # need better index integration
+		self._mask["modified"] = { # modified branches get new masks?
+		}
+
+		if self._proxyObj.value != self._baseObj.value:
+			self._mask["value"] = self._proxyObj.value
+		else: self._mask["value"] = None
+
+
+	def applyMask(self):
+		for index, branch in self._mask["added"]:
+			self._proxyObj
+		if self._mask.get("value") is not None:
+			self._proxyObj.value = self._mask["value"]
+
+	def serialise(self):
+		data = {
+			"added" : {},
+			"value" : self._mask["value"]
+		}
+		for index, branch in self._mask["added"]:
+			data["added"][index] = branch.serialise()
+
+	@classmethod
+	def deserialise(cls, data, baseObj):
+		""" setting redundant values on proxy is fine as
+		extractMask() will remove them anyway """
+		proxy = cls(baseObj)
+		for index, branchData in data["added"]:
+			branch = AbstractTree.fromDict(branchData)
+			proxy.addChild(branch, index=index)
+
+		proxy.value = data["value"]
+
+
+
+
+
+
+"""
+# toughest scenario:
+baseObj
+proxy = Delta(baseObj)
+proxy["key"] = valueA
+baseObj["key"] = valueB
+
+"""
+# test for interfaces with the tree structure
+testTree = AbstractTree("TestRoot")
+testTree("asdf").value = "firstKey"
+testTree("parent").value = "nonas"
+testTree("parent.childA").value = 930
+testTree("parent.childA").extras["options"] = (930, "eyyy")
+testTree("parent.childB").value = True
+
+# cannot do nested list inputs yet
+testTree["parent.listEntry"] = "[eyyy, test, 4.3, '', 2e-10, False]"
+testTree["parent.nestedList"] = "[eyyy, test, 4.3, '', [4e4, i, 33, True], 2e-10]"
+
 
 
 
 if __name__ == '__main__':
+
+	debug(testTree)
+	proxyTree = TreeDelta(testTree)
+
+
+
 	baseDict = {"baseKey" : 69,
 	            "baseKeyB" : "eyy"}
 	debug(baseDict)
@@ -183,208 +285,4 @@ if __name__ == '__main__':
 	debug(proxyDict)
 
 
-class DeltaMask(Proxy):
-
-
-	def setObject(self, obj):
-		""" mask can be assigned to any object asynchronously """
-		self._baseObj = obj
-
-	def setMask(self, maskDict):
-		self._mask = maskDict
-
-
-	def result(self):
-		if self._productObj:
-			self.extractMask()
-		# update with shallow copy of base object
-		self._productObj = copy.copy(self._baseObj)
-		self.applyMask()
-		self.wrapProduct()
-		return self
-
-
-	def extractMask(self):
-		pass
-	def applyMask(self):
-		pass
-	def wrapProduct(self):
-		""" updates this proxy to point to a new object
-		references to this mask object will
-		always be valid """
-
-
-	def collapse(self):
-		""" flatten delta mask to entirely new object """
-		pass
-
-
-
-	# saving and loading
-	def serialise(self):
-		""" no reference to object """
-		return self._mask
-
-	@classmethod
-	def fromDict(cls, data):
-		deltaMask = cls()
-		deltaMask.setMask(data)
-
-
-class ListDelta(DeltaMask):
-	""" at some point maybe refit this to abstractTree as well"""
-	OBJ_CLASS = list
-
-	def absIndex(self, index):
-		""" converts negative list index to positive value """
-		if index < 0:
-			return len(self._obj) + index
-		return index
-	
-	def result(self):
-		length = max( max(self.map.keys()), len(self._obj))
-		newObj = list(self._obj) + [None] * ( length - len(self._obj) )
-		for k, v in self._mask.iteritems():
-			newObj[k] = v
-		return newObj
-
-
-
-class AbstractTreeDelta(DeltaMask):
-	""" if values are modified, use primitive type masks
-	if new branches are added, create new abstractTrees, not masks
-	trigger warning: code duplication """
-	OBJ_CLASS = AbstractTree
-
-	def __init__(self, obj=None):
-		super(AbstractTreeDelta, self).__init__(obj)
-		self._mask = {
-			"value" : None, # raw data or deltamask
-		}
-
-	def __call__(self, address):
-		""" wrapping base tree lookup"""
-
-	pass
-
-
-
-
-class DictDelta(DeltaMask):
-	OBJ_CLASS = dict
-
-	def transformed(self):
-		"""construct a new dict for return, don't try to
-		frankenstein the same bound object
-		all other dict methods are overridden anyway
-		:rtype dict"""
-
-		tfData = { k : v for k, v in self.obj.iteritems()}
-		for i in self.mask["removed"]:
-			tfData.pop(i)
-		for k, v in self.mask["added"].iteritems():
-			tfData[k] = v
-		for k, v in self.mask["modified"].iteritems():
-			tfData[k] = v
-		""" here addition and modification are the same - 
-		is that true everywhere? """
-		return tfData
-
-
-		pass
-
-	@property
-	def obj(self):
-		""":rtype dict"""
-		return super(DictDelta, self).obj or {}
-
-
-
-class OrderedDictDelta(DictDelta):
-	OBJ_CLASS = OrderedDict
-	pass
-
-
-DELTA_CLASSES = {
-	list : ListDelta,
-	dict : DictDelta,
-	AbstractTree : AbstractTreeDelta,
-	OrderedDict : OrderedDictDelta
-}
-
-
-"""test case let's go
-
-
-class Test(object):
-	
-	def __init__:
-		self.A = 5
-		self.B = "this is test"
-		
-newTest = Test()
-stack = DeltaStack.trackObject(newTest)
-
-- this will return a deltaStack with newTest as its base
-this will be a top-level wrapper around newTest - any modification 
-of stack's attributes will be a modification delta
-
-eg
-
-stack.C = "newAttr"
-is an object-level modification, comprised of an attribute-level addition
-
-does not add the attribute to stack. compares previous transformedState of stack -
-this is treated as a dict for sanity - see if it contains C.
-
-if it does, then object level is NOT MODIFIED - no object level delta is created
-attribute lookup ten returns an inner stack, which handles it further.
-
-if it doesn't, an addition delta is created at object level to add the attribute
-AS NEW STACK with base state None - 
-object level contains no knowledge of attribute's value
-
-for convenience, register attribute value as stack base state. don't think it
-matters, but helps for determining delta type etc
-
-new stack processes attribute value, creates child stacks if necessary
-(if need to tokenise string, etc)
-
-
-
-
-is it worth returning a new deltastack around this attribute, as it has
- no base state? would only allow for undo operations
- 
-stack.B = "this is new test"
-more interesting.
-
-compare the source state and the target state
-
-is it worth tracking from the top down like this? surely bottom up would
-make more sense
-
-
-
-
-
-accessing object must apply all relevant modifications
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
 

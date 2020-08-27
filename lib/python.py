@@ -493,13 +493,10 @@ class AbstractTree(object):
 		self.structureChanged()
 		return branch
 
-	def addDirectChild(self, branch):
-		""" only called when adding an inherited branch? """
 
 	def get(self, lookup, default=None):
 		"""same implementation as normal dict
 		addresses will recurse into child branches """
-		#return self._map.get(lookup, default)
 		if isinstance(lookup, basestring):
 			lookup = lookup.split(".")
 		name = lookup.pop(0)
@@ -668,6 +665,17 @@ class AbstractTree(object):
 	def __repr__(self):
 		return "<{} ({}) : {}>".format(self.__class__, self.name, self.value)
 
+	def __copy__(self):
+		""" create shallow copy of this tree -
+		new tree object, new internal map, same
+		tree objects in map """
+		tree = self.__class__(self.name, type(self.value)(self.value))
+		tree._map = OrderedDict(self._map)
+		return tree
+
+	def __deepcopy__(self):
+		return self.fromDict(self.serialise())
+
 
 	""" shaky support for 'array attribute' branch generation """
 	def makeChildBranch(self, name=None, *args, **kwargs):
@@ -755,7 +763,7 @@ class AbstractTree(object):
 		if not (val or name or children): # skip branch
 			print("regenDict {}".format(regenDict))
 			print("no name, val or children found")
-			pass
+			return None
 		new = cls(name=name, val=val)
 		new.extras = regenDict.get("?EXTRAS") or {}
 
@@ -1052,9 +1060,10 @@ testTree("parent.childB").value = True
 
 testTree["parent.testObj"] = saveObjectClass(testTree)
 
-#testTree["parent.listEntry"] = "[eyyy, test, 4.3, [4e4, i, 33], 2e-10]"
 # cannot do nested list inputs yet
-testTree["parent.listEntry"] = "[eyyy, test, 4.3, 2e-10]"
+testTree["parent.listEntry"] = "[eyyy, test, 4.3, '', 2e-10, False]"
+testTree["parent.nestedList"] = "[eyyy, test, 4.3, '', [4e4, i, 33, True], 2e-10]"
+
 
 if __name__ == '__main__':
 
