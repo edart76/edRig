@@ -1,6 +1,7 @@
 
 import copy
 from collections import OrderedDict
+import inspect
 
 
 from edRig.lib.python import AbstractTree, debug
@@ -17,9 +18,22 @@ while comparing to given base object
 """
 
 
-def isSimple(obj):
-	return isinstance(obj, (basestring, tuple, int, float, bool, None))
+class CallWrapper(object):
+	""" pseudo-decorator
+	for pre- and post-call wrapping of specific function """
+	def __init__(self, fn, *args, **kwargs):
+		self._fn = fn
 
+	def preCall(self, *args, **kwargs):
+		pass
+	def postCall(self, result, *args, **kwargs):
+		pass
+
+	def __call__(self, *args, **kwargs):
+		self.preCall(*args, **kwargs)
+		result = self._fn(*args, **kwargs)
+		self.postCall(result, *args, **kwargs)
+		return result
 
 
 class Proxy(object):
@@ -28,19 +42,32 @@ class Proxy(object):
 	further modifications from ya boi """
 	#__slots__ = ["_obj", "__weakref__"]
 	_class_proxy_cache = {} # { class : { class cache } }
-	_proxyAttrs = ("_proxyObj", )
-	_proxyObjKey = "_proxyObj" # attribute pointing to object
+	_proxyAttrs = ("_proxyObjRef", "_proxyObj")
+	_proxyObjKey = "_proxyObjRef" # attribute pointing to object
+	_methodHooks = {}
 
 	def __init__(self, obj):
-		object.__setattr__(self, self._proxyObjKey, obj)
+		#object.__setattr__(self, self._proxyObjKey, obj)
+		self._proxyObj = obj
+
+	@property
+	def _proxyObj(self):
+		return self._returnProxy()
+	@_proxyObj.setter
+	def _proxyObj(self, val):
+		object.__setattr__(self, self._proxyObjKey, val)
+
+	def _returnProxy(self):
+		""" hook for extending proxy behaviour
+		prefer overriding this over properties"""
+		return object.__getattribute__(self, self._proxyObjKey)
 
 	# proxying (special cases)
 	def __getattribute__(self, name):
 		try: # look up attribute on proxy class first
 			return object.__getattribute__(self, name)
 		except:
-			return getattr(object.__getattribute__(
-				self, self._proxyObjKey), name)
+			return getattr( self._proxyObj, name)
 
 	def __delattr__(self, name):
 		delattr(object.__getattribute__(self, self._proxyObjKey), name)
@@ -50,9 +77,11 @@ class Proxy(object):
 			object.__setattr__(self, name, value)
 		else:
 			setattr(object.__getattribute__(self, self._proxyObjKey), name, value)
+			setattr(self._proxyObj, name, value)
 
 	def __nonzero__(self):
 		return bool(object.__getattribute__(self, self._proxyObjKey))
+		return bool(self._proxyObj)
 
 	def __str__(self):
 		return str(object.__getattribute__(self, self._proxyObjKey))
@@ -81,14 +110,17 @@ class Proxy(object):
 	@classmethod
 	def _create_class_proxy(cls, theclass):
 		"""creates a proxy for the given class"""
+		# combine declared proxy attributes
+		cls._proxyAttrs = set(cls._proxyAttrs)
+		for base in cls.__mro__:
+			if base == object: break
+			cls._proxyAttrs.update(base._proxyAttrs)
 
 		def make_method(name):
 			def method(self, *args, **kw):
-				# insert live object lookup here
 				return getattr(
-					object.__getattribute__(self, cls._proxyObjKey),
+					self._proxyObj,
 					name)(*args, **kw)
-
 			return method
 
 		namespace = {}
@@ -103,8 +135,7 @@ class Proxy(object):
         creates a proxy instance referencing `obj`. (obj, *args, **kwargs) are
         passed to this class' __init__, so deriving classes can define an
         __init__ method of their own.
-        note: _class_proxy_cache is unique per deriving class (each deriving
-        class must hold its own cache)
+        base Proxy class holds master dict
         """
 		# looks up type-specific proxy class
 		cache = Proxy.__dict__["_class_proxy_cache"]
@@ -112,11 +143,9 @@ class Proxy(object):
 			genClass = cache[cls][type(obj)]
 		except KeyError:
 			genClass = cls._create_class_proxy(type(obj))
-			#cache[cls] = {obj.__class__ : theclass}
 			cache[cls] = { type(obj) : genClass }
 
-		# create new proxy instance with type-specific
-		# proxy class
+		# create new proxy instance with type-specific proxy class
 		ins = object.__new__(genClass)
 
 		# run init on created instance
@@ -124,29 +153,35 @@ class Proxy(object):
 		return ins
 
 
-
 class Delta(Proxy):
 	""" delta-tracking wrapper
 	also adapted from 496741 """
 
-	_proxyAttrs = ("_baseObj", "_proxyObj", "_mask")
+	_proxyAttrs = (#"_proxyObjRef", "_proxyObj",
+	               "_baseObj", "_mask")
 
 	def __init__(self, obj):
 		self._baseObj = obj # reference to base object to draw from
 		self._proxyObj = copy.copy(obj)
-		self._mask = { "added" : {}, "modified" : {} }
-		self.extractMask()
+		self._mask = { "added" : {}, "modified" : {}, "removed" : {} }
+		self.extractMask(self._baseObj, self._proxyObjRef)
 
-	def extractMask(self):
+	def _returnProxy(self):
+		""" runs mask operation every time proxy is accessed
+		never said this would be fast """
+		return super(Delta, self)._returnProxy()
+
+
+	def extractMask(self, baseObj=None, deltaObj=None):
 		""" compares proxy object to base, collates delta to mask """
-	def applyMask(self):
+	def applyMask(self, newObj=None):
 		""" applies delta mask to product object """
 
 	def product(self):
-		self.extractMask()
-		self._proxyObj = copy.copy(self._baseObj)
-		self.applyMask()
-		return self
+		self.extractMask(self._baseObj, self._proxyObjRef)
+		newObj = copy.copy(self._baseObj)
+		self.applyMask(newObj)
+		return newObj
 
 	def serialise(self):
 		pass
@@ -158,7 +193,7 @@ class Delta(Proxy):
 
 
 class DictDelta(Delta):
-	def extractMask(self):
+	def extractMask(self, proxyObj=None):
 		self._mask["added"] = {
 			pK : pV for pK, pV in self._proxyObj.iteritems() if \
 				pK not in self._baseObj }
@@ -167,7 +202,7 @@ class DictDelta(Delta):
 				self._baseObj.get(pK) != pV }
 		# added and modified functionally the same here
 
-	def applyMask(self):
+	def applyMask(self, newObj=None):
 		self._proxyObj.update(self._mask["added"])
 		self._proxyObj.update(self._mask["modified"])
 
@@ -177,7 +212,7 @@ class ListDelta(Delta):
 		self._mask["added"] = {
 			self._proxyObj.index(i) : i for i in self._proxyObj \
 				if not i in self._baseObj }
-	def applyMask(self):
+	def applyMask(self, newObj=None):
 		for index, val in self._mask["added"]:
 			try:
 				self._proxyObj.insert(index, val)
@@ -185,28 +220,46 @@ class ListDelta(Delta):
 				self._proxyObj.append(val)
 
 class TreeDelta(Delta):
-	""" final boss
-	deep trees even more difficult, as copying doesn't work
-	need to keep consistent objects throughout operations"""
-	def extractMask(self):
+	""" final boss """
+
+	def __init__(self, obj):
+		""" a mask initialised on a tree then create
+		masks all the way down? probably
+		"""
+		super(TreeDelta, self).__init__(obj)
+		for branch in obj.branches:
+			""" vulnerable to name changing, need proper hashing for
+			branch objects """
+			self._mask["modified"][branch.name] = branch
+
+
+	def extractMask(self, baseObj=None, deltaObj=None):
+		""" avoid looking up instance attributes here
+		this should probably be static """
 		# added trees are easiest, no child deltas needed
 		self._mask["added"] = {
-			branch.index : branch for branch in self._baseObj.branches \
-				if not branch.name in self._baseObj._map
+			branch.index : branch for branch in baseObj.branches \
+				if not branch.name in baseObj._map
 		} # need better index integration
-		self._mask["modified"] = { # modified branches get new masks?
+		# store indices separately? idk
+		self._mask["modified"] = { # modified is list of child masks
 		}
+		""" modifications have no hierarchy in deltamask,
+		mask should only track value and added and removed branches
+		otherwise lookup tree objects and create new delta objects?
+		but then how the hell do you serialise and deserialise """
 
-		if self._proxyObj.value != self._baseObj.value:
-			self._mask["value"] = self._proxyObj.value
+
+		if deltaObj.value != baseObj.value:
+			self._mask["value"] = deltaObj.value
 		else: self._mask["value"] = None
 
 
-	def applyMask(self):
+	def applyMask(self, newObj=None):
 		for index, branch in self._mask["added"]:
-			self._proxyObj
+			newObj.addChild(branch, index)
 		if self._mask.get("value") is not None:
-			self._proxyObj.value = self._mask["value"]
+			newObj.value = self._mask["value"]
 
 	def serialise(self):
 		data = {
@@ -260,6 +313,10 @@ if __name__ == '__main__':
 	debug(testTree)
 	proxyTree = TreeDelta(testTree)
 
+	proxyTree["proxyKey"] = "w e w _ l a d"
+
+	print(proxyTree.display())
+
 
 
 	baseDict = {"baseKey" : 69,
@@ -268,21 +325,21 @@ if __name__ == '__main__':
 
 	replaceDict = {"replacedDict" : 3e4}
 
-	testDict = Proxy(baseDict)
-	testDict["proxyTest"] = True
-	debug(testDict)
-	testDict._proxyObj = replaceDict
-	debug(testDict)
-
-	proxyDict = Delta(baseDict)
-	debug(proxyDict)
-
-	baseDict["newBaseKey"] = 49494
-	debug(proxyDict)
-
-	proxyDict["newProxyKey"] = "FAJLS"
-	print("baseDict is {}".format(baseDict))
-	debug(proxyDict)
+	# testDict = Proxy(baseDict)
+	# testDict["proxyTest"] = True
+	# debug(testDict)
+	# testDict._proxyObj = replaceDict
+	# debug(testDict)
+	#
+	# proxyDict = Delta(baseDict)
+	# debug(proxyDict)
+	#
+	# baseDict["newBaseKey"] = 49494
+	# debug(proxyDict)
+	#
+	# proxyDict["newProxyKey"] = "FAJLS"
+	# print("baseDict is {}".format(baseDict))
+	# debug(proxyDict)
 
 
 

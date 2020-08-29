@@ -669,7 +669,9 @@ class AbstractTree(object):
 		""" create shallow copy of this tree -
 		new tree object, new internal map, same
 		tree objects in map """
-		tree = self.__class__(self.name, type(self.value)(self.value))
+		tree = self.__class__(self.name)
+		if self.value is not None:
+			tree.value = type(self.value)(self.value)
 		tree._map = OrderedDict(self._map)
 		return tree
 
