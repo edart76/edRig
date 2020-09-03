@@ -87,10 +87,6 @@ function int[] allhedgeequivalents( int geo; int hedge ){
 function int[] primhalfedges( int geo; int prim ){
     // return all halfedges in primitive
     int edges[];
-    // int vertices[] = primvertices( geo, prim );
-    // foreach( int v; vertices ){
-    //     append( edges, vertexhedge( geo, v) );
-    // }
     int current = primhedge( geo, prim );
     int start = current;
     do{
@@ -105,7 +101,6 @@ function int[] primhalfedgesexcept( int geo; int prim; int except){
     // returns all primitive half edges except hedge specified
     // ALSO REMOVE ALL HEDGES EQUIVALENT TO EXCEPT
     int edges[] = primhalfedges( geo, prim );
-    //edges = subtract( edges, allhedgeequivalents( geo, except));
     foreach( int remove; allhedgeequivalents( geo, except )){
         removevalue( edges, remove);
     }
@@ -191,7 +186,6 @@ function int[] nexthedgesinloop(int geo; int starthedge){
 function int[] edgeloop( int geo; int seedhedge ){
     // builds edge loop from a seed halfedge
     int outhedges[];
-    //int activehedges[];
     int activehedges[] = array( seedhedge );
     do{
         int foundhedges[];
@@ -256,12 +250,49 @@ function int maprowscolumns( int geo; int corner; int columndir ){
 }
 
 
-
 function vector halfedgemidpoint( int geo; int hedge ){
     vector startPos = point( geo, "P", hedge_srcpoint( geo, hedge ) );
     vector endPos = point( geo, "P", hedge_dstpoint( geo, hedge ) );
     return (endPos + startPos) / 2.0 ;
 };
+
+
+
+function int mapTopoSymmetry(int geo; int hedge){
+    // given a seed half edge, crawl mesh on both sides -
+    // add @twin attribute for opposite point number
+    int foundpoints[];
+    int foundhedges[];
+    int foundprims[];
+
+    int seedprim = hedge_prim(geo, hedge);
+
+    int seedHedges[] = edgeloop(geo, hedge);
+
+    do {
+        foreach(int edge; seedHedges){
+
+        }
+
+        break;
+    } while(1);
+
+}
+
+/* next edge is INTERSECTION of connected point edges and primitive edges,
+SUBTRACT previous edge(s)
+*/
+
+
+/*
+ERROR: Couldn't open resource file "resources" (No such file or directory)
+Can't load the default font specification.
+resources.std is either missing or specifies
+an unknown font for the DefaultFont.
+*/
+
+
+
 
 #define _ED_POLY_H
 #endif
