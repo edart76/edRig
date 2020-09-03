@@ -48,14 +48,14 @@ class Proxy(object):
 
 	def __init__(self, obj):
 		#object.__setattr__(self, self._proxyObjKey, obj)
-		self._proxyObj = obj
+		self._proxyObjRef = obj
 
 	@property
 	def _proxyObj(self):
 		return self._returnProxy()
-	@_proxyObj.setter
-	def _proxyObj(self, val):
-		object.__setattr__(self, self._proxyObjKey, val)
+	# @_proxyObj.setter
+	# def _proxyObj(self, val):
+	# 	object.__setattr__(self, self._proxyObjKey, val)
 
 	def _returnProxy(self):
 		""" hook for extending proxy behaviour
@@ -67,7 +67,8 @@ class Proxy(object):
 		try: # look up attribute on proxy class first
 			return object.__getattribute__(self, name)
 		except:
-			return getattr( self._proxyObj, name)
+			#return getattr( self._proxyObj, name)
+			return getattr( object.__getattribute__(self, "_proxyObj"), name)
 
 	def __delattr__(self, name):
 		delattr(object.__getattribute__(self, self._proxyObjKey), name)
@@ -76,18 +77,20 @@ class Proxy(object):
 		if name in self.__class__._proxyAttrs:
 			object.__setattr__(self, name, value)
 		else:
-			setattr(object.__getattribute__(self, self._proxyObjKey), name, value)
+			#setattr(object.__getattribute__(self, self._proxyObjKey), name, value)
 			setattr(self._proxyObj, name, value)
 
 	def __nonzero__(self):
-		return bool(object.__getattribute__(self, self._proxyObjKey))
+		#return bool(object.__getattribute__(self, self._proxyObjKey))
 		return bool(self._proxyObj)
 
 	def __str__(self):
-		return str(object.__getattribute__(self, self._proxyObjKey))
+		#return str(object.__getattribute__(self, self._proxyObjKey))
+		return str(self._proxyObj)
 
 	def __repr__(self):
-		return repr(object.__getattribute__(self, self._proxyObjKey))
+		#return repr(object.__getattribute__(self, self._proxyObjKey))
+		return repr(self._proxyObj)
 
 	# factories
 	_special_names = [
@@ -162,25 +165,28 @@ class Delta(Proxy):
 
 	def __init__(self, obj):
 		self._baseObj = obj # reference to base object to draw from
-		self._proxyObj = copy.copy(obj)
+		self._proxyObjRef = copy.copy(obj)
 		self._mask = { "added" : {}, "modified" : {}, "removed" : {} }
-		self.extractMask(self._baseObj, self._proxyObjRef)
+		self._extractMask(self._baseObj, self._proxyObjRef)
 
 	def _returnProxy(self):
 		""" runs mask operation every time proxy is accessed
 		never said this would be fast """
-		return super(Delta, self)._returnProxy()
+		#return super(Delta, self)._returnProxy()
+		return self.product()
 
 
-	def extractMask(self, baseObj=None, deltaObj=None):
+	def _extractMask(self, baseObj=None, deltaObj=None):
 		""" compares proxy object to base, collates delta to mask """
 	def applyMask(self, newObj=None):
 		""" applies delta mask to product object """
 
 	def product(self):
-		self.extractMask(self._baseObj, self._proxyObjRef)
+		self._extractMask(self._baseObj, self._proxyObjRef)
+		#debug(self._mask)
 		newObj = copy.copy(self._baseObj)
 		self.applyMask(newObj)
+		self._proxyObjRef = newObj
 		return newObj
 
 	def serialise(self):
@@ -193,7 +199,7 @@ class Delta(Proxy):
 
 
 class DictDelta(Delta):
-	def extractMask(self, proxyObj=None):
+	def _extractMask(self, proxyObj=None):
 		self._mask["added"] = {
 			pK : pV for pK, pV in self._proxyObj.iteritems() if \
 				pK not in self._baseObj }
@@ -208,7 +214,7 @@ class DictDelta(Delta):
 
 class ListDelta(Delta):
 	""" basic, indices not working """
-	def extractMask(self):
+	def _extractMask(self):
 		self._mask["added"] = {
 			self._proxyObj.index(i) : i for i in self._proxyObj \
 				if not i in self._baseObj }
@@ -233,12 +239,14 @@ class TreeDelta(Delta):
 			self._mask["modified"][branch.name] = branch
 
 
-	def extractMask(self, baseObj=None, deltaObj=None):
+	def _extractMask(self, baseObj=None, deltaObj=None):
 		""" avoid looking up instance attributes here
 		this should probably be static """
 		# added trees are easiest, no child deltas needed
+		# for branch in baseObj.branches:
+		# 	if
 		self._mask["added"] = {
-			branch.index : branch for branch in baseObj.branches \
+			branch.index() : branch for branch in deltaObj.branches \
 				if not branch.name in baseObj._map
 		} # need better index integration
 		# store indices separately? idk
@@ -256,7 +264,7 @@ class TreeDelta(Delta):
 
 
 	def applyMask(self, newObj=None):
-		for index, branch in self._mask["added"]:
+		for index, branch in self._mask["added"].iteritems():
 			newObj.addChild(branch, index)
 		if self._mask.get("value") is not None:
 			newObj.value = self._mask["value"]
@@ -272,7 +280,7 @@ class TreeDelta(Delta):
 	@classmethod
 	def deserialise(cls, data, baseObj):
 		""" setting redundant values on proxy is fine as
-		extractMask() will remove them anyway """
+		_extractMask() will remove them anyway """
 		proxy = cls(baseObj)
 		for index, branchData in data["added"]:
 			branch = AbstractTree.fromDict(branchData)
@@ -299,11 +307,11 @@ testTree("asdf").value = "firstKey"
 testTree("parent").value = "nonas"
 testTree("parent.childA").value = 930
 testTree("parent.childA").extras["options"] = (930, "eyyy")
-testTree("parent.childB").value = True
+#testTree("parent.childB").value = True
 
 # cannot do nested list inputs yet
-testTree["parent.listEntry"] = "[eyyy, test, 4.3, '', 2e-10, False]"
-testTree["parent.nestedList"] = "[eyyy, test, 4.3, '', [4e4, i, 33, True], 2e-10]"
+#testTree["parent.listEntry"] = "[eyyy, test, 4.3, '', 2e-10, False]"
+#testTree["parent.nestedList"] = "[eyyy, test, 4.3, '', [4e4, i, 33, True], 2e-10]"
 
 
 
@@ -314,16 +322,24 @@ if __name__ == '__main__':
 	proxyTree = TreeDelta(testTree)
 
 	proxyTree["proxyKey"] = "w e w _ l a d"
+	proxyTree["parent"] = 12323422
+	proxyTree.value = 4956565
 
 	print(proxyTree.display())
 
+	proxyTree["proxyKey.proxyChild"] = "jojojo"
+
+	print(proxyTree.display())
+	print(testTree.display())
+	debug(proxyTree._mask)
 
 
-	baseDict = {"baseKey" : 69,
-	            "baseKeyB" : "eyy"}
-	debug(baseDict)
 
-	replaceDict = {"replacedDict" : 3e4}
+	# baseDict = {"baseKey" : 69,
+	#             "baseKeyB" : "eyy"}
+	# debug(baseDict)
+	#
+	# replaceDict = {"replacedDict" : 3e4}
 
 	# testDict = Proxy(baseDict)
 	# testDict["proxyTest"] = True
