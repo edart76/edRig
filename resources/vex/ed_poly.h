@@ -63,6 +63,13 @@ function int[] hedgepoints( int geo; int hedge ){
     return out;
 }
 
+function int hedgepointopposite( int geo; int hedge; int pt ){
+    // return the opposite point in hedge
+    int pts[] = hedgepoints(geo, hedge);
+    removevalue(pts, pt);
+    return pts[0];
+}
+
 // WARN
 function int[] halfedgeequivalents( int geo; int hedge ){
     // returns the other half edges belonging to same main edge
@@ -260,93 +267,107 @@ function vector halfedgemidpoint( int geo; int hedge ){
 };
 
 
-//
-// function int crawlMesh(int geo; int hedge; int iterations;
-//         int foundpoints[]; int foundprims[]){
-//     // given a seed half edge, crawl mesh on both sides -
-//     // add @twin attribute for opposite point number
-//     int foundpoints[];
-//     //int foundhedges[];
-//     int foundprims[];
-//
-//     // go over one side and just append points - if
-//     // topo is correct, then sequence alone will be enough,
-//     // consistent on both sides
-//
-//     foundpoints = hedgepoints(geo, hedge);
-//     int seedpoint = foundpoints[0];
-//
-//     int activehedge;
-//     int testhedge;
-//     int activeprim;
-//     int sourcepoint;
-//     int destpoint;
-//     int nextpoints[];
-//     int primdead = 0;
-//     activehedge = hedge;
-//     sourcepoint = seedpoint;
-//     activeprim = hedge_prim(geo, activehedge);
-//
-//     /* begin iteration
-//     this should be run breadth first across whole centre loop
-//     */
-//     for( int i = 0; i < iterations; i++)
-//     {
-//
-//         // activeprim = hedge_prim(geo, activehedge);
-//         nextpoints = subtract(
-//             intersect(primpoints(geo, activeprim),
-//                     neighbours(sourcepoint) ),
-//             foundpoints);
-//             // should only ever be 1 entry
-//
-//
-//         if( len(nextpoints) < 1){
-//             // next point in primitive has been reached
-//             // mark primitive as complete
-//             append(foundprims, activeprim);
-//             // walk backwards around prim until hedge
-//             // borders a prim not found
-//             testhedge = hedge_next(activehedge);
-//             ////
-//             while ( (hedge_prim(testhedge) == activeprim) && (testhedge != activehedge) ) // stop if prim changes or hedge doesn't
-//             {
-//                 if( hedgeisunshared(testhedge)){
-//                     // border edge, nothing to do
-//                     testhedge = hedge_next(testhedge);
-//                     continue;            }
-//
-//                 // is adjacent prim already found?
-//                 if( index(foundprims,
-//                     hedge_prim(
-//                         hedge_nextequiv(testhedge))) < 0){
-//                             activehedge = hedge_nextequiv(testhedge);
-//                             activeprim = hedge_prim(activehedge);
-//                             break;
-//                         }
-//                 else{
-//                     testhedge = hedge_next(testhedge);
-//                 }
-//             }
-//             if (testhedge == activehedge){
-//                 // entirely surrounded by found prims
-//                 primdead = 1;
-//                 break;
-//             }
-//
-//         }
-//         else{ // continue iteration
-//             append(foundpoints, nextpoints[0]);
-//             destpoint = nextpoints[0];
-//             // active hedge is isec of prim hedges and point hedges
-//             activehedge = intersect(
-//                 primhalfedges(geo, activeprim),
-//                 halfedgeequivalents(geo,
-//                     pointhedge(geo, sourcepoint, destpoint))
-//                 )[0]; //guaranteed
-//         }
-//     }
-// }
+
+function int[] crawlMesh(int geo; int iterations;
+     int activehedge; int activepoint;// int activeprim;
+        int foundpoints[]; int foundprims[]){
+
+    // go over one side and just append points - if
+    // topo is correct, then sequence alone will be enough,
+    // consistent on both sides
+
+    // pass out active indices as well, as this function
+    // needs to be pretty atomic
+
+
+    //foundpoints = hedgepoints(geo, activehedge);
+    //int seedpoint = hedgepoints(geo, activehedge)[0];
+
+    int result[];
+    resize(result, 6);
+
+    //int activehedge;
+    int testhedge;
+    int activeprim;
+    int sourcepoint;
+    int destpoint;
+    int nextpoints[];
+    int primdead = 0;
+    //activehedge = hedge;
+    sourcepoint = activepoint;
+    activeprim = hedge_prim(geo, activehedge);
+
+    /* begin iteration
+    this should be run breadth first across whole centre loop
+    */
+    for( int i = 0; i < iterations; i++)
+    {
+
+        // activeprim = hedge_prim(geo, activehedge);
+        nextpoints = subtract(
+            intersect(primpoints(geo, activeprim),
+                    neighbours(geo, sourcepoint) ),
+            foundpoints);
+            // should only ever be 1 entry
+
+
+        if( len(nextpoints) < 1){ // works
+            // next point in primitive has been reached
+            // mark primitive as complete
+            append(foundprims, activeprim);
+            // walk backwards around prim until hedge
+            // borders a prim not found
+            testhedge = hedge_next(geo, activehedge);
+            //testhedge = activehedge;
+            ////
+            while ( (hedge_prim(geo, testhedge) == activeprim) && (testhedge != activehedge) ) // stop if prim changes or hedge doesn't
+            {
+                if( hedgeisunshared(geo, testhedge)){
+                    printf("hedge is unshared\n" );
+                    // border edge, nothing to do
+                    testhedge = hedge_next(geo, testhedge);
+                    continue;            }
+
+                // is adjacent prim already found?
+                if( index(foundprims,
+                    hedge_prim(geo, hedge_nextequiv(geo, testhedge))) < 0){
+                        //printf("new prim found\n" );
+                        //printf("current hedge %i\n", activehedge);
+                        activehedge = hedge_nextequiv(geo, testhedge);
+                        //printf("new hedge %i\n", activehedge);
+                        activeprim = hedge_prim(geo, activehedge);
+                        activepoint = hedgepointopposite(geo, activehedge, activepoint);
+                        break;
+                        }
+                else{
+                    testhedge = hedge_next(geo, testhedge);
+                }
+            }
+            if (testhedge == activehedge){
+                // entirely surrounded by found prims
+                primdead = 1;
+                break;
+            }
+
+        }
+        else{ // continue iteration
+
+            append(foundpoints, nextpoints[0]);
+            destpoint = nextpoints[0];
+            // active hedge is isec of prim hedges and point hedges
+            activehedge = intersect(
+                primhalfedges(geo, activeprim),
+                halfedgeequivalents(geo,
+                    pointhedge(geo, sourcepoint, destpoint))
+                )[0]; //guaranteed
+            activepoint = destpoint;
+        }
+    }
+    result[0] = activehedge;
+    result[1] = activepoint;
+    result[2] = primdead;
+    return result;
+}
 
 /* next edge is INTERSECTION of connected point edges and primitive edges,
 SUBTRACT previous edge(s)
