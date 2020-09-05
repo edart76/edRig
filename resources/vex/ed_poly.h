@@ -126,6 +126,12 @@ function int[] hedgeprims( int geo; int hedge ){
     return out;
 }
 
+function int primpointshedge( int geo; int prim; int pointa, pointb){
+    // return half edge on prim between given points
+    return intersect(primhalfedges(geo, prim), allhedgeequivalents(
+        geo, pointedge(geo, pointa, pointb)))[0];
+}
+
 // time for a diagram
 
 /*
@@ -374,12 +380,40 @@ SUBTRACT previous edge(s)
 */
 
 
-/*
-ERROR: Couldn't open resource file "resources" (No such file or directory)
-Can't load the default font specification.
-resources.std is either missing or specifies
-an unknown font for the DefaultFont.
-*/
+function int[] crawlmesh2(int geo;
+     int activehedge; int activepoint; int ptidx;
+        int foundpoints[]; int foundprims[]){
+
+    int newedges[]; // edges for next iteration
+    int currentprim = hedge_prim(geo, activehedge);
+
+    // check if prim is found
+    if( find(foundprims, currentprim) > -1){
+        return newedges;
+    }
+    append(foundprims, currentprim);
+    setprimattrib(geo, "found", currentprim, 1);
+
+    // cycle around prim hedges and add adjacents to return
+    for (int i = 0; i < len(primpoints(geo, currentprim)); i++) {
+        // really not sure about this
+        append(foundpoints, activepoint);
+        setpointattrib(geo, "twin", activepoint, ptidx++);
+        int newpt = subtract(
+            intersect(neighbours(geo, activepoint), primpoints(geo, currentprim)),
+            hedgepoints(geo, activehedge))[0];
+        activehedge = primpointshedge(geo, currentprim, activepoint, newpt);
+        int spechedge = hedge_nextequiv(geo, activehedge);
+        if( find(foundprims, hedge_prim(geo, spechedge)) < 0 )
+        {
+            append(newedges, spechedge);
+        }
+        setpointgroup(geo, "found", newpt, 1);
+        activepoint = newpt;
+    }
+    return newedges;
+
+}
 
 
 
