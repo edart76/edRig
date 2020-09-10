@@ -44,7 +44,25 @@ try:
 	from edRig.node import AbsoluteNode, ECA
 	from edRig.attr import con
 	hostDict["maya"] = True
-	pass
+
+	from functools import wraps
+	# patch maya cmds "list-" functions to return lists no matter what
+	listFunctions = ["ls", "listRelatives"]
+
+	def returnList(fn):
+		@wraps(fn)
+		def _innerFn(*args, **kwargs):
+			result = fn(*args, **kwargs)
+			if result is None:
+				return []
+			return result
+		return _innerFn
+
+	for fnName in listFunctions:
+		fn = getattr(cmds, fnName)
+		setattr(cmds, fnName, returnList(fn))
+
+
 except :
 	pass
 
