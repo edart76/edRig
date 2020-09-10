@@ -8,6 +8,7 @@ import maya.OpenMayaUI as omui
 import shiboken2, weakref
 import maya.cmds as cmds
 from shiboken2 import wrapInstance
+import itertools
 import pprint
 
 expandingPolicy = QtWidgets.QSizePolicy(
@@ -150,14 +151,12 @@ class KeyState(object):
 		""" wrapper for consistent references to bool value """
 		def __init__(self, val):
 			self._val = val
-		def __repr__(self):
-			return self._val
 		def __call__(self, *args, **kwargs):
 			self._val = args[0]
 		def __str__(self):
 			return str(self._val)
 		def __nonzero__(self):
-			return self._val
+			return self._val.__nonzero__()
 
 
 	def __init__(self):
@@ -172,15 +171,16 @@ class KeyState(object):
 			self.LMB : QtCore.Qt.LeftButton,
 			self.RMB : QtCore.Qt.RightButton,
 			self.MMB : QtCore.Qt.MiddleButton }
+
 		self.keyMap = {
-			self.alt : QtCore.Qt.AltModifier,
-			self.ctrl : QtCore.Qt.ControlModifier,
-			self.shift : QtCore.Qt.ShiftModifier}
+			self.alt: QtCore.Qt.AltModifier,
+			self.ctrl: QtCore.Qt.ShiftModifier, ### w h y ###
+			self.shift: QtCore.Qt.ControlModifier} ### w h y ###
+		# shift and ctrl are swapped for me I kid you not
 
 	def mousePressed(self, event):
 		for button, v in self.mouseMap.iteritems():
-			if event.button() == v:
-				button(True)
+			button( event.button() == v)
 		self.syncModifiers(event)
 
 	def mouseReleased(self, event):
@@ -189,9 +189,36 @@ class KeyState(object):
 				button(False)
 		self.syncModifiers(event)
 
+	def keyPressed(self, event):
+		self.syncModifiers(event)
+
 	def syncModifiers(self, event):
+		""" test each individual permutation of keys
+		against event
+		this is ridiculous """
+		# keys = self.keyMap.keys()
+		# for sequence in itertools.combinations_with_replacement(
+		# 		keys, len(keys)):
+		# 	val = self.keyMap[sequence[0]]
+		# 	for key in sequence[1:]: # same values should collapse to single
+		# 		val = val | self.keyMap[key]
+		# 	if event.modifiers() == val:
+		# 		for key in sequence:
+		# 			key(True)
+		# 		return
+		# 	for key in sequence:
+		# 		key(False)
+
 		for key, v in self.keyMap.iteritems():
-			key(event.modifiers() == v)
+			key((event.modifiers() == v)) # not iterable
+		if event.modifiers() == (QtCore.Qt.ShiftModifier | QtCore.Qt.ControlModifier):
+			self.ctrl(True)
+			self.shift(True)
+
+
+	def debug(self):
+		print(self.mouseMap)
+		print(self.keyMap)
 
 
 class ConfirmDialogue(QtWidgets.QMessageBox):

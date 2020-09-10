@@ -118,9 +118,14 @@ class TilePileUI(QtWidgets.QMainWindow):
 		self.graphView.onAssetChanged(assetInfos)
 		self.status.updateCurrentAsset(assetInfos[0])
 
-	# def keyPressEvent(self, event):
-	# 	print "event is {}".format(event)
-	# 	super(TilePileUI, self).keyPressEvent(event)
+	def keyPressEvent(self, event):
+		print "main keyPress  {}".format(event.key())
+		# this stops events passing back to maya ui
+		#super(TilePileUI, self).keyPressEvent(event)
+
+	def mousePressEvent(self, event):
+		print "main mousePress"
+		super(TilePileUI, self).mousePressEvent(event)
 
 	# def focusInEvent(self, event):
 	# 	print "main focusIn is {}".format(event.reason())

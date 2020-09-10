@@ -15,6 +15,11 @@ from edRig import pipeline, ROOT_PATH
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
 
+"""
+view receives events first
+"""
+
+
 class AbstractView(QtWidgets.QGraphicsView):
 	"""simple class to view an abstractGraph's contents"""
 
@@ -192,10 +197,11 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 
 	def mousePressEvent(self, event):
+		print ("view mousePress event")
 		super(AbstractView, self).mousePressEvent(event)
 
 		self.keyState.mousePressed(event)
-		print ("view mousePress event")
+
 		# called BEFORE scene event
 		alt_modifier = self.keyState.alt
 		shift_modifier = self.keyState.shift

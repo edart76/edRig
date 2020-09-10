@@ -300,25 +300,6 @@ class StringLike(str): # best I can do for now
 	def __hash__(self):
 		return str.__hash__(self.value)
 
-#StringLike.register(str)
-
-# if __name__ == '__main__':
-#
-# 	print(StringLike)
-# 	#print type(StringLike)
-#
-# 	#assert issubclass(str, StringLike)
-# 	test = StringLike("test")
-# 	assert isinstance("this is a string", str)
-# 	assert isinstance(test, str)
-# 	print("jhgf" + test)
-# 	#print(True)
-# 	print(test.value)
-# 	print(test)
-# 	test.value = "eyyy"
-# 	print(test)
-# 	print(test + "ei")
-
 
 class Signal(object):
 	def __init__(self):
@@ -334,6 +315,10 @@ class Signal(object):
 		for obj, funcs in self._methods.items():
 			for func in funcs:
 				func(obj, *args, **kargs)
+
+	def emit(self, *args, **kwargs):
+		""" brings this object up to parity with qt """
+		self(*args, **kwargs)
 
 	def connect(self, slot):
 		if inspect.ismethod(slot):
@@ -569,7 +554,6 @@ class AbstractTree(object):
 
 		if onlyChildren, only searches through children -
 		else checks through all branches
-
 		"""
 
 		found = []
@@ -687,13 +671,17 @@ class AbstractTree(object):
 		return newBranch
 
 	def matchBranchesToSequence(self, sequence,
-								create=True, destroy=True):
+								create=True, destroy=True,
+	                            createFn=None, destroyFn=None, insertFn=None
+	                            ):
 		"""reorders, adds or deletes branches as necessary
 		for the current tree's branches to match the target
-		create and destroy govern whether new branches will be
-		created or destroyed
-		created branches are simple branches
-		:type sequence list"""
+		:type sequence list
+		:param create: should new branches be created
+		:param destroy: should old excess branches be destroyed
+		:param createFn: function executed on created branches
+		:param destroyFn: function executed on destroyed branches
+		:param insertFn: function executed on each branch inserted into map"""
 		newMap = OrderedDict()
 		for i in sequence:
 			if i in self.keys():

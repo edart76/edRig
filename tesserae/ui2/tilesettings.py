@@ -11,7 +11,7 @@ allowing for more granular control"""
 
 from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.lib.python import Signal, AbstractTree
-from edRig.tesserae.ui2.lib import ContextMenu, expandingPolicy, getMayaMainWindow, BaseMayaUi
+from edRig.tesserae.ui2.lib import ContextMenu, expandingPolicy, getMayaMainWindow, BaseMayaUi, KeyState
 from edRig.structures import ActionItem
 
 # t i m e _ t o _ h a c k
@@ -89,6 +89,8 @@ class TileSettings(QtWidgets.QTreeView):
 		# self.customContextMenuRequested.connect(self.onContextPoint)
 		self.sizeChanged = Signal()
 
+		self.keyState = KeyState()
+
 
 		self.highlights = {} # dict of tree addresses to highlight
 		self.tree = None
@@ -133,6 +135,10 @@ class TileSettings(QtWidgets.QTreeView):
 
 		self.expandAll()
 
+		self.clicked.connect(self.onClicked)
+		self.activated.connect(self.onClicked)
+		self.pressed.connect(self.onClicked)
+
 
 
 	def data(self, index, role=QtCore.Qt.DisplayRole):
@@ -165,18 +171,23 @@ class TileSettings(QtWidgets.QTreeView):
 		pass
 
 
-	# def mousePressEvent(self, event):
-	# 	try:
-	# 		self.saveAppearance()
-	# 	finally:
-	# 		try:
-	# 			result = super(TileSettings, self).mousePressEvent(event)
-	# 			self.restoreAppearance()
-	# 			return result
-	# 		except:
-	# 			return super(TileSettings, self).mousePressEvent(event)
-	#
+	def mousePressEvent(self, event):
+		print("tileSettings mouse event")
+		self.keyState.mousePressed(event)
+		print("shift {}, ctrl {}".format(self.keyState.shift, self.keyState.ctrl))
 
+		# only pass event on editing,
+		# need to manage selection separately
+		if not (self.keyState.ctrl or self.keyState.shift):
+			print("settings pass mouse event")
+			super(TileSettings, self).mousePressEvent(event)
+
+
+	def onClicked(self, index):
+		""" manage selection manually """
+		print("settings clicked {}".format(index))
+		if not (self.keyState.ctrl or self.keyState.shift):
+			return
 
 	def setTree(self, tree):
 		"""associates widget with AbstractTree object"""
@@ -353,6 +364,8 @@ class TileSettings(QtWidgets.QTreeView):
 				branch = self.modelObject.treeFromRow(i)
 				if branch:
 					self.savedExpandedTrees.append(branch)
+		# save viewport scroll position
+		self.scrollPos = self.verticalScrollBar().value()
 
 
 	def restoreAppearance(self):
@@ -378,6 +391,8 @@ class TileSettings(QtWidgets.QTreeView):
 		self.expandAll()
 		self.resizeToTree()
 
+		self.verticalScrollBar().setValue(self.scrollPos)
+
 
 
 	def keyPressEvent(self, event):
@@ -402,7 +417,8 @@ class TileSettings(QtWidgets.QTreeView):
 
 		"""
 
-		print("settings mousePress event")
+		print("settings keyPress event {}".format(event.key()))
+		self.keyState.keyPressed(event)
 
 		sel = self.selectionModel().selectedRows()
 
@@ -416,7 +432,8 @@ class TileSettings(QtWidgets.QTreeView):
 			# very important that event methods don't error,
 			# messes up whole maya ui if they do
 
-			if event.modifiers() == QtCore.Qt.ControlModifier:
+			#if event.modifiers() == QtCore.Qt.ControlModifier:
+			if self.keyState.ctrl:
 				if event.key() == QtCore.Qt.Key_D: # duplicate
 					for row in sel:
 						self.modelObject.duplicateRow(row)
@@ -427,14 +444,14 @@ class TileSettings(QtWidgets.QTreeView):
 						return True
 
 			# shifting row up or down
-			if event.modifiers() == QtCore.Qt.ShiftModifier | QtCore.Qt.ControlModifier:
+			#if event.modifiers() == QtCore.Qt.ShiftModifier | QtCore.Qt.ControlModifier:
+			if self.keyState.shift and self.keyState.ctrl:
 				if event.key() in [QtCore.Qt.Key_Up, QtCore.Qt.Key_Left]:
 					for row in sel:
 						self.modelObject.shiftRow(row, up=True)
 				elif event.key() in [QtCore.Qt.Key_Down, QtCore.Qt.Key_Right]:
 					for row in sel:
 						self.modelObject.shiftRow(row, up=False)
-				#self.expandAll()
 				return True
 
 
@@ -445,7 +462,7 @@ class TileSettings(QtWidgets.QTreeView):
 					return True
 
 			if event.key() == QtCore.Qt.Key_P:
-				if event.modifiers() == QtCore.Qt.ShiftModifier:
+				if self.keyState.shift:
 					for row in sel: # unparent row
 						self.model().unParentRow(row)
 				elif len(sel) > 1: # parent

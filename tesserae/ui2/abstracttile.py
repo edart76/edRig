@@ -584,18 +584,6 @@ class Knob(QtWidgets.QGraphicsRectItem):
 	def __repr__(self):
 		return self.name
 
-	# def onConnectionMade(self, dest):
-	# 	"""in case"""
-	#
-	# def onConnectionBroken(self, dest):
-	# 	pass
-	#
-	# def removePipe(self, pipe):
-	# 	self.pipes = [i for i in self.pipes if i != pipe]
-	#
-	# def delete(self):
-	# 	"""literally the reason i broke up with NodeGraphQt"""
-
 	# visuals
 	def hoverEnterEvent(self, event):
 		"""tweak to allow knobs to expand pleasingly when you touch them"""
