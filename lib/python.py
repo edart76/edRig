@@ -506,6 +506,15 @@ class AbstractTree(object):
 			return self.parent.index(self.name)
 		else: return -1
 
+	def flattenedIndex(self):
+		""" return the index of this branch if entire tree were flattened """
+		index = self.index()
+		if self.parent:
+			index += self.parent.flattenedIndex()
+		return index
+
+
+
 	def items(self):
 		return self._map.items()
 

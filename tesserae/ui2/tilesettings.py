@@ -54,6 +54,30 @@ def removeDuplicates( baseList ):
 			existing.add(i)
 	return result
 
+
+class SelectionModelContainer(object):
+	""" convenience wrapper for QItemSelectionModel"""
+	def __init__(self, selectionModel):
+		self._model = None
+		self.setSelectionModel(selectionModel)
+	def setSelectionModel(self, model):
+		self._model = model
+
+	def add(self, index):
+		self._model.select(index, QtCore.QItemSelectionModel.Select |
+		                   QtCore.QItemSelectionModel.Rows)
+	def remove(self, index):
+		self._model.select(index, QtCore.QItemSelectionModel.Deselect |
+		                   QtCore.QItemSelectionModel.Rows)
+	def toggle(self, index):
+		self._model.select(index, QtCore.QItemSelectionModel.Toggle |
+		                   QtCore.QItemSelectionModel.Rows)
+	def setCurrent(self, index):
+		self._model.setCurrentIndex(index,
+		                            QtCore.QItemSelectionModel.Select |
+		                   QtCore.QItemSelectionModel.Rows)
+
+
 class TileSettings(QtWidgets.QTreeView):
 	"""widget for viewing and editing an AbstractTree
 	display values in columns, branches in rows"""
@@ -66,8 +90,6 @@ class TileSettings(QtWidgets.QTreeView):
 	def __init__(self, parent=None, tree=None):
 		""":param tree : AbstractTree"""
 		super(TileSettings, self).__init__(parent)
-		#self.setAnimated(True) # attend first to swag
-		#self.setAutoExpandDelay(0.01)
 		self.setSizePolicy(expandingPolicy)
 		#self.installEventFilter(WheelEventFilter(self))
 
@@ -84,13 +106,10 @@ class TileSettings(QtWidgets.QTreeView):
 		self.setItemDelegate(AbstractBranchDelegate())
 		self.menu = ContextMenu(self)
 
-		# self.makeMenu()
-		# self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-		# self.customContextMenuRequested.connect(self.onContextPoint)
 		self.sizeChanged = Signal()
 
+		# convenience wrappers
 		self.keyState = KeyState()
-
 
 		self.highlights = {} # dict of tree addresses to highlight
 		self.tree = None
@@ -115,13 +134,7 @@ class TileSettings(QtWidgets.QTreeView):
 		self.setAlternatingRowColors(True)
 		self.showDropIndicator()
 
-		#self.setSizeAdjustPolicy( QtWidgets.QAbstractScrollArea.AdjustToContents)
-
 		self.initActions()
-
-		# header.geometriesChanged.connect( self.resizeToTree )
-		# self.collapsed.connect( self.resizeToTree )
-		# self.expanded.connect( self.resizeToTree )
 
 		if tree:
 			tree = self.setTree(tree)
@@ -129,6 +142,7 @@ class TileSettings(QtWidgets.QTreeView):
 
 		self.savedExpandedTrees = []
 		self.savedSelectedTrees = []
+		self.lastSelected = None
 
 		self.contentChanged.connect(self.resizeToTree)
 		self.setSizePolicy(expandingPolicy)
@@ -140,6 +154,9 @@ class TileSettings(QtWidgets.QTreeView):
 		self.pressed.connect(self.onClicked)
 
 
+	@property
+	def sel(self):
+		return SelectionModelContainer(self.selectionModel())
 
 	def data(self, index, role=QtCore.Qt.DisplayRole):
 		""" convenience """
@@ -182,12 +199,37 @@ class TileSettings(QtWidgets.QTreeView):
 			print("settings pass mouse event")
 			super(TileSettings, self).mousePressEvent(event)
 
+		index = self.indexAt(event.pos())
+		self.onClicked(index)
+
 
 	def onClicked(self, index):
 		""" manage selection manually """
 		print("settings clicked {}".format(index))
+
 		if not (self.keyState.ctrl or self.keyState.shift):
-			return
+			pass
+		# if ctrl, toggle selection
+		elif self.keyState.ctrl:
+			self.sel.add(index)
+		elif self.keyState.shift:
+			if not self.lastSelected:
+				self.lastSelected = self.modelObject.index(1, 0)
+			# select all entries between last and clicked
+			clickTree = self.modelObject.itemFromIndex(index).tree
+			lastTree = self.modelObject.itemFromIndex(index).tree
+			maxIndex = max(clickTree.flattenedIndex(),
+			               lastTree.flattenedIndex())
+			minIndex = min(clickTree.flattenedIndex(),
+			               lastTree.flattenedIndex())
+			allBranches = self.modelObject.tree.root.allBranches()
+			for i in range(minIndex, maxIndex):
+				self.sel.add(self.modelObject.rowFromTree(allBranches[i]))
+
+		# set previous selection
+		self.lastSelected = index
+		#self.sel.setCurrent(index)
+
 
 	def setTree(self, tree):
 		"""associates widget with AbstractTree object"""
@@ -209,9 +251,6 @@ class TileSettings(QtWidgets.QTreeView):
 		self.setRootIndex( self.model().invisibleRootItem().child(0, 0).index())
 
 		return self.modelObject
-
-
-
 
 
 	def makeMenu(self):
@@ -237,18 +276,6 @@ class TileSettings(QtWidgets.QTreeView):
 
 	def display(self):
 		print(self.tree.display())
-
-	# def moveCursor(self, action, modifiers):
-	# 	index = self.currentIndex()
-	# 	columns = self.model().columnCount(index)
-	# 	rows = self.model().rowCount(index.parent())
-	# 	if action == self.MoveNext:
-	# 		if index.column() + 1 < columns:
-	# 			return index.sibling(index.row(), index.column() + 1)
-	# 		elif index.row() + 1 < rows:
-	# 			return self.model()
-	#
-	# 	return super(TileSettings, self).moveCursor(action, modifiers)
 
 
 	def copyEntries(self):
@@ -320,11 +347,6 @@ class TileSettings(QtWidgets.QTreeView):
 		#menu = self.menu.exec_( pos )
 		menu = self.menu.exec_( self.viewport().mapToGlobal(event.pos()) )
 
-
-	# def onContextPoint(self, qPoint):
-	# 	self.makeMenu()
-	# 	menu = self.menu.exec_( self.viewport().mapToGlobal(qPoint) )
-	# 	#print "settingsMenu is {}".format(menu)
 
 
 	def showMenu(self, *args, **kwargs):
@@ -768,8 +790,6 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		""":rtype AbstractTree """
 		#return self.tree( self.data(row, objRole) )
 		return self.tree.get( self.data(row, objRole) )
-		# found = self.tree.search( self.data(row, objRole) )
-		# return found[0] if found else None
 
 
 	def duplicateRow(self, row):
@@ -837,9 +857,6 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 			self.buildFromTree(i, parent=self.root)
 		#self.endResetModel()
 		self.setHorizontalHeaderLabels(["branch", "value"])
-
-
-		#print("rowCount {}".format(self.rowCount(self.invisibleRootItem().index())))
 
 
 	def buildFromTree(self, tree, parent=None):
