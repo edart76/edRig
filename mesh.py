@@ -1,7 +1,7 @@
 # fucnctions for renumbering mesh points, getting weights,
 # interfacing between weights and maps etc
 # additionally for working with nurbs shapes
-from edRig import core, attr, transform, naming, cmds, om, oma
+from edRig import core, attr, transform, naming, cmds, om, oma, con
 from edRig.lib.python import AbstractTree
 from edRig.node import AbsoluteNode, ECA
 
@@ -117,6 +117,31 @@ def attachNurbsSurfaceToMesh(meshShape, pntList):
 		cmds.connectAttr(meshShape+".points[{}]".format(val),
 		                 nurbs+".controlPoints[{}]".format(i))
 	return nurbs
+
+def combineInstanceMeshes(parentTransforms, name="combined"):
+	"""combines instanced meshes for deformation as one
+	actually a use for the array world mesh attribute \o/ """
+	shapes = set(cmds.listRelatives(parentTransforms, shapes=True))
+	if len(shapes) > 1:
+		print("multiple shapes detected, using first")
+	shape = shapes.pop()
+	# connect attributes
+	combine = name + "_unite"
+	mesh = name + "_combined"
+	if not cmds.ls(combine):
+		combine = ECA("polyUnite", n=combine)
+		mesh = ECA("mesh", n=mesh+"Shape")
+		mesh.parent.rename(mesh)
+	for i in range(len(parentTransforms)):
+		con(shape + ".worldMatrix[{}]".format(i),
+		    combine + ".inputMat[{}]".format(i))
+		con(shape + ".worldMesh[{}]".format(i),
+		    combine + ".inputPoly[{}]".format(i))
+	con(combine + ".output", mesh + ".inMesh")
+	return combine, mesh
+
+
+
 
 
 
