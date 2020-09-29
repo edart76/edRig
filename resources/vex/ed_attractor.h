@@ -113,7 +113,7 @@ vector cockatooAttractor( vector p; // do not advect
 vector kanekoIAttractor( vector p;
     float a, b){
         return set(
-            a * p.x + (1 - a) * ( 1 - b * pow(p.y, 2));
+            a * p.x + (1 - a) * ( 1 - b * pow(p.y, 2)),
             p.x,
             0
         );

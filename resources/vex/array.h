@@ -48,7 +48,7 @@ function int[] removeduplicates( int set[]){
     int out[];
     // also inefficient for now
     foreach( int x; set){
-        if( index(out, x) < 0){
+        if( find(out, x) < 0){
             append(out, x);
         }
     }
@@ -62,7 +62,7 @@ function int[] union( int a[]; int b[]){
     int out[] = removeduplicates(a);
     //int out[] = a;
     foreach(int test; b){
-        if( index( out, test ) < 0 ){
+        if( find( out, test ) < 0 ){
             // not in array
             append(out, test);
         }
@@ -81,7 +81,7 @@ function int[] intersect( int a[]; int b[]){
     int found[];
     int out[];
     foreach( int test; joint){
-        if (index(found, test) > -1){
+        if (find(found, test) > -1){
             append(out, test);
         }
         else{

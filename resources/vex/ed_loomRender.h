@@ -33,9 +33,9 @@ struct RayHit {
     vector pos;
 };
 
-function void castlightray(Ray ray; int fieldgeo; int maxbounces;
+function int castlightray(Ray ray; int fieldgeo; int maxbounces;
     float bias; float decay;
-    int debug){
+    int debug; int outputpoint){
     /* cast out ray until it hits geometry
     */
     // bounding box for collision geo
@@ -58,17 +58,31 @@ function void castlightray(Ray ray; int fieldgeo; int maxbounces;
 
         if( prim(0, "field", hitprim) == 0){
             // hit on collision geo
-            vector baseIrr = prim(0, "irradiance", hitprim);
-            baseIrr += ray.colour;
-            setprimattrib(0, "irradiance", hitprim, baseIrr);
-            break;
+            if(outputpoint){
+                // output new point with irradiance info
+                int newpt = addpoint(0, hitpos);
+                setpointattrib(0, "irradiance", newpt, ray.colour);
+                setpointgroup(0, "lightpoints", newpt, 1);
+                return newpt;
+            }
+            else{
+                // add irradiance to hit primitive
+                vector baseIrr = prim(0, "irradiance", hitprim);
+                baseIrr += ray.colour;
+                setprimattrib(0, "irradiance", hitprim, baseIrr);
+                break;
+            }
         }
-        vector normal = primuv(0, "N", hitprim, uvw);
-        ray.dir = reflect(ray.dir, normal);
-        ray.pos = hitpos + ray.dir * bias;
-        ray.colour *= decay;
+        else{
+            // hit on field geo
+            vector normal = primuv(0, "N", hitprim, uvw);
+            ray.dir = reflect(ray.dir, normal);
+            ray.pos = hitpos + ray.dir * bias;
+            ray.colour *= decay;
+        }
 
     }
+    return -1;
 
 
 }

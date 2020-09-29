@@ -329,7 +329,7 @@ function int[] crawlMesh(int geo; int iterations;
             while ( (hedge_prim(geo, testhedge) == activeprim) && (testhedge != activehedge) ) // stop if prim changes or hedge doesn't
             {
                 if( hedgeisunshared(geo, testhedge)){
-                    printf("hedge is unshared\n" );
+                    //printf("hedge is unshared\n" );
                     // border edge, nothing to do
                     testhedge = hedge_next(geo, testhedge);
                     continue;            }
