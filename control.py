@@ -2,7 +2,8 @@
 from edRig import CURRENT_PATH
 from edRig.core import ECN, con
 from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import cmds, om, attr, transform, pipeline, material, beauty, plug
+from edRig import cmds, om, attr, transform, pipeline, material, beauty, plug, \
+	scene
 
 
 import string
@@ -11,6 +12,221 @@ import string
 controlLibPath = CURRENT_PATH + r'\data\ctrls\ctrlLibraryv02.ma'
 
 validTypes = ["tet", "sphere", "dodec"]
+
+
+
+class Control(object):
+	"""no spaces, no layers for now
+	use proxies to separate ui and output
+
+	dag hierarchy is this:
+
+	ctl grp
+		- world position - placed by hand
+            - world offsets - however many layers wanted
+                first offset is reserved for matrix rivet
+                - world ui - layers
+                    - world ui output
+
+	for parallel stuff each control needs a proxied transform at origin,
+	but that is for later
+	output specifies this local parallel copy,
+	to be used for driving attributes
+	worldOutput is the final ui output in worldspace, for parenting etc
+
+			"""
+
+	indexColours = ["none", "black"]
+
+	types = ("curve", "surface")
+
+	def __init__(self, name=None, uiLayers=1, offsetLayers=1,
+	             controlType="curve",
+	             colour=(0,120,256), build=True ):
+
+		self.controlType = controlType
+		self.name = name
+		self.guide = None # template guide control
+
+		self.uis = [None] * uiLayers # type: [AbsoluteNode]
+		self.locals = [None] * uiLayers
+		self.offsets = [None] * max(1, offsetLayers) # type: list([AbsoluteNode])
+
+		if build:
+			self.build()
+
+		# if layers:
+		# 	self.connectProxies()
+		# 	self.connectOutput()
+
+
+	@property
+	def worldOutput(self):
+		return self.uis[-1]
+
+	@property
+	def output(self):
+		""" change when parallel comes online """
+		return self.uis[-1]
+
+	def build(self):
+		self.makeHierarchy()
+
+	def makeHierarchy(self):
+		"""creates one control and one offset group and that is it"""
+		self.root = ECA("transform", name=self.name+"_controlGrp")
+		parent = self.root
+		for i in range(len(self.offsets)):
+			self.offsets[i] = ECA("transform",
+			    n=self.name + "_offset" + string.ascii_uppercase[i],
+			                      parent=parent)
+			parent = self.offsets[i]
+		for i in range(len(self.uis)):
+			self.uis[i] = self.makeShape(self.name)
+			self.uis[i].parentTo(parent)
+			parent = self.uis[i]
+
+
+	def connectProxies(self):
+		"""connect up proxy attributes from ui to local components
+		if proxies don't work, move to more advanced ways like blendDevices
+		and managing keys directly"""
+
+		"""imperative to do more here, this is just a stopgap until a callback system
+		is worked out
+		there will be no parallelism with this yet"""
+		pass
+
+	def connectOutput(self):
+		"""multiply local matrices and decompose to output
+		keeping it uniform with matrix decomp even if unnecessary - if we ever
+		get to the point of this being a bottleneck, we're doing alright"""
+		plugs = [i + ".matrix" for i in self.layers]
+		layerMult = transform.multMatrixPlugs(plugs,
+		                                      name=self.name+"_layerMult")
+		transform.decomposeMatrixPlug(layerMult, self.worldOutput)
+		transform.connectTransformAttrs(self.worldOutput, self.localOutput)
+
+	def makeUiElement(self, name="test", parent=None):
+		"""make a proper visual representation at origin"""
+		# for now just a circle
+		ctrl = self.makeShape(name)
+		if parent:
+			cmds.parent(ctrl, parent)
+		return ctrl
+
+	def makeShape(self, name):
+		"""makes either a circle or circular surface"""
+		ctrl = cmds.circle(name="temp")[0]
+		if self.controlType == "surface":
+			surfaceTemp = cmds.planarSrf(ctrl)
+			# returns transform, planarTrim node
+			newTemp = cmds.duplicate(surfaceTemp[0], n="newCtrlTemp")[0]
+			cmds.delete(ctrl, surfaceTemp[0], surfaceTemp[1])
+			ctrl = cmds.rename(newTemp, name)
+		else:
+			ctrl = cmds.rename(ctrl, name)
+		return AbsoluteNode(ctrl)
+
+	def showGuides(self):
+		"""turns everything bright yellow"""
+		pass
+
+	def hideGuides(self):
+		"""removes yellow """
+
+	def makeStatic(self):
+		"""insert inverse offset group just above control
+		not used in base class"""
+
+		staticTf = ECA("transform", n=self.name+"_static")
+		#staticTf.parentTo(self.first.parent, r=True)
+		transform.decomposeMatrixPlug( self.first+".inverseMatrix",
+		                               staticTf)
+		self.first.parentTo(staticTf)
+		return staticTf
+
+	@property
+	def outputPlug(self):
+		"""returns the local matrix plug of control """
+		return self.worldOutput+".matrix"
+
+	@property
+	def worldOutputPlug(self):
+		"""world output of the control (strongly not recommended for use)"""
+		return self.worldOutput+".worldMatrix[0]"
+
+	@property
+	def shapes(self):
+		"""returns list of ui shapes"""
+		return [i.shape for i in self.layers]
+	@property
+	def first(self):
+		"""returns first layer
+		:return AbsoluteNode"""
+		return self.layers[0]
+
+	def memoryInfo(self):
+		"""return dict formatted for op memory """
+		return {
+			self.name + "ControlShapes" : {
+				"infoType" : ["shape"],
+				"nodes" : [i.shape for i in self.uis]
+			},
+			self.name + "ControlAttrs" : {
+				"infoType" : ["attr"],
+				"nodes" : self.uis + [self.guide, self.root]
+			},
+			self.name + "ControlTransforms": {
+				"infoType" : ["xform"],
+				"nodes" : self.offsets
+			}
+		}
+
+class ParametricControl(Control):
+	"""controls sliding on curves or surfaces"""
+
+	def __init__(self, name=None, layers=1,
+	             controlType="sphere", colour=(0,0,1),
+	             domainShape=None, auxShapeA=None, auxShapeB=None,
+	             parametreScale=(10.0, 10.0, 10.0),
+	             ):
+		"""domainShape is shape on which control moves
+		auxShapes may be used in certain curve configurations"""
+		super(ParametricControl, self).__init__(name, layers,
+		                                        controlType, colour)
+		self.domainShape = domainShape
+		self.parametreScale = parametreScale
+
+	def makeHierarchy(self):
+		"""we assume the same transform as the domain shapes
+		shapeTf
+			|- shape
+			|- ctrl static grp
+				|- ctrl"""
+		ui = self.makeShape(self.name)
+		self.layers[0] = ui
+		static = self.makeStatic()
+
+
+		mult = ECA("multMatrix", n=self.name+"_mult")
+		ui.con(ui+".inverseMatrix", mult+".matrixIn[0]")
+
+
+		shapemat = self.getShapeMatrix()
+		mult.con(shapemat, mult+".matrixIn[1]")
+		transform.decomposeMatrixPlug(mult+".matrixSum", static)
+
+	def getShapeMatrix(self):
+		""""""
+
+	def makeStatic(self):
+		"""remove complex operations"""
+		static = ECA("transform", n=self.name+"_static")
+		static.parentTo(self.domainShape.transform)
+		self.first.parentTo(static)
+		return static
+
 
 class OldControl(object):
 	#base class for all forms of control
@@ -62,252 +278,6 @@ class OldControl(object):
 	def reparentUnder(self, parent):
 		# seriously fuck maya
 		self.tf = cmds.parent(self.tf, parent)[0]
-
-
-	# add property to rename control and children when self.name changes
-	# @property
-	# def name(self, value):
-	#     self.tf = cmds.rename(self.tf, name+"_ctrl")
-	#     # for i in cmds.listRelatives(self.tf, children=True, recursive=True):
-	#     self.name = value
-
-class NewControl(object):
-	""" let's try this again """
-	def __init__(self, name=None, layers=1, controlType="curve"):
-		self.layers = [None] * layers # list of absoluteNodes of TRANSFORMS
-
-
-class Control(object):
-	# base for all controls whose physical location doesn't matter
-	"""control dag structure is this: # contributes to output
-	entry: organisation
-		space grp:
-			control grp:
-				inverse grp: (only if control is marked as static
-					ui controlA: # always last in output
-						ui controlB : # only if necessary for offsets
-					world output # separate world output, in same space
-		localOutput: locator for use as point datatype
-			"""
-
-	indexColours = ["none", "black"]
-
-	types = ("curve", "surface")
-
-	def __init__(self, name=None, layers=1, controlType="curve",
-	             colour=(0,120,256) ):
-		if not controlType in self.types:
-			print "control type {} is invalid".format(controlType)
-			controlType = "curve"
-		self.controlType = controlType
-		self.name = name
-		self.spareInputs = {} # name, node
-		self.guide = None # template guide control
-		self.layers = [None] * layers # absoluteNodes
-		self.colour = beauty.getColour(colour)
-		self.makeHierarchy()
-		if layers:
-			self.connectProxies()
-			self.connectOutput()
-
-		self.makeBeautiful(self.colour)
-
-	def makeBeautiful(self, colour):
-		"""pretty"""
-		if self.controlType == "surface":
-			controlMat = material.getUiShader(colour)
-		for i in self.layers:
-			beauty.setColour(i, colour)
-			if self.controlType == "surface":
-				try:
-					controlMat.applyTo(i)
-				except:
-					pass
-
-
-	def makeHierarchy(self):
-		"""creates uniform hierarchy, according to plan following class"""
-		# main and local
-		self.root = ECA("transform", name=self.name+"_control")
-		self.localRoot = ECA("transform", name=self.name+"_localRoot")
-		self.localOffset = ECA("transform",
-		                       name=self.name+"_localOffset", parent=self.localRoot)
-		#print "local offset " + self.localOffset
-		self.localOutput = ECA("locator",
-		                       name=self.name+"_localOutput", parent=self.localOffset)
-
-		# ui and world
-		self.uiRoot = ECA("transform",
-		                       name=self.name+"_uiRoot", parent=self.root)
-		# self.uiFollow = ECA("transform",
-		#                        name=self.name+"_uiFollow", parent=self.uiRoot)
-		self.uiOffset = ECA("transform",
-		                       name=self.name+"_uiOffset", parent=self.uiRoot)
-
-		transform.connectTransformAttrs(self.uiOffset, self.localOffset)
-
-		# layers
-		for i, val in enumerate(self.layers):
-			letter = string.ascii_uppercase[i]
-			if i != 0:
-				controlName = self.name + "_" + letter
-			else:
-				controlName = self.name
-			parent = self.uiOffset if i == 0 else self.layers[i-1]
-			print "outer parent {}".format(parent)
-			self.layers[i] = self.makeUiElement(name=controlName,
-			                parent=parent)
-
-			attr.makeStringConnection(self.uiRoot, self.layers[i],
-			                          startName="ui"+letter,
-			                          endName="uiRoot")
-
-		self.worldOutput = ECA("locator",
-		                        name=self.name+"_worldOutput",
-		                        parent=self.uiOffset)
-		self.worldOutput.hide()
-		self.localOutput.hide()
-
-		print "ctrl parent is {}".format(self.first.parent)
-
-	def connectProxies(self):
-		"""connect up proxy attributes from ui to local components
-		if proxies don't work, move to more advanced ways like blendDevices
-		and managing keys directly"""
-
-		"""imperative to do more here, this is just a stopgap until a callback system
-		is worked out
-		there will be no parallelism with this yet"""
-		pass
-
-	def connectOutput(self):
-		"""multiply local matrices and decompose to output
-		keeping it uniform with matrix decomp even if unnecessary - if we ever
-		get to the point of this being a bottleneck, we're doing alright"""
-		plugs = [i + ".matrix" for i in self.layers]
-		layerMult = transform.multMatrixPlugs(plugs,
-		                                      name=self.name+"_layerMult")
-		transform.decomposeMatrixPlug(layerMult, self.worldOutput)
-		transform.connectTransformAttrs(self.worldOutput, self.localOutput)
-
-	def makeUiElement(self, name="test", parent=None):
-		"""make a proper visual representation at origin"""
-		# for now just a circle
-		ctrl = self.makeShape(name)
-
-		if parent:
-			cmds.parent(ctrl, parent)
-		return ctrl
-
-	def makeShape(self, name):
-		"""makes either a circle or circular surface"""
-		ctrl = cmds.circle(name="temp")[0]
-		if self.controlType == "surface":
-			surfaceTemp = cmds.planarSrf(ctrl)
-			# returns transform, planarTrim node
-			newTemp = cmds.duplicate(surfaceTemp[0], n="newCtrlTemp")[0]
-			cmds.delete(ctrl, surfaceTemp[0], surfaceTemp[1])
-			ctrl = cmds.rename(newTemp, name)
-		else:
-			ctrl = cmds.rename(ctrl, name)
-		return AbsoluteNode(ctrl)
-
-	def showGuides(self):
-		"""turns everything bright yellow"""
-		pass
-
-	def hideGuides(self):
-		"""removes yellow """
-
-	def makeStatic(self):
-		"""insert inverse offset group just above control
-		not used in base class"""
-
-		staticTf = ECA("transform", n=self.name+"_static")
-		#staticTf.parentTo(self.first.parent, r=True)
-		transform.decomposeMatrixPlug( self.first+".inverseMatrix",
-		                               staticTf)
-		self.first.parentTo(staticTf)
-		return staticTf
-
-	@property
-	def outputPlug(self):
-		"""returns the local matrix plug of control """
-		return self.localOutput+".matrix"
-
-	@property
-	def worldOutputPlug(self):
-		"""world output of the control (strongly not recommended for use)"""
-		return self.worldOutput+".worldMatrix[0]"
-
-	@property
-	def shapes(self):
-		"""returns list of ui shapes"""
-		return [i.shape for i in self.layers]
-	@property
-	def first(self):
-		"""returns first layer
-		:return AbsoluteNode"""
-		return self.layers[0]
-
-	def memoryInfo(self):
-		"""return dict formatted for op memory """
-		return {
-			self.name + "ControlShapes" : {
-				"infoType" : ["shape"],
-				"nodes" : [i.shape for i in self.layers]
-			},
-			self.name + "ControlAttrs" : {
-				"infoType" : ["attr", "xform"],
-				"nodes" : self.layers + [self.guide, self.root]
-			}
-		}
-
-class ParametricControl(Control):
-	"""controls sliding on curves or surfaces"""
-
-	def __init__(self, name=None, layers=1,
-	             controlType="sphere", colour=(0,0,1),
-	             domainShape=None, auxShapeA=None, auxShapeB=None,
-	             parametreScale=(10.0, 10.0, 10.0),
-	             ):
-		"""domainShape is shape on which control moves
-		auxShapes may be used in certain curve configurations"""
-		super(ParametricControl, self).__init__(name, layers,
-		                                        controlType, colour)
-		self.domainShape = domainShape
-		self.parametreScale = parametreScale
-
-	def makeHierarchy(self):
-		"""we assume the same transform as the domain shapes
-		shapeTf
-			|- shape
-			|- ctrl static grp
-				|- ctrl"""
-		ui = self.makeShape(self.name)
-		self.layers[0] = ui
-		static = self.makeStatic()
-
-
-		mult = ECA("multMatrix", n=self.name+"_mult")
-		ui.con(ui+".inverseMatrix", mult+".matrixIn[0]")
-
-
-		shapemat = self.getShapeMatrix()
-		mult.con(shapemat, mult+".matrixIn[1]")
-		transform.decomposeMatrixPlug(mult+".matrixSum", static)
-
-	def getShapeMatrix(self):
-		""""""
-
-	def makeStatic(self):
-		"""remove complex operations"""
-		static = ECA("transform", n=self.name+"_static")
-		static.parentTo(self.domainShape.transform)
-		self.first.parentTo(static)
-		return static
-
-
 
 
 

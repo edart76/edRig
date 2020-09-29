@@ -47,7 +47,7 @@ try:
 
 	from functools import wraps
 	# patch maya cmds "list-" functions to return lists no matter what
-	listFunctions = ["ls", "listRelatives"]
+	listFunctions = ["ls", "listRelatives", "listHistory", "listConnections"]
 
 	def returnList(fn):
 		@wraps(fn)

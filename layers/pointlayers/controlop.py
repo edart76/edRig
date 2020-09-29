@@ -28,8 +28,8 @@ class ControlOp(PointLayerOp):
 		                value=(0, 0, 256))
 
 	def execute(self):
-		count = min(self.settings["controlCount"].value, 1)
-		controlType = self.settings["controlType"].value
+		# count = min(self.settings["controlCount"].value, 1)
+		# controlType = self.settings["controlType"].value
 
 		self.control = control.FkControl(name=self.opName, layers=count,
 		                                 controlType=controlType)
@@ -41,27 +41,17 @@ class ControlOp(PointLayerOp):
 
 		self.connectOutputs()
 
-		# test
-		self.log("ctrl parent {}".format(self.control.first.parent))
-		"""
-		self.remember("joints", "xform", self.joints, jointMode=True)
-		self.remember("joints", "attr", self.joints, transform=False)
-		self.remember("curves", "shape", [self.upCurve.shape, self.mainCurve.shape])
-		"""
 
 	def showGuides(self):
 		"""connects first ui ctrl to uiOffset group of control"""
 		#transform.zeroTransforms(self.control.first)
-		cmds.parent(self.control.first, self.control.uiRoot)
-		cmds.parent(self.control.uiOffset, self.control.first, r=True)
-		self.control.markAsGuides()
+		# cmds.parent(self.control.first, self.control.uiRoot)
+		# cmds.parent(self.control.uiOffset, self.control.first, r=True)
+		# self.control.markAsGuides()
 
 	def connectInputs(self):
 		"""connect driving space to control
 		offset not necessary as we recall world transforms just after"""
-
-		# attr.con(self.getInput("driverSpace").plug,
-		#          self.control.uiRoot)
 		transform.decomposeMatrixPlug(self.getInput("driverSpace").plug(),
 		                              self.control.uiRoot)
 

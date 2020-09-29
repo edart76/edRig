@@ -7,7 +7,8 @@ from functools import partial, wraps
 from abc import ABCMeta
 import types
 
-from edRig.lib.tree import Tree, Signal
+#from edRig.lib.tree import Tree, Signal
+from tree import Tree
 
 
 
