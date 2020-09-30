@@ -112,11 +112,11 @@ class LayerOp(Op):
 	def remember(self, infoName=None, infoType=None, nodes=None,
 	             relative=None, **kwargs):
 		"""apply saved data if it exists, create it if not
-		just a bit of recreational industrial espionage"""
+		"""
 
 		# support for custom memory behaviour for complex types
 		if isinstance(infoType, control.Control):
-			self.remember( infoName, compound=infoType.memoryInfo())
+			return self.remember( infoName, compound=infoType.memoryInfo())
 
 		# support for remembering compound data
 		if kwargs.get("compound"):
@@ -131,8 +131,16 @@ class LayerOp(Op):
 				              nodes=v["nodes"],
 				              relative=v.get("relative"),
 				              **kwargs)
-				return True
+			return True
 
+		# check over nodes to make sure they're all valid
+		# not sure the best way to do this
+		nodes = [i for i in nodes if i]
+
+		if isinstance(infoType, (list, tuple)):
+			for i in infoType:
+				self.remember(infoName, i, nodes, relative, **kwargs)
+			return True
 
 		"""relative left None to ignore - otherwise specify transform or matrix
 		plug to remember and recall only in local space

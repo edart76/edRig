@@ -82,7 +82,10 @@ class Control(object):
 			                      parent=parent)
 			parent = self.offsets[i]
 		for i in range(len(self.uis)):
-			self.uis[i] = self.makeShape(self.name)
+			if len(self.uis) == 1: # no point in letters
+				name = self.name + "_ctl"
+			else: name = self.name + string.uppercase[i] + "_ctl"
+			self.uis[i] = self.makeShape(name)
 			self.uis[i].parentTo(parent)
 			parent = self.uis[i]
 
@@ -101,19 +104,12 @@ class Control(object):
 		"""multiply local matrices and decompose to output
 		keeping it uniform with matrix decomp even if unnecessary - if we ever
 		get to the point of this being a bottleneck, we're doing alright"""
-		plugs = [i + ".matrix" for i in self.layers]
+		plugs = [i + ".matrix" for i in self.uis]
 		layerMult = transform.multMatrixPlugs(plugs,
 		                                      name=self.name+"_layerMult")
 		transform.decomposeMatrixPlug(layerMult, self.worldOutput)
-		transform.connectTransformAttrs(self.worldOutput, self.localOutput)
+		#transform.connectTransformAttrs(self.worldOutput, self.localOutput)
 
-	def makeUiElement(self, name="test", parent=None):
-		"""make a proper visual representation at origin"""
-		# for now just a circle
-		ctrl = self.makeShape(name)
-		if parent:
-			cmds.parent(ctrl, parent)
-		return ctrl
 
 	def makeShape(self, name):
 		"""makes either a circle or circular surface"""
@@ -139,11 +135,11 @@ class Control(object):
 		"""insert inverse offset group just above control
 		not used in base class"""
 
-		staticTf = ECA("transform", n=self.name+"_static")
-		#staticTf.parentTo(self.first.parent, r=True)
+		staticTf = ECA("transform", n=self.name+"_staticGrp",
+		               parent=self.offsets[-1])
 		transform.decomposeMatrixPlug( self.first+".inverseMatrix",
 		                               staticTf)
-		self.first.parentTo(staticTf)
+		self.uis[0].parentTo(staticTf)
 		return staticTf
 
 	@property
@@ -169,15 +165,15 @@ class Control(object):
 	def memoryInfo(self):
 		"""return dict formatted for op memory """
 		return {
-			self.name + "ControlShapes" : {
+			self.name + "Shape" : {
 				"infoType" : ["shape"],
 				"nodes" : [i.shape for i in self.uis]
 			},
-			self.name + "ControlAttrs" : {
+			self.name + "Attrs" : {
 				"infoType" : ["attr"],
 				"nodes" : self.uis + [self.guide, self.root]
 			},
-			self.name + "ControlTransforms": {
+			self.name + "Transforms": {
 				"infoType" : ["xform"],
 				"nodes" : self.offsets
 			}

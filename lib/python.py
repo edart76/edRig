@@ -11,6 +11,45 @@ import types
 from tree import Tree
 
 
+class Signal(object):
+	def __init__(self):
+		self._functions = WeakSet()
+		self._methods = WeakKeyDictionary()
+
+	def __call__(self, *args, **kargs):
+		# Call handler functions
+		for func in self._functions:
+			func(*args, **kargs)
+
+		# Call handler methods
+		for obj, funcs in self._methods.items():
+			for func in funcs:
+				func(obj, *args, **kargs)
+
+	def emit(self, *args, **kwargs):
+		""" brings this object up to parity with qt """
+		self(*args, **kwargs)
+
+	def connect(self, slot):
+		if inspect.ismethod(slot):
+			if slot.__self__ not in self._methods:
+				self._methods[slot.__self__] = set()
+
+			self._methods[slot.__self__].add(slot.__func__)
+		else:
+			self._functions.add(slot)
+
+	def disconnect(self, slot):
+		if inspect.ismethod(slot):
+			if slot.__self__ in self._methods:
+				self._methods[slot.__self__].remove(slot.__func__)
+		else:
+			if slot in self._functions:
+				self._functions.remove(slot)
+
+	def clear(self):
+		self._functions.clear()
+		self._methods.clear()
 
 class Decorator(object):
 	"""base decorator class for functions
@@ -325,6 +364,10 @@ class AbstractTree(Tree):
 	@options.setter
 	def options(self, val):
 		self.extras["options"] = val
+
+	@Tree.uuid.setter
+	def uuid(self, val):
+		self._uuid = val
 
 
 	@property

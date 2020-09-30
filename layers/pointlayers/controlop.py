@@ -28,16 +28,20 @@ class ControlOp(PointLayerOp):
 		                value=(0, 0, 256))
 
 	def execute(self):
-		# count = min(self.settings["controlCount"].value, 1)
-		# controlType = self.settings["controlType"].value
+		count = min(self.settings["controlCount"], 1)
+		controlType = self.settings["controlType"]
 
-		self.control = control.FkControl(name=self.opName, layers=count,
-		                                 controlType=controlType)
+		self.control = control.Control(self.opName, uiLayers=1,
+		                               offsetLayers=2)
 
 		self.connectInputs()
 
-		self.remember("offset", "xform", self.control.uiOffset)
-		self.remember("ctrlShapes", "shape", self.control.shapes)
+		print("controlOp memoryInfo {}".format(self.control.memoryInfo()))
+
+		self.remember(compound=self.control.memoryInfo() )
+		print("controlOp memory is {}".format(self.memory.display()))
+		# self.remember("offset", "xform", self.control.uiOffset)
+		# self.remember("ctrlShapes", "shape", self.control.shapes)
 
 		self.connectOutputs()
 
@@ -52,14 +56,15 @@ class ControlOp(PointLayerOp):
 	def connectInputs(self):
 		"""connect driving space to control
 		offset not necessary as we recall world transforms just after"""
-		transform.decomposeMatrixPlug(self.getInput("driverSpace").plug(),
-		                              self.control.uiRoot)
+
+		transform.decomposeMatrixPlug(self.getInput("driverSpace").plug,
+		                              self.control.offsets[0])
 
 	def connectOutputs(self):
 		"""connect plugs"""
-		cmds.connectAttr(self.control.uiRoot+".message",
-		                 self.getOutput("controlUi").plug())
+		# cmds.connectAttr(self.control.uiRoot+".message",
+		#                  self.getOutput("controlUi").plug())
 		cmds.connectAttr(self.control.outputPlug,
-		                 self.getOutput("controlOutput").plug())
+		                 self.getOutput("controlOutput").plug)
 		cmds.connectAttr(self.control.worldOutputPlug,
-		                 self.getOutput("controlOutputWorld").plug())
+		                 self.getOutput("controlOutputWorld").plug)

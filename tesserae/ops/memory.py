@@ -79,14 +79,15 @@ class Memory2(AbstractTree):
 		"""add information to op's memory if none exists
 		we remember lists here
 		main entrypoint"""
-		# print("remember infoName {}, infotype {}, nodes {}".format(
-		# 	infoName, infoType, nodes)
-		# )
+		print("remember infoName {}, infotype {}, nodes {}".format(
+			infoName, infoType, nodes)
+		)
 
 		# multi memory support
 		if isinstance(infoType, list):
 			for i in infoType:
 				self.remember(infoName, i, nodes)
+			return
 
 		if not isinstance(nodes, list):
 			nodes = [nodes]
