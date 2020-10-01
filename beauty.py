@@ -9,6 +9,10 @@ colourPresets = {
 	"red" : (256, 0, 0),
 	"blue" : (0, 0, 256),
 	"guides" : (256, 256, 0), # neon unpleasant warning yellow
+	# sides use port-starboard convention
+	"left" : (200, 50, 50),
+	"right" : (50, 200, 50),
+	"centre" : (50, 50, 200)
 
 }
 
@@ -29,6 +33,12 @@ def setColour(target, colour=(40, 200, 40)):
 	attr.setAttr(target + ".overrideEnabled", 1)
 	attr.setAttr(target + ".overrideRGBColors", 1)
 	attr.setAttr(target + ".overrideColorRGB", colour)
+
+def lighter(colour, factor):
+	return colour
+
+def darker(colour, factor):
+	return colour
 
 def removeColour(target):
 	attr.setAttr(target + ".overrideEnabled", 0)

@@ -51,6 +51,7 @@ class Control(object):
 		self.uis = [None] * uiLayers # type: [AbsoluteNode]
 		self.locals = [None] * uiLayers
 		self.offsets = [None] * max(1, offsetLayers) # type: list([AbsoluteNode])
+		self.colour = colour
 
 		if build:
 			self.build()
@@ -85,7 +86,7 @@ class Control(object):
 			if len(self.uis) == 1: # no point in letters
 				name = self.name + "_ctl"
 			else: name = self.name + string.uppercase[i] + "_ctl"
-			self.uis[i] = self.makeShape(name)
+			self.uis[i] = self.makeShape(name, iteration=i)
 			self.uis[i].parentTo(parent)
 			parent = self.uis[i]
 
@@ -111,9 +112,11 @@ class Control(object):
 		#transform.connectTransformAttrs(self.worldOutput, self.localOutput)
 
 
-	def makeShape(self, name):
+	def makeShape(self, name, iteration=0):
 		"""makes either a circle or circular surface"""
-		ctrl = cmds.circle(name="temp")[0]
+		ctrl = cmds.circle(name="temp_ctl_")[0]
+		colour = beauty.darker(self.colour, factor=iteration * 0.07)
+		beauty.setColour(ctrl, colour)
 		if self.controlType == "surface":
 			surfaceTemp = cmds.planarSrf(ctrl)
 			# returns transform, planarTrim node
@@ -122,6 +125,10 @@ class Control(object):
 			ctrl = cmds.rename(newTemp, name)
 		else:
 			ctrl = cmds.rename(ctrl, name)
+		# shrink secondary controls
+		for ax in "XYZ":
+			cmds.setAttr(ctrl + ".scale" + ax, 1.0 - 0.1 * iteration)
+		cmds.makeIdentity(ctrl, apply=True)
 		return AbsoluteNode(ctrl)
 
 	def showGuides(self):

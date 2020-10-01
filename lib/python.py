@@ -417,6 +417,45 @@ class AbstractTree(Tree):
 		self._map = newMap
 
 
+	@staticmethod
+	def templateTree(tree):
+		""" runs over tree looking for branches named 'template'
+		L_armUpper_grp : [L_humerus]
+		 + - template : [L_, R_,]
+		 + - L_armLower_grp : [L_radius, L_ulna]
+		etc
+		recursively adds new branches and replaces occurrences
+		of first 'template' string with following
+		a bit less dicy than custom string parsing and templating
+		IF TEMPLATE STRING DOES NOT DIRECTLY APPEAR IN PARENT,
+		NOTHING HAPPENS.
+
+		also no special check for templates of templates -
+		don't try to template the same thing twice in one tree or you'll
+		have a bad time
+
+		only do this on tree copies, not masters
+		"""
+		for branch in tree.allBranches(includeSelf=True):
+			tokens = branch.get("template")
+			if not tokens: continue
+			if not tokens[0] in branch.name:
+				print("template tokens {} do not appear in branch {}".format(
+					tokens, branch.name))
+			for token in tokens[1:]:
+				newBranch = branch.__deepcopy__()
+				newBranch.searchReplace(tokens[0], token)
+				branch.parent.addChild(newBranch)
+
+
+		# # expression support ooooh it's very spooky
+		# permutations = expression.runTemplatedStrings(
+		# 	[branch.name] + branch.listValue)
+		# for combo in permutations:
+		# 	debug(combo)
+		# 	branchName = combo[0]
+		# 	nodes = combo[1:]
+
 def movingMask(seq, maskWidth=1, nullVal=None):
 	""" generates a symmetrical moving frame over sequence
 	eg seq = [ 1, 2, 3, 4, 5, 6 ]

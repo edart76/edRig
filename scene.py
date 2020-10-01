@@ -298,27 +298,28 @@ def hierarchyFromTree(tree, withinNodes=None):
 	:param tree : AbstractTree
 	:type tree : AbstractTree"""
 	hierarchyGrp = ECA("transform", n=tree.name)
+	# copy for safety
+	tree = tree.__deepcopy__()
+	# generate template branches
+	tree.templateTree(tree)
+
 	for branch in tree.allBranches(includeSelf=False):
+		# build parent groups first
+		grp = ECA("transform", n=branch.name)
+		branch.extras["group"] = grp
 
-		# expression support ooooh it's very spooky
-		permutations = expression.runTemplatedStrings(
-			[branch.name] + branch.listValue)
-		for combo in permutations:
-			debug(combo)
-			branchName = combo[0]
-			nodes = combo[1:]
-
-			grp = ECA("transform", n=branchName)
-			grp.parentTo(branch.parent.name)
-			for node in nodes:
-				if cmds.ls(node):
-					if withinNodes:
-						toParent = [i for i in cmds.ls(node) if i in withinNodes]
-					else: toParent = cmds.ls(node)
-					cmds.parent( toParent, grp)
+	for branch in tree.allBranches(includeSelf=False):
+		grp = branch.extras["group"]
+		nodes = branch.value
+		for node in nodes:
+			# if cmds.ls(node):
+			if withinNodes:
+				toParent = [i for i in cmds.ls(node) if i in withinNodes]
+			else:
+				toParent = cmds.ls(node)
+			cmds.parent( toParent, grp)
 			# ls should be sufficient to handle wildcarding
+		grp.parentTo(branch.parent.extras["group"])
 	return hierarchyGrp
-
-
 
 

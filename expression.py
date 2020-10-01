@@ -40,6 +40,9 @@ if we introduce hysteresis and state we can do
 [<L,R>_ulna, <>_radius, <>_semilunateCarpal]
 but this is more complex, more fragile, more confusing, not worth it
 
+found a better way to approach this particular usecase
+more verbose and more readable
+
 """
 
 
