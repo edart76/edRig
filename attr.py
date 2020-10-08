@@ -1,12 +1,7 @@
 # lib for adding and modifying attributes
 import random
 
-# try:
-# 	from maya import cmds
-# 	import maya.api.OpenMaya as om
-# except:
-# 	cmds = None
-# 	om = None
+from tree import Tree
 
 from edRig.lib import python
 from edRig.dcc import cmds, om
@@ -18,6 +13,18 @@ dimTypes = {
 	"1D" : ("nurbsCurve", "bezierCurve"),
 	"2D" : ("nurbsSurface", "mesh")
 }
+
+def treeFromPlug(rootPlug):
+	""" retrieve a tree with branches representing nested plugs,
+	containing useful information about them
+	hopefully we can eventually replace most of the other mess below """
+	node, at = rootPlug.split(".")
+	tree = Tree(rootPlug)
+	if cmds.attributeQuery(at, node=node, listChildren=1):
+		for i in cmds.attributeQuery(at, node=node, listChildren=1):
+			branch = treeFromPlug( node + "." + i)
+			tree.addChild(branch)
+	return tree
 
 def isNode(target):
 	"""copied to avoid dependency"""
@@ -120,14 +127,19 @@ def breakConnections(target, source=True, dest=True):
 	if isNode(target):
 		for i in cmds.listAttr(target):
 			breakConnections(target+"."+i, source, dest)
-	if isPlug(target):
-		test = cmds.listConnections(target, plugs=True, s=source, d=dest)
-		if test:
-			for i in test:
-				try:
-					cmds.disconnectAttr(target, i)
-				except:
-					cmds.disconnectAttr(i, target)
+		return
+
+	tree = treeFromPlug(target)
+	for target in tree.allBranches():
+		target = target.name
+		if isPlug(target):
+			test = cmds.listConnections(target, plugs=True, s=source, d=dest)
+			if test:
+				for i in test:
+					try:
+						cmds.disconnectAttr(target, i)
+					except:
+						cmds.disconnectAttr(i, target)
 
 
 # functions for using string attributes like keys in dictionary

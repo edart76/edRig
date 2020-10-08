@@ -15,18 +15,7 @@ class Memory2(AbstractTree):
 		super(Memory2, self).__init__(name, val)
 		self["nodes"] = [] # node storage
 
-	""" a top-level tree interface is all that's necessary - 
-	no need for a full tree object to hold an integer value """
 
-	@property
-	def nodes(self):
-		""":rtype list(AbsoluteNode)"""
-		return self["nodes"]
-	@nodes.setter
-	def nodes(self, val):
-		self["nodes"] = val
-
-	IGNORE_KEYS = ("nodes", )
 
 	def _allocateSpace(self, infoName, nodes=None):
 		"""creates blank memory dict
@@ -38,7 +27,7 @@ class Memory2(AbstractTree):
 		self[infoName] = {}
 		#self[infoName]["CLOSED"] = False
 		self[infoName]["nodes"] = nodes
-		self.nodes += nodes
+		self["nodes"] += nodes
 
 		"""currently fragile, expecting to be called just once per data
 		does not yet support addition"""
@@ -246,8 +235,8 @@ class Memory2(AbstractTree):
 
 		allInfo = self[infoName]
 
-		#print("allInfo {}".format(allInfo))
-		#print("target {}".format(target))
+		print("allInfo {}".format(allInfo))
+		print("target {}".format(target))
 
 		space = kwargs.get("space") or "world"
 
@@ -260,10 +249,10 @@ class Memory2(AbstractTree):
 			info = allInfo[infoType]
 
 
-		#print "info to apply is {}".format(info)
+		print "info to apply is {}".format(info)
 		# it's really, really for the best if you just work by sequence
 		for target, info in zip(target, info):
-			#print("target {}, info {}".format(target, info))
+			print("target {}, info {}".format(target, info))
 
 
 			if not cmds.objExists(target):
@@ -306,7 +295,7 @@ class Memory2(AbstractTree):
 	def getFlattenedNodes(self):
 		"""ensure nodes are stored as strings, not AbsNodes"""
 		#self.nodes = [str(i) for i in self.nodes] # for some reason | characters screw up strings
-		return [str(i) for i in self.nodes]
+		return [str(i) for i in self["nodes"]]
 
 	@staticmethod
 	def makeBlankInfoType(infoType):
@@ -380,7 +369,8 @@ class Memory2(AbstractTree):
 		"""reapply weights on to target shape"""
 
 	def serialise(self):
-		self.nodes = [ str(i) for i in self.nodes]
+		#print("serialise nodes {}".format(self["nodes"]))
+		self["nodes"] = [ str(i) for i in self.get("nodes") or []]
 		return super(Memory2, self).serialise()
 
 """

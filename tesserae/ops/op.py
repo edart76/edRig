@@ -148,6 +148,7 @@ class Op(MayaReal):
 
 	def __init__(self, name=None, abstract=None):
 		""":type abstract AbstractNode"""
+		super(Op, self).__init__(name=name)
 		self.character = None
 		print "Op instantiated"
 		self._opName = None
@@ -266,20 +267,22 @@ class Op(MayaReal):
 
 	def rename(self, newName):
 		"""called by graph"""
-		self.opName = newName
+		self.name = newName
 
 	@property
 	def opName(self):
 		# because this wasn't confusing enough already
-		if self._opName:
-			return self._opName
-		else:
-			return self.__class__.__name__ #+ self.uuid
+		# if self._opName:
+		# 	return self._opName
+		# else:
+		# 	return self.__class__.__name__ #+ self.uuid
+		return self.name
 
 	@opName.setter
 	def opName(self, val):
 		# equivalent to renaming an op
-		self._opName = val
+		#self._opName = val
+		self.name = val
 		# return val
 
 	@staticmethod
@@ -365,11 +368,10 @@ class Op(MayaReal):
 		# connect all created nodes to the input network node
 		# said the consummate idiot
 
-	def ECN(self, type, name="blankName", cleanup=False, *args):
+	def ECN(self, type, name=None, cleanup=False, *args, **kwargs):
 		# this is such a good idea
-		if name == "blankName":
-			name = type
-		node = ECN(type, name, *args)
+		name = kwargs.get("n") or name or type
+		node = ECN(type, name, *args, **kwargs)
 		self.edTag(node)
 		self.opTag(node)
 
@@ -377,9 +379,10 @@ class Op(MayaReal):
 			node = cmds.parent(node, self.opGrp)[0] # prevent messy scenes
 		return node
 
-	def ECAsimple(self, type, name="blankName", cleanup=False, *args, **kwargs):
+	def ECAsimple(self, type, name=None, cleanup=False, *args, **kwargs):
 		# this is such a good idea
 		# first check if node already exists, later
+		name = kwargs.get("n") or name or self.name + "_" + type
 		node = self.ECN(type, *args, name=name, cleanup=cleanup, **kwargs)
 		return AbsoluteNode(node)
 

@@ -509,12 +509,11 @@ def reloadEdRig(tesserae=True):
 	"""force reload all edRig packages
 	if not tesserae, will try not to crash tesserae"""
 	protecc = {"tesserae" : ("layers", "tesserae")}
+	attacc = ("edRig", "tree")
 	import sys
 	for i in sys.modules.keys():
-		if "edRig" in i:
-			if not tesserae and any([n in i for n in protecc["tesserae"]]):
-				continue
-			else:   del sys.modules[i]
+		if any( n in i for n in attacc):
+			del sys.modules[i]
 
 
 def getLatestVersions( files=None, versions=2, path=None ):

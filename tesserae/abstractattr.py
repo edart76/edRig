@@ -126,8 +126,8 @@ class AbstractAttr(AbstractTree):
 
 
 	# ---- main methods ---
-	def addChild(self, newChild):
-		newChild = super(AbstractAttr, self).addChild(newChild)
+	def addChild(self, newChild, **kwargs):
+		newChild = super(AbstractAttr, self).addChild(newChild, **kwargs)
 		newChild._node = self.node
 		return newChild
 

@@ -8,7 +8,9 @@ from abc import ABCMeta
 import types
 
 #from edRig.lib.tree import Tree, Signal
-from tree import Tree
+import tree
+reload(tree)
+Tree = tree.Tree
 
 
 class Signal(object):
@@ -730,18 +732,21 @@ if __name__ == '__main__':
 	testTree.addChild(breakTree)
 
 
-	debug(newTree)
+	#debug(newTree)
 	#debug(testTree("parent").address)
 
 	#print(testTree.display())
 	loadedTree = AbstractTree.fromDict( testTree.serialise() )
 
-	#print(loadedTree.display())
+	print(loadedTree.display())
+	loadedTree["asdf"] = "notFirstKey"
+	print(loadedTree.display())
 
-	print( loadedTree("parent.listEntry").value )
-	print( loadedTree("parent.listEntry").listValue )
-	print( loadedTree("parent.listEntry").listValue[-1] * 100)
-
+	#
+	# print( loadedTree("parent.listEntry").value )
+	# print( loadedTree("parent.listEntry").listValue )
+	# print( loadedTree("parent.listEntry").listValue[-1] * 100)
+	pass
 
 
 	# for i in loadedTree.allBranches():
@@ -775,14 +780,14 @@ if __name__ == '__main__':
 			self._prop = val
 
 
-	test = Test()
-	print(test.var)
-	test.map[0](True)
-	print(test.var)
-	if test.var:
-		print("ye")
-
-	print(test.prop)
-	test.map[1] = False
-	print(test.prop)
+	# test = Test()
+	# print(test.var)
+	# test.map[0](True)
+	# print(test.var)
+	# if test.var:
+	# 	print("ye")
+	#
+	# print(test.prop)
+	# test.map[1] = False
+	# print(test.prop)
 

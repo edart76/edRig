@@ -298,16 +298,16 @@ def debug(var):
 def ECN(kind, name="", parent=None, *args, **kwargs):
 	# node creation without carpal conflagration
 	# short for EdCreateNode
-
-	if not name: name = kind
+	name = kwargs.get("n") or name or kind
+	if "n" in kwargs: kwargs.pop("n")
 
 	if kind == "pma":
-		node = cmds.createNode("plusMinusAverage", n=name)
+		node = cmds.createNode("plusMinusAverage", n=name, **kwargs)
 		if "-" in args:
 			cmds.setAttr(node + ".operation", 2)
 
 	elif kind == "md":
-		node = cmds.createNode("multiplyDivide", n=name)
+		node = cmds.createNode("multiplyDivide", n=name, **kwargs)
 		if "div" in args:
 			cmds.setAttr(node + ".operation", 2)
 
@@ -433,7 +433,7 @@ def ECN(kind, name="", parent=None, *args, **kwargs):
 
 	else:
 		# raise RuntimeError("Kind {} is not recognised - please choose an ECN-supported node".format(kind))
-		node = cmds.createNode(kind, n=name, ss=True)
+		node = cmds.createNode(kind, n=name, ss=True, **kwargs)
 
 	if isinstance(node, list):
 		node = node[0]

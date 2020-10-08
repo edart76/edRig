@@ -388,6 +388,15 @@ def getClosestPoint(target=(0,0,0), points=None):
 			lowest = length
 
 
+def unrollConstraint(constraint):
+	""" remove or reroute the cyclic mess of connections
+	that festoons each and every constraint node
+	run last in rig building"""
+	# used to look up driven transform
+	historyAttr = "constraintRotateOrder"
+	# attrs to reroute
+	breakAttrs = ["constraintRotateOrder", "constraintRotatePivot",
+	              "constraintRotateTranslate",]
 
 
 

@@ -112,7 +112,15 @@ class AbsoluteNode(StringLike):
 		absolute.nodeType = absolute._instanceNodeType
 
 		# add new node to cache
-		cls.nodeCache[ uid[0] ] = absolute
+		try:
+			cls.nodeCache[ uid[0] ] = absolute
+		except:
+			print("node {}".format(node))
+			print("node uid {}".format(cmds.ls(node, uid=1)))
+			print("uid {}".format(uid))
+			print("nodeCache {}".format(cls.nodeCache))
+			raise RuntimeError
+
 
 		return absolute
 
