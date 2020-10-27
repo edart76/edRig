@@ -13,7 +13,11 @@ userSetupPath = "C:/Users/Ed/Documents/maya/2018/scripts\userSetup.py"
 
 # set environment paths
 oldPath = os.environ["MAYA_PLUG_IN_PATH"]
-os.environ["MAYA_PLUG_IN_PATH"] = COMMON_PATH + "/edCode/edPlugin/build/Debug;" + oldPath
+#os.environ["MAYA_PLUG_IN_PATH"] = COMMON_PATH + "/edCode/edPlugin/build/Debug;" + oldPath
+os.environ["MAYA_PLUG_IN_PATH"] = COMMON_PATH + "/edCode/edPlugin/build/Release;" + \
+oldPath
+#COMMON_PATH + "/edCode/edPlugin/build/Debug;" + \
+
 
 # ref from Maya.env
 # MAYA_PLUG_IN_PATH = F:\all_projects_desktop\common\edCode\edPlugin;F:\all_projects_desktop\common\edCode\edPlugin\build\Release;

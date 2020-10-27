@@ -217,6 +217,17 @@ class AbstractAttr(AbstractTree):
 		else:
 			self.connections = [edge]
 
+	def delete(self):
+		""" removes this attribute and all children
+		from other attrs' connections
+		might be better to use signal system"""
+		for edge in self.getConnections():
+			other = edge.oppositeAttr(self)
+			other.connections.remove(edge)
+		for i in self.getConnectedChildren():
+			i.delete()
+
+
 	def getConnectedAttrs(self):
 		"""returns only connected AbstractAttrs, not abstractEdges -
 		this should be the limit of what's called in normal api"""

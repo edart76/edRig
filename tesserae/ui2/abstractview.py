@@ -144,6 +144,11 @@ class AbstractView(QtWidgets.QGraphicsView):
 		tab.triggered.connect(self.tabSearchToggle)
 		self.addAction(tab)
 
+		delete = QtWidgets.QAction("Delete Selected", self)
+		delete.setShortcut("del")
+		delete.triggered.connect(self.nodeDeleteCalled)
+		self.addAction(delete)
+
 		#setup_actions(self)
 	# def setAsset(self, assetItem):
 	# 	self.currentAsset = assetItem
@@ -180,6 +185,10 @@ class AbstractView(QtWidgets.QGraphicsView):
 			super(AbstractView, self).scrollContentsBy(dx, dy)
 			pass
 
+	def keyPressEvent(self, event):
+		print("view keyPressEvent")
+		super(AbstractView, self).keyPressEvent(event)
+
 	def contextMenuEvent(self, event):
 		"""i'm really honestly quite sick of this softlocking my program"""
 
@@ -190,7 +199,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			return
 		#self.RMB_state = False
 		self.buildContext()
-		self.contextMenu.exec_(event.globalPos())
+		self.contextMenu.exec_(self.mapToScene(event.globalPos()))
 		# super(AbstractView, self).contextMenuEvent(event)
 
 	""" view receives events first - calling super passes them to scene """

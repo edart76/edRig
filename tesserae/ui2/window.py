@@ -122,6 +122,7 @@ class TilePileUI(QtWidgets.QMainWindow):
 		print "main keyPress  {}".format(event.key())
 		# this stops events passing back to maya ui
 		#super(TilePileUI, self).keyPressEvent(event)
+		self.graphView.keyPressEvent(event)
 
 	def mousePressEvent(self, event):
 		print "main mousePress"

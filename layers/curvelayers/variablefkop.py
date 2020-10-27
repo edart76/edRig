@@ -2,8 +2,19 @@
 import maya.cmds as cmds
 import edRig.core as core
 # tesserae is here to save our souls
-from edRig.core import con, ECN
 from edRig.tesserae.ops.layer import LayerOp
+from edRig import curve, ECA, con, ECN, transform
+
+""" redo system to use two controls - one as the normal fk 
+control, and one parent as the position and bias control
+tx is u,
+scalex is falloff width, scaley is falloff bias, 
+scalez falloff sharpness
+
+also need a visual indicator of bias shape
+
+"""
+
 
 class VariableFkOp(LayerOp):
 	# wahey
@@ -30,7 +41,7 @@ class VariableFkOp(LayerOp):
 def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 	# you knew it was coming
 	inCrv = curve.createCurve(name+"Input")
-	inShape = nodule(inCrv[0])
+	inShape = inCrv[0]
 	con(targetCrv+".local", inShape+".create")
 
 	out = curve.duplicateCurveTf(inCrv[1])
@@ -69,7 +80,7 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 	for i in xrange(numJnts+1):
 		#with the last joint being an end
 		u = 1.0 / numJnts * i
-		jnt = ECn("joint", "{}_vFk_{}jnt".format(name, i))
+		jnt = ECN("joint", "{}_vFk_{}jnt".format(name, i))
 		parts["jnts"].append(jnt)
 		jntWorldDecomp = ECN("matDecomp", "jntWorldDecomp")
 
@@ -78,8 +89,8 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 			outShape+".controlPoints[{}]".format(i))
 
 		# connect output upcurve
-		jntWorldPmm = ECn("pmm", "jntWorldUpPmm", "vmOff")
-		jntWorldPmm.inPoint = (0, 3, 0)
+		jntWorldPmm = ECA("pmm", "jntWorldUpPmm", "vmOff")
+		jntWorldPmm.set("inPoint", (0, 3, 0))
 		cmds.connectAttr(jnt+".worldMatrix[0]", jntWorldPmm+".inMatrix")
 		cmds.connectAttr(jntWorldPmm+".output",
 			outUpShape+".controlPoints[{}]".format(i))
@@ -87,14 +98,14 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 
 		initPci = curve.pciAtU(inShape, u=u, constantU=True, purpose="initialJointPosition")
 		parts["initPcis"].append(initPci)
-		initLoc = core.loc("initJntLoc")
+		initLoc = ECA("locator", "initJntLoc")
 
 
 		if i != 0:
-			aim = nodule(transform.liveAimFromTo(
-				parts["initPcis"][i-1]+".position", initPci+".position"))
+			aim = transform.liveAimFromTo(
+				parts["initPcis"][i-1]+".position", initPci+".position")
 			parts["initAims"].append(aim)
-			matProxy = core.loc("initMat_proxy_loc")
+			matProxy = ECA("locator", "initMat_proxy_loc")
 			con(aim+".constraintRotate", matProxy+".rotate")
 			parts["initMatProxies"].append(matProxy)
 			endMatMult = ECN("multMatrix", "endMatMult")
@@ -191,6 +202,10 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 		# more nuanced treatment needed for choice connections
 		cmds.connectAttr(ctrl.tf+".rotate", ctrlSani+".input[0]")
 
+
+		"""replace with softmod, affect sharpness and bias all through 
+		ramp if possible 
+		bias might have to be rotation-based """
 
 		# set up sin deformer
 		# this still gives jagged behaviour at edge of bell curve, which is

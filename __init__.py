@@ -10,7 +10,7 @@ from edRig.dcc import cmds, mel, om, oma, omui, \
 
 from edRig.lib.python import debug
 
-from edRig.node import AbsoluteNode, ECA
+from edRig.node import AbsoluteNode, ECA, ECN
 from edRig.attr import con
 
 sys.dont_write_bytecode = True

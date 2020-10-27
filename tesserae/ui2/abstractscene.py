@@ -195,9 +195,9 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			self.activeView.sceneMouseReleaseEvent(event)
 		super(AbstractScene, self).mouseReleaseEvent(event)
 
-	# def keyPressEvent(self, event): # THIS GIVES A REAL BAD TIME
-	# 	if self.activeView:
-	# 		self.activeView.keyPressEvent(event)
+	def keyPressEvent(self, event):
+		print("scene keyPressEvent")
+		super(AbstractScene, self).keyPressEvent(event)
 
 
 	def _draw_grid(self, painter, rect, pen, grid_size):

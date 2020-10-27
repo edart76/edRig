@@ -29,6 +29,16 @@ class AbstractEdge(object):
 	def dest(self):
 		return self.destNode, self.destAttr
 
+	def oppositeAttr(self, attr):
+		""" given one attr, return its opposite,
+		or None if attr is not recognised """
+		if attr == self.sourceAttr:
+			return self.destAttr
+		elif attr == self.destAttr:
+			return self.sourceAttr
+		else:
+			return None
+
 	def serialise(self):
 		"""store uids of nodes, and names of attributes - edges regenerated last"""
 		serial = {
