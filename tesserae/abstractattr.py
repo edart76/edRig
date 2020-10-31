@@ -192,17 +192,13 @@ class AbstractAttr(AbstractTree):
 		return [i for i in level if i.isLeaf()]
 
 	def getAllConnectable(self):
-		level = self.getAllChildren()
+		level = self.getAllChildren() + [self]
 		levelList = [i for i in level if i.isConnectable()]
-		if self.isConnectable():
-			levelList.append(self)
 		return levelList
 
 	def getAllInteractible(self):
-		level = self.getAllChildren()
+		level = self.getAllChildren() + [self]
 		levelList = [i for i in level if i.isInteractible()]
-		if self.isInteractible():
-			levelList.append(self)
 		return levelList
 
 	def addConnection(self, edge):

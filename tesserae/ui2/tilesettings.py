@@ -344,8 +344,12 @@ class TileSettings(QtWidgets.QTreeView):
 		self.makeMenu()
 		#pos = event.localPos()
 		pos = event.globalPos()
-		#menu = self.menu.exec_( pos )
-		menu = self.menu.exec_( self.viewport().mapToGlobal(event.pos()) )
+		pos = event.pos()
+		#pos = self.viewport().mapFromGlobal( self.mapToGlobal( event.pos()))
+		pos = self.mapToGlobal( event.pos())
+		menu = self.menu.exec_( pos )
+		#menu = self.menu.exec_( self.viewport().mapToGlobal(event.pos()) )
+		#menu = self.menu.exec_( self.viewport().mapToGlobal(event.globalPos()) )
 
 
 
@@ -789,7 +793,7 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 	def treeFromRow(self, row):
 		""":rtype AbstractTree """
 		#return self.tree( self.data(row, objRole) )
-		return self.tree.get( self.data(row, objRole) )
+		return self.tree.getBranch( self.data(row, objRole) )
 
 
 	def duplicateRow(self, row):

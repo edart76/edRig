@@ -161,14 +161,15 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.keyState.syncModifiers(event)
 		event.ignore()
 		#print("view wheel event accepted {}".format(event.isAccepted()))
-		super(AbstractView, self).wheelEvent(event)
+		# super(AbstractView, self).wheelEvent(event)
 		#print("view wheel event accepted {}".format(event.isAccepted()))
 
 
-		if event.isAccepted():
-			return
-		# adjust = (event.delta() / 120) * 0.1
-		# self.setViewerZoom(adjust, event.globalPos())
+		# if event.isAccepted():
+		# 	return
+		adjust = (event.delta() / 120) * 0.1
+		#self.setViewerZoom(adjust, event.globalPos())
+		self.setViewerZoom(adjust, event.pos())
 
 	# def scrollEvent(self, event): # never called
 	# 	print("view scrollEvent")
@@ -194,13 +195,21 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		super(AbstractView, self).contextMenuEvent(event)
 
-		# just check in every widget if event has been used
-		if event.isAccepted():
+		try:
+
+			# just check in every widget if event has been used
+			if event.isAccepted():
+				return
+			#self.RMB_state = False
+			self.buildContext()
+			self.contextMenu.exec_(event.globalPos())
+			# self.contextMenu.exec_(
+			# 	self.mapToScene(event.globalPos()).toPoint())
+			# super(AbstractView, self).contextMenuEvent(event)
+		except RuntimeError as e:
+			print e
 			return
-		#self.RMB_state = False
-		self.buildContext()
-		self.contextMenu.exec_(self.mapToScene(event.globalPos()))
-		# super(AbstractView, self).contextMenuEvent(event)
+
 
 	""" view receives events first - calling super passes them to scene """
 
