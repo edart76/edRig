@@ -174,8 +174,11 @@ class KeyState(object):
 
 		self.keyMap = {
 			self.alt: QtCore.Qt.AltModifier,
-			self.ctrl: QtCore.Qt.ShiftModifier, ### w h y ###
-			self.shift: QtCore.Qt.ControlModifier} ### w h y ###
+			# self.ctrl: QtCore.Qt.ShiftModifier, ### w h y ###
+			# self.shift: QtCore.Qt.ControlModifier, ### w h y ###
+			self.ctrl: QtCore.Qt.ControlModifier,
+			self.shift: QtCore.Qt.ShiftModifier,
+		}
 		# shift and ctrl are swapped for me I kid you not
 
 	def mousePressed(self, event):

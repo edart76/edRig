@@ -171,7 +171,7 @@ class TileSettings(QtWidgets.QTreeView):
 			maxLen = max(maxLen, len(k) + len(str(v.value)))
 		width = maxLen*7 + 30
 
-		rowHeight = self.rowHeight(self.modelObject.index(0, 0))
+		rowHeight = self.rowHeight(self.modelObject.index(0, 0)) * 0.5
 
 		#height = self.viewportSizeHint().height()
 		count = len( self.tree.root.allBranches( includeSelf=True) )
@@ -179,9 +179,9 @@ class TileSettings(QtWidgets.QTreeView):
 			height = 1
 			width = 1
 		else:
-			height = 20 * count
-		index = self.rootIndex()
-		index = self.modelObject.index(1, 1)
+			height = rowHeight * count
+		# index = self.rootIndex()
+		# index = self.modelObject.index(1, 1)
 		#height = ( self.rowHeight( index ) + 2 ) * count
 		self.resize( width, height )
 		self.sizeChanged()
@@ -189,14 +189,14 @@ class TileSettings(QtWidgets.QTreeView):
 
 
 	def mousePressEvent(self, event):
-		print("tileSettings mouse event")
+		#print("tileSettings mouse event")
 		self.keyState.mousePressed(event)
-		print("shift {}, ctrl {}".format(self.keyState.shift, self.keyState.ctrl))
+		#print("shift {}, ctrl {}".format(self.keyState.shift, self.keyState.ctrl))
 
 		# only pass event on editing,
 		# need to manage selection separately
 		if not (self.keyState.ctrl or self.keyState.shift):
-			print("settings pass mouse event")
+			#print("settings pass mouse event")
 			super(TileSettings, self).mousePressEvent(event)
 
 		index = self.indexAt(event.pos())
@@ -273,6 +273,7 @@ class TileSettings(QtWidgets.QTreeView):
 		self.menu.addAction(func=self.copyEntries)
 		self.menu.addAction(func=self.pasteEntries)
 		self.menu.addAction(func=self.display)
+		self.menu.addAction(func=self.resizeToTree)
 
 	def display(self):
 		print(self.tree.display())
@@ -915,7 +916,7 @@ def test():
 	# ref = win.show()
 	win = BaseMayaUi(parent=getMayaMainWindow())
 	widg = TileSettings(win, tree=testTree)
-	#win.setSizePolicy(expandingPolicy)
+	win.setSizePolicy(expandingPolicy)
 
 	#return ref, win
 	return win.show()

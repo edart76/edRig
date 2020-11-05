@@ -192,6 +192,56 @@ than vertices in the mesh
 
 """
 
+def getInfluenceMap(skinNode):
+	""" return a map of object : influence index """
+	fn = oma.MFnSkinCluster(core.MObjectFrom(skinNode))
+	influences = fn.influenceObjects()
+	result = {}
+	for inf in influences:
+		result[inf] = fn.indexForInfluenceObject(inf)
+	return result
+
+
+
+
+def getSkinWeights(skinNode):
+	"""returns dict of all vertex weighs per influence
+	copied in part from charactersetup.com"""
+	fn = om.MFnDependencyNode(core.MObjectFrom(skinNode))
+	result = {}
+
+	listPlug = fn.findPlug("weightList")
+	weightPlug = fn.findPlug("weights")
+	nVertices = listPlug.numElements()
+
+	for vtx in range(nVertices):
+		weightPlug.selectAncestorLogicalIndex(vtx, listPlug.attribute())
+		result[vtx] = {}
+		for idx in weightPlug.numElements():
+			valuePlug = weightPlug.elementByPhysicalIndex(idx)
+			result[vtx][valuePlug.logicalIndex()] = valuePlug.asDouble()
+	return result
+
+
+class MeshStruct(object):
+	""" maybe?
+	common interchange serialisation structure to
+	store per point attributes """
+
+	def __init__(self):
+		self.nPoints = 0
+		self.nEdges = 0
+		self.nFaces = 0
+		self.positions = [] # list of floats
+		self.pointAttrs = {}
+
+
+
+class SkinWeights(object):
+
+	pass
+
+
 class DeformerWeights(object):
 	""" per-point varying weights """
 
