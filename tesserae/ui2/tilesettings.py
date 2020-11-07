@@ -78,6 +78,9 @@ class SelectionModelContainer(object):
 		                   QtCore.QItemSelectionModel.Rows)
 
 
+rowHeight = 16
+
+
 class TileSettings(QtWidgets.QTreeView):
 	"""widget for viewing and editing an AbstractTree
 	display values in columns, branches in rows"""
@@ -127,6 +130,12 @@ class TileSettings(QtWidgets.QTreeView):
 		header.setStretchLastSection(True)
 		self.savedSelectedTrees = []
 		self.savedExpandedTrees = []
+		# self.setStyleSheet("font: Comic Sans MS")
+		self.setStyleSheet("QLabel {font: Comic Sans MS}")
+
+		self.setSizeAdjustPolicy(
+			QtWidgets.QAbstractScrollArea.AdjustToContents
+		)
 
 
 		self.setUniformRowHeights(True)
@@ -145,7 +154,7 @@ class TileSettings(QtWidgets.QTreeView):
 		self.lastSelected = None
 
 		self.contentChanged.connect(self.resizeToTree)
-		self.setSizePolicy(expandingPolicy)
+		#self.setSizePolicy(expandingPolicy)
 
 		self.expandAll()
 
@@ -164,26 +173,39 @@ class TileSettings(QtWidgets.QTreeView):
 
 	def resizeToTree(self, *args, **kwargs):
 		self.header().resizeSections(QtWidgets.QHeaderView.ResizeToContents)
-		return
 		# get rough idea of how long max tree entry is
 		maxLen = 0
 		for k, v in self.tree.iterBranches():
 			maxLen = max(maxLen, len(k) + len(str(v.value)))
 		width = maxLen*7 + 30
 
-		rowHeight = self.rowHeight(self.modelObject.index(0, 0)) * 0.5
+		width = self.header().length()
+
+		# rowHeight = self.rowHeight(self.modelObject.index(0, 0))
+		# rowHeight = QtGui.QFontMetrics(self.font()).height()
+		boxHeight = self.visualRect( self.model().index(0, 0)).height()
+		rowHeight = max(10, boxHeight)
+		# if boxHeight:
+		# 	rowHeight = boxHeight
+		# else:
+		# 	rowHeight = rowHeight
+
+
+		print("rowHeight {}".format(rowHeight))
 
 		#height = self.viewportSizeHint().height()
 		count = len( self.tree.root.allBranches( includeSelf=True) )
-		if count == 1:
-			height = 1
-			width = 1
-		else:
-			height = rowHeight * count
-		# index = self.rootIndex()
-		# index = self.modelObject.index(1, 1)
-		#height = ( self.rowHeight( index ) + 2 ) * count
-		self.resize( width, height )
+		print("all {}".format(self.tree.root.allBranches()))
+		print("count {}".format(count))
+		# if count == 1:
+		# 	height = 1
+		# 	width = 1
+		# else:
+		# 	height = rowHeight * count + self.header().rect().height()
+
+		self.resize( self.viewportSizeHint().width(),
+		                          self.viewportSizeHint().height() +
+		                          self.header().rect().height() )
 		self.sizeChanged()
 		pass
 
@@ -564,7 +586,6 @@ class AbstractBranchDelegate(QtWidgets.QStyledItemDelegate):
 		return super(AbstractBranchDelegate, self).createEditor(parent, options, index)
 
 
-rowHeight = 16
 
 class AbstractBranchItem(QtGui.QStandardItem):
 	"""small wrapper allowing standardItems to take tree objects directly"""
@@ -604,7 +625,6 @@ class AbstractBranchItem(QtGui.QStandardItem):
 	def addValueData(self):
 		"""for now this only handles strings
 		in future it may be worth handling dicts, lists etc"""
-		# textItem = QtCore.QStandardItem(self.tree.value)
 		textItem = AbstractValueItem(self.tree)
 		#self.appendColumn([textItem])
 		self.insertColumn( 1, [textItem])
@@ -916,7 +936,7 @@ def test():
 	# ref = win.show()
 	win = BaseMayaUi(parent=getMayaMainWindow())
 	widg = TileSettings(win, tree=testTree)
-	win.setSizePolicy(expandingPolicy)
+	#win.setSizePolicy(expandingPolicy)
 
 	#return ref, win
 	return win.show()

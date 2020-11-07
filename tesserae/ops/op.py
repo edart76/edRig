@@ -271,19 +271,11 @@ class Op(MayaReal):
 
 	@property
 	def opName(self):
-		# because this wasn't confusing enough already
-		# if self._opName:
-		# 	return self._opName
-		# else:
-		# 	return self.__class__.__name__ #+ self.uuid
 		return self.name
 
 	@opName.setter
 	def opName(self, val):
-		# equivalent to renaming an op
-		#self._opName = val
 		self.name = val
-		# return val
 
 	@staticmethod
 	def log(message, **kwargs):

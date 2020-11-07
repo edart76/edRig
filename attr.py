@@ -19,11 +19,10 @@ def treeFromPlug(rootPlug):
 	containing useful information about them
 	hopefully we can eventually replace most of the other mess below """
 	node, at = rootPlug.split(".")
-	tree = Tree(rootPlug)
-	if cmds.attributeQuery(at, node=node, listChildren=1):
-		for i in cmds.attributeQuery(at, node=node, listChildren=1):
-			branch = treeFromPlug( node + "." + i)
-			tree.addChild(branch)
+	tree = Tree(name=at, val=rootPlug)
+	for i in cmds.attributeQuery(at, node=node, listChildren=1) or []:
+		branch = treeFromPlug( node + "." + i)
+		tree.addChild(branch)
 	return tree
 
 def isNode(target):
@@ -74,6 +73,22 @@ def getMObject(node):
 	sel.add(node)
 	return sel.getDependNode(0)
 
+
+"""
+con(leafA, leafB)
+fine
+
+con(compoundA, leafB)
+decompose into list
+con([cAx, cAy, cAz], leafB)
+truncate to shortest?
+con([cAx], leafB)
+
+con(leafA, compoundB)
+con(leafA, [cBx, cBy])
+
+"""
+
 def con(a, b, f=True):
 	"""let's try this again
 	single to compound -> single connected to all compound
@@ -105,6 +120,8 @@ def con(a, b, f=True):
 
 def con2(a, b, f=True):
 	""" attempt to be less powerful """
+def con3(a, b, f=True):
+	"""NOT POWERFUL ENOUGH"""
 
 
 def conOrSet(a, b, f=True):

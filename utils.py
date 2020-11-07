@@ -1,14 +1,13 @@
 #useful tools and larger procedures
 import core
-from core import ECN, con
-import maya.cmds as cmds
-import maya.api.OpenMaya as om
-from edRig import curve, transform, mesh, surface, attr, control
+from core import ECN
+from edRig import curve, transform, mesh, surface, attr, control, \
+	cmds, om, plug, con
 import time
 
 
-def getMatrixPlugFromPlug(fromPlug, closestPoint=None, upCurvePlug=None):
-	"""WHERE DO I PUT THIS"""
+def closestMatrixToMatrixPlug(fromPlug, closestPoint=None, upCurvePlug=None):
+	""" type-agnostic function for constraining matrices with previous geo """
 	plugType = attr.plugType(fromPlug)
 	if plugType == "matrix":
 		return fromPlug
@@ -18,6 +17,9 @@ def getMatrixPlugFromPlug(fromPlug, closestPoint=None, upCurvePlug=None):
 		                           purpose="getPoint", upCurve=upCurvePlug)["mat"]
 		return mat+".output"
 		#pciCtrl = control.TileControl()
+	elif plugType == "mesh":
+		data = mesh.closestPointOnMesh()
+
 
 
 # rotate transform around axis vector with quaternion

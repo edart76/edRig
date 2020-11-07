@@ -1,7 +1,7 @@
 # move stuff around
 import edRig.node
-from edRig import core, attr, cmds, om
-from core import ECN, con
+from edRig import core, attr, cmds, om, con
+from core import ECN
 from edRig.node import AbsoluteNode, ECA
 
 

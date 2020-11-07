@@ -5,6 +5,16 @@ from edRig import core, attr, transform, naming, cmds, om, oma, con
 from edRig.lib.python import AbstractTree
 from edRig.node import AbsoluteNode, ECA
 
+def closestPointOnMesh(meshPlug, pos=(0, 0, 0), static=False):
+	""" pos may be tuple, plug or mvector """
+
+def getMeshUVs(meshFn):
+	""" full map of mesh uv sets by name """
+	data = {name : {
+		"coords" : meshFn.getUVs(name),
+		"shells" : meshFn.getUVShellsIds(name)
+	} for name in meshFn.getUVSetNames()}
+
 
 
 def getLiveShapeLayer(target, local=True):
@@ -234,6 +244,10 @@ class MeshStruct(object):
 		self.nFaces = 0
 		self.positions = [] # list of floats
 		self.pointAttrs = {}
+
+	def setMesh(self, meshFn):
+
+		self.pointAttrs["uvs"] = getMeshUVs(meshFn)
 
 
 
