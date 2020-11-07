@@ -1,8 +1,9 @@
 # layers working with transforms, hierarchy, point data, joints
 from __future__ import division, print_function
 import edRig.node
-from edRig.core import ECN, con
-from edRig import core, transform, attrio, control, curve, point, ECA, plug
+from edRig.core import ECN
+from edRig import core, transform, attrio, control, curve, point, ECA, plug, \
+	con
 from maya import cmds
 from edRig.tesserae.ops.layer import LayerOp
 import maya.api.OpenMaya as om

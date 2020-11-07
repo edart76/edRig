@@ -177,31 +177,6 @@ class TileSettings(QtWidgets.QTreeView):
 		maxLen = 0
 		for k, v in self.tree.iterBranches():
 			maxLen = max(maxLen, len(k) + len(str(v.value)))
-		width = maxLen*7 + 30
-
-		width = self.header().length()
-
-		# rowHeight = self.rowHeight(self.modelObject.index(0, 0))
-		# rowHeight = QtGui.QFontMetrics(self.font()).height()
-		boxHeight = self.visualRect( self.model().index(0, 0)).height()
-		rowHeight = max(10, boxHeight)
-		# if boxHeight:
-		# 	rowHeight = boxHeight
-		# else:
-		# 	rowHeight = rowHeight
-
-
-		print("rowHeight {}".format(rowHeight))
-
-		#height = self.viewportSizeHint().height()
-		count = len( self.tree.root.allBranches( includeSelf=True) )
-		print("all {}".format(self.tree.root.allBranches()))
-		print("count {}".format(count))
-		# if count == 1:
-		# 	height = 1
-		# 	width = 1
-		# else:
-		# 	height = rowHeight * count + self.header().rect().height()
 
 		self.resize( self.viewportSizeHint().width(),
 		                          self.viewportSizeHint().height() +

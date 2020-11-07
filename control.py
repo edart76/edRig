@@ -1,9 +1,9 @@
 # define all the pretty colours, and how to saving them
 from edRig import CURRENT_PATH
-from edRig.core import ECN, con
+from edRig.core import ECN
 from edRig.node import AbsoluteNode, ECA, invokeNode
 from edRig import cmds, om, attr, transform, pipeline, material, beauty, plug, \
-	scene
+	scene, con
 
 
 import string
