@@ -135,10 +135,10 @@ class BaseMayaUi(QtWidgets.QWidget):
 		super(BaseMayaUi, self).__init__(parent)
 		self.setWindowFlags(QtCore.Qt.Window)
 		self.eater = KeyPressEater(self) 
-		self.installEventFilter( self.eater )
+		#self.installEventFilter( self.eater )
 
 	def closeEvent(self, event):
-		self.removeEventFilter(self.eater)
+		#self.removeEventFilter(self.eater)
 		return super(BaseMayaUi, self).closeEvent(event)
 
 

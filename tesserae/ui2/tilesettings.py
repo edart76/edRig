@@ -12,6 +12,7 @@ allowing for more granular control"""
 from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.lib.python import Signal, AbstractTree
 from edRig.tesserae.ui2.lib import ContextMenu, expandingPolicy, getMayaMainWindow, BaseMayaUi, KeyState
+from edRig.tesserae.ui2.collapsible import Section
 from edRig.structures import ActionItem
 
 # t i m e _ t o _ h a c k
@@ -910,7 +911,19 @@ def test():
 	# win.setCentralWidget(widg)
 	# ref = win.show()
 	win = BaseMayaUi(parent=getMayaMainWindow())
-	widg = TileSettings(win, tree=testTree)
+	winLayout = QtWidgets.QGridLayout(win)
+	section = Section(win, title="tree")
+	layout = QtWidgets.QGridLayout(section)
+	#widg = TileSettings(win, tree=testTree)
+	widg = TileSettings(section, tree=testTree)
+	layout.addWidget(widg)
+	winLayout.addWidget(section)
+	winLayout.setSpacing(0)
+	winLayout.setContentsMargins(0, 0, 0, 0)
+
+
+	win.setLayout(winLayout)
+	section.setContentLayout(layout)
 	#win.setSizePolicy(expandingPolicy)
 
 	#return ref, win

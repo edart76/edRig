@@ -92,36 +92,34 @@ class Section(QtWidgets.QWidget):
 	""" collapsible widget area """
 	def __init__(self, parent=None, title=""):
 		super(Section, self).__init__(parent)
-		self.button = QtWidgets.QToolButton(parent=self)
-		self.header = QtWidgets.QFrame(parent=self)
-		self.toggleAnim = QtCore.QParallelAnimationGroup(parent=self)
-		self.contentArea = QtWidgets.QScrollArea(parent=self)
-		self.layout = QtWidgets.QGridLayout(parent=self)
+		self.button = QtWidgets.QToolButton(self)
+		#self.button = QtWidgets.QToolButton(self)
+		self.header = QtWidgets.QFrame(self)
+		self.toggleAnim = QtCore.QParallelAnimationGroup(self)
+		self.contentArea = QtWidgets.QScrollArea(self)
+		self.layout = QtWidgets.QGridLayout(self)
+		self.isOpen = True
+
+		# self.expandFns = (self.setMinimumHeight, self.setMaximumHeight,
+		#                   self.contentArea.setMaximumHeight)
 
 		self.button.setStyleSheet("QToolButton {border: none;}")
 		self.button.setToolButtonStyle( QtCore.Qt.ToolButtonTextBesideIcon )
 		self.button.setArrowType( QtCore.Qt.ArrowType.RightArrow )
 		self.button.setText(title)
 		self.button.setCheckable( True )
-		self.button.setChecked( True )
+		#self.button.setChecked( True )
 
-		self.headerLine.setFrameShape( QtWidgets.QFrame.HLine )
-		self.headerLine.setSizePolicy( QtWidgets.QSizePolicy.Expanding,
-		                               QtWidgets.QSizePolicy.Maximum )
+		self.header.setFrameShape( QtWidgets.QFrame.HLine )
+		self.header.setSizePolicy( QtWidgets.QSizePolicy.Fixed,
+		                               QtWidgets.QSizePolicy.Fixed )
 
 		self.contentArea.setSizePolicy( QtWidgets.QSizePolicy.Expanding,
-		                                QtWidgets.QSizePolicy.Fixed )
+		                                QtWidgets.QSizePolicy.Expanding )
 		self.contentArea.setMaximumHeight(0)
 		self.contentArea.setMinimumHeight(0)
 
-		self.toggleAnim.addAnimation( QtCore.QPropertyAnimation(
-			parent=self, propertyName="minimumHeight" ) )
-		self.toggleAnim.addAnimation( QtCore.QPropertyAnimation(
-			parent=self, propertyName="maximumHeight" ) )
-		self.toggleAnim.addAnimation( QtCore.QPropertyAnimation(
-			parent=self.contentArea, propertyName="maximumHeight" ) )
-
-		self.layout.setVerticalSpacing(0)
+		self.layout.setSpacing(0)
 		self.layout.setContentsMargins( 0, 0, 0, 0 )
 
 		row = 0
@@ -130,32 +128,88 @@ class Section(QtWidgets.QWidget):
 		self.layout.addWidget( self.contentArea, row + 1, 0, 1, 3 )
 		self.setLayout( self.layout )
 
-		self.button.triggered.connect( self.toggle )
+		#self.button.triggered.connect( self.toggle )
+		self.button.clicked.connect( self.toggle )
 
 	def toggle(self, collapsed=True):
-		self.button.setArrowType( QtCore.Qt.ArrowType.DownArrow if collapsed else
-		                          QtCore.Qt.ArrowType.RightArrow )
-		self.toggleAnim.setDirection( QtCore.QAbstractAnimation.Forward if collapsed else
-		                              QtCore.QAbstractAnimation.Backward)
-		self.toggleAnim.start()
+		self.close() if self.isOpen else self.open()
+
+
+	def open(self):
+		self.button.setArrowType(QtCore.Qt.ArrowType.DownArrow)
+		self.toggleAnim.setDirection(QtCore.QAbstractAnimation.Forward)
+		self.isOpen = True
+		contentLayout = self.contentArea.layout()
+		collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
+		contentHeight = contentLayout.sizeHint().height()
+
+		# for i in range( self.toggleAnim.animationCount()):
+		# 	anim = self.toggleAnim.animationAt( i )
+		# 	anim.setDuration( delay )
+		# 	anim.setStartValue( collapsedHeight )
+		# 	anim.setEndValue( collapsedHeight + contentHeight )
+		#
+		# newAnim = self.toggleAnim.animationAt(
+		# 	self.toggleAnim.animationCount() - 1 )
+		# newAnim.setDuration( delay )
+		# newAnim.setStartValue(0)
+		# newAnim.setEndValue(contentHeight)
+		# self.toggleAnim.start()
+
+		# for fn in self.expandFns:
+		# 	fn(300)
+		self.contentArea.setMaximumHeight(10000)
+
+
+	def close(self):
+		self.button.setArrowType(QtCore.Qt.ArrowType.RightArrow)
+		self.toggleAnim.setDirection(QtCore.QAbstractAnimation.Backward)
+		self.isOpen = False
+		contentLayout = self.contentArea.layout()
+		collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
+		contentHeight = contentLayout.sizeHint().height()
+
+		# print("collapsedHeight {} self sizeHint {}".format(collapsedHeight, self.sizeHint().height()))
+		# print("contentAreaMaxHeight {}".format(self.contentArea.maximumHeight()))
+		# print("contentHeight {}".format(contentHeight))
+
+		# for i in range( self.toggleAnim.animationCount()):
+		# 	anim = self.toggleAnim.animationAt( i )
+		# 	anim.setDuration( delay )
+		# 	anim.setStartValue( collapsedHeight )
+		# 	anim.setEndValue( collapsedHeight + contentHeight )
+		#
+		# newAnim = self.toggleAnim.animationAt(
+		# 	self.toggleAnim.animationCount() - 1 )
+		# newAnim.setDuration( delay )
+		# newAnim.setStartValue(0)
+		# newAnim.setEndValue(contentHeight)
+		# self.toggleAnim.start()
+
+		# for fn in self.expandFns:
+		# 	fn(50)
+		self.contentArea.setMaximumHeight(0)
 
 	def setContentLayout(self, contentLayout):
 		""" replaces stored layout with new one
 		:type contentLayout : QtWidgets.QLayout """
 		self.contentArea.setLayout( contentLayout )
-		collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
-		contentHeight = contentLayout.sizeHint().height()
-
-		for i in range( self.toggleAnim.animationCount()):
-			anim = self.toggleAnim.animationAt( i )
-			anim.setDuration( delay )
-			anim.setStartValue( collapsedHeight )
-			anim.setEndValue( collapsedHeight + contentHeight )
-
-		newAnim = self.toggleAnim.animationAt(
-			self.toggleAnim.animationCount() - 1 )
-		newAnim.setDuration( delay )
-		newAnim.setStartValue(0)
-		newAnim.setEndValue(contentHeight)
+		contentLayout.setSpacing(0)
+		contentLayout.setContentsMargins(0, 0, 0, 0)
+		# collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
+		# contentHeight = contentLayout.sizeHint().height()
+		#
+		# for i in range( self.toggleAnim.animationCount()):
+		# 	anim = self.toggleAnim.animationAt( i )
+		# 	anim.setDuration( delay )
+		# 	anim.setStartValue( collapsedHeight )
+		# 	anim.setEndValue( collapsedHeight + contentHeight )
+		#
+		# newAnim = self.toggleAnim.animationAt(
+		# 	self.toggleAnim.animationCount() - 1 )
+		# newAnim.setDuration( delay )
+		# newAnim.setStartValue(0)
+		# newAnim.setEndValue(contentHeight)
+		self.open()
 
 
