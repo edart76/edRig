@@ -11,9 +11,16 @@ def closestPointOnMesh(meshPlug, pos=(0, 0, 0), static=False):
 def getMeshUVs(meshFn):
 	""" full map of mesh uv sets by name """
 	data = {name : {
-		"coords" : meshFn.getUVs(name),
-		"shells" : meshFn.getUVShellsIds(name)
+		"coords" : meshFn.getUVs(name), # array of u, array of v
+		"assigned" : meshFn.getAssignedUVs(name),
+		# number of assigned uvs per face, uv ids per face
 	} for name in meshFn.getUVSetNames()}
+
+def setMeshUVSet(meshFn, data, name="map1"):
+	""" sets individual mesh uv set from data """
+	uvData = data[name]
+	meshFn.setUVs( uvData["coords"][0], uvData["coords"][1], name)
+	meshFn.assignUVs( uvData["assigned"][0], uvData["assigned"][1], name)
 
 
 
@@ -375,6 +382,7 @@ class DeformerWrapper(object):
 
 cmds.addAttr( ln="testArray", dt="doubleArray")
 cmds.makePaintable("pSphere1.testArray", attrType="doubleArray")
+
 
 """
 

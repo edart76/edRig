@@ -34,6 +34,59 @@ shrinkingPolicy = QtWidgets.QSizePolicy(
 )
 
 
+from edRig import CURRENT_PATH
+import os
+
+ICON_PATH = CURRENT_PATH + "/resources/icons/"
+#ICON_PATH = os.path.join(CURRENT_PATH, "/resources/icons/")
+
+
+
+
+
+
+# square icons
+squareCentre = QtGui.QPixmap()
+squarePath = os.path.join(ICON_PATH + "square_centre.png")
+downPath = os.path.join(ICON_PATH + "square_down.png")
+print(squarePath)
+print squareCentre.load( squarePath)
+print squareCentre
+
+squareSides = {}
+for i, key in enumerate(["down", "left", "up", "right"]):
+	tf = QtGui.QTransform()
+	tf.rotate(90 * i)
+	squareSides[key] = squareCentre.transformed(tf)
+
+#icon-size: 32px 32px;
+
+styleSheet = """
+QTreeView::branch::open::has-children {
+    image: url(@square_down@);
+}
+QTreeView::branch::closed::has-children {
+    image: url(@square_down@);
+}
+"""
+# QTreeView::item:open {
+#     image: url('@square_centre@');
+# }
+# QTreeView::item:closed:has-children {
+#     image: url('@square_down@');
+# }
+# """
+
+subs = {"@square_centre@" : squarePath,
+        "@square_down@" : downPath}
+
+subs = {"@square_centre@" : "square_centre.png",
+        "@square_down@" : "square_down.png"}
+
+for k, v in subs.iteritems():
+	styleSheet = styleSheet.replace(k, v)
+print(styleSheet)
+
 class WheelEventFilter(QtCore.QObject):
 	def eventFilter(self, obj, event):
 		if event.type() == QtCore.QEvent.Wheel:
@@ -96,6 +149,7 @@ class TileSettings(QtWidgets.QTreeView):
 		super(TileSettings, self).__init__(parent)
 		self.setSizePolicy(expandingPolicy)
 		#self.installEventFilter(WheelEventFilter(self))
+		self.setWindowIcon(QtGui.QIcon(squareCentre))
 
 		self.setDragEnabled(True)
 		self.setAcceptDrops(True)
@@ -132,11 +186,12 @@ class TileSettings(QtWidgets.QTreeView):
 		self.savedSelectedTrees = []
 		self.savedExpandedTrees = []
 		# self.setStyleSheet("font: Comic Sans MS")
-		self.setStyleSheet("QLabel {font: Comic Sans MS}")
+		# self.setStyleSheet("QLabel {font: Comic Sans MS}")
 
 		self.setSizeAdjustPolicy(
 			QtWidgets.QAbstractScrollArea.AdjustToContents
 		)
+		self.setStyleSheet(styleSheet)
 
 
 		self.setUniformRowHeights(True)
@@ -547,9 +602,6 @@ class TileSettings(QtWidgets.QTreeView):
 class AbstractBranchDelegate(QtWidgets.QStyledItemDelegate):
 	""" use for support of locking entries, options on right click etc """
 
-	# def editorEvent(self, event, model, option, index):
-	# 	""" on right click on entry, check if branch has options """
-
 	def createEditor(self, parent, options, index):
 		""" check for options or if entry is locked """
 		item = index.model().itemFromIndex(index)
@@ -561,27 +613,54 @@ class AbstractBranchDelegate(QtWidgets.QStyledItemDelegate):
 			return None
 		return super(AbstractBranchDelegate, self).createEditor(parent, options, index)
 
+	# def paint(self, painter, option, index):
+	# 	""" draw test icon """
+	# 	painter.drawPixmap(
+	# 		QtCore.QPointF(0.0, 0.0),
+	# 		squareCentre,
+	# 		QtCore.QRectF(0.0, 0.0, 20.0, 20.0)
+	# 	)
+
 
 
 class AbstractBranchItem(QtGui.QStandardItem):
 	"""small wrapper allowing standardItems to take tree objects directly"""
-	ICONS = {}
+	ICONS = {"centre" : QtGui.QIcon( squareCentre ),
+	         "down" : QtGui.QIcon( squareSides["down"])}
 
 	def __init__(self, tree):
 		""":param tree : AbstractTree"""
-		super(AbstractBranchItem, self).__init__(tree.name)
-		self.tree = tree or AbstractTree()
+		self.tree = tree or AbstractTree("root")
+		super(AbstractBranchItem, self).__init__(self.tree.name)
+		#super(AbstractBranchItem, self).setIcon(self.ICONS["centre"])
+
+
+
 		self.treeType = AbstractTree # add support here for subclasses if necessary
 		self.setColumnCount(1)
-		self.trueType = type(self.tree.name)
+		#self.icon = self.ICONS["centre"]
 
-		self.icon = tree.extras.get("icon")
-		if self.icon and self.icon in self.ICONS:
-			self.icon = QtGui.QIcon(self.icon)
+
+		self.trueType = type(self.tree.name)
+		#self.setIcon(self.icon)
+		# print(self.__dict__)
+		# print(self.tree)
+
+
+
+		#self.setIcon(QtGui.QIcon())
+
+		# self.icon = tree.extras.get("icon")
+		# if self.icon and self.icon in self.ICONS:
+		# 	self.icon = QtGui.QIcon(self.icon)
 
 	def data(self, role=QtCore.Qt.DisplayRole):
 		""" just return branch name
 		data is used when regenerating abstractTree from model"""
+		#print("data called - tree name {}".format(self.tree.name))
+		#print(self.__dict__)
+		# if role == QtCore.Qt.DecorationRole:
+		# 	return self.icon
 		if role == objRole:
 			#return self.tree # crashes
 			return self.tree.address
@@ -589,6 +668,7 @@ class AbstractBranchItem(QtGui.QStandardItem):
 			return QtCore.QSize(
 				len(self.tree.name) * 7.5,
 				rowHeight)
+
 		base = super(AbstractBranchItem, self).data(role)
 		return base
 
@@ -867,7 +947,8 @@ class AbstractTreeModel(QtGui.QStandardItemModel):
 		textItem = AbstractValueItem(tree)
 
 		parent.appendRow( [branchItem, textItem] )
-		#parent.appendRow( branchItem )
+		# if tree.branches:
+		# 	branchItem.setIcon(AbstractBranchItem.ICONS["centre"])
 		for i in tree.branches:
 			self.buildFromTree(i, parent=branchItem)
 		self.itemChanged.emit(branchItem)

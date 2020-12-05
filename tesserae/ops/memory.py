@@ -13,14 +13,14 @@ class Memory2(AbstractTree):
 
 	def __init__(self, name="memory", val=None):
 		super(Memory2, self).__init__(name, val)
-		self["nodes"] = [] # node storage
+		#self["nodes"] = [] # node storage
 
 
 
 	def _allocateSpace(self, infoName, nodes=None):
 		"""creates blank memory dict
 		"""
-
+		nodes = nodes or []
 		if self.get(infoName):
 			return
 

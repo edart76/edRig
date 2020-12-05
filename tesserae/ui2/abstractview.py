@@ -331,11 +331,11 @@ class AbstractView(QtWidgets.QGraphicsView):
 			knobs = self._items_near(event.scenePos(), Knob, 5, 5)
 			pos = event.scenePos()
 			if knobs:
-				self._live_pipe.draw_path(self._start_port, None, knobs[0].scenePos())
+				self._live_pipe.drawPath(self._start_port, None, knobs[0].scenePos())
 
 				#self.testPipe.setEnd(knobs[0])
 			else:
-				self._live_pipe.draw_path(self._start_port, None, pos)
+				self._live_pipe.drawPath(self._start_port, None, pos)
 				#
 				# self.testPipe.setEnd(event)
 

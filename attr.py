@@ -7,18 +7,20 @@ from edRig.lib import python
 from edRig.dcc import cmds, om
 
 
-
 dimTypes = {
 	"0D" : ("matrix",),
 	"1D" : ("nurbsCurve", "bezierCurve"),
 	"2D" : ("nurbsSurface", "mesh")
 }
 
+nodeObjMap = {}
+
 def treeFromPlug(rootPlug):
 	""" retrieve a tree with branches representing nested plugs,
 	containing useful information about them
 	hopefully we can eventually replace most of the other mess below """
 	node, at = rootPlug.split(".")
+
 	tree = Tree(name=at, val=rootPlug)
 	for i in cmds.attributeQuery(at, node=node, listChildren=1) or []:
 		branch = treeFromPlug( node + "." + i)
@@ -87,6 +89,10 @@ con([cAx], leafB)
 con(leafA, compoundB)
 con(leafA, [cBx, cBy])
 
+con([a, b, c], [x, y, z, w])
+con([a, b, c], [x, y, z])
+
+
 """
 
 def con(a, b, f=True):
@@ -121,7 +127,14 @@ def con(a, b, f=True):
 def con2(a, b, f=True):
 	""" attempt to be less powerful """
 def con3(a, b, f=True):
-	"""NOT POWERFUL ENOUGH"""
+	"""NOT POWERFUL ENOUGH
+	we assume that plugs passed as strings have not been processed yet
+	"""
+	targets = [a, b]
+	for i in targets:
+		if isinstance(i, basestring):
+			tree = treeFromPlug(i)
+
 
 
 def conOrSet(a, b, f=True):

@@ -1,6 +1,8 @@
 # manages connectivity and execution order of a dag graph
 
 from __future__ import print_function
+import pprint
+from weakref import WeakSet, WeakValueDictionary
 
 from edRig import ROOT_PATH, pipeline, naming
 from edRig.lib.python import Signal
@@ -11,7 +13,6 @@ from edRig.tesserae.abstractedge import AbstractEdge
 # from edRig.tesserae.oplist import ValidList # only on demand
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
-import pprint
 
 # lots of pain has been generated from trying
 # to keep tesserae's structure "correct"
@@ -301,7 +302,11 @@ class AbstractGraph2(AbstractTree):
 
 	def addEdge(self, sourceAttr, destAttr, newEdge=None):
 		"""adds edge between two attributes
-		DOES NOT CHECK LEGALITY"""
+		DOES NOT CHECK LEGALITY
+		edges in future should not use bidirectional references -
+		only inputs know their own drivers - outputs know nothing
+
+		"""
 		if self.state != "neutral":
 			return False
 		self.log( "")

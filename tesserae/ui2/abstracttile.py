@@ -15,55 +15,26 @@ PIPE_STYLES = {
 entryHeight = 20
 nameBarHeight = 30
 
-class AbstractTile(QtWidgets.QGraphicsItem):
-	"""base for any tile in the ui"""
-
-	"""connection events are collected in viewer, passed to graph, verified and enacted
-	then call sync on affected nodes"""
-
-	def __init__(self, parent=None, abstractNode=None, scene=None, **kwargs):
+class AbstractTile2(QtWidgets.QGraphicsItem):
+	""" starting this over """
+	def __init__(self, parent=None, abstractNode=None):
+		super(AbstractTile2, self).__init__(parent)
 		if not isinstance(abstractNode, AbstractNode):
 			raise RuntimeError("no abstractNode provided!")
 		self.abstract = abstractNode
-		self.name = abstractNode.nodeName
-		super(AbstractTile, self).__init__(parent)
-		self.scene = scene
-		self.extras = dict(kwargs)
-		self.attrBlocks = [None, None] # input, output,  neutral(?)
-		self.entries = {} # every individual tile entry from blocks
 
-		self._width = 30
-		self._height = 30
-		self.entryHeight = 20
+		self.attrBlocks = [None, None] # input, output
+		self.entries = {}
 
-		self.selected = False
-		self.colour = self.abstract.colour
-		self.borderColour = (200,200,250)
-
-		# widgets
 		self.nameTag = tilewidgets.NameTagWidget(self, abstractNode.nodeName)
 		self.classTag = QtWidgets.QGraphicsTextItem(
 			self.abstract.__class__.__name__, self)
 
 		self.settingsWidg = self.addSettings(self.abstract.settings)
 		self.settingsWidg.expandAll()
-		# daring
-		self.settingsWidg.contentChanged.connect(self._resizeSettings)
-		self.memoryWidg = None # soon
 
-		# flags?
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable) # ????
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable) # ????
-
-		#print "abstract inputs are {}".format(self.abstract.inputs)
-
-		# arrange items
-		self.arrangeText()
-		#self.arrangeEntries()
-
-		self.sync()
-
-		self.setTextColour((200, 200, 200))
 
 		# signals
 		self.nameTag.value_changed.connect(self._onNameChange)
@@ -73,69 +44,36 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		# set reference to this tile on abstractNode
 		self.abstract.ui = self
 
-	@property
-	def inBlock(self):
-		return self.attrBlocks[0]
-	@property
-	def outBlock(self):
-		return self.attrBlocks[1]
+		# appearance
+		self.width, self.height = self.getSize()
+		self.entryHeight = 20
+		self.colour = self.abstract.extras.get("colour", (50, 50, 120))
+		self.borderColour = (200,200,250)
+		textColour = QtGui.QColor(200, 200, 200)
+		self.classTag.setDefaultTextColor(textColour)
+		self.classTag.setPos(self.boundingRect().width(), 0)
 
-	def _resizeSettings(self, *args, **kwargs):
-		self.syncSize()
-		self.settingsWidg.resizeToTree()
-
-		self.settingsProxy.setGeometry( QtCore.QRect(0.0, 0.0,
-		                               self.settingsWidg.width(),
-		                               self.settingsWidg.height() ) )
-
-		self.settingsProxy.setPos(0, self.height )
-
-	def addSettings(self, tree):
-		"""create a new abstractTree widget and add it to the bottom of node"""
-		self.settingsProxy = QtWidgets.QGraphicsProxyWidget(self)
-		self.settingsWidg = tilesettings.TileSettings(parent=None,
-		                                              tree= tree)
-		self.settingsProxy.setWidget(self.settingsWidg)
-
-		# connect collapse and expand signals to update size properly
-		self.settingsWidg.collapsed.connect( self._resizeSettings )
-		self.settingsWidg.expanded.connect( self._resizeSettings )
-		self._resizeSettings()
-
-		#self.addWidget
-		return self.settingsWidg
 
 	def sync(self):
 		"""update attrBlocks"""
 
 		# remove old entries
 		for i in self.attrBlocks:
-			self.scene.removeItem(i)
-		self.attrBlocks = [None, None]
+			self.scene().removeItem(i)
+		self.attrBlocks = []
 		self.entries.clear()
 
 		# generate new blocks
-		inEntry = TileEntry(parent=self,
-		                  attrItem=self.abstract.inputRoot,
-		                  scene=self.scene, text=False)
-		self.attrBlocks[0] = inEntry
-		inEntry.arrange()
-
-		outEntry = TileEntry(parent=self,
-		                  attrItem=self.abstract.outputRoot,
-		                  scene=self.scene, text=False)
-		self.attrBlocks[1] = outEntry
-		outEntry.arrange()
-
+		for i in (self.abstract.inputRoot, self.abstract.outputRoot):
+			entry = TileEntry(parent=self,
+			                  attrItem=i,
+			                  text=False)
+			entry.arrange()
+			self.entries.update(entry.getEntryMap())
+			self.attrBlocks.append(entry)
 
 		# resizing
-		self.width, self.height = self.syncSize()
-		# for i in self.entries.values():
-		# 	i.setRect(0,0, self.width, self.entryHeight)
-
-		#self.settingsWidg.sync()
-		#self._resizeSettings()
-
+		self.width, self.height = self.getSize()
 		self.arrange()
 
 	def arrange(self):
@@ -151,36 +89,118 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 		y += 30
 
-		self.syncSize()
-		self._resizeSettings()
+		self.settingsWidg.resizeToTree()
+		self.settingsProxy.setGeometry( QtCore.QRect(0.0, self.height,
+		                               self.settingsWidg.width(),
+		                               self.settingsWidg.height() ) )
+
+		#self.settingsProxy.setPos(0, self.height )
 
 
-	def syncSize(self):
+	def _onNameChange(self, widget, name):
+		self.abstract.rename(name)
+
+
+	def getSize(self):
 		"""
 		calculate minimum node size.
 		"""
-		width = 0.0
 		minRect = self.nameTag.boundingRect()
 		minWidth = minRect.x() + 150
 		minHeight = minRect.y() + 20
-		# for i in self.entries.values():
-		# 	minHeight += entryHeight + 2
-		# 	minWidth = max(minWidth, i.boundingRect().width())
+
 		for i in self.attrBlocks:
 			if not i:
 				continue
-			minHeight += i.boundingRect().height() + 5
-			#minWidth = max( minWidth, i.boundingRect().width() )
+			minHeight += i.boundingRect().height() + 10
 
-
-		#self.prepareGeometryChange()
 		self.width = minWidth
 		self.height = minHeight
-		self.update()
 		return minWidth, minHeight
+
+	def boundingRect(self):
+		minWidth, minHeight = self.getSize()
+		return QtCore.QRect(0, 0, minWidth, minHeight)
+
+	def paint(self, painter, option, widget):
+		painter.save()
+		self.getSize()
+
+		baseBorder = 1.0
+		rect = QtCore.QRectF(0.5 - (baseBorder / 2),
+							 0.5 - (baseBorder / 2),
+							 self.width + baseBorder,
+							 self.height + baseBorder)
+		radius_x = 2
+		radius_y = 2
+		path = QtGui.QPainterPath()
+		path.addRoundedRect(rect, radius_x, radius_y)
+		painter.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 255), 1.5))
+		painter.drawPath(path)
+
+		rect = self.boundingRect()
+		bg_color = QtGui.QColor(*self.colour)
+		painter.setBrush(bg_color)
+		painter.setPen(QtCore.Qt.NoPen)
+		#painter.drawRoundRect(rect, radius_x, radius_y)
+		painter.drawRect(rect)
+
+		if self.isSelected():
+			painter.setBrush(QtGui.QColor(*NODE_SEL_COLOR))
+			painter.drawRoundRect(rect, radius_x, radius_y)
+
+		label_rect = QtCore.QRectF(rect.left() + (radius_x / 2),
+								   rect.top() + (radius_x / 2),
+								   self.width - (radius_x / 1.25),
+								   28)
+		path = QtGui.QPainterPath()
+		path.addRoundedRect(label_rect, radius_x / 1.5, radius_y / 1.5)
+		painter.setBrush(QtGui.QColor(0, 0, 0, 50))
+		painter.fillPath(path, painter.brush())
+
+		border_width = 0.8
+		border_color = QtGui.QColor(*self.borderColour)
+		if self.isSelected():
+			border_width = 1.2
+			border_color = QtGui.QColor(*NODE_SEL_BORDER_COLOR)
+		border_rect = QtCore.QRectF(rect.left() - (border_width / 2),
+									rect.top() - (border_width / 2),
+									rect.width() + border_width,
+									rect.height() + border_width)
+		path = QtGui.QPainterPath()
+		path.addRoundedRect(border_rect, radius_x, radius_y)
+		painter.setBrush(QtCore.Qt.NoBrush)
+		painter.setPen(QtGui.QPen(border_color, border_width))
+		painter.drawPath(path)
+		#print "end paint"
+
+		painter.restore()
+
+	def addSettings(self, tree):
+		"""create a new abstractTree widget and add it to the bottom of node"""
+		self.settingsProxy = QtWidgets.QGraphicsProxyWidget(self)
+		self.settingsWidg = tilesettings.TileSettings(parent=None,
+		                                              tree= tree)
+		self.settingsProxy.setWidget(self.settingsWidg)
+
+		# connect collapse and expand signals to update size properly
+		# self.settingsWidg.collapsed.connect( self._resizeSettings )
+		# self.settingsWidg.expanded.connect( self._resizeSettings )
+
+		#self.addWidget
+		return self.settingsWidg
 
 	def getActions(self):
 		return self.abstract.getAllActions()
+
+	def serialise(self):
+		"""save position in view"""
+		return {
+			"pos" :	(self.pos().x(), self.pos().y()),
+			}
+
+class AbstractTile(QtWidgets.QGraphicsItem):
+	"""base for any tile in the ui"""
 
 	@property
 	def pipes(self):
@@ -221,73 +241,6 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 		text_color = QtGui.QColor(*color)
 		self.classTag.setDefaultTextColor(text_color)
 
-	def paint(self, painter, option, widget):
-		painter.save()
-
-		bg_border = 1.0
-		rect = QtCore.QRectF(0.5 - (bg_border / 2),
-							 0.5 - (bg_border / 2),
-							 self.width + bg_border,
-							 self.height + bg_border)
-		radius_x = 2
-		radius_y = 2
-		path = QtGui.QPainterPath()
-		path.addRoundedRect(rect, radius_x, radius_y)
-		painter.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 255), 1.5))
-		painter.drawPath(path)
-
-		rect = self.boundingRect()
-		bg_color = QtGui.QColor(*self.colour)
-		painter.setBrush(bg_color)
-		painter.setPen(QtCore.Qt.NoPen)
-		#painter.drawRoundRect(rect, radius_x, radius_y)
-		painter.drawRect(rect)
-
-		if self.selected:
-			painter.setBrush(QtGui.QColor(*NODE_SEL_COLOR))
-			painter.drawRoundRect(rect, radius_x, radius_y)
-
-		label_rect = QtCore.QRectF(rect.left() + (radius_x / 2),
-								   rect.top() + (radius_x / 2),
-								   self.width - (radius_x / 1.25),
-								   28)
-		path = QtGui.QPainterPath()
-		path.addRoundedRect(label_rect, radius_x / 1.5, radius_y / 1.5)
-		painter.setBrush(QtGui.QColor(0, 0, 0, 50))
-		painter.fillPath(path, painter.brush())
-
-		border_width = 0.8
-		border_color = QtGui.QColor(*self.borderColour)
-		if self.selected:
-			border_width = 1.2
-			border_color = QtGui.QColor(*NODE_SEL_BORDER_COLOR)
-		border_rect = QtCore.QRectF(rect.left() - (border_width / 2),
-									rect.top() - (border_width / 2),
-									rect.width() + border_width,
-									rect.height() + border_width)
-		path = QtGui.QPainterPath()
-		path.addRoundedRect(border_rect, radius_x, radius_y)
-		painter.setBrush(QtCore.Qt.NoBrush)
-		painter.setPen(QtGui.QPen(border_color, border_width))
-		painter.drawPath(path)
-		#print "end paint"
-
-		painter.restore()
-
-	# set positions of widgets
-	def positionName(self):
-		"""centres nametag widget"""
-		nameBox = self.nameTag.boundingRect()
-		#x = (self.width / 2)# - (nameBox.width() / 2)
-		x = self.width
-		self.nameTag.setPos(x, 1.0)
-
-
-	def delete(self):
-		for i in self.entries.values():
-			#self.deleteKnob(i)
-			i.delete()
-		self.scene.deleteNode(self)
 
 	@property
 	def icon(self):
@@ -334,40 +287,30 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 class TileEntry(QtWidgets.QGraphicsRectItem):
 	"""individual shelf for knob and associated widget
-	this sadly locks us into left-to-right rectangular widgets...for now...
-	should read and arrange attributes recursively from tree leaves
-	doesn't do that yet """
-	def __init__(self, parent=None, attrItem=None, scene=None,
+	 """
+	def __init__(self, parent=None, attrItem=None,
 	             text=True, depth=0):
 		if not attrItem:
 			raise RuntimeError("no attrItem supplied!")
-		#print("attritem {} type {}".format( attrItem.name, type(attrItem)))
 		super(TileEntry, self).__init__(parent)
 
-		self.parent = parent
-		self.scene = scene
 		self.attr = attrItem
 		self.name = attrItem.name
 		self.dataType = attrItem.dataType
 		self.depth = depth
 
 
-
 		# base visual dimensions
 		self.edgePad = 5
 		self.unitHeight = entryHeight
 
-		# update parent with shared entry dict
-		self.entries = self.parent.entries
-		self.entries[ self.name ] = self
-
-		self.setRect(0,0,self.parent.boundingRect().width() - self.edgePad,
+		self.setRect(0,0,self.parentItem().boundingRect().width() - self.edgePad,
 		             self.unitHeight)
 		depth += 1
 
 		self.children = [ TileEntry(
-			parent=self, attrItem=i, scene=self.scene, depth=depth)
-				for i in attrItem.children if isinstance(i, AbstractAttr) ]
+			parent=self, attrItem=i, depth=depth)
+				for i in attrItem.branches ]
 
 
 		self.extras = self.attr.extras
@@ -413,16 +356,21 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		if self.widg and self.role == "input":
 			self.widg.enable()
 
-	def setAttrValue(self, name, val):
-		"""given tuple of (name, value) when widget changes"""
-		self.attr.value = val
+	# def setAttrValue(self, name, val):
+	# 	"""given tuple of (name, value) when widget changes"""
+	# 	self.attr.value = val
 
-	def sync(self):
-		"""disable widget if connected, update widget value etc"""
+	def getEntryMap(self):
+		""" returns map of {address : entry} for all child entries """
+		entryMap = {self.attr.address : self}
+		for i in self.children:
+			entryMap.update(i.getEntryMap())
+		return entryMap
+
+
 
 	def arrange(self, parentWidth=None, depth=0, n=0, d=0):
 		"""recursively lay out tree structure
-		not sure this is totally solid yet but for now it works
 		 """
 		depth = self.depth
 		f = 1 if self.role == "output" else -1
@@ -434,30 +382,18 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 		y +=3
 
 		self.setPos(x, y)
-		#n += 1
 
 		for i in self.children:
-			# n += 1
 			i.arrange(depth=depth, n=n)
 			n += 1
 
-		n = d
 		height = sum([i.rect().height() for i in self.children])
 		height = height + self.unitHeight
 
-		if self.children:
-			height += 3
-
-		# no more widgets
-		midHeight = self.height / 2.0
-		midWidth = self.width / 2.0
 		mainWidth = self.rect().width()
-		parentWidth = parentWidth or self.parent.width
+		parentWidth = parentWidth or self.parentItem().width
 
-
-		#self.setRect( x, y, parentWidth, height)
 		self.setRect( 0, 0, parentWidth, height)
-
 
 		if self.label:
 			labelRect = self.label.boundingRect()
@@ -469,13 +405,15 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 
 		if self.role == "output":
 			x = mainWidth
-			if self.knob:
-				textX = mainWidth + 30
-			else: textX = mainWidth + 5
+			textX = mainWidth - textWidth
+			# if self.knob:
+			# 	textX = mainWidth + 30
+			# else: textX = mainWidth + 5
 		else:
 			# position knob on left
 			x = -20
-			textX = textWidth * -1
+			#textX = textWidth * -1
+			textX = 20
 		if self.knob:
 			knobY = self.height /2.0 - self.knob.boundingRect().height() / 2.0
 			self.knob.setPos(x, 0)
@@ -557,7 +495,6 @@ class Knob(QtWidgets.QGraphicsRectItem):
 	def __init__(self, parent=None, attr=None, extras={}):
 		# parent is qGraphicsWidget, attr is AttrItem
 		super(Knob, self).__init__(parent)
-		self.parent = parent
 		self.extras = dict(extras)
 		self.baseSize = 20
 		self.setRect(0,0, self.baseSize, self.baseSize)
@@ -579,7 +516,7 @@ class Knob(QtWidgets.QGraphicsRectItem):
 
 	@property
 	def attr(self):
-		return self.parent.attr
+		return self.parentItem().attr
 
 	def __repr__(self):
 		return self.name
@@ -594,9 +531,10 @@ class Knob(QtWidgets.QGraphicsRectItem):
 		self.setFlaccid()
 
 	def setTumescent(self):
-		new = int(self.baseSize * 1.5)
-		# self.setRect(0, new/1.25, new, new)
-		self.setRect(0, 0, new, new)
+		scale = 1.3
+		new = int(self.baseSize * scale)
+		newOrigin = (new - self.baseSize) / 2
+		self.setRect(-newOrigin, -newOrigin, new, new)
 
 	def setFlaccid(self):
 		self.setRect(0, 0, self.baseSize, self.baseSize)
@@ -612,7 +550,6 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 		self._style = PIPE_STYLE_DEFAULT
 		self._active = False
 		self._highlight = False
-		self.selected = False
 		self._start = start
 		self._end = end
 		self.pen = None
@@ -624,7 +561,6 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 
 
 	def setSelected(self, selected):
-		self.selected = selected
 		if selected:
 			self.highlight()
 		if not selected:
@@ -651,7 +587,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 			# 	pen_width += 0.2
 			# 	pen_style = PIPE_STYLES.get(PIPE_STYLE_DOTTED)
 
-		if self.selected:
+		if self.isSelected():
 			#painter.setBrush(QtGui.QColor(*NODE_SEL_COLOR))
 			#colour = QtGui.QColor(200, 200, 100)
 			# self._highlight = True
@@ -668,18 +604,18 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 		painter.setRenderHint(painter.Antialiasing, True)
 		painter.drawPath(self.path())
 
-	def draw_path(self, start_port, end_port, cursor_pos=None):
-		if not start_port:
+	def drawPath(self, startPort, endPort, cursorPos=None):
+		if not startPort:
 			return
-		offset = (start_port.boundingRect().width() / 2)
-		pos1 = start_port.scenePos()
+		offset = (startPort.boundingRect().width() / 2)
+		pos1 = startPort.scenePos()
 		pos1.setX(pos1.x() + offset)
 		pos1.setY(pos1.y() + offset)
-		if cursor_pos:
-			pos2 = cursor_pos
-		elif end_port:
-			offset = start_port.boundingRect().width() / 2
-			pos2 = end_port.scenePos()
+		if cursorPos:
+			pos2 = cursorPos
+		elif endPort:
+			offset = startPort.boundingRect().width() / 2
+			pos2 = endPort.scenePos()
 			pos2.setX(pos2.x() + offset)
 			pos2.setY(pos2.y() + offset)
 		else:
@@ -694,28 +630,28 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 		# 	self.setPath(path)
 		# 	return
 
-		ctr_offset_x1, ctr_offset_x2 = pos1.x(), pos2.x()
-		tangent = ctr_offset_x1 - ctr_offset_x2
+		ctrOffsetX1, ctrOffsetX2 = pos1.x(), pos2.x()
+		tangent = ctrOffsetX1 - ctrOffsetX2
 		tangent = (tangent * -1) if tangent < 0 else tangent
 
-		max_width = start_port.parent.boundingRect().width() / 2
-		tangent = max_width if tangent > max_width else tangent
+		maxWidth = startPort.parentItem().boundingRect().width() / 2
+		tangent = maxWidth if tangent > maxWidth else tangent
 
-		if start_port.role == "input":
-			ctr_offset_x1 -= tangent
-			ctr_offset_x2 += tangent
-		elif start_port.role == "output":
-			ctr_offset_x1 += tangent
-			ctr_offset_x2 -= tangent
+		if startPort.role == "input":
+			ctrOffsetX1 -= tangent
+			ctrOffsetX2 += tangent
+		elif startPort.role == "output":
+			ctrOffsetX1 += tangent
+			ctrOffsetX2 -= tangent
 
-		ctr_point1 = QtCore.QPointF(ctr_offset_x1, pos1.y())
-		ctr_point2 = QtCore.QPointF(ctr_offset_x2, pos2.y())
-		path.cubicTo(ctr_point1, ctr_point2, pos2)
+		ctrPoint1 = QtCore.QPointF(ctrOffsetX1, pos1.y())
+		ctrPoint2 = QtCore.QPointF(ctrOffsetX2, pos2.y())
+		path.cubicTo(ctrPoint1, ctrPoint2, pos2)
 		self.setPath(path)
 
 	def redrawPath(self):
 		"""updates path shape"""
-		self.draw_path(self.start, self.end)
+		self.drawPath(self.start, self.end)
 
 	def activate(self):
 		self._active = True
@@ -779,10 +715,6 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 	@style.setter
 	def style(self, style):
 		self._style = style
-
-	def delete(self):
-		self.scene().removeItem(self)
-		del self
 
 
 

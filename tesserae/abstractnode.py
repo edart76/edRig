@@ -95,7 +95,7 @@ class AbstractNode(AbstractTree):
 		self.nodeChanged = Signal()
 		self.wireSignals()
 
-		self.extras = None
+		self.extras = {}
 		self.inEdges = set()
 		self.outEdges = set()
 
@@ -400,7 +400,6 @@ class AbstractNode(AbstractTree):
 		return self.outputRoot.attrFromName(name)
 
 	def connectableInputs(self):
-		#self.log("op connectableInputs are {}".format(self.inputRoot.getAllConnectable()))
 		return self.inputRoot.getAllConnectable()
 
 	def interactibleInputs(self):

@@ -41,7 +41,7 @@ class AbstractAttr(AbstractTree):
 		# edges saved separately by graph, not within attr tree
 
 		self.connectionChanged = Signal()
-		self.childrenChanged = Signal()
+		#self.childrenChanged = Signal()
 
 
 		# default kwargs passed to attributes created through array behaviour

@@ -26,7 +26,7 @@ class _NodeGroupBox(QtWidgets.QGroupBox):
 
 
 class NodeBaseWidget(QtWidgets.QGraphicsProxyWidget):
-	"""	proxy to embed widgets in noe graphics
+	"""	proxy to embed widgets in node graphics
 	"""
 	value_changed = QtCore.Signal(str, object)
 

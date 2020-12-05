@@ -3,7 +3,8 @@ import weakref, ctypes
 
 from edRig.dcc import cmds, om
 
-from edRig.core import MObjectFrom, shapeFrom, tfFrom, stringFromMObject, ECN
+from edRig.core import MObjectFrom, shapeFrom, tfFrom, \
+	stringFromMObject, ECN, nodeObjMap
 from edRig import attr, naming, beauty
 
 # saviour

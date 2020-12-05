@@ -176,11 +176,11 @@ function int[] nexthedgesinloop(int geo; int starthedge){
                 continue;
                 //break;
             }
-            // check edge isn't already in found edges
-            if( index(foundhedges, newhedge) > -1){
-                //break;
-                //continue;
-            }
+            // // check edge isn't already in found edges
+            // if( index(foundhedges, newhedge) > -1){
+            //     //break;
+            //     //continue;
+            // }
 
             // check if edge src or dest is in original points
             int newhedgepts[] = hedgepoints( geo, newhedge);
@@ -335,7 +335,9 @@ function int[] crawlMesh(int geo; int iterations;
                     continue;            }
 
                 // is adjacent prim already found?
-                if( index(foundprims,
+                // if( index(foundprims,
+                //     hedge_prim(geo, hedge_nextequiv(geo, testhedge))) < 0){
+                if( find(foundprims,
                     hedge_prim(geo, hedge_nextequiv(geo, testhedge))) < 0){
                         //printf("new prim found\n" );
                         //printf("current hedge %i\n", activehedge);

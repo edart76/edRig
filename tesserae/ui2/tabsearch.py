@@ -52,7 +52,7 @@ class AbstractSearchWidget(QtWidgets.QLineEdit):
 
 		self.nodeNames = sorted(items or [])
 
-		self.stringModel = QtGui.QStringListModel(items, self)
+		self.stringModel = QtCore.QStringListModel(items, self)
 		self.completerWidg = TabSearchCompleter()
 		self.completerWidg.setModel(self.stringModel)
 		self.setCompleter(self.completerWidg)

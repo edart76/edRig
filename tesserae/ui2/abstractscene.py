@@ -1,6 +1,6 @@
 # scene holding visual node graph
 from PySide2 import QtCore, QtWidgets, QtGui
-from edRig.tesserae.ui2.abstracttile import AbstractTile, Knob, Pipe
+from edRig.tesserae.ui2.abstracttile import AbstractTile2, Knob, Pipe
 #from edRig.tesserae.ui2.abstractview import AbstractView
 from edRig.tesserae.abstractnode import AbstractNode
 from edRig.tesserae.abstractedge import AbstractEdge
@@ -10,7 +10,11 @@ from edRig.tesserae.ui2.style import (VIEWER_BG_COLOR,
 
 
 class AbstractScene(QtWidgets.QGraphicsScene):
-	"""graphics scene for interfacing with abstractgraph and ui"""
+	"""graphics scene for interfacing with abstractgraph and ui
+	ideally we would tie this directly to the state of the graph
+	by the standard tree signals
+
+	"""
 	def __init__(self, parent=None, graph=None, view=None):
 		super(AbstractScene, self).__init__(parent)
 		#self.abstractGraph = graph # AbstractGraph object
@@ -18,7 +22,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		# eventually allowing multiple codependent views of the same graph
 		self.activeView = view
 		self.setSceneRect(1000, 200, 0, 0)
-		self.tiles = {} # AbstractNode : AbstractTile
+		self.tiles = {} # AbstractNode : AbstractTile2
 		self.pipes = {} # AbstractEdge : Pipe
 
 
@@ -65,7 +69,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		for i in self.pipes.keys():
 			if i not in abstractEdges:
 				self.deletePipe(i)
-		print "finished sync"
+		print "finished scene sync"
 
 		self.updatePipePaths()
 
@@ -73,17 +77,17 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 	def makeTile(self, abstract=None, pos=(0,0)):
 		#print "making tile for {}".format(abstract)
-		tile = AbstractTile(abstractNode=abstract, scene=self)
+		if isinstance(self.tiles.get(abstract), AbstractTile2):
+			raise RuntimeError("added abstract already in scene")
+		tile = AbstractTile2(abstractNode=abstract)
 		self.addItem(tile)
 		if isinstance(pos, QtCore.QPointF):
 			tile.setPos(pos)
 		else:
 			tile.setPos(*pos)
+		tile.sync()
 
-		if not abstract:
-			raise RuntimeError("wtf no abstract don't do that")
-		if not tile in self.tiles.values():
-			self.tiles[abstract] = tile
+		self.tiles[abstract] = tile
 
 		#print "added tile"
 		return tile
@@ -100,9 +104,8 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			return pipe
 
 	def addPipe(self, pipe):
-		assert isinstance(pipe, Pipe)
 		self.addItem(pipe)
-		pipe.draw_path(pipe.start, pipe.end)
+		pipe.drawPath(pipe.start, pipe.end)
 
 	def updatePipePaths(self, nodes=None):
 		"""updates everything for now - if that gets laggy only redraw changed"""
@@ -118,12 +121,14 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			if tile not in self.tiles.keys():
 				return
 			tile = self.tiles[tile]
-		for i in tile.pipes:
-			self.deletePipe(i)
-		for k, v in self.tiles.iteritems():
-			if v == tile:
-				target = k
-		self.tiles.pop(target)
+		for i in tile.abstract.edges:
+			pipe = self.pipes[i]
+			self.deletePipe(pipe)
+		# for k, v in self.tiles.iteritems():
+		# 	if v == tile:
+		# 		target = k
+		#self.tiles.pop(target)
+		self.tiles.pop(tile.abstract)
 		self.removeItem(tile)
 
 	def deletePipe(self, pipe):
@@ -134,10 +139,13 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		# for k, v in self.pipes.iteritems():
 		# 	if v == pipe:
 		# 		self.pipes.pop(k)
-		self.pipes.pop([k for k, v in self.pipes.iteritems() if v == pipe][0])
-		for i in pipe.start, pipe.end:
-			if pipe in i.pipes:
-				i.pipes.remove(pipe)
+		#self.pipes.pop([k for k, v in self.pipes.iteritems() if v == pipe][0])
+		self.pipes.pop(pipe.edge)
+
+		# remove pipe references from knobs
+		for knob in pipe.start, pipe.end:
+			if pipe in knob.pipes:
+				knob.pipes.remove(pipe)
 		self.removeItem(pipe)
 		# i never want to tipe pipe
 
@@ -158,7 +166,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 	def selectedNodes(self):
 		nodes = []
 		for item in self.selectedItems():
-			if isinstance(item, AbstractTile):
+			if isinstance(item, AbstractTile2):
 				nodes.append(item)
 		return nodes
 

@@ -10,7 +10,7 @@ class BezierOp(LayerOp):
 
 	def defineAttrs(self):
 		self.addInput(name="input1D", dataType="1D",
-		              desc="curve to drive with bezier controls (optional)" )
+		              desc="curve to drive with bezier operations")
 		self.addInput(name="start0D", dataType="0D",
 		              desc="point driving start of curve")
 		self.addInput(name="end0D", dataType="0D",

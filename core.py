@@ -3,24 +3,26 @@
 from edRig.dcc import cmds, om
 from edRig.lib.python import AbstractTree
 
-import math, random, sys, functools
+import math, random, sys, functools, weakref
 
 sys.dont_write_bytecode = True
 
 
-def isThisMaya():
-	"""returns true if code is run from within maya, else false"""
-	# use the frames
-	return True  # for now
+nodeObjMap = weakref.WeakValueDictionary()
+
 
 def isNode(target):
 	return cmds.objExists(target)
 
 def getMObject(node):
+	uid = cmds.ls(node, uuid=1)
+	if nodeObjMap.get(uid):
+		return nodeObjMap[uid]
 	sel = om.MSelectionList()
 	sel.add(node)
-	return sel.getDependNode(0)
-
+	obj = sel.getDependNode(0)
+	nodeObjMap[uid] = obj
+	return obj
 
 def isPlug(target):
 	"""returns true for format pCube1.translateX"""
@@ -548,151 +550,6 @@ def ruggedSerialise(object):
 	# have a better crack at serialising datatypes and absoluteNodes
 	# for now though
 	return None
-
-#
-# class NodeOp(Op):
-# 	# class referring to operations with nodes
-# 	def __init__(self):
-# 		Op.__init__(self)
-# 		self.nodes = []
-#
-#
-# class VecFromTo(NodeOp):
-# 	# persistent vectors
-# 	# def __init__(self, from=None, to=None):
-# 	#     self.vec = self.ECN("pma", "-")
-# 	pass
-#
-#
-# def crossProduct(name, start, mid, end):
-# 	# vectors are from midpoint to start and end
-# 	# if you can say it better i'd love to hear it
-# 	vecA = vecFrom("vec{}to{}".format(mid, start), mid, start)
-# 	vecB = vecFrom("vec{}to{}".format(mid, end), mid, end)
-#
-# 	cross = ECN("vp", name)
-# 	cmds.setAttr(cross + ".operation", 2)
-#
-# 	mag = ECN("md", name)
-# 	ctrl = ECN("mdl", name + "_ctrl")
-#
-# 	for ax in "XYZ":
-# 		con(ctrl + ".output", mag + ".input1" + ax)
-#
-# 	con(vecA, cross + ".input1")
-# 	con(vecB, cross + ".input2")
-# 	out = mag + ".output"
-# 	# add system to flip vector with condition and mdiv
-#
-# 	return out
-#
-#
-# class BlendRot(NodeOp):
-# 	# blend rotations without using blendColours
-# 	# (eg without using unitConversions, and bringing SHAME on family)
-# 	def __init__(self, rot1, rot2):
-# 		super(BlendRot, self).__init__()
-# 		self.rot1 = start
-# 		self.rot2 = end
-#
-# 		rot1 = self.rot1 + ".rotate"
-# 		rot2 = self.rot2 + ".rotate"
-#
-# 		rev = ECN("rev", "rotRev")
-# 		rotBlend = ECN("abnar", "rotBlend")
-#
-# 		in1 = rotBlend + ".inputA"
-# 		in2 = rotBlend + ".inputB"
-# 		blend = rev + "inputX"
-# 		out = rotBlend + ".output"
-#
-# 		self.inputs.append(in1, in2, blend)
-# 		self.outputs.append(out)
-# 		self.nodes.append(rev, rotBlend)
-#
-# 		cmds.connectAttr(rev + ".outputX", rotBlend + ".weightA")
-# 		cmds.connectAttr(rev + ".inputX", rotBlend + ".weightB")
-# 		cmds.connectAttr(rot1, in1)
-# 		cmds.connectAttr(rot2, in2)
-#
-#
-# class Normalise(NodeOp):
-# 	# normalise any three values
-# 	def __init__(self, values):
-# 		super(Normalise, self).__init__()
-# 		self.values = values
-# 		norm = ECN("vp", "normalise")
-#
-# 		in1 = norm + ".input1"
-# 		out1 = norm + ".output"
-#
-# 		self.inputs.append(in1)
-# 		self.outputs.append(out1)
-# 		self.nodes.append(norm)
-#
-# 		for i, axis in "XYZ":
-# 			cmds.connectAttr(values[i], in1 + axis)
-#
-#
-# class Trig(NodeOp):
-# 	# get sin, cos and tan of any value
-# 	def __init__(self, value):
-# 		super(Trig, self).__init__()
-# 		self.value = value
-#
-# 		trigNode = ECN("etq", "trigNode")
-# 		tanDiv = ECN("md", "tanDiv")
-# 		in1 = trigNode + ".inputRotateX"
-# 		outSin = trigNode + ".outputQuatW"
-# 		outCos = trigNode + ".outputQuatX"
-# 		outTan = tanDiv + ".outputX"
-#
-# 		con(self.value, in1)
-# 		con(outSin, tanDiv + ".input1X")
-# 		con(outCos, tanDiv + ".input2X")
-# 		cmds.setAttr(tanDiv + ".operation", 2)
-#
-# 		self.inputs.append(in1)
-# 		self.outputs.append(outSin, outCos, outTan)
-# 		self.nodes.append(trigNode, tanDiv)
-#
-#
-# class MatConst(NodeOp):
-# 	# create matrix constraint and bask in frames
-# 	def __init__(self, parents, child, offset):
-# 		super(MatConst, self).__init__()
-#
-# 		matMult = ECN("multMatrix")
-# 		matDecomp = ECN("matDecomp")
-#
-# 		in1 = matMult + ".matrixIn[0]"
-# 		in2 = matMult + ".matrixIn[1]"
-# 		cmds.connectAttr(parents + ".worldMatrix[0]", in1)
-# 		cmds.connectAttr(child + ".parentInverseMatrix[0]", in2)
-#
-# 		cmds.connectAttr(matMult + ".matrixSum", matDecomp + ".inputMatrix")
-# 		outQuat = matDecomp + ".outputQuat"
-# 		outRot = matDecomp + ".outputRotate"
-# 		outScale = matDecomp + ".outputScale"
-# 		outTrans = matDecomp + ".outputTranslate"
-#
-# 		con(outTrans, child + ".translate")
-# 		con(outRot, child + ".rotate")
-# 		con(outScale, child + ".scale")
-#
-# 		self.nodes.append(matMult, matDecomp)
-# 		self.outputs.append(outTrans, outRot, outScale, outQuat)
-#
-# 	"""
-# 	i suck at python
-# 	if len(parents)>1:
-# 		#not implemented yet
-# 	else:
-# 		if offset==False:
-# 			in1 = matMult + ".matrixIn[0]"
-# 			in2 = matMult
-#
-# 	"""
 
 randomWords = [
 	"this", "is", "a", "test", "how", "shall", "I", "sing", "that", "majesty"
