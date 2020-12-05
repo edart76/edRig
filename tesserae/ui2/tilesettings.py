@@ -37,12 +37,9 @@ shrinkingPolicy = QtWidgets.QSizePolicy(
 from edRig import CURRENT_PATH
 import os
 
-ICON_PATH = CURRENT_PATH + "/resources/icons/"
+ICON_PATH = CURRENT_PATH + "/tesserae/ui2/"
+ICON_PATH = ICON_PATH.replace("\\", "/")
 #ICON_PATH = os.path.join(CURRENT_PATH, "/resources/icons/")
-
-
-
-
 
 
 # square icons
@@ -63,29 +60,19 @@ for i, key in enumerate(["down", "left", "up", "right"]):
 
 styleSheet = """
 QTreeView::branch::open::has-children {
-    image: url(@square_down@);
+    image: url('@square_down@');
 }
 QTreeView::branch::closed::has-children {
-    image: url(@square_down@);
+    image: url('@square_centre@');
 }
 """
-# QTreeView::item:open {
-#     image: url('@square_centre@');
-# }
-# QTreeView::item:closed:has-children {
-#     image: url('@square_down@');
-# }
-# """
+
 
 subs = {"@square_centre@" : squarePath,
         "@square_down@" : downPath}
 
-subs = {"@square_centre@" : "square_centre.png",
-        "@square_down@" : "square_down.png"}
-
 for k, v in subs.iteritems():
 	styleSheet = styleSheet.replace(k, v)
-print(styleSheet)
 
 class WheelEventFilter(QtCore.QObject):
 	def eventFilter(self, obj, event):
@@ -185,8 +172,6 @@ class TileSettings(QtWidgets.QTreeView):
 		header.setStretchLastSection(True)
 		self.savedSelectedTrees = []
 		self.savedExpandedTrees = []
-		# self.setStyleSheet("font: Comic Sans MS")
-		# self.setStyleSheet("QLabel {font: Comic Sans MS}")
 
 		self.setSizeAdjustPolicy(
 			QtWidgets.QAbstractScrollArea.AdjustToContents
