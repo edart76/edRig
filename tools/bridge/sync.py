@@ -20,6 +20,7 @@ def getBridgeSet():
 
 
 def sync():
+	""" maya facing sync """
 	cmds.loadPlugin("objExport")
 	pipeline.reloadAllReferences()
 
@@ -28,6 +29,7 @@ def sync():
 	syncBridgeSets()
 
 def syncBridgeSets():
+	""" sync bridge sets found in maya scene """
 	topSet = getBridgeSet()
 	topSetItems = topSet.objects()
 	print("topSetItems {}".format(topSetItems))

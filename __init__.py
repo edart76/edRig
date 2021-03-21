@@ -25,10 +25,21 @@ but also a common material library"""
 def log(message, **kwargs):
 	print(message)
 
+def reloadEdRig(tesserae=True):
+	"""force reload all edRig packages
+	if not tesserae, will try not to crash tesserae"""
+	protecc = {"tesserae" : ("layers", "tesserae")}
+	attacc = ("edRig", "tree")
+	import sys
+	for i in sys.modules.keys():
+		if any( n in i for n in attacc):
+			del sys.modules[i]
+
 """ STANDARDS
 lol
 
 "function" abbreviated to "fn" 
+"create" used over "make" - "make" is ambigious: "make a cake" vs "make it go away"
 
 
 """

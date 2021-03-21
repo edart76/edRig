@@ -10,6 +10,9 @@ allowing for more granular control"""
 # print(sys.path)
 
 from PySide2 import QtCore, QtWidgets, QtGui
+
+
+
 from edRig.lib.python import Signal, AbstractTree
 from edRig.tesserae.ui2.lib import ContextMenu, expandingPolicy, getMayaMainWindow, BaseMayaUi, KeyState
 from edRig.tesserae.ui2.collapsible import Section
@@ -46,9 +49,6 @@ ICON_PATH = ICON_PATH.replace("\\", "/")
 squareCentre = QtGui.QPixmap()
 squarePath = os.path.join(ICON_PATH + "square_centre.png")
 downPath = os.path.join(ICON_PATH + "square_down.png")
-print(squarePath)
-print squareCentre.load( squarePath)
-print squareCentre
 
 squareSides = {}
 for i, key in enumerate(["down", "left", "up", "right"]):
@@ -243,7 +243,7 @@ class TileSettings(QtWidgets.QTreeView):
 
 	def onClicked(self, index):
 		""" manage selection manually """
-		print("settings clicked {}".format(index))
+		#print("settings clicked {}".format(index))
 
 		if not (self.keyState.ctrl or self.keyState.shift):
 			pass
@@ -341,14 +341,14 @@ class TileSettings(QtWidgets.QTreeView):
 
 		pass
 	def pasteEntries(self):
-		print "pasting"
+		print( "pasting")
 		indices = self.selectedIndexes() # i strongly hate
 		if not indices:
 			return
 		index = indices[0]
 		clip = QtGui.QGuiApplication.clipboard()
 		data = clip.mimeData()
-		print "mime is {}".format(data.text())
+		print( "mime is {}".format(data.text()) )
 		regenDict = eval(data.text()) # this is probably extremely dangerous lol
 		pasteTree = AbstractTree.fromDict(regenDict)
 

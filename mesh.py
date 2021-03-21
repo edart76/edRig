@@ -5,6 +5,12 @@ from edRig import core, attr, transform, naming, cmds, om, oma, con
 from edRig.lib.python import AbstractTree
 from edRig.node import AbsoluteNode, ECA
 
+def getMObject(node):
+	sel = om.MSelectionList()
+	sel.add(node)
+	return sel.getDependNode(0)
+
+
 def closestPointOnMesh(meshPlug, pos=(0, 0, 0), static=False):
 	""" pos may be tuple, plug or mvector """
 
@@ -209,41 +215,101 @@ than vertices in the mesh
 
 """
 
-def getInfluenceMap(skinNode):
+
+def checkItemsUnique(seq):
+	""" seq contains no repetitions """
+	return len(set(seq)) == len(seq)
+
+def getNameIndexMap(skinNode):
 	""" return a map of object : influence index """
-	fn = oma.MFnSkinCluster(core.MObjectFrom(skinNode))
+	fn = oma.MFnSkinCluster(getMObject(skinNode))
 	influences = fn.influenceObjects()
 	result = {}
+
+	# check influence names are unique
+	infNames = [i.fullPathName().split("|")[-1] for i in influences]
+	if not checkItemsUnique(infNames):
+		raise RuntimeError("joint names must be unique")
+
 	for inf in influences:
-		result[inf] = fn.indexForInfluenceObject(inf)
+		result[inf.fullPathName().split("|")[-1]] = int(fn.indexForInfluenceObject(inf))
 	return result
-
-
 
 
 def getSkinWeights(skinNode):
 	"""returns dict of all vertex weighs per influence
-	copied in part from charactersetup.com"""
+	"""
 	fn = om.MFnDependencyNode(core.MObjectFrom(skinNode))
-	result = {}
 
-	listPlug = fn.findPlug("weightList")
-	weightPlug = fn.findPlug("weights")
+	listPlug = fn.findPlug("weightList", False)
+	weightPlug = fn.findPlug("weights", False)
 	nVertices = listPlug.numElements()
+	result = {}
 
 	for vtx in range(nVertices):
 		weightPlug.selectAncestorLogicalIndex(vtx, listPlug.attribute())
-		result[vtx] = {}
-		for idx in weightPlug.numElements():
+		# interleaved list of [ indexA, valueA, indexB, valueB] etc
+		data = [None] * weightPlug.numElements() * 2
+		for idx in range(weightPlug.numElements()):
 			valuePlug = weightPlug.elementByPhysicalIndex(idx)
-			result[vtx][valuePlug.logicalIndex()] = valuePlug.asDouble()
+			data[ idx * 2 ] = valuePlug.logicalIndex()
+			data[ idx * 2 + 1 ] = valuePlug.asDouble()
+		result[vtx] = tuple(data)
 	return result
+
+
+def getSkinData(skinNode):
+	return {
+		"names" : getNameIndexMap(skinNode),
+		"weights" : getSkinWeights(skinNode),
+		"formatVersion" : 1 # how do we work with this
+	}
+
+def setSkinData(skinNode, skinData):
+	""" reapply and reconnect skincluster data """
+	# check that all influences are found in scene
+	# if not, create temp joints at origin
+	influences = getNameIndexMap(skinNode)
+	for name, index in skinData["names"].iteritems():
+		if not cmds.objExists(name):
+			jnt = cmds.createNode("joint", n=name)
+			cmds.skinCluster(skinNode, e=1, add=jnt)
+
+	# set skin plug values
+	fn = om.MFnDependencyNode(core.MObjectFrom(skinNode))
+	listPlug = fn.findPlug("weightList", False)
+	weightPlug = fn.findPlug("weights", False)
+	nVertices = listPlug.numElements()
+
+	weights = skinData["weights"]
+
+	for vtx, weightData in weights.iteritems():
+		weightPlug.selectAncestorLogicalIndex(
+			vtx, listPlug.attribute())
+
+		# clear current values
+		#for i in range(int(weightPlug.getExistingArrayAttributeIndices())):
+		for i in range(int(weightPlug.numElements())):
+			valuePlug = weightPlug.elementByPhysicalIndex(i)
+			valuePlug.setDouble(0.0)
+
+		for i in range(int(len(weightData) / 2)):
+			valuePlug = weightPlug.elementByLogicalIndex(
+				weightData[ i * 2]
+			)
+			valuePlug.setDouble(
+				weightData[ i * 2 + 1]
+			)
+
+
+
 
 
 class MeshStruct(object):
 	""" maybe?
 	common interchange serialisation structure to
-	store per point attributes """
+	store per point attributes
+	should be interchangeable with c++ struct output """
 
 	def __init__(self):
 		self.nPoints = 0
@@ -283,7 +349,7 @@ class DeformerWrapper(object):
 
 		self.node = AbsoluteNode(deformerNode)
 		self.deformerType = self.node.MFnDependency.typeName
-		print "new deformer wrapper is type {}".format(self.deformerType)
+		print( "new deformer wrapper is type {}".format(self.deformerType))
 
 		if self.node.MObject.hasFn(681): # skinClusterFilter
 			self.fn = oma.MFnSkincluster(self.node.MObject)
@@ -299,7 +365,7 @@ class DeformerWrapper(object):
 	def getComponentObject(self):
 		setFn = om.MFnSet(self.fn.deformerSet())
 		members = setFn.getMembers(True) # MSelectionList, flatten=True
-		print "members is {}".format(members)
+		print( "members is {}".format(members) )
 
 
 

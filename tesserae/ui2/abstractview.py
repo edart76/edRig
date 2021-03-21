@@ -207,7 +207,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			# 	self.mapToScene(event.globalPos()).toPoint())
 			# super(AbstractView, self).contextMenuEvent(event)
 		except RuntimeError as e:
-			print e
+			print( e)
 			return
 
 
@@ -385,7 +385,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 				legality = self.checkLegalConnection(knobs[0], self.testPipe.start)
 			else:
 				legality = self.checkLegalConnection(self.testPipe.start, knobs[0])
-			print "legality is {}".format(legality)
+			print( "legality is {}".format(legality))
 			if legality:
 				self.makeRealConnection(#pipe=self.testPipe,
 										source=self.testPipe.start, dest=knobs[0])
@@ -685,8 +685,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 		if not defaultPath:
 			defaultPath = self.savePath or self.currentAsset.path or ROOT_PATH
 		if not path:
-			print "current asset is {}".format(self.currentAsset.name)
-			print "asset path is {}".format(self.currentAsset.path)
+			print( "current asset is {}".format(self.currentAsset.name) )
+			print( "asset path is {}".format(self.currentAsset.path) )
 			tilePileFile = QtWidgets.QFileDialog.getSaveFileName(
 				parent=self, caption="save this pile of tiles",
 				dir=defaultPath)[0]

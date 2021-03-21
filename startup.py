@@ -22,14 +22,12 @@ oldPath
 # ref from Maya.env
 # MAYA_PLUG_IN_PATH = F:\all_projects_desktop\common\edCode\edPlugin;F:\all_projects_desktop\common\edCode\edPlugin\build\Release;
 
+# set default project save path
+# you're welcome
+os.environ["MAYA_PROJECT"] = r"F:\all_projects_desktop;"
 
-"""the objective: remove the student warning every time you breathe on maya
-    i'm already poor, i don't need reminding every second of the day
 
-	the method: when a file is opened, the flag must be gone
-		when a file is saved, the flag must be there
-		
-	beforeSaving: add the flag. afterSaving: remove the flag"""
+# exception catching class to wrap callback functions
 
 def clearCallbacks():
 	pass
@@ -218,6 +216,7 @@ def setupViewport():
 	cmds.setAttr( "hardwareRenderingGlobals.lineAAEnable", 1)
 
 def mainStartup():
+	""" runs on software startup, executes before anything"""
 	# ECA("transform", name="mainStartup")
 	# om.MSceneMessage.addStringArrayCallback(
 	# 	om.MSceneMessage.kAfterPluginLoad, callbackDelayed) # works
@@ -238,11 +237,14 @@ def mainStartup():
 	# 	om.MSceneMessage.kAfterNew, afterNew)
 
 	setupViewport()
+
+	onMayaOpen()
 	pass
 
 def onMayaOpen(userSetupFile=None):
 	""" runs when software is opened, not when new scene opened """
 	userSetupPath = userSetupFile
+	print("running onMayaOpen")
 
 	# banish pymel for ever and ever
 	import sys

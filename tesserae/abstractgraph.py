@@ -4,26 +4,20 @@ from __future__ import print_function
 import pprint
 from weakref import WeakSet, WeakValueDictionary
 
+
+from tree import Graph
+
 from edRig import ROOT_PATH, pipeline, naming
 from edRig.lib.python import Signal
 from edRig.lib.python import AbstractTree
 from edRig.pipeline import TempAsset
 from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
 from edRig.tesserae.abstractedge import AbstractEdge
-# from edRig.tesserae.oplist import ValidList # only on demand
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
 
-# lots of pain has been generated from trying
-# to keep tesserae's structure "correct"
-# bit sick of it
-
-from edRig.tesserae import maya
 
 
-class AbstractAbstractGraph(type):
-	"""metaclass for the abstract graph in case we need it
-	likely to be used to register graphs on creation """
 
 class ExecutionPath(object):
 	"""class describing a sequential path through the graph"""
@@ -471,7 +465,7 @@ class AbstractGraph2(AbstractTree):
 		removeList = []
 		for i in node.edges:
 			if not any([n in node.outputs + node.inputs for
-						n in i.sourceAttr, i.destAttr]):
+						n in [i.sourceAttr, i.destAttr]]):
 				removeList.append(i)
 
 		if removeList:

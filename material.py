@@ -1,7 +1,5 @@
-from maya import cmds
-import maya.api.OpenMaya as om
 
-from edRig import scene, core, log, beauty
+from edRig import scene, core, log, beauty, om, cmds
 from edRig.node import AbsoluteNode, ECA
 
 class Material(AbsoluteNode):

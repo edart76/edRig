@@ -1,6 +1,7 @@
 // functions for working with arrays
 
 #ifndef ARRAY_H
+#define size_t int
 
 // ghetto templating system
 
@@ -99,6 +100,36 @@ function int[] subtract( int whole[]; int toremove[]){
         removevalue(out, x);
     }
     return out;
+}
+
+function float[] initarray(int n; float val){
+    float weights[];
+    resize(weights, n);
+    for (size_t i = 0; i < n; i++) {
+        weights[i] = val;
+    }
+    return weights;
+}
+
+// maths functions
+struct InterpResult {
+    int lower;
+    int higher;
+    float u;
+}
+
+function InterpResult arrayinterplookup(float items[]; float lookup){
+    // given array of floats and lookup, return (as floats)
+    // low bound, high bound, and normalised proportion of
+    // lookup across the interval
+    // assumes array is sorted in increasing order
+    InterpResult result;
+    float start = items[0];
+    int idx = 0;
+    while ((start < lookup) && (idx < len(items))) {
+        idx++;
+        start = items[idx];
+    }
 }
 
 

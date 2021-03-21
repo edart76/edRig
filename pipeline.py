@@ -5,6 +5,16 @@ import os, sys, importlib, pprint, io, tempfile
 import re
 from collections import OrderedDict
 
+def reloadEdRig(tesserae=True):
+	"""force reload all edRig packages
+	if not tesserae, will try not to crash tesserae"""
+	protecc = {"tesserae" : ("layers", "tesserae")}
+	attacc = ("edRig", "tree")
+	import sys
+	for i in sys.modules.keys():
+		if any( n in i for n in attacc):
+			del sys.modules[i]
+
 from edRig.lib.python import AbstractTree, debug
 
 from edRig import ROOT_PATH, COMMON_PATH, cmds, mel, hou
@@ -121,7 +131,7 @@ class FilePathTree(str):
 			try:
 				os.mkdir(newPath)
 			except:
-				print "failed to create folder {}".format(name)
+				print( "failed to create folder {}".format(name))
 			return FilePathTree(newPath)
 
 	def makeChildFile(self, name, suffix=".txt"):
@@ -235,14 +245,14 @@ def ioinfo(name="", mode="in", info=None, path=None):
 	if not path:
 		return None
 	if mode == "in":
-		with open("{}".format(path), "r") as file:
+		with open("{}".format(path), "r") as f:
 			# goss = json.load(file)
 			#goss = json.loads(eval(file.read()))
-			goss = file.read()
-			file.close()
+			goss = f.read()
+			f.close()
 
 		if isinstance(goss, dict):
-			print "goss is dict"
+			print ("goss is dict")
 			return goss
 
 		goss = eval(goss)
@@ -251,9 +261,9 @@ def ioinfo(name="", mode="in", info=None, path=None):
 	elif mode == "out":
 
 		#file = os.open(path, "w+b")
-		with open(path, "w+b") as file:
-			file.write(str(pprint.pformat(info, indent=2)) )
-			file.close()
+		with open(path, "w+b") as f:
+			f.write(str(pprint.pformat(info, indent=2)) )
+			f.close()
 
 	else:
 		raise RuntimeError("no valid mode ('in' or 'out') to ioinfo")
@@ -295,13 +305,13 @@ def checkAssetStructure(dir, core=True):
 	"""checks that core structure exists"""
 	for i in coreFolders:
 		if not FilePathTree.isDir(dir+"/"+i):
-			print "found no coreFolder {} in asset {}".format(i,
-			                                                  dir)
+			print ("found no coreFolder {} in asset {}".format(i,
+			                                                  dir))
 			return False
 	for i in coreFiles:
 		if not FilePathTree.isFile(dir+"/"+i):
-			print "found no coreFile {} in asset {}".format(i,
-			                                                  dir)
+			print ("found no coreFile {} in asset {}".format(i,
+			                                                  dir))
 			return False
 	return True
 
@@ -310,11 +320,11 @@ def makeAssetStructure(dir, core=True, all=False):
 	tree = FilePathTree(dir)
 	for i in coreFolders:
 		if not i in tree.children:
-			print "making child core folder {}".format(i)
+			print ("making child core folder {}".format(i))
 			tree.makeChildFolder(i)
 	for i in coreFiles:
 		if not i in tree.children:
-			print "making child core file {}".format(i)
+			print ("making child core file {}".format(i))
 			tree.makeChildFile(i, suffix=".txt")
 
 def getExistingAssets(checkPath=ROOT_PATH):
@@ -345,18 +355,18 @@ def safeLoadModule(mod):
 	try:
 		module = importlib.import_module(mod)
 	except Exception as e:
-		print "ERROR in loading module {}".format(mod)
-		print "error is {}".format(str(e))
+		print ("ERROR in loading module {}".format(mod))
+		print ("error is {}".format(str(e)))
 	return module
 
 def renameFile(old="", new="", suffix=""):
 	if suffix: # legacy, don't use this
 		new = checkSuffix(new, suffix)
 		old = checkSuffix(old, suffix)
-	print "rename old is {}, new is {}".format(old, new)
+	print ("rename old is {}, new is {}".format(old, new))
 	if os.path.exists(old):
 		try:
-			print "found file {}, renaming to {}".format(old, new)
+			print ("found file {}, renaming to {}".format(old, new))
 			os.rename(old, new)
 		except  RuntimeError("could not rename file {}".format(old)):
 			pass
@@ -386,7 +396,7 @@ def makeLegit(path):
 	technically i am still meant to be at university :) """
 
 	if not os.path.exists(path):
-		print "unable to legitify path {}".format(path)
+		print ("unable to legitify path {}".format(path))
 		return False
 	with open(path, mode="r+") as f:
 		heinous = f.readlines()
@@ -409,7 +419,7 @@ def makeLegit(path):
 def makeBogus(path):
 	"""pretend like you're some washed-up pauper using the student version"""
 	if not os.path.exists(path):
-		print "unable to strip path {} of material and spiritual wealth".format(path)
+		print ("unable to strip path {} of material and spiritual wealth".format(path))
 		return False
 	with open(path, mode="r+") as f:
 		wealthy = f.readlines()
@@ -421,7 +431,7 @@ def makeBogus(path):
 		for i, line in enumerate(testLines):
 			#print "line is " + line
 			if 'fileInfo "license" "student";\n' in line:
-				print "already poor lol"
+				print( "already poor lol")
 				mod=False
 				break
 		if mod:
@@ -463,7 +473,7 @@ class AssetItem(str):
 		
 	def __getitem__(self, item):
 		"""alternative was writing out loads of properties"""
-		print "asset {} getting item {}".format(self.path, item)
+		print ("asset {} getting item {}".format(self.path, item))
 		if item in coreFiles or item in defaultFiles:
 			if not self.tree[item]:
 				self.tree.makeChildFile(item, ".txt")
@@ -504,17 +514,6 @@ def assetFromName(name):
 	if asset:
 		return AssetItem(asset)
 	return None
-
-def reloadEdRig(tesserae=True):
-	"""force reload all edRig packages
-	if not tesserae, will try not to crash tesserae"""
-	protecc = {"tesserae" : ("layers", "tesserae")}
-	attacc = ("edRig", "tree")
-	import sys
-	for i in sys.modules.keys():
-		if any( n in i for n in attacc):
-			del sys.modules[i]
-
 
 def getLatestVersions( files=None, versions=2, path=None ):
 	""" looks through a set of files for those marked as versions
@@ -582,6 +581,7 @@ def sortVersions(files=None, path=None, formats=None):
 	if not files: return {}
 	outDict = {}
 
+	# search for 'v010', 'V_3', 'v 24' etc
 	pattern = re.compile( r"(v(\d|\s)*)")
 
 	for fileName in files:
@@ -754,6 +754,8 @@ def reloadAllReferences():
 			print(e)
 			print("failed to reload reference {}".format(i))
 
+
+### file export functions
 def getScenePath():
 	return cmds.file(q=True, sn=True)
 

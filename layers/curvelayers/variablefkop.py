@@ -1,9 +1,8 @@
 
-import maya.cmds as cmds
 import edRig.core as core
 # tesserae is here to save our souls
 from edRig.tesserae.ops.layer import LayerOp
-from edRig import curve, ECA, con, ECN, transform
+from edRig import curve, ECA, con, ECN, transform, cmds, om
 
 """ redo system to use two controls - one as the normal fk 
 control, and one parent as the position and bias control

@@ -12,9 +12,9 @@ def onHoudiniStartup(*args, **kwargs):
 	could never get houdini.env to work properly """
 	import hou
 	hInstall = hou.getenv("HFS") # C:/PROGRA~1/SIDEEF~1/HOUDIN~1.287
-	pathAdd = "F:/all_projects_desktop/common/edCode/edRig/resources/;"
-	fullVar = "F:/all_projects_desktop/common/edCode/edRig/resources/vex;C:\Program Files\Side Effects Software\Houdini 18.0.287\houdini\vex;C:\Program Files\Side Effects Software\Houdini 18.0.287\houdini\vex\include"
-	
+	#pathAdd = r"F:/all_projects_desktop/common/edCode/edRig/resources/;"
+	# fullVar = "F:/all_projects_desktop/common/edCode/edRig/resources/vex;C:\Program Files\Side Effects Software\Houdini 18.0.287\houdini\vex;C:\Program Files\Side Effects Software\Houdini 18.0.287\houdini\vex\include"
+	#
 	vexPaths = ["F:/all_projects_desktop/common/edCode/edRig/resources/vex",
 	            ]
 

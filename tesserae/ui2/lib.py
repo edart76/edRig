@@ -245,17 +245,6 @@ class ConfirmDialogue(QtWidgets.QMessageBox):
 convert to use abstractTree as base structure """
 
 
-class EmbeddedAction(QtWidgets.QAction):
-	"""the bridge between normal action items and qt"""
-
-	def __init__(self, actionObject=None, parent=None):
-		super(EmbeddedAction, self).__init__(parent)
-		self._actionObject = actionObject or None
-		if not self._actionObject:
-			print "no actionObject received for embedded action!"
-			return
-		self.name = str(self._actionObject.name)
-		self.triggered.connect(self._actionObject.execute)
 
 
 class ContextMenu(object):
@@ -307,7 +296,7 @@ class ContextMenu(object):
 		return newAction
 
 	def marker(self):
-		print "TRIGGERING ACTION"
+		print( "TRIGGERING ACTION")
 
 	def addCommand(self, name, func=None, shortcut=None, parent=None):
 		if not parent:

@@ -111,7 +111,7 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 			#shutil.copy2(fullFilePath, destFilePath)
 			shutil.copy2(val[0], val[1])
 		except:
-			print "error encountered copying file {}".format(val[0])
+			print( "error encountered copying file {}".format(val[0]))
 			continue
 
 

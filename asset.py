@@ -20,6 +20,8 @@ versioned in the same way, but that seems philosophically difficult
 
 from tree import Tree
 from collections import namedtuple
+import os, sys, importlib, pprint, io, tempfile, uuid
+import re
 
 class Database(object):
 
@@ -36,16 +38,36 @@ to specific version by hand
 subPath may be left as "" or set to a sub-path to a specific asset output
 """
 
-AssetRef = namedtuple("AssetRef", ["path", "version"])
+"""lowest level of reference to specific asset"""
+AssetRef = namedtuple("AssetRef", ["uid", "path", "version"])
 
 
 class Asset(Tree):
+	"""container for all assetRefs"""
 
 	# set of AssetRef objects
 	dependencies = set()
 
 	# set of string tags
-	meta = set()
+	metadata = set()
+
+
+	def getVersions(self, *args, **kwargs):
+		""" returns slice of asset versions according kwargs
+
+		kwargs type list
+
+		user=["johnnyLad", "dannyBoy"]
+			- return all assetRefs created by these users
+		date=[2040, 2070]
+			- all assetRefs created between dates, or after a single date
+		version=[50]
+		version=[-1]
+			- return corresponding versions
+		greater=True / lesser=True
+			- return corresponding assets and all either before or after
+
+		"""
 
 
 	pass

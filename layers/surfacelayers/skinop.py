@@ -2,8 +2,8 @@
 from edRig.tesserae.ops.layer import LayerOp
 from edRig.layers.surfacelayers import MeshOp
 
-from maya import cmds
-import maya.api.OpenMaya as om
+from edRig import cmds, om
+
 
 class SkinOp(MeshOp):
 	"""creates a skincluster on a mesh and saves the weights

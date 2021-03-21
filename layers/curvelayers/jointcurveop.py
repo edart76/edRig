@@ -3,10 +3,10 @@ from __future__ import division, print_function
 import edRig.node
 from edRig.core import ECN
 from edRig import core, transform, attrio, control, curve, point, ECA, plug, \
-	con
-from maya import cmds
+	con, cmds, om
+
 from edRig.tesserae.ops.layer import LayerOp
-import maya.api.OpenMaya as om
+
 import random
 
 

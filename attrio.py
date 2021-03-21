@@ -1,9 +1,8 @@
 # literacy is important
 """deprecated, switch to pipeline functions"""
 import io
-import maya.cmds as cmds
 import ast
-from edRig import pipeline
+from edRig import pipeline, cmds
 import pprint
 
 import os

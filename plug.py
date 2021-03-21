@@ -15,8 +15,8 @@ def vecFromTo(startPlug, endPlug, name=None):
 	name = name or "vecFrom_{}_{}".format(startPlug, endPlug)
 	vec = ECA("plusMinusAverage", name=name)
 	vec.set("operation", "subtract") #smart enum setting bois :D
-	vec.con(endPlug, vec+".input3D[0]")
-	vec.con(startPlug, vec+".input3D[1]")
+	vec.conOrSet(endPlug, vec+".input3D[0]")
+	vec.conOrSet(startPlug, vec+".input3D[1]")
 	return vec+".output3D"
 
 def dividePlug(numerator, divisor):

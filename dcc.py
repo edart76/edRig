@@ -21,13 +21,23 @@ QtCore = None
 QtWidgets = None
 QtGui = None
 
+#### unreal modules
+unreal = None # there can be only one
+
 
 # host values
 hostDict = {
 	"maya" : False,
 	"houdini" : False,
 	"python" : False,
-	"blender" : False
+	"blender" : False,
+	"unreal" : False
+}
+
+# host exes
+exeMap = {
+	"maya" : "",
+	"houdini" : "C:\Program Files\Side Effects Software\Houdini 18.0.287\bin\happrentice.exe",
 }
 
 # running without ui
@@ -39,31 +49,34 @@ try:
 	from maya import cmds, mel
 	import maya.api.OpenMaya as om
 	import maya.api.OpenMayaAnim as oma
-	import maya.api.OpenMayaUi as omui
+	import maya.api.OpenMayaUI as omui
 
-	from edRig.node import AbsoluteNode, ECA
-	from edRig.attr import con
 	hostDict["maya"] = True
 
 	from functools import wraps
 	# patch maya cmds "list-" functions to return lists no matter what
-	listFunctions = ["ls", "listRelatives", "listHistory", "listConnections"]
+	listFunctions = ["ls", "listRelatives", "listHistory", "listConnections",
+	                 "listAttr"]
 
-	def returnList(fn):
-		@wraps(fn)
+	def returnList(wrapFn):
+		@wraps(wrapFn)
 		def _innerFn(*args, **kwargs):
-			result = fn(*args, **kwargs)
+			result = wrapFn(*args, **kwargs)
 			if result is None:
+				print("returned None, changing to list")
 				return []
 			return result
 		return _innerFn
 
 	for fnName in listFunctions:
-		fn = getattr(cmds, fnName)
-		setattr(cmds, fnName, returnList(fn))
+		try:
+			fn = getattr(cmds, fnName)
+			setattr(cmds, fnName, returnList(fn))
+		except:
+			print("error wrapping {}".format(fn.__name__))
 
 
-except :
+except Exception as e:
 	pass
 
 # houdini
@@ -87,5 +100,12 @@ except:
 try:
 	from PySide2 import QtCore, QtWidgets, QtGui
 	qtAvailable = True
+except:
+	pass
+
+# unreal
+try:
+	import unreal # there can be only one
+	hostDict["unreal"] = True
 except:
 	pass

@@ -8,7 +8,8 @@ from edRig.lib.python import AbstractTree
 
 class Memory2(AbstractTree):
 	""" a long time ago Matt Goutte told me that trees are all you need
-	in cg """
+	in cg
+	he was so right """
 	infoKinds = ["attr", "xform", "weight", "shape", "multi"]
 
 	def __init__(self, name="memory", val=None):

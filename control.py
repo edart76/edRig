@@ -24,9 +24,10 @@ class Control(object):
 	ctl grp
 		- world position - placed by hand
             - world offsets - however many layers wanted
-                first offset is reserved for matrix rivet
-                - world ui - layers
-                    - world ui output
+            first offset is reserved for matrix rivet
+	            - world ui - layers
+	                - world ui output
+	    - static controls - transform layers mirroring ui, driven by proxies
 
 	for parallel stuff each control needs a proxied transform at origin,
 	but that is for later
@@ -49,16 +50,15 @@ class Control(object):
 		self.guide = None # template guide control
 
 		self.uis = [None] * uiLayers # type: [AbsoluteNode]
-		self.locals = [None] * uiLayers
+		self.locals = [None] * uiLayers # type: AbsoluteNode
 		self.offsets = [None] * max(1, offsetLayers) # type: list([AbsoluteNode])
 		self.colour = colour
 
+		self._output = None
+		self._worldOutput = None
+
 		if build:
 			self.build()
-
-		# if layers:
-		# 	self.connectProxies()
-		# 	self.connectOutput()
 
 
 	@property
@@ -68,38 +68,62 @@ class Control(object):
 	@property
 	def output(self):
 		""" change when parallel comes online """
-		return self.uis[-1]
+		return self.locals[-1]
 
 	def build(self):
-		self.makeHierarchy()
+		self.createHierarchy()
+		#self.createConnections()
 
-	def makeHierarchy(self):
+	def createHierarchy(self):
 		"""creates one control and one offset group and that is it"""
-		self.root = ECA("transform", name=self.name+"_controlGrp")
-		parent = self.root
+		self.root = parent = ECA("transform", name=self.name+"_controlGrp")
+		self.root.lock() # lock all root attributes, should remain at origin
+
+		# create offset groups, to be moved around in scene
+		# redo these as direct parentOffset connections
 		for i in range(len(self.offsets)):
 			self.offsets[i] = ECA("transform",
 			    n=self.name + "_offset" + string.ascii_uppercase[i],
 			                      parent=parent)
 			parent = self.offsets[i]
+
+		# create ui shapes
+		localParent = self.root
 		for i in range(len(self.uis)):
 			if len(self.uis) == 1: # no point in letters
 				name = self.name + "_ctl"
-			else: name = self.name + string.uppercase[i] + "_ctl"
-			self.uis[i] = self.makeShape(name, iteration=i)
+			# subcontrol naming convention: "C_spinex2" ?
+			else: name = self.name + "x{}".format(i) + "_ctl"
+			self.uis[i] = self.createShape(name, iteration=i)
 			self.uis[i].parentTo(parent)
 			parent = self.uis[i]
 
+			# local counterpart, which will receive keys
+			self.locals[i] = ECA("transform", n=name+"Local")
+			self.locals[i].parentTo(localParent)
+			self.locals[i].hide() # hidden nodes eval faster
+			localParent = self.locals[i]
+		"""using parenting for now, test later if flat hierarchy
+		and adding / multiplying attributes is more efficient"""
 
-	def connectProxies(self):
-		"""connect up proxy attributes from ui to local components
-		if proxies don't work, move to more advanced ways like blendDevices
-		and managing keys directly"""
+		# single output node necessary for matrices to work properly
+		self._output = ECA("transform", n=self.name+"LocalOutput",
+		                   parent=self.root)
 
-		"""imperative to do more here, this is just a stopgap until a callback system
-		is worked out
-		there will be no parallelism with this yet"""
-		pass
+
+
+	def createConnections(self):
+		""" for each ui layer, proxy each of its keyable attributes
+		to its local counterpart
+		relies on attributes being common across all transforms """
+		for local, world in zip(self.locals, self.uis):
+			for i in world.attrs(keyable=True):
+				world.connectProxyPlug( local + "." + i, i)
+
+
+
+
+
 
 	def connectOutput(self):
 		"""multiply local matrices and decompose to output
@@ -112,7 +136,7 @@ class Control(object):
 		#transform.connectTransformAttrs(self.worldOutput, self.localOutput)
 
 
-	def makeShape(self, name, iteration=0):
+	def createShape(self, name, iteration=0):
 		"""makes either a circle or circular surface"""
 		ctrl = cmds.circle(name="temp_ctl_")[0]
 		colour = beauty.darker(self.colour, factor=iteration * 0.07)
@@ -152,7 +176,7 @@ class Control(object):
 	@property
 	def outputPlug(self):
 		"""returns the local matrix plug of control """
-		return self.worldOutput+".matrix"
+		return self.output+".matrix"
 
 	@property
 	def worldOutputPlug(self):
@@ -201,13 +225,13 @@ class ParametricControl(Control):
 		self.domainShape = domainShape
 		self.parametreScale = parametreScale
 
-	def makeHierarchy(self):
+	def createHierarchy(self):
 		"""we assume the same transform as the domain shapes
 		shapeTf
 			|- shape
 			|- ctrl static grp
 				|- ctrl"""
-		ui = self.makeShape(self.name)
+		ui = self.createShape(self.name)
 		self.layers[0] = ui
 		static = self.makeStatic()
 
@@ -348,7 +372,7 @@ class TileControl(Control):
 		name = name or self.name
 		return AbsoluteNode(cmds.polyPlane(n=name, ch=False, sx=1, sy=0)[0])
 
-	def makeHierarchy(self):
+	def createHierarchy(self):
 		"""make a square and make a group"""
 		self.root = ECA("transform", name=self.name+"_control")
 		self.square = self.makeSquare()
@@ -394,7 +418,7 @@ class ProximityControl(Control):
 		name = name or "sphere"
 		return AbsoluteNode(cmds.sphere(n=name)[0])
 
-	def makeHierarchy(self):
+	def createHierarchy(self):
 		self.root = self.uiRoot = ECA(
 			"transform", name=self.name+"_domain")
 

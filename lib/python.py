@@ -1,57 +1,20 @@
 """general lib for nifty python things like decorators and debugs"""
 from __future__ import print_function
-import inspect,importlib, pprint, pkgutil, string, re, os
+import inspect,importlib, pprint, pkgutil, string, re, os, ast
 from weakref import WeakSet, WeakKeyDictionary, proxy
 from collections import OrderedDict, MutableSet
 from functools import partial, wraps
 from abc import ABCMeta
 import types
 
+import threading
+
 #from edRig.lib.tree import Tree, Signal
 import tree
 reload(tree)
 Tree = tree.Tree
+Signal = tree.Signal
 
-
-class Signal(object):
-	def __init__(self):
-		self._functions = WeakSet()
-		self._methods = WeakKeyDictionary()
-
-	def __call__(self, *args, **kargs):
-		# Call handler functions
-		for func in self._functions:
-			func(*args, **kargs)
-
-		# Call handler methods
-		for obj, funcs in self._methods.items():
-			for func in funcs:
-				func(obj, *args, **kargs)
-
-	def emit(self, *args, **kwargs):
-		""" brings this object up to parity with qt """
-		self(*args, **kwargs)
-
-	def connect(self, slot):
-		if inspect.ismethod(slot):
-			if slot.__self__ not in self._methods:
-				self._methods[slot.__self__] = set()
-
-			self._methods[slot.__self__].add(slot.__func__)
-		else:
-			self._functions.add(slot)
-
-	def disconnect(self, slot):
-		if inspect.ismethod(slot):
-			if slot.__self__ in self._methods:
-				self._methods[slot.__self__].remove(slot.__func__)
-		else:
-			if slot in self._functions:
-				self._functions.remove(slot)
-
-	def clear(self):
-		self._functions.clear()
-		self._methods.clear()
 
 class Decorator(object):
 	"""base decorator class for functions
@@ -245,6 +208,13 @@ class StringLikeMeta(type):
 	#
 		return new
 
+	# def __eq__(self, other):
+	# 	if other == type(str):
+	# 		return True
+	# 	if other == str or other == basestring:
+	# 		return True
+	# 	return super(StringLikeMeta, self).__eq__(other)
+
 #StringLikeMeta.register(str)
 #StringLikeMeta.register(basestring)
 #StringLikeMeta.register(type("") )
@@ -277,19 +247,6 @@ class StringLike(str): # best I can do for now
 	def value(self, val):
 		""" :rtype : str """
 		self._base = str(val) # no unicode
-
-
-	# def __getattr__(self, item):
-	# 	try:
-	# 		return object.__getattr__(item)
-	# 	except:
-	# 		return self._base.__getattribute__(item )
-	#
-	# def __getattribute__(self, item):
-	# 	try:
-	# 		return object.__getattribute__(self, item)
-	# 	except:
-	# 		return str.__getattribute__(self._base, item)
 
 	def __repr__(self):
 		return self.__str__()
@@ -747,6 +704,13 @@ if __name__ == '__main__':
 	# print( loadedTree("parent.listEntry").listValue )
 	# print( loadedTree("parent.listEntry").listValue[-1] * 100)
 	pass
+
+	# testDict = {"ey" : 3}
+	# testStr = str(testDict)
+	# print(testStr)
+	# #loadDict = dict(testStr)
+	# loadDict = ast.literal_eval(testStr)
+	# print(loadDict)
 
 
 	# for i in loadedTree.allBranches():

@@ -1,3 +1,5 @@
+
+from __future__ import print_function
 # container interfacing with the graph - concerned with connections
 from edRig.structures import ActionItem
 from edRig.core import shortUUID
@@ -36,9 +38,9 @@ class AbstractNodeExecutionManager(GeneralExecutionManager):
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		if exc_type:
 			self.node.afterExecute(success=False)
-			print ""
-			print "node {} encountered error during execution".format(self.node.nodeName)
-			print "error is {}".format(exc_val)
+			print( "")
+			print ("node {} encountered error during execution".format(self.node.nodeName))
+			print ("error is {}".format(exc_val))
 			#self.node.setState("failed")
 
 

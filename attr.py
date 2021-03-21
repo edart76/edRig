@@ -1,4 +1,5 @@
 # lib for adding and modifying attributes
+from __future__ import print_function
 import random
 
 from tree import Tree
@@ -15,6 +16,29 @@ dimTypes = {
 
 nodeObjMap = {}
 
+class PlugTree(Tree):
+	"""specialised tree for interfacing with Maya plugs
+	name is attribute name,
+	value is entire plug
+	"""
+
+	def __repr__(self):
+		return self.value
+	# def __init__(self, name=None, val=None):
+	def __init__(self, plug=None, absNode=None):
+		name = ".".join( plug.split(".")[1:] )
+		self.node = absNode
+		super(PlugTree, self).__init__(name, val=plug)
+
+
+
+	# @property
+	# def node(self):
+	# 	return self.value.split(".")[0]
+
+
+
+
 def treeFromPlug(rootPlug):
 	""" retrieve a tree with branches representing nested plugs,
 	containing useful information about them
@@ -26,6 +50,27 @@ def treeFromPlug(rootPlug):
 		branch = treeFromPlug( node + "." + i)
 		tree.addChild(branch)
 	return tree
+
+def processPlugIndex(givenPlug=""):
+	""" when given plug string such as worldMatrix[-1],
+	finds the last plug in array - for growing arrays,
+	this gives an unconnected plug, while [-2] gives the
+	last connected
+	only process last occurrence"""
+	if not givenPlug.endswith("]"):
+		return givenPlug
+	# find split
+	i = 2
+	while givenPlug[-i] != "[":
+		i += 1
+	root, index = givenPlug[:-i], int( givenPlug[-i + 1 : -1])
+	size = cmds.getAttr(root, size=1)
+	if index < 0:
+		index = max(size + index, 0)
+	index = min(index, size)
+	return "{}[{}]".format(root, index)
+
+
 
 def isNode(target):
 	"""copied to avoid dependency"""
@@ -256,10 +301,10 @@ def setHidden(plug, state=True):
 	cmds.setAttr(plug, cb=state)
 
 def setLocked(plug, state=True):
-	try:
-		cmds.setAttr(plug, locked=state)
-	except:
-		print "unable to lock attr {}".format(plug)
+	# try:
+	cmds.setAttr(plug, lock=state)
+	# except:
+	# 	print "unable to lock attr {}".format(plug)
 
 
 def addUntypedAttr(node, attrName="untypedAttr"):
@@ -272,8 +317,20 @@ def addUntypedAttr(node, attrName="untypedAttr"):
 	return node + "." + attrName
 
 
-def addAttr(target, attrName="newAttr", attrType="float", parent=None,
-            keyable=True, **kwargs):
+# track which maya types are defined as 'dt' or 'at'
+# coerce either to work
+# this is one of my least favourite bits of this software
+attrTypeMap = {
+	"at" : ("bool", "long", "short", "byte", "char", "enum", "float",
+	        "double", "doubleAngle", "compound", "time", "message"),
+	"dt" : ("matrix", "string", "stringArray", "doubleArray", "floatArray",
+	        "vectorArray", "nurbsCurve", "nurbsSurface", "mesh", "lattice",
+	        "pointArray")
+}
+
+# at=float3 and dt=float3 actually do different things, which is so dumb
+# figure that out yourself if you use it
+def addAttr(target, parent=None, **kwargs):
 	"""wrapper for more annoying attr types like string
 	returns plug"""
 	if parent:
@@ -281,24 +338,26 @@ def addAttr(target, attrName="newAttr", attrType="float", parent=None,
 			parent = target + "." + parent
 		parent = ".".join(parent.split(".")[1:])
 		kwargs.update({"parent" : parent})
-		#print "parent is {}".format(parent)
 
 	# check if already exists
-	attrName = kwargs.get("ln") or attrName
+	attrName = kwargs.get("ln", kwargs.get("attrName"))
 	if not "ln" in kwargs: kwargs["ln"] = attrName
 	if attrName in cmds.listAttr(target):
 		return target+"."+attrName
 
+	# check for typing
+	attrType = kwargs.get("at", kwargs.get("dt", kwargs.get("attrType")))
 	if attrType == "int" : attrType = "long"
-	dtList = ["string", "nurbsCurve", "mesh"]
-	if attrType in dtList:
-		plug = cmds.addAttr(target, dt=attrType, keyable=True,
-		                    **kwargs)
-	else:
-		plug = cmds.addAttr(target, at=attrType, keyable=True,
-		                    **kwargs)
-		# if you know the logic behind at vs dt, please contact me
-	# contact me urgently
+
+	for flag, values in attrTypeMap.items():
+		if attrType in values:
+			kwargs.pop("at", None)
+			kwargs.pop("dt", None)
+			kwargs[flag] = attrType
+	# if not found in map, will fallback to what is specified by user
+
+	cmds.addAttr(target, **kwargs)
+
 	if parent:
 		return parent + "." + attrName
 	return target+"."+attrName
@@ -394,7 +453,7 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 	op = kwargs.get("relative")
 	if op:
 		"""increment attr value rather than set it"""
-		print "setting relative"
+		print ("setting relative")
 		operators = ("+", "-", "*", "/")
 		operator = op if op in operators else "+"
 		base = getAttr(targetPlug)
@@ -485,7 +544,7 @@ def getImmediateNeighbours(target, source=True, dest=True, wantPlug=False):
 	"""returns nodes connected immediately downstream of plug, or all of node"""
 	nodeList = []
 	if isNode(target):
-		print "node target {}".format(target)
+		print ("node target {}".format(target))
 		for i in cmds.listAttr(target):
 			nodeList += getImmediateNeighbours(i)
 	else:

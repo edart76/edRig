@@ -1,4 +1,6 @@
+#ifndef _ED_ALIGN_H
 
+#define _ED_ALIGN_H
 #include "array.h"
 // functions to align geometry and components
 
@@ -87,3 +89,4 @@ function int[] convex2Dpointorder(vector centre;
     return out;
 
 }
+#endif

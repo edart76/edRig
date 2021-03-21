@@ -1,5 +1,5 @@
-"""AbsoluteNode and object-style nod wrappers"""
-import weakref, ctypes
+"""AbsoluteNode wrapper """
+import weakref, ctypes, ast
 
 from edRig.dcc import cmds, om
 
@@ -8,13 +8,7 @@ from edRig.core import MObjectFrom, shapeFrom, tfFrom, \
 from edRig import attr, naming, beauty
 
 # saviour
-from edRig.lib.python import StringLike, ContextDecorator
-
-
-# TMP HAAAACK
-#from edRig.plug import RampPlug
-# until the core is restructured
-
+from edRig.lib.python import StringLike, ContextDecorator, AbstractTree
 
 
 def invokeNode(name="", type="", parent="", func=None):
@@ -31,8 +25,28 @@ def invokeNode(name="", type="", parent="", func=None):
 	return node
 
 
-#class AbsoluteNode(str):
-#class AbsoluteNode(object):
+
+"""
+get() and getPlug() methods are fine, but consider conforming the syntax of this to AbstractTree,
+mirroring __getitem__ and __call__ in that object
+
+compare:
+	absNodeA.con( "plugA", absNodeB + ".destPlugB")
+	val = absNodeA.get("plugA")
+	concise enough, but two different operations used to extract plug from node
+	
+vs:
+	absNodeA("plugA").con(absNodeB("destPlugB")
+	val = absNodeA["plugA"]
+
+consider even:
+	absNodeA("plugA") >> absNodeB("destPlugB")
+this is flashy but it has limited value over con:
+only 4 strokes over 6, looks freaky, no argument support
+	
+"""
+
+
 class AbsoluteNode(StringLike):
 	# DON'T LOSE YOUR WAAAAY
 
@@ -58,6 +72,9 @@ class AbsoluteNode(StringLike):
 		}
 	}
 
+	NODE_DATA_ATTR = "_nodeData"
+	NODE_PROXY_ATTR = "_proxyDrivers"
+
 	# persistent dict of uid : absoluteNode, used as cache
 	nodeCache = {}
 	# yes I know there can be uid clashes but for now it's fine
@@ -66,13 +83,6 @@ class AbsoluteNode(StringLike):
 	# override with {"nodeState" : 1} etc
 
 	_nodeType = None
-
-	defaultTime = "time1.outTime" # tryin this out
-
-	""" IMPORTANT ISSUES facing AbsNode:
-	no automatic way to create specific wrappers against specific node types
-	once created as one wrapper, node cannot be converted to another 
-	"""
 
 	# naming prefix system test
 	prefixStack = [""]
@@ -151,8 +161,8 @@ class AbsoluteNode(StringLike):
 		else:
 			raise RuntimeError
 
-
-		# absolute._nodeType = cmds.nodeType(node)
+		# slot to hold live data tree object
+		self._dataTree = None
 
 		# callbacks attached to node, to delete on node deletion
 		self.callbacks = []
@@ -196,19 +206,9 @@ class AbsoluteNode(StringLike):
 		self.value = self.refreshPath()
 		return super(AbsoluteNode, self).__str__()
 
-	"""for repeated operations this will incur a penalty in speed
-	consider leaving the call function explicitly to refresh the path"""
-
 	def __call__(self, *args, **kwargs):
 		self.value = self.refreshPath()
 		return self.value
-
-
-
-	"""self object not behaving as it should
-	need to return this AbsoluteNode instance, while still having the 
-	string value of the new name"""
-
 
 	def refreshDagPath(self):
 		#self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
@@ -251,6 +251,7 @@ class AbsoluteNode(StringLike):
 	@property
 	def shapeFn(self):
 		# initialise costly shape mfns only when needed, then never again
+		# update to functools.cached_property once on 3.9
 		if not self._shapeFn:
 			if self.shapeFnType:
 				self._shapeFn = eval("om.MFn"+self.shapeFnType[1:]+"(self.MObject)")
@@ -342,10 +343,10 @@ class AbsoluteNode(StringLike):
 		if self.isDag():
 			cmds.showHidden(self())
 
-	def lock(self, attrs=None):
-		attrs = attrs or self.attrs()
+	def lock(self, attrs=None, locked=True):
+		attrs = attrs or self.attrs(keyable=True)
 		for i in attrs:
-			attr.lockAttr(i)
+			attr.setLocked(self + "." + i, state=locked)
 
 	def rename(self, name, andShape=True):
 		""" allows renaming transform and shape as unit,
@@ -456,6 +457,7 @@ class AbsoluteNode(StringLike):
 
 	def attrs(self, **kwargs):
 		"""return all the attributes of the node"""
+		print self()
 		return cmds.listAttr(self(), **kwargs)
 
 	def parseAttrArgs(self, args=None):
@@ -464,9 +466,11 @@ class AbsoluteNode(StringLike):
 		append node name to it (UNLESS set, in which case string
 		value is allowed)
 		"""
+		print(args)
 		for i in range(len(args)):
 			val = args[i]
-			if not isinstance(val, str):
+			if not isinstance(val, basestring):
+				# print("{} is not str".format())
 				continue
 			if not "." in val:
 				val = self() + "." + val
@@ -485,14 +489,6 @@ class AbsoluteNode(StringLike):
 		""" im gonna do it """
 		args = [sourcePlug, destPlug]
 		conargs = self.parseAttrArgs(args)
-		# conargs = []
-		# for i in args:
-		# 	if not "." in i:
-		# 		c = self + "." + i
-		# 	elif not cmds.objExists(i.split(".")[0]):
-		# 		c = self + "." + i
-		# 	else: c = i
-		# 	conargs.append(c)
 		attr.con(conargs[0], conargs[1], f=True)
 
 	@staticmethod
@@ -522,9 +518,6 @@ class AbsoluteNode(StringLike):
 	def get(self, attrName=None, **kwargs):
 		"""duplication rip"""
 		attrName = self.parseAttrArgs([attrName])[0]
-		# if not self() in attrName:
-		# 	attrName = self() + "." + attrName
-		#print "getting {}".format(attrName)
 		return attr.getAttr(attrName, **kwargs)
 
 	def disconnect(self, attrName=None, source=True, dest=True):
@@ -537,9 +530,6 @@ class AbsoluteNode(StringLike):
 
 	def getMPlug(self, plugName):
 		"""return MPlug object"""
-		if plugName not in self.attrs():
-			raise RuntimeError("plug {} not found in attrs {}".format(
-				plugName, self.attrs() ) )
 		return self.MFnDependency.findPlug(plugName, False)
 
 	def getShapeLayer(self, name="newLayer", local=True, newTf=True):
@@ -559,6 +549,49 @@ class AbsoluteNode(StringLike):
 			print "shadingEngine {}".format(self.shadingEngine)
 			newNode.connectToShader(self.shadingEngine)
 		return newNode
+
+	# -- node data
+	def getNodeData(self):
+		""" returns dict from node data"""
+		if not self.NODE_DATA_ATTR in self.attrs():
+			self.addAttr(keyable=False, ln=self.NODE_DATA_ATTR, dt="string")
+			self.set(self.NODE_DATA_ATTR, "{}")
+
+		data = self.get(self.NODE_DATA_ATTR)
+		return ast.literal_eval(data)
+
+	def setNodeData(self, dataDict):
+		""" serialise given dictionary to string attribute ._nodeData """
+		self.set(self.NODE_DATA_ATTR, str(dataDict))
+
+
+	@property
+	def dataTree(self):
+		""" initialise data tree object and return it
+		connect value changed signal to serialise method
+		given AbsoluteNode register, there SHOULD be no way this will ever
+		desync from node, as any AbsNode call should return
+		 the correct wrapper, and so the correct tree """
+		if self._dataTree:
+			return self._dataTree
+		elif self.getNodeData():
+			return AbstractTree.fromDict(self.getNodeData())
+		self._dataTree = AbstractTree()
+
+		#saveTree = lambda : self.setNodeData(self._dataTree.serialise())
+		def saveTree(*args, **kwargs):
+			self.setNodeData( self._dataTree.serialise())
+
+		self._dataTree.valueChanged.connect( saveTree )
+		self._dataTree.structureChanged.connect( saveTree )
+		return self._dataTree
+
+		"""the alternative is to use a context handler, like
+		with self.dataTree() as data:
+			data[etc]
+		but this is even cleaner"""
+
+
 
 	# -- other random stuff -----
 	def setColour(self, colour):
@@ -594,6 +627,59 @@ class AbsoluteNode(StringLike):
 			self.set("overrideDisplayType", 2)
 		elif clean:
 			self.set("overrideDisplayType", 0)
+
+	def connectProxyPlug(self, driverPlug=None, proxyAttr=None):
+		"""connects plugs and keeps a record of it"""
+		"""check for proxy attribute register - arrays of message attributes
+		on destination node, with names of 'driverPlug_<<driverPlugAttr>>_proxy_<<proxyAttr>>
+		will look disgusting but it's clear"""
+		# create compound message attribute
+		if not self.NODE_PROXY_ATTR in self.attrs():
+			messageFn = om.MFnMessageAttribute()
+			messageObj = messageFn.create(self.NODE_PROXY_ATTR, self.NODE_PROXY_ATTR)
+			messageFn.array = True
+			self.MFnDependency.addAttribute(messageObj)
+
+		# connect actual proxy relationship
+		self.con(driverPlug, proxyAttr)
+		proxyObj = self.MFnDependency.attribute(proxyAttr)
+		attrFn = om.MFnAttribute(proxyObj)
+		attrFn.isProxyAttribute = True
+
+		# connect driver's message to proxy array
+		pointIndex = driverPlug.index(".")
+		driverNode, driverAttr = driverPlug[:pointIndex], driverPlug[pointIndex + 1:]
+
+		print(driverNode)
+		print(cmds.listConnections(self + "." + self.NODE_PROXY_ATTR))
+
+
+		if not driverNode in cmds.listConnections(self + "." + self.NODE_PROXY_ATTR):
+			index = attr.getNextAvailableIndex(self + "." + self.NODE_PROXY_ATTR)
+			self.con(driverNode + ".message",
+			         self + ".{}[{}]".format(self.NODE_PROXY_ATTR, index))
+		else:
+			index = cmds.listConnections(self + "." + self.NODE_PROXY_ATTR).index(driverNode)
+
+		# set proxy connections in node data
+		# proxyData = {1 : [ (driverA, proxyB), (driverC, proxyD) ] } etc
+
+		tree = self.dataTree
+		index = str(index)
+		existing = tree("proxyData", index)
+		existing.default = []
+		existing.value.append( (driverAttr, proxyAttr))
+		self.setNodeData(tree.serialise())
+
+		# data = self.getNodeData()
+		# proxyData = data.get("proxyData") or {}
+		# existing = proxyData.get(index) or {}
+		# existing[driverAttr] = proxyAttr
+		# proxyData[index] = existing
+		# data["proxyData"] = proxyData
+		# self.setNodeData(data)
+
+
 
 
 	def setDefaults(self):
