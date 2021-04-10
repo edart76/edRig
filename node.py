@@ -1,4 +1,5 @@
 """AbsoluteNode wrapper """
+from __future__ import print_function
 import weakref, ctypes, ast
 
 from edRig.dcc import cmds, om
@@ -14,13 +15,13 @@ from edRig.lib.python import StringLike, ContextDecorator, AbstractTree
 def invokeNode(name="", type="", parent="", func=None):
 	# print "core invokeNode looking for {}".format(name)
 	if cmds.objExists(name):
-		#print "found {}".format(name)
+		#print("found {}".format(name)
 		return AbsoluteNode(name)
 	if not func:
 		func = ECA
 	node = func(type, name=name)
 	if parent and cmds.objExists(parent):
-		#print "parenting invoked"
+		#print("parenting invoked"
 		cmds.parent(node, parent)
 	return node
 
@@ -109,7 +110,7 @@ class AbsoluteNode(StringLike):
 		if isinstance(node, AbsoluteNode):
 			return node
 		elif isinstance(node, list):
-			print "node is list"
+			print ("node is list")
 			return cls(node[0])
 		elif isinstance(node, om.MObject):
 			return cls.fromMObject(node)
@@ -405,10 +406,7 @@ class AbsoluteNode(StringLike):
 
 	@property
 	def inShape(self):
-		#print "inShape self {}".format(self)
-		#print "inshape nodeInfo {}".format(self.nodeInfo)
 		plug = "{}.{}".format(self, self.nodeInfo.get("inShape") )
-		#print "inShape plug {}".format(plug)
 		return plug
 
 	def TRS(self, *args):
@@ -457,7 +455,7 @@ class AbsoluteNode(StringLike):
 
 	def attrs(self, **kwargs):
 		"""return all the attributes of the node"""
-		print self()
+		print(self())
 		return cmds.listAttr(self(), **kwargs)
 
 	def parseAttrArgs(self, args=None):
@@ -542,11 +540,11 @@ class AbsoluteNode(StringLike):
 		newNode = AbsoluteNode.fromMObject(newShape)
 		newNode.name = name+"Shape"
 
-		print "new {}, {}".format(newNode, newNode.inShape)
+		print( "new {}, {}".format(newNode, newNode.inShape))
 
 		self.con(self.outLocal, newNode.inShape)
 		if newNode.isMesh:
-			print "shadingEngine {}".format(self.shadingEngine)
+			print( "shadingEngine {}".format(self.shadingEngine))
 			newNode.connectToShader(self.shadingEngine)
 		return newNode
 

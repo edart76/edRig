@@ -83,7 +83,7 @@ function int[] tetrahedralpoints(int seedpts[];
                 append(poses, pos + dir);
                 append(existing, newptcoord);
                 append(result, newpt);
-                setpointattrib(0, "result", newpt, result);
+                //setpointattrib(0, "result", newpt, result);
                 setpointattrib(0, "seedpts", newpt, seedpts);
             }
         }

@@ -215,6 +215,9 @@ def alembicExport(targetSets=None, startFrame=None, endFrame=None):
 def importFbx(path):
 	""" because importing fbx to maya is dicey, like everything is """
 	cmds.loadPlugin("fbxmaya", quiet=1)
+	# disable warning dialogue
+	mel.eval("FBXProperty Import|AdvOptGrp|UI|ShowWarningsManager -v 0;")
+	# I went on a journey to find this
 	return mel.eval( """FBXImport -file "{}";""".format(path) )
 
 def importObj(path):

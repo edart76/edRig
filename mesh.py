@@ -302,27 +302,329 @@ def setSkinData(skinNode, skinData):
 			)
 
 
+import math
 
+
+class OffsetBuffer(object):
+	""" should be 1:1 of the c++ object
+	should also be able to be converted to numpy
+	once I understand numpy
+
+	no interleaving for now
+
+	[(3, 2), (4, 5, 6), (5, 6, 5)] 8
+	[0,       2,         5 ]
+	[ 2 - 0     5 - 2    8 - 5 ]
+
+	could literally just use lists of tuples in python
+	"""
+
+	def __init__(self, values, offsets):
+		self.values = values
+		self.offsets = offsets
+
+	def mapIndex(self, index):
+		""" account for negative indexing """
+		return index if index >= 0 else len(self.values) + index
+
+	def entryLength(self, index):
+		""" length of entry in buffer """
+		index = self.mapIndex(index)
+		if index == len(self.values) - 1:
+			return len(self.values) - self.offsets[-1]
+		return self.offsets[index + 1] - self.offsets[index]
+
+	def entry(self, index):
+		""" start at the offset to this index,
+		continue for the length of this entry """
+		index = self.mapIndex(index)
+		return self.values[
+		       self.offsets[index] :
+		            self.offsets[index] + self.entryLength(index) ]
+
+	def __getitem__(self, item):
+		index = self.mapIndex(item)
+		return self.entry(index)
+
+
+class Vertex(object):
+	""" testing if it's better to have a struct
+	for traversing meshes, otherwise it gets super tangled
+	also locality probably isn't too bad, since if you want
+	to map point to vertex, you usually also need to map
+	vertex to point as well """
+	def __init__(self, localIndex, face=None):
+		self._localIndex = localIndex # FACE-LOCAL vertex index
+		#self.next = next # VERTEX object to next vtx
+		self.face = face
+
+	@property
+	def index(self):
+		""" return GLOBAL vertex index """
+		return self.localIndex + self.face.vertexOffset
+
+	# interfaces like a proper programmer
+	@property
+	def globalIndex(self):
+		return 0
+	@property
+	def localIndex(self):
+		return self._localIndex
+	@property
+	def nextVertex(self):
+		return 0
+	@property
+	def prevVertex(self):
+		return 0
+	# in c these will all be direct functions
+
+
+class Face(object):
+	def __init__(self, index, vertexOffset=None):
+		self.index = index
+		# value to add to LOCAL vertex indices to retrieve GLOBAL indices
+		self.vertexOffset = vertexOffset
+
+	def points(self):
+		""" can still index back into main array """
+		return faceConnects[self.index]
+
+""" 
+for compromise between efficiency and user-friendliness,
+consider only generating these components on demand, from the topo buffers
+same thing with component attributes
+"""
 
 
 class MeshStruct(object):
-	""" maybe?
+	"""
 	common interchange serialisation structure to
 	store per point attributes
-	should be interchangeable with c++ struct output """
+	should be interchangeable with c++ struct output
+
+	adopt full houdini-style attributes
+
+	uv coordinates vary per-vertex - 4 uv coords are connected if they are
+	 equal to each other
+
+	SHOULD we enforce triangulation?
+
+	"""
 
 	def __init__(self):
-		self.nPoints = 0
-		self.nEdges = 0
-		self.nFaces = 0
-		self.positions = [] # list of floats
+
+		# which points connect to which
+		self.pointConnects = []
+
+		# list of tuples mapping points to vertices
+		self.pointToVertexMap = []
+
+
 		self.pointAttrs = {}
+		self.vertexAttrs = {}
+
 
 	def setMesh(self, meshFn):
 
 		self.pointAttrs["uvs"] = getMeshUVs(meshFn)
 
+	@classmethod
+	def getMeshData(cls, mesh):
+		obj = getMObject(mesh)
+		fn = om.MFnMesh(obj)
 
+
+		faceVertices = []
+		facePointConnects = []
+		pointVertices = []
+		pointConnects = []
+		faceObjs = []
+		for i in range(fn.numPolygons):
+			# # global point connections
+			facePoints = tuple(fn.getPolygonVertices(i))
+			facePointConnects.append( facePoints )
+
+			# map vertices
+			# [ face index : ( list of global face vertex indices ) ]
+			thisFaceVertices = tuple([
+					fn.getFaceVertexIndex(i, n, localVertex=False)
+					for n in facePoints])
+			faceVertices.append(
+				thisFaceVertices
+			)
+
+			# global face vertex indices guaranteed to be contiguous with
+			# face indices
+			minVtxId = min(thisFaceVertices)
+			faceObj = Face(i, vertexOffset=minVtxId)
+			faceObjs.append(faceObj)
+			vertexObjs = []
+
+			for n in thisFaceVertices:
+				# map global vertex indices to local
+				vertexObjs.append(Vertex(n - minVtxId, face=faceObj))
+
+		positions = [tuple(i)[:-1] for i in fn.getPoints()]
+
+
+
+
+		""" UVs
+		we treat UVs as they are in maya, basically a pseudo-mesh
+		with rich connectivity information
+		as opposed to the much simpler treatment in houdini
+		
+		actually we treat them literally as a separate mesh,
+		with uv coords as points, 
+		then with maps to and from the main mesh 
+		"""
+		uvFamilies = {}
+		for familyName in fn.getUVSetFamilyNames():
+			uvs = {}
+
+			for setName in fn.getUVSetsInFamily(familyName):
+				data = {
+					"coords" : [tuple(i) for i in fn.getUVs(setName)],
+
+				}
+
+				data["faceUvIds"] = [
+					[fn.getPolygonUVid(face, n, setName) for n in
+					 range(len(fn.getPolygonVertices(face)))]
+					for face in range(fn.numPolygons)]
+
+				data["uvConnects"] = cls.pointConnectsFromFacePointConnects(
+					data["faceUvIds"])
+
+				data["nUVs"] = len(data["uvConnects"])
+				data["nUVmatch"] = data["nUVs"] == fn.numUVs(setName)
+
+
+				# each point may have multiple uvs
+				# each uv may have multiple face vertices
+				# point <- uv <- vertex
+
+				# map of [uvIndex : pointIndex]
+				uvPointMap = [-1] * fn.numUVs(setName)
+
+				# map of [vertexIndex : uvIndex]
+				vertexUVMap = [-1] * fn.numFaceVertices
+				for face in range(fn.numPolygons):
+					faceObj = faceObjs[face]
+					for pointIdx, uvIdx, vertexIdx in zip(
+						facePointConnects[face],
+						data["faceUvIds"][face],
+						faceVertices[face]
+					):
+						vertexUVMap[vertexIdx] = uvIdx
+						uvPointMap[uvIdx] = pointIdx
+				data["uvPointMap"] = uvPointMap
+				data["vertexUVMap"] = vertexUVMap
+
+				uvs[setName] = data
+			uvFamilies[familyName] = uvs
+
+
+		# test reconstruction
+
+		newPositions = [om.MPoint(*i) for i in positions]
+		newFaceCounts = [len(i) for i in facePointConnects]
+		newFaceConnects = flatten(facePointConnects)
+
+		fn.create(newPositions, newFaceCounts, newFaceConnects)
+
+		return {
+			"facePointConnects" : facePointConnects,
+			#"pointConnects" : pointConnects,
+			"faceVertices" : faceVertices,
+			"positions" : positions,
+			# "newFaceConnects" : newFaceConnects,
+			"uvs" : uvFamilies
+		}
+
+	@staticmethod
+	def groupConnectedElements(connects):
+		""" given ordered list of connect tuples,
+		walk through the set and group all connected elements
+		into indexed sets
+		this assumes bidirectional connections in the elements """
+		groups = []
+		visited = [0] * len(connects)
+		groupIdx = 0
+		visitIdx = 0
+		while 1 - any(visited):
+			pass
+
+
+
+
+	@staticmethod
+	def facePointConnectsFromPointConnects(pointConnects):
+		""" given list of [point index : (connected points)]
+		returns new list of tuples -
+		[ face index : (face points) ]
+
+		so I think this is actually intractable, it becomes a question
+		of picking shortest closed paths, but there is no information
+		on whether those paths are valid
+		"""
+		faceSets = {}
+		# many-to-few dict of {point index : whole face set}
+		faceIdx = 0
+		faceIdxRef = [0]
+
+		print(pointConnects)
+		for i, points in enumerate(pointConnects):
+			span = len(points)
+			for n, pt in enumerate(points):
+				lead = (n + 1 + span) % span
+				lead = points[lead]
+				trail = (n - 1 + span) % span
+				trail = points[trail]
+
+				# new pair of points means new face
+				if not (lead in faceSets and trail in faceSets):
+					faceSet = {lead, trail}
+					faceSets[lead] = faceSet
+					faceSets[trail] = faceSet
+
+
+				for adjPt in [lead, trail]:
+					if not adjPt:
+						pass
+				faceSets[n].add(n)
+		#return list(faceSets.values())
+		return faceSets
+
+	@staticmethod
+	def pointConnectsFromFacePointConnects(facePointConnects):
+		""" given list of [face index : (face points)]
+		return new list of tuples -
+		[point index : (connected points)]
+		"""
+		pointSets = {}
+		for i, points in enumerate(facePointConnects):
+			span = len(points)
+			for n, pt in enumerate(points):
+				lead = (n + 1 + span) % span
+				trail = (n - 1 + span) % span
+				# point connects are inherently orderless
+				# order only appears if you consider faces between them
+				if not pt in pointSets:
+					pointSets[pt] = set()
+				pointSets[pt].add(points[lead])
+				pointSets[pt].add(points[trail])
+		return [tuple(i) for i in pointSets.values()]
+
+def flatten(seq):
+	""" recursively flatten sequence to list """
+	result = []
+	for i in seq:
+		if hasattr(i, "__iter__"):
+			result.extend(flatten(i))
+		else:
+			result.append(i)
+	return result
 
 class SkinWeights(object):
 

@@ -9,7 +9,6 @@ import types
 
 import threading
 
-#from edRig.lib.tree import Tree, Signal
 import tree
 reload(tree)
 Tree = tree.Tree
@@ -153,9 +152,6 @@ def rawToList(listString):
 	tokens = [i.strip() for i in listString[1:-1].split(",")]
 	result = []
 	for token in tokens:
-		# if token.startswith("[") and token.endswith("]"):
-		# 	result.append(rawToList(token))
-		# no parsers here, cannot handle nested lists
 		try:
 			result.append(eval(token))
 		except:
@@ -163,6 +159,19 @@ def rawToList(listString):
 
 	return result
 
+
+# tree functions
+def poolToTree(items, treeCls=Tree, key=None):
+	""" given pool of lists of varying length,
+	sort them into a single tree
+	if param key is provided, item[key] will be used to sort, with
+	item being set as tree value
+	else only the tree itself will be created """
+
+
+
+# spider: web developer
+# stand up lizard jokes : stand up chamaeleon
 
 #class StringLikeMeta(ABCMeta):
 class StringLikeMeta(type):

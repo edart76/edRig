@@ -770,7 +770,11 @@ def exportToObj(targetGeo=None, path=None, force=True):
 def exportToFbx(targetGeo=None, path=None, force=True):
 	path = checkSuffix(path, suffix="fbx")
 	cmds.select( targetGeo, replace=1)
-	cmds.file(path, es=1, type="FBX export", f=force)
+	mel.eval("FBXProperty Import|AdvOptGrp|UI|ShowWarningsManager -v 0;")
+	mel.eval("FBXExportSmoothingGroups -v 1;")
+	#cmds.file(path, es=1, type="FBX export", f=force)
+	#cmds.file( path, e=1, f=force)
+	mel.eval ("""FBXExport -file "{}" -s;""".format(path))
 	cmds.select(cl=1)
 
 def exportToAlembic(targetGeo=None, path=None, f=True):

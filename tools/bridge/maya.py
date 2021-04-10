@@ -1,21 +1,32 @@
 
-"""
-functions to call in any DCC scene, to bring it totally up to speed with the
-wider ecosystem: reload references, export outputs, import inputs, everything
-"""
-
+""" maya-facing sync functions """
 
 from edRig import cmds, om, pipeline, scene
+reload(pipeline)
+reload(scene)
 from edRig.node import AbsoluteNode, ECA, ObjectSet
 
-from edRig import hou # it's happening
 from edRig.core import debug
+
+
+def toolClick():
+	""" entrypoint for the single maya sync button """
+	sync()
+
+def setupBridgeSets():
+	bridge = ObjectSet.create("bridge_set")
+	importSet = ObjectSet.create("import_set")
+	exportSet = ObjectSet.create("export_set")
+	bridge.addToSet(importSet)
+	bridge.addToSet(exportSet)
+	return bridge
+
 
 def getBridgeSet():
 	""" creates basic bridge sets for scene """
 	if not cmds.objExists("bridge_set"):
 		print("bridge set not found, creating")
-		return ObjectSet.create("bridge_set")
+		return setupBridgeSets()
 	return ObjectSet("bridge_set")
 
 
@@ -31,23 +42,23 @@ def sync():
 def syncBridgeSets():
 	""" sync bridge sets found in maya scene """
 	topSet = getBridgeSet()
-	topSetItems = topSet.objects()
-	print("topSetItems {}".format(topSetItems))
+	exportSet = ObjectSet("export_set")
+	exportSetItems = exportSet.objects()
+	print("topSetItems {}".format(exportSetItems))
 
 	path = pipeline.getScenePath()
 
 	# every set in a bridge set for now signifies an export
-	for i in topSetItems:
+	for i in exportSetItems:
 
-		debug(i)
-
+		# if subset is specified, all contained objects are combined
 		if i.nodeType() == "objectSet":
 			#print(i)
 			combineTargets = ObjectSet(i(), useCache=False).objects()
 			# combine objects and export
 			duplicates = [ cmds.duplicate(n, name=n+"_duplicate")[0] for n in combineTargets]
 
-		else: # one export for every top-level model in the set
+		else: # export every top-level mesh in main export set individually
 			duplicates = cmds.duplicate(i, name=i + "_duplicate")
 
 		for n in duplicates:
@@ -71,7 +82,7 @@ def syncBridgeSets():
 
 		# add new namespace in anticipation
 
-		scene.addNamespace("bridge_:{}_".format(i.name))
+		# scene.addNamespace("bridge_:{}_".format(i.name))
 		# framestore readable underscore convention
 
 def prepSyncGeo(geo):
@@ -88,36 +99,4 @@ def prepSyncGeo(geo):
 			                   ch=0
 			                   )
 
-
-
-def syncHIO():
-	syncHInputs()
-	syncHOutputs()
-
-def syncHInputs():
-	""" begins from root obj node - recurses through all nodes for now
-	when file node is found in load mode, reloads geometry """
-	root = hou.node("/")
-	for i in root.allSubChildren():
-		#print("node {}, node type {}".format(i, i.type()))
-		if i.type().name() == "file":
-			#print("found file {}".format(i))
-			button = i.parm( "reload" )
-			mode = i.parm( "filemode" ).evalAsString()
-			# returns "read", "write"
-			# if you leave file nodes on auto you're an animal and i have no sympathy
-			if mode == "read":
-				button.pressButton()
-
-def syncHOutputs(onlyHDA=True):
-	""" looks for files or for specific export HDAs"""
-	root = hou.node("/")
-	for i in root.allSubChildren():
-		if i.type().name() == "Ed_export_geo":
-			button = i.parm( "stashinput" )
-			button.pressButton()
-	""" I wrote this HDA having absolutely no perspective on the coding side - 
-	node and attribute names may certainly change in future """
-
-
-
+	pass
