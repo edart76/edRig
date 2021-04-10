@@ -1,6 +1,11 @@
 # fucnctions for renumbering mesh points, getting weights,
 # interfacing between weights and maps etc
 # additionally for working with nurbs shapes
+
+import math
+from six import iteritems, string_types
+
+
 from edRig import core, attr, transform, naming, cmds, om, oma, con
 from edRig.lib.python import AbstractTree
 from edRig.node import AbsoluteNode, ECA
@@ -395,6 +400,12 @@ consider only generating these components on demand, from the topo buffers
 same thing with component attributes
 """
 
+def tupleListFromBuffers(strides, values):
+	result = [None] * len(strides)
+	for i, stride in enumerate(strides):
+		result[i] = tuple(values[:stride])
+		values = values[stride:]
+	return result
 
 class MeshStruct(object):
 	"""
@@ -402,145 +413,245 @@ class MeshStruct(object):
 	store per point attributes
 	should be interchangeable with c++ struct output
 
-	adopt full houdini-style attributes
+	TERMINOLOGY:
+	POINT : single point coordinate in space, connected by
+		edges to other points. The same point may be shared by
+		many faces. In MAYA, this would be a 'vertex'.
+	FACE : single polygon, spanning many points and containing corresponding
+		vertices. In HOUDINI, this would be a 'primitive'.
+	VERTEX : single corner of a face, where the face meets a point, but
+		UNIQUE to that face. A vertex has a global index, unique in the mesh,
+		and a local index, unique within its face.
+		In MAYA, this would be a 'face vertex'.
 
-	uv coordinates vary per-vertex - 4 uv coords are connected if they are
-	 equal to each other
+	A cube, with square faces, has:
+		- 8 points
+		- 6 faces
+		- 6 * 4 = 24 vertices
 
-	SHOULD we enforce triangulation?
+	Maya doesn't seem to consider face vertices as real objects, they
+	are literally defined by a face and a (point) vertex. So that's annoying
+
+	We adopt full houdini-style attributes - except for UVs.
+	A UV set is literally a separate mesh in its own right, just
+	with the same face and vertex indices.
 
 	"""
 
-	def __init__(self):
+	def __init__(self,
+	             facePointConnects,
+	             pointConnects=None,
+	             faceVertexConnects=None,
+	             pointVertexConnects=None,
+	             hasSubMeshes=True, # whatever
+	             ):
+		""" passing either facePointConnects or faceVertexConnects
+		will share these existing buffers instead of recomputing.
+		If both are given, we assume that they match, and
+		are topologically correct.
+		"""
+		flatPoints = flatten(facePointConnects)
+		self.nPoints = max(flatPoints) + 1
+		self.nFaces = len(facePointConnects)
+		self.nVertices = len(flatPoints)
 
-		# which points connect to which
-		self.pointConnects = []
+		# topo buffers
+		self.facePointConnects = facePointConnects # most important
+		if pointConnects:
+			self.pointConnects = pointConnects
+		else:
+			self.pointConnects = self.pointConnectsFromFacePointConnects(
+				self.facePointConnects )
 
-		# list of tuples mapping points to vertices
-		self.pointToVertexMap = []
+		if faceVertexConnects:
+			self.faceVertexConnects = faceVertexConnects
+		else:
+			self.faceVertexConnects = self.faceVertexConnectsFromFacePointConnects(
+				self.facePointConnects,)
 
-
-		self.pointAttrs = {}
-		self.vertexAttrs = {}
-
-
-	def setMesh(self, meshFn):
-
-		self.pointAttrs["uvs"] = getMeshUVs(meshFn)
-
-	@classmethod
-	def getMeshData(cls, mesh):
-		obj = getMObject(mesh)
-		fn = om.MFnMesh(obj)
-
-
-		faceVertices = []
-		facePointConnects = []
-		pointVertices = []
-		pointConnects = []
-		faceObjs = []
-		for i in range(fn.numPolygons):
-			# # global point connections
-			facePoints = tuple(fn.getPolygonVertices(i))
-			facePointConnects.append( facePoints )
-
-			# map vertices
-			# [ face index : ( list of global face vertex indices ) ]
-			thisFaceVertices = tuple([
-					fn.getFaceVertexIndex(i, n, localVertex=False)
-					for n in facePoints])
-			faceVertices.append(
-				thisFaceVertices
+		if pointVertexConnects:
+			self.pointVertexConnects = pointVertexConnects
+		else:
+			self.pointVertexConnects = self.buildPointVertexConnects(
+				self.nPoints,
+				self.facePointConnects,
+				self.faceVertexConnects
 			)
 
-			# global face vertex indices guaranteed to be contiguous with
-			# face indices
-			minVtxId = min(thisFaceVertices)
-			faceObj = Face(i, vertexOffset=minVtxId)
-			faceObjs.append(faceObj)
-			vertexObjs = []
+		# lazy compute buffers
+		self.vertexToFacePointMap = None
 
-			for n in thisFaceVertices:
-				# map global vertex indices to local
-				vertexObjs.append(Vertex(n - minVtxId, face=faceObj))
+		# per-element attributes
+		self.meshAttrs = {}
+		self.faceAttrs = {}
+		self.pointAttrs = {}
+		self.vertexAttrs = {}
+		# can easily be used with int values to track groups
 
-		positions = [tuple(i)[:-1] for i in fn.getPoints()]
+		if hasSubMeshes:
+			# special cases
+			self.subMeshes = {
+				"UVs" : {},
+			}
+			# we store uv-varying attributes in the uv mesh structs
+		else: self.subMeshes = None
 
+	def faceVertexBuffers(self, local=False):
+		faces, allVertices = [], []
+		for face, vertices in enumerate(self.faceVertexConnects):
+			for localVtx, globalVtx in enumerate(vertices):
+				faces.append(face)
+				allVertices.append(localVtx if local else globalVtx)
+		return faces, allVertices
 
+	def facePointBuffers(self, local=False):
+		faces, allVertices = [], []
+		for face, vertices in enumerate(self.faceVertexConnects):
+			for localVtx, globalVtx in enumerate(vertices):
+				faces.append(face)
+				allVertices.append(localVtx if local else globalVtx)
+		return faces, allVertices
 
-
-		""" UVs
-		we treat UVs as they are in maya, basically a pseudo-mesh
-		with rich connectivity information
-		as opposed to the much simpler treatment in houdini
-		
-		actually we treat them literally as a separate mesh,
-		with uv coords as points, 
-		then with maps to and from the main mesh 
-		"""
-		uvFamilies = {}
-		for familyName in fn.getUVSetFamilyNames():
-			uvs = {}
-
-			for setName in fn.getUVSetsInFamily(familyName):
-				data = {
-					"coords" : [tuple(i) for i in fn.getUVs(setName)],
-
-				}
-
-				data["faceUvIds"] = [
-					[fn.getPolygonUVid(face, n, setName) for n in
-					 range(len(fn.getPolygonVertices(face)))]
-					for face in range(fn.numPolygons)]
-
-				data["uvConnects"] = cls.pointConnectsFromFacePointConnects(
-					data["faceUvIds"])
-
-				data["nUVs"] = len(data["uvConnects"])
-				data["nUVmatch"] = data["nUVs"] == fn.numUVs(setName)
-
-
-				# each point may have multiple uvs
-				# each uv may have multiple face vertices
-				# point <- uv <- vertex
-
-				# map of [uvIndex : pointIndex]
-				uvPointMap = [-1] * fn.numUVs(setName)
-
-				# map of [vertexIndex : uvIndex]
-				vertexUVMap = [-1] * fn.numFaceVertices
-				for face in range(fn.numPolygons):
-					faceObj = faceObjs[face]
-					for pointIdx, uvIdx, vertexIdx in zip(
-						facePointConnects[face],
-						data["faceUvIds"][face],
-						faceVertices[face]
-					):
-						vertexUVMap[vertexIdx] = uvIdx
-						uvPointMap[uvIdx] = pointIdx
-				data["uvPointMap"] = uvPointMap
-				data["vertexUVMap"] = vertexUVMap
-
-				uvs[setName] = data
-			uvFamilies[familyName] = uvs
+	def facePointsFromVertices(self):
+		""" list [ vertex index : (face index, point index) ] """
+		if not self.vertexToFacePointMap :
+			result = [None] * self.nVertices
+			vtxIndex = 0
+			for face, points in enumerate(self.facePointConnects):
+				for point in points:
+					result[vtxIndex] = (face, point)
+					vtxIndex += 1
+			self.vertexToFacePointMap = result
+		return self.vertexToFacePointMap
 
 
-		# test reconstruction
+	def iterFaceVertices(self, local=False):
+		""" return tuples of (face, globalVtx) """
+		return zip(self.faceVertexBuffers(local))
 
-		newPositions = [om.MPoint(*i) for i in positions]
-		newFaceCounts = [len(i) for i in facePointConnects]
-		newFaceConnects = flatten(facePointConnects)
+	@classmethod
+	def fromMFnMesh(cls, mfn):
+		""" generate a MeshStruct from a maya mfn mesh
+		:param mfn : om.MFnMesh """
 
-		fn.create(newPositions, newFaceCounts, newFaceConnects)
+		faceCounts, facePoints = mfn.getVertices()
+		facePointConnects = tupleListFromBuffers(
+			faceCounts, facePoints)
 
-		return {
-			"facePointConnects" : facePointConnects,
-			#"pointConnects" : pointConnects,
-			"faceVertices" : faceVertices,
-			"positions" : positions,
-			# "newFaceConnects" : newFaceConnects,
-			"uvs" : uvFamilies
-		}
+		mesh = cls(facePointConnects,
+		           )
+
+		# set attributes
+		# positions
+		positions = [tuple(i)[:3] for i in mfn.getPoints()]
+		mesh.pointAttrs["positions"] = positions
+
+		# normals
+		baseNormals = mfn.getNormals()
+		normalCounts, normalIds = mfn.getNormalIds()
+		# this was quite silly to arrive at, but it works
+		normals = []
+		for i in range(mesh.nVertices):
+			normal = baseNormals[ normalIds[ i ] ]
+			normals.append(normal)
+		normals = [tuple(i) for i in normals]
+		mesh.vertexAttrs["normals"] = normals
+
+		# UVs
+		uvSets = {}
+
+		# for setName in fn.getUVSetsInFamily(familyName):
+		for setName in mfn.getUVSetNames() or []:
+
+			#create UV sub-mesh
+			uvPositions = [tuple(i) for i in mfn.getUVs(setName)]
+
+			faceUVIds = [
+				[mfn.getPolygonUVid(face, n, setName) for n in
+				 range(len(mfn.getPolygonVertices(face)))]
+				for face in range(mfn.numPolygons)]
+
+			uvConnects = cls.pointConnectsFromFacePointConnects(
+				faceUVIds)
+
+			uvMesh = MeshStruct(
+				facePointConnects=faceUVIds,
+				pointConnects=uvConnects,
+
+				# share vertex information from base mesh
+				faceVertexConnects=mesh.faceVertexConnects,
+				#pointVertexConnects=mesh.pointVertexConnects,
+				hasSubMeshes=False
+			)
+			uvMesh.pointAttrs["positions"] = uvPositions
+
+
+			# # each point may have multiple uvs
+			# # each uv may have multiple face vertices
+			# # point <- uv <- vertex
+			#
+			# # map of [uvIndex : pointIndex]
+			# uvPointMap = [-1] * mfn.numUVs(setName)
+			#
+			# # map of [vertexIndex : uvIndex]
+			# vertexUVMap = [-1] * mfn.numFaceVertices
+			# for face in range(mfn.numPolygons):
+			# 	for pointIdx, uvIdx, vertexIdx in zip(
+			# 			facePointConnects[face],
+			# 			data["faceUVIds"][face],
+			# 			faceVertexConnects[face]
+			# 	):
+			# 		vertexUVMap[vertexIdx] = uvIdx
+			# 		uvPointMap[uvIdx] = pointIdx
+			# data["uvPointMap"] = uvPointMap
+			# data["vertexUVMap"] = vertexUVMap
+
+			uvSets[setName] = uvMesh
+		mesh.subMeshes["UVs"] = uvSets
+
+		return mesh
+
+	def toMFnMesh(self, mfn=None):
+		""" convert a MeshStruct to a maya mesh object
+		:param mfn : om.MFnMesh """
+		mfn = mfn or om.MFnMesh()
+		positions = self.pointAttrs["positions"]
+		positions = [om.MPoint(*i) for i in positions]
+		faceCounts = [len(i) for i in self.facePointConnects]
+		faceConnects = flatten(self.facePointConnects)
+
+		mfn.create(positions, faceCounts, faceConnects) # works
+
+		# assign attributes
+		# normals
+
+		# maya requires pairs of (face index, point index) to define vertices
+		faces = [i[0] for i in self.facePointsFromVertices()]
+		points = [i[1] for i in self.facePointsFromVertices()]
+
+		mfn.unlockFaceVertexNormals(faces, points)
+		if self.vertexAttrs.get("normals"):
+			for n in range(len(faces)):
+				mfn.setFaceVertexNormals(
+					# [om.MVector(*i) for i in self.vertexAttrs["normals"]][:5],
+					[om.MVector(*self.vertexAttrs["normals"][n])],
+					[faces[n]], [points[n]]
+				)
+
+		# UVs
+		for setName, uvMesh in iteritems(self.subMeshes["UVs"]):
+			if not setName in mfn.getUVSetNames():
+				mfn.createUVSet(setName)
+			mfn.clearUVs(setName)
+			mfn.setUVs(uvMesh.pointAttrs["positions"][0],
+			           uvMesh.pointAttrs["positions"][1],
+			          uvSet=setName)
+			mfn.assignUVs(
+				[len(i) for i in uvMesh.facePointConnects],
+				flatten(uvMesh.facePointConnects),
+				setName
+			)
+
 
 	@staticmethod
 	def groupConnectedElements(connects):
@@ -554,8 +665,6 @@ class MeshStruct(object):
 		visitIdx = 0
 		while 1 - any(visited):
 			pass
-
-
 
 
 	@staticmethod
@@ -597,8 +706,44 @@ class MeshStruct(object):
 		return faceSets
 
 	@staticmethod
+	def faceVertexConnectsFromFacePointConnects(facePointConnects):
+		""" given list of [face index : (face points)
+		return new list of tuples -
+		[face index : (face global vertices) ]
+
+		consider also returning point map from this """
+		nFaces = len(facePointConnects)
+		faceVertexConnects = [None] * nFaces
+		vtxIdx = 0
+
+		for face in range(nFaces):
+			# # global point connections
+			facePoints = facePointConnects[face]
+			faceVertices = [-1] * len(facePoints)
+			for n, point in enumerate(facePoints):
+				faceVertices[n] = vtxIdx
+				vtxIdx += 1
+			faceVertexConnects[face] = tuple(faceVertices)
+		return faceVertexConnects
+
+	@staticmethod
+	def buildPointVertexConnects(nPoints, facePointConnects, faceVertexConnects):
+		""" given list of [face index : (face points) ],
+		and [face index : (face vertices) ],
+		return list of [ point index : (point vertices) ]
+		"""
+		pointVertexConnects = [[]] * nPoints
+		for point, vertex in zip(
+				flatten(facePointConnects), flatten(faceVertexConnects)):
+			pointVertexConnects[point].append(vertex)
+		return pointVertexConnects
+
+
+	@staticmethod
 	def pointConnectsFromFacePointConnects(facePointConnects):
-		""" given list of [face index : (face points)]
+		""" very long function names
+		because this buffer stuff is so easy to lose track of
+		given list of [face index : (face points)]
 		return new list of tuples -
 		[point index : (connected points)]
 		"""
@@ -625,6 +770,21 @@ def flatten(seq):
 		else:
 			result.append(i)
 	return result
+
+"""
+
+from edRig import mesh, om, cmds
+reload(mesh)
+
+
+mObj = mesh.getMObject("meshShape")
+mfn = om.MFnMesh(mObj)
+
+meshObj = mesh.MeshStruct.fromMFnMesh(mfn)
+
+meshObj.toMFnMesh()
+
+"""
 
 class SkinWeights(object):
 
