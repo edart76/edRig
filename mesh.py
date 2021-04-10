@@ -585,27 +585,6 @@ class MeshStruct(object):
 			)
 			uvMesh.pointAttrs["positions"] = uvPositions
 
-
-			# # each point may have multiple uvs
-			# # each uv may have multiple face vertices
-			# # point <- uv <- vertex
-			#
-			# # map of [uvIndex : pointIndex]
-			# uvPointMap = [-1] * mfn.numUVs(setName)
-			#
-			# # map of [vertexIndex : uvIndex]
-			# vertexUVMap = [-1] * mfn.numFaceVertices
-			# for face in range(mfn.numPolygons):
-			# 	for pointIdx, uvIdx, vertexIdx in zip(
-			# 			facePointConnects[face],
-			# 			data["faceUVIds"][face],
-			# 			faceVertexConnects[face]
-			# 	):
-			# 		vertexUVMap[vertexIdx] = uvIdx
-			# 		uvPointMap[uvIdx] = pointIdx
-			# data["uvPointMap"] = uvPointMap
-			# data["vertexUVMap"] = vertexUVMap
-
 			uvSets[setName] = uvMesh
 		mesh.subMeshes["UVs"] = uvSets
 
@@ -651,6 +630,45 @@ class MeshStruct(object):
 				flatten(uvMesh.facePointConnects),
 				setName
 			)
+
+	def serialise(self):
+		""" flatten mesh data to dict """
+		data = {k : getattr(self, k) for k in [
+			"facePointConnects",	"pointConnects",
+		    "faceVertexConnects", "pointVertexConnects",
+			"pointAttrs", "faceAttrs", "vertexAttrs", "meshAttrs"
+		]}
+		# submeshes
+		if self.subMeshes:
+			subData = {"UVs" : {}}
+			for name, subMesh in iteritems(self.subMeshes["UVs"]):
+				subData["UVs"][name] = subMesh.serialise()
+			data["subMeshes"] = subData
+		return data
+
+	@classmethod
+	def fromDict(cls, data):
+		""" restore full mesh object from dictionary """
+		initKwargs = {k : data.get(k) for k in [			"facePointConnects",	"pointConnects",
+		    "faceVertexConnects", "pointVertexConnects"] }
+		hasSubMeshes = "subMeshes" in data
+		initKwargs["hasSubMeshes"] = hasSubMeshes
+		mesh = cls(**initKwargs)
+		# set attributes
+		for k in ["pointAttrs", "faceAttrs",
+		          "vertexAttrs", "meshAttrs"]:
+			setattr(mesh, k, data.get(k) or {} )
+		# regenerate and set submeshes
+		if hasSubMeshes:
+			subData = {
+				"UVs" : {
+					name : cls.fromDict(subData) for name, subData in
+						iteritems(data["subMeshes"]["UVs"])
+				}
+			}
+			mesh.subMeshes = subData
+		return mesh
+
 
 
 	@staticmethod
@@ -732,11 +750,21 @@ class MeshStruct(object):
 		and [face index : (face vertices) ],
 		return list of [ point index : (point vertices) ]
 		"""
-		pointVertexConnects = [[]] * nPoints
-		for point, vertex in zip(
-				flatten(facePointConnects), flatten(faceVertexConnects)):
-			pointVertexConnects[point].append(vertex)
+		### FASCINATING behaviour I found ###
+		# pointVertexConnects = [[]] * nPoints
+		# this does not create a list of many lists
+		# it creates a list with many entries - of THE SAME LIST
+
+		pointVertexConnects = []
+		for i in range(nPoints):
+			pointVertexConnects.append([])
+
+		for points, vertices in zip(
+				facePointConnects, faceVertexConnects):
+			for point, vertex in zip( points, vertices):
+				pointVertexConnects[point].append(vertex)
 		return pointVertexConnects
+
 
 
 	@staticmethod
