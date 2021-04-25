@@ -619,17 +619,27 @@ class MeshStruct(object):
 
 		# UVs
 		for setName, uvMesh in iteritems(self.subMeshes["UVs"]):
-			if not setName in mfn.getUVSetNames():
-				mfn.createUVSet(setName)
-			mfn.clearUVs(setName)
-			mfn.setUVs(uvMesh.pointAttrs["positions"][0],
-			           uvMesh.pointAttrs["positions"][1],
-			          uvSet=setName)
-			mfn.assignUVs(
-				[len(i) for i in uvMesh.facePointConnects],
-				flatten(uvMesh.facePointConnects),
-				setName
-			)
+			self.applyUVsMFnMesh(mfn, setName, uvMesh)
+
+
+	@staticmethod
+	def applyUVsMFnMesh(mfn, uvSetName, uvMesh, setCurrent=True):
+		""" applies a specific UV mesh as a maya uv set
+		optionally sets it to be the current active set """
+		if not uvSetName in mfn.getUVSetNames():
+			mfn.createUVSet(uvSetName)
+		mfn.clearUVs(uvSetName)
+		mfn.setUVs(uvMesh.pointAttrs["positions"][0],
+		           uvMesh.pointAttrs["positions"][1],
+		           uvSet=uvSetName)
+		mfn.assignUVs(
+			[len(i) for i in uvMesh.facePointConnects],
+			flatten(uvMesh.facePointConnects),
+			uvSetName
+		)
+		if setCurrent:
+			mfn.setCurrentUVSetName(uvSetName)
+
 
 	def serialise(self):
 		""" flatten mesh data to dict """
@@ -649,6 +659,7 @@ class MeshStruct(object):
 	@classmethod
 	def fromDict(cls, data):
 		""" restore full mesh object from dictionary """
+		# regenerate main mesh object
 		initKwargs = {k : data.get(k) for k in [			"facePointConnects",	"pointConnects",
 		    "faceVertexConnects", "pointVertexConnects"] }
 		hasSubMeshes = "subMeshes" in data

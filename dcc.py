@@ -54,6 +54,7 @@ try:
 	hostDict["maya"] = True
 
 	from functools import wraps
+	import traceback
 	# patch maya cmds "list-" functions to return lists no matter what
 	listFunctions = ["ls", "listRelatives", "listHistory", "listConnections",
 	                 "listAttr"]
@@ -74,6 +75,7 @@ try:
 			setattr(cmds, fnName, returnList(fn))
 		except:
 			print("error wrapping {}".format(fn.__name__))
+			print(traceback.format_exc())
 
 
 except Exception as e:

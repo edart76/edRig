@@ -1,4 +1,4 @@
-\
+
 #ifndef _ED_POLY_H
 
 #define _ED_POLY_H
@@ -85,6 +85,64 @@ int connectpointsbyattr( int geo; int ptnum; float range; string attr){
     return -1;
 }
 
+function int[] insertpoint(int outerprim; int pt){
+    // given one primitive and one point,
+    // insert point in primitive and triangulate
+    // for each half
+    int pts[] = primpoints(0, outerprim);
+    removeprim(0, outerprim, 1);
+    int newprims[];
+
+    for (size_t i = 0; i < len(pts); i++)
+    {
+        int prev = (i + -1) % len(pts);
+        int newprim = addprim(0, "poly",  pts[i], pt, pts[prev]);
+        append(newprims, newprim);
+    }
+
+    return newprims;
+}
+
+
+
+function int[] insertpoints(string weldpts; string collisionprims;
+    string newgrp; int mode){
+    // inserts new points into collision prim faces,
+    // corresponding to weld pts
+    // mode - 0 : nearest point, 1 : normal project
+    int pts[] = expandpointgroup(1, weldpts);
+    int addedpts[];
+    foreach(int pt; pts){
+        // nearest point
+        vector pos = point(1, "P", pt);
+        vector uvw;
+        vector hitpos;
+        int hitprim;
+        if (mode == 0){
+            xyzdist(0, collisionprims, pos, hitprim, uvw);
+        }
+        if (mode == 1){
+            vector dir = -point(1, "N", pt);
+            intersect(0, collisionprims, pos, dir, hitpos, uvw);
+            xyzdist(0, collisionprims, hitpos, hitprim, uvw);
+            // intersect(0, pos, dir, hitpos, uvw);
+            // xyzdist(0, hitpos, hitprim, uvw);
+        }
+        hitpos = primuv(0, "P", hitprim, uvw);
+        int newpt = addpoint(0, hitpos);
+
+        int newprims[] = insertpoint(hitprim, newpt);
+        //removeprim(0, hitprim, 0);
+        foreach(int newprim; newprims){
+            setprimgroup(0, collisionprims, newprim, 1);
+        }
+        append(addedpts, newpt);
+    }
+    return addedpts;
+}
+
+
+
 
 
 // ---- half-edges ------
@@ -114,7 +172,6 @@ function int hedgepointopposite( int geo; int hedge; int pt ){
     return pts[0];
 }
 
-// WARN
 function int[] halfedgeequivalents( int geo; int hedge ){
     // returns the other half edges belonging to same main edge
     int edges[];
@@ -175,6 +232,8 @@ function int primpointshedge( int geo; int prim; int pointa, pointb){
     return intersect(primhalfedges(geo, prim), allhedgeequivalents(
         geo, pointedge(geo, pointa, pointb)))[0];
 }
+
+// higher topo functions
 
 // time for a diagram
 
@@ -317,110 +376,6 @@ function vector halfedgemidpoint( int geo; int hedge ){
 };
 
 
-
-// function int[] crawlMesh(int geo; int iterations;
-//      int activehedge; int activepoint;// int activeprim;
-//         int foundpoints[]; int foundprims[]){
-//
-//     // go over one side and just append points - if
-//     // topo is correct, then sequence alone will be enough,
-//     // consistent on both sides
-//
-//     // pass out active indices as well, as this function
-//     // needs to be pretty atomic
-//
-//
-//     //foundpoints = hedgepoints(geo, activehedge);
-//     //int seedpoint = hedgepoints(geo, activehedge)[0];
-//
-//     int result[];
-//     resize(result, 6);
-//
-//     //int activehedge;
-//     int testhedge;
-//     int activeprim;
-//     int sourcepoint;
-//     int destpoint;
-//     int nextpoints[];
-//     int primdead = 0;
-//     //activehedge = hedge;
-//     sourcepoint = activepoint;
-//     activeprim = hedge_prim(geo, activehedge);
-//
-//     /* begin iteration
-//     this should be run breadth first across whole centre loop
-//     */
-//     for( int i = 0; i < iterations; i++)
-//     {
-//
-//         // activeprim = hedge_prim(geo, activehedge);
-//         nextpoints = subtract(
-//             intersect(primpoints(geo, activeprim),
-//                     neighbours(geo, sourcepoint) ),
-//             foundpoints);
-//             // should only ever be 1 entry
-//
-//
-//         if( len(nextpoints) < 1){ // works
-//             // next point in primitive has been reached
-//             // mark primitive as complete
-//             append(foundprims, activeprim);
-//             // walk backwards around prim until hedge
-//             // borders a prim not found
-//             testhedge = hedge_next(geo, activehedge);
-//             //testhedge = activehedge;
-//             ////
-//             while ( (hedge_prim(geo, testhedge) == activeprim) && (testhedge != activehedge) ) // stop if prim changes or hedge doesn't
-//             {
-//                 if( hedgeisunshared(geo, testhedge)){
-//                     //printf("hedge is unshared\n" );
-//                     // border edge, nothing to do
-//                     testhedge = hedge_next(geo, testhedge);
-//                     continue;            }
-//
-//                 // is adjacent prim already found?
-//                 // if( index(foundprims,
-//                 //     hedge_prim(geo, hedge_nextequiv(geo, testhedge))) < 0){
-//                 if( find(foundprims,
-//                     hedge_prim(geo, hedge_nextequiv(geo, testhedge))) < 0){
-//                         //printf("new prim found\n" );
-//                         //printf("current hedge %i\n", activehedge);
-//                         activehedge = hedge_nextequiv(geo, testhedge);
-//                         //printf("new hedge %i\n", activehedge);
-//                         activeprim = hedge_prim(geo, activehedge);
-//                         activepoint = hedgepointopposite(geo, activehedge, activepoint);
-//                         break;
-//                         }
-//                 else{
-//                     testhedge = hedge_next(geo, testhedge);
-//                 }
-//             }
-//             if (testhedge == activehedge){
-//                 // entirely surrounded by found prims
-//                 primdead = 1;
-//                 break;
-//             }
-//
-//         }
-//         else{ // continue iteration
-//
-//             append(foundpoints, nextpoints[0]);
-//             destpoint = nextpoints[0];
-//             // active hedge is isec of prim hedges and point hedges
-//             activehedge = intersect(
-//                 primhalfedges(geo, activeprim),
-//                 halfedgeequivalents(geo,
-//                     pointhedge(geo, sourcepoint, destpoint))
-//                 )[0]; //guaranteed
-//             activepoint = destpoint;
-//         }
-//     }
-//     result[0] = activehedge;
-//     result[1] = activepoint;
-//     result[2] = primdead;
-//     return result;
-// }
-
 /* next edge is INTERSECTION of connected point edges and primitive edges,
 SUBTRACT previous edge(s)
 */
@@ -458,10 +413,74 @@ function int[] crawlmesh2(int geo;
         activepoint = newpt;
     }
     return newedges;
-
 }
 
 
+// Higher functions still combining topo with spatial info
+
+function matrix3 tangentmatrix(int geo;
+    int face){
+        // return orientation matrix for polygon face
+        // oriented to face gradient
+        string geos = opfullpath(".");
+        vector2 samplepos = set(0.5, 0.5);
+        vector grad = normalize(primduv(geos, face, samplepos, 1, 1));
+        vector N = normalize(prim(geo, "N", face));
+        vector bitan = cross(grad, N);
+
+        return matrix3(set(grad, N, bitan));
+    }
+
+
+#define SS_FLATTENLENGTH 0
+#define SS_PRESERVELENGTH 1
+
+function vector projectsurfacespace(int geo;
+    vector origin; vector dir; int face;
+    int mode;
+    // output references
+    int escapehedge;
+    vector escapepos;
+    vector escapedir
+)
+    {
+    /* given face and vector to project,
+    flatten it into surface space and project it out
+
+    mode: either squash a high-angle vector
+    to its direct projection,
+    or restore its length in surface space
+
+    escapehedge: returns the prim hedge index crossed by the
+    flattened vector, or -1 if vector terminates in this prim
+    escapepos: position at which vector escapes
+    escapedir: portion of vector lying outside prim
+    */
+
+    // matrix to rotate all points to surface space
+    matrix orientmat = tangentmatrix(geo, face);
+
+    return dir;
+
+
+    }
+
+
+
+function int[] primsbetweenpoints(int geo;
+    int pta; int ptb;
+    int activeprim; int visitedprims[];
+    int success;
+){
+    // breadth search from a to b,
+    // adding primitives to visited
+    int activepts[] = primpoints(geo, activeprim);
+    if(IN(activepts, ptb)){
+        success = 1;
+
+    }
+    return activepts;
+}
 
 
 #endif

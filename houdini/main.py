@@ -1,5 +1,5 @@
 
-""" place to put all the random stuff in houdini you need """
+""" OBSOLETE """
 from edRig import hou, stateutils
 from edRig.houdini import core
 

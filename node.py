@@ -781,6 +781,10 @@ class ObjectSet(AbsoluteNode):
 		if not items: return []
 		return set( [AbsoluteNode(i) for i in items])
 
+	def sets(self):
+		items = cmds.sets( self, q=True) or []
+		items = [i for i in items if cmds.nodeType(i) == "objectSet"]
+
 
 
 class PlugObject(StringLike):

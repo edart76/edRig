@@ -31,14 +31,6 @@ class PlugTree(Tree):
 		super(PlugTree, self).__init__(name, val=plug)
 
 
-
-	# @property
-	# def node(self):
-	# 	return self.value.split(".")[0]
-
-
-
-
 def treeFromPlug(rootPlug):
 	""" retrieve a tree with branches representing nested plugs,
 	containing useful information about them

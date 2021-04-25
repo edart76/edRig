@@ -196,12 +196,6 @@ class StringLikeMeta(type):
 
 
 	def __new__(mcs, *args, **kwargs):
-	#def __new__(mcs, base):
-
-		#new = super(StringLikeMeta, mcs).__new__(mcs)
-		#new = str.__new__(mcs, base)
-		#new = str.__new__(mcs, *args, **kwargs)
-		# mcs.register(str)
 		new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
 		return new
 	

@@ -2,6 +2,8 @@
 
 #ifndef ARRAY_H
 #define size_t int
+#define IN(arr, value)\
+    (find(arr, value) > -1)
 
 // ghetto templating system
 
