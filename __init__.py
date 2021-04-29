@@ -5,13 +5,14 @@ import sys, os
 from edRig.dcc import cmds, mel, om, oma, omui, \
 	hou, stateutils, objecttoolutils, \
 	bpy, \
-	QtCore, QtWidgets, QtGui, \
 	hostDict
+	#QtCore, QtWidgets, QtGui, \
 
-from edRig.lib.python import debug
 
-from edRig.node import AbsoluteNode, ECA, ECN
-from edRig.attr import con
+#from edRig.lib.python import debug
+
+#from edRig.node import AbsoluteNode, ECA, ECN
+#from edRig.attr import con
 
 sys.dont_write_bytecode = True
 ROOT_PATH = "F:" + "/" + "all_projects_desktop" # root path of asset system
