@@ -1,8 +1,7 @@
 
 """ General utilities for building and editing networks """
-
+import os, sys, re, json
 from edRig import hou
-from edRig.lib import python
 
 def getNetworkBox(parent, boxName, caseSensitive=False):
 	""" retrieves or creates network box"""
@@ -90,6 +89,14 @@ def populateMerge(targetMerge=None, items=None, singleObjMerge=False,
 		box.fitAroundContents()
 
 
+def conformPathSeparators(line):
+	""" ensures that any slash of any kind is os.path.separator"""
+	return line.replace("\\", os.path.sep).replace("/", os.path.sep)
+
+def stripNonAlphaNumeric(line, replace="_"):
+	""" replaces all non-alphaNumeric characters with given item """
+	return re.sub('[\W_]+', replace, line)
+
 def makeMultiFileMerge(targetMerge=None, paths=None,
                   boxName=None, rootPath=None):
 	""" no alternative this time - required to create separate node per file
@@ -108,11 +115,11 @@ def makeMultiFileMerge(targetMerge=None, paths=None,
 	for i in box.nodes():
 		i.destroy()
 
-	rootPath = python.conformPathSeparators(rootPath)
+	rootPath = conformPathSeparators(rootPath)
 	for path in paths:
-		path = python.conformPathSeparators(path)
+		path = conformPathSeparators(path)
 		#print(path.split(rootPath)[-1])
-		nodeName = python.stripNonAlphaNumeric(
+		nodeName = stripNonAlphaNumeric(
 			path.split(rootPath)[-1]).split(".")[0]
 		fileNode = parent.createNode("file", nodeName + "_file")
 		try:

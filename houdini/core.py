@@ -1,7 +1,5 @@
 
 from edRig import hou
-from edRig.lib import python
-reload(python)
 
 
 def returnNode(parent, node_type, node_name):

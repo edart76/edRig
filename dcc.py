@@ -10,6 +10,7 @@ mel = None
 
 #### houdini modules
 hou = None
+hutil = None
 stateutils = None
 objecttoolutils = None
 
@@ -83,7 +84,7 @@ except Exception as e:
 
 # houdini
 try:
-	import hou, stateutils, objecttoolutils
+	import hou, stateutils, objecttoolutils, hutil
 	#print("omg this is houdini")
 	hostDict["houdini"] = True
 except:

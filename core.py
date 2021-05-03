@@ -218,7 +218,7 @@ def breakConnections(attr):
 
 def isAttr(test, *args):
 	# OH BOY ATTRIBUTEQUERY SUCKS BIG THROBBING DONG
-	if not isinstance(test, basestring):
+	if not isinstance(test, str):
 		return False
 	# elif cmds.objExists(test):
 	# return False

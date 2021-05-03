@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from maya import cmds
 from edRig import deformer, AbsoluteNode, ECA, dynamics, muscle
-from edRig.tools.ui.setup import UiTool
+from edRig.tool.ui.setup import UiTool
 from edRig.lib.python import getUserInput
 
 from edRig.lib import algorithms

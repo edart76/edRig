@@ -1,13 +1,22 @@
 from __future__ import print_function
 import sys, os
 
+
+try:
+	reload = reload
+except:
+	from importlib import reload
+	reload = reload
+
+from edRig import dcc
+reload(dcc)
+
 # import all the things
 from edRig.dcc import cmds, mel, om, oma, omui, \
-	hou, stateutils, objecttoolutils, \
+	hou, stateutils, objecttoolutils, hutil,\
 	bpy, \
 	hostDict
 	#QtCore, QtWidgets, QtGui, \
-
 
 #from edRig.lib.python import debug
 
