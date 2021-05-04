@@ -31,6 +31,11 @@ CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 containing rigging files like control shape libraries, any templates you want,
 but also a common material library"""
 
+# import site
+# fp = r"C:\Users\Ed\AppData\Local\Programs\Python\Python37-32\Lib"
+# #site.addsitedir(fp)
+#
+# sys.path.append(fp)
 
 def log(message, **kwargs):
 	print(message)
