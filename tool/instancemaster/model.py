@@ -126,14 +126,14 @@ class SceneInstanceModel(object):
 		if not target:
 			target = cmds.ls(sl=True)
 			if not target:
-				print "nothing selected, no new master to create"
+				print("nothing selected, no new master to create")
 				return
 			target = target[0]
-		masterName = raw_input("Name new instance master")
+		masterName = input("Name new instance master")
 		if not masterName or not self.checkMasterNameValid(masterName):
-			print "no valid name input, terminating"
+			print("no valid name input, terminating")
 			return
-		print "making master from {}".format(target)
+		print("making master from {}".format(target))
 
 		# # first make IM object and offsets
 		# master = MasterItem(target, self, masterName)
@@ -183,7 +183,7 @@ class SceneInstanceModel(object):
 
 	def checkMasterNameValid(self, name):
 		"""checks master name is maya-friendly and not a duplicate"""
-		if name in self.listAllMasters().keys():
+		if name in list(self.listAllMasters().keys()):
 			return False
 		return True
 

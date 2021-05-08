@@ -17,13 +17,13 @@ currentPath = ""
 
 def getMayaWindow():
 	ptr = omui.MQtUtil.mainWindow()
-	widget = wrapInstance( long( ptr ), QtWidgets.QWidget )
+	widget = wrapInstance( int( ptr ), QtWidgets.QWidget )
 	#widget = wrapInstance( long( ptr ), QtWidgets.QMainWindow )
 	return widget
 
 def getMayaObject():
 	ptr = omui.MQtUtil.mainWindow()
-	widget = wrapInstance( long( ptr ), QtCore.QObject )
+	widget = wrapInstance( int( ptr ), QtCore.QObject )
 	return widget
 
 windows = []
@@ -82,7 +82,7 @@ class TilePileUI(QtWidgets.QMainWindow):
 
 		self._asset = None
 
-		print "tp init finished"
+		print("tp init finished")
 
 	@property
 	def asset(self):
@@ -119,13 +119,13 @@ class TilePileUI(QtWidgets.QMainWindow):
 		self.status.updateCurrentAsset(assetInfos[0])
 
 	def keyPressEvent(self, event):
-		print "main keyPress  {}".format(event.key())
+		print("main keyPress  {}".format(event.key()))
 		# this stops events passing back to maya ui
 		#super(TilePileUI, self).keyPressEvent(event)
 		self.graphView.keyPressEvent(event)
 
 	def mousePressEvent(self, event):
-		print "main mousePress"
+		print("main mousePress")
 		super(TilePileUI, self).mousePressEvent(event)
 
 	# def focusInEvent(self, event):
@@ -150,9 +150,9 @@ class TilePileUI(QtWidgets.QMainWindow):
 	def closeEvent(self, event):
 		"""saves graph to maya maybe"""
 		self.graphView.saveToScene()
-		print ""
-		print "until we tile again"
-		print ""
+		print("")
+		print("until we tile again")
+		print("")
 		# remove reference to window
 		if self in windows:
 			windows.remove(self)

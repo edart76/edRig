@@ -67,7 +67,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		# tab search
 		self.tabSearch = TabSearchWidget(parent=self)
-		self.tabSearch.set_nodes(self.graph.registeredNodes.keys())
+		self.tabSearch.set_nodes(list(self.graph.registeredNodes.keys()))
 
 
 		# signals
@@ -133,7 +133,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.savePath = info["tesserae.savePath"]
 		self.filePath = info["tesserae.filePath"]
 		if force and pipeline.checkFileExists(self.filePath):
-			print("forcing open from scene, self save path is {}".format(self.filePath))
+			print(("forcing open from scene, self save path is {}".format(self.filePath)))
 			self.openTilePileFile(self.filePath, force=True)
 		#print( info.serialise(pretty=True))
 
@@ -161,12 +161,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.keyState.syncModifiers(event)
 		event.ignore()
 		#print("view wheel event accepted {}".format(event.isAccepted()))
-		# super(AbstractView, self).wheelEvent(event)
-		#print("view wheel event accepted {}".format(event.isAccepted()))
 
-
-		# if event.isAccepted():
-		# 	return
 		adjust = (event.delta() / 120) * 0.1
 		#self.setViewerZoom(adjust, event.globalPos())
 		self.setViewerZoom(adjust, event.pos())
@@ -195,20 +190,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		super(AbstractView, self).contextMenuEvent(event)
 
-		try:
-
-			# just check in every widget if event has been used
-			if event.isAccepted():
-				return
-			#self.RMB_state = False
-			self.buildContext()
-			self.contextMenu.exec_(event.globalPos())
-			# self.contextMenu.exec_(
-			# 	self.mapToScene(event.globalPos()).toPoint())
-			# super(AbstractView, self).contextMenuEvent(event)
-		except RuntimeError as e:
-			print( e)
-			return
+		self.buildContext()
+		self.contextMenu.exec_(event.globalPos())
 
 
 	""" view receives events first - calling super passes them to scene """
@@ -228,7 +211,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 		nodes = [i for i in items if isinstance(i, AbstractTile)]
 
 		if self.keyState.LMB:
-			#self.LMB_state = True
 			# toggle extend node selection.
 			if shift_modifier:
 				for node in nodes:
@@ -238,10 +220,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 					i.setSelected(False)
 				for i in nodes:
 					i.setSelected(True)
-		# elif event.button() == QtCore.Qt.RightButton:
-		# 	self.RMB_state = True
-		# elif event.button() == QtCore.Qt.MiddleButton:
-		# 	self.MMB_state = True
+
 		self._origin_pos = event.pos()
 		self._previous_pos = event.pos()
 		self._prev_selection = self.selectedNodes()
@@ -262,8 +241,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 			self._rubber_band.setGeometry(rect)
 			self._rubber_band.show()
 
-		# if not shift_modifier:
-		# 	super(AbstractView, self).mousePressEvent(event)
 
 		if event.button() == QtCore.Qt.LeftButton:
 			# emit specific node selected signal
@@ -276,13 +253,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def mouseReleaseEvent(self, event):
 		self.keyState.mouseReleased(event)
 
-		# if event.button() == QtCore.Qt.LeftButton:
-		# 	self.LMB_state = False
-		# elif event.button() == QtCore.Qt.RightButton:
-		# 	self.RMB_state = False
-		# elif event.button() == QtCore.Qt.MiddleButton:
-		# 	self.MMB_state = False
-
 		# hide selection marquee
 		if self._rubber_band.isVisible():
 			rect = self._rubber_band.rect()
@@ -293,9 +263,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		super(AbstractView, self).mouseReleaseEvent(event)
 
 	def mouseMoveEvent(self, event):
-		# alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
-		# shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
-		#if self.MMB_state or (self.LMB_state and alt_modifier):
+
 		if self.keyState.MMB or (self.keyState.LMB and self.keyState.alt):
 			pos_x = (event.x() - self._previous_pos.x())
 			pos_y = (event.y() - self._previous_pos.y())
@@ -385,7 +353,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 				legality = self.checkLegalConnection(knobs[0], self.testPipe.start)
 			else:
 				legality = self.checkLegalConnection(self.testPipe.start, knobs[0])
-			print( "legality is {}".format(legality))
+			print(( "legality is {}".format(legality)))
 			if legality:
 				self.makeRealConnection(#pipe=self.testPipe,
 										source=self.testPipe.start, dest=knobs[0])
@@ -587,7 +555,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 	def mergeActionDicts(self, base, target):
 		"""if two identical paths appear, an actionList is created"""
-		for k, v in base.iteritems():
+		for k, v in base.items():
 			if target.get(k):
 				if isinstance(v, dict) and isinstance(target[k], dict):
 
@@ -659,7 +627,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.graph = self.graph.fromDict(serialised)
 		self.sync()
 		self.scene.regenUi(serialised)
-		print("savePath after open is {}".format(self.savePath))
+		print(("savePath after open is {}".format(self.savePath)))
 		pass
 
 	def loadTilePileInfo(self, path=None, force=False):
@@ -685,8 +653,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 		if not defaultPath:
 			defaultPath = self.savePath or self.currentAsset.path or ROOT_PATH
 		if not path:
-			print( "current asset is {}".format(self.currentAsset.name) )
-			print( "asset path is {}".format(self.currentAsset.path) )
+			print(( "current asset is {}".format(self.currentAsset.name) ))
+			print(( "asset path is {}".format(self.currentAsset.path) ))
 			tilePileFile = QtWidgets.QFileDialog.getSaveFileName(
 				parent=self, caption="save this pile of tiles",
 				dir=defaultPath)[0]

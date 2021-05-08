@@ -213,7 +213,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 
 	@property
 	def knobs(self):
-		return [v.knob for v in self.entries.values() if v.knob]
+		return [v.knob for v in list(self.entries.values()) if v.knob]
 
 	def getKnob(self, knobName):
 		"""you know that feeling when you need a very specific kind of knob"""

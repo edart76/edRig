@@ -65,7 +65,7 @@ def templateString(data):
 	formatted = []
 	for combo in combos:
 		parsed = data
-		for token, value in combo.iteritems():
+		for token, value in combo.items():
 			parsed = parsed.replace(
 				"<{}>".format(token), value)
 		formatted.append(parsed)
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 	print(result)
 
 	testString = "L_arm_grp"
-	print templateString(testString)
+	print(templateString(testString))
 
 	testList = ["L_arm_grp", "R_carpal"]
 	result = runTemplatedStrings(testList) # works
@@ -129,7 +129,7 @@ class Token(object):
 delimiters = "<>"
 def collectTokens(span):
 	""" runs over input span and collects balanced, nested tokens """
-	for i in xrange(span):
+	for i in range(span):
 		if i == delimiters[0]:
 			pass #?
 

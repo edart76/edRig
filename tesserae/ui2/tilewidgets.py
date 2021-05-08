@@ -236,8 +236,8 @@ class NodeLineEdit(NodeBaseWidget):
 
 	@value.setter
 	def value(self, text=''):
-		print ""
-		print "setting text box value to {}".format(text)
+		print("")
+		print("setting text box value to {}".format(text))
 		self._ledit.setText(text)
 
 class NodeTextEdit(NodeBaseWidget):

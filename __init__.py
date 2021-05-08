@@ -1,5 +1,6 @@
-from __future__ import print_function
+
 import sys, os
+import importlib
 
 global reload
 try:
@@ -10,19 +11,19 @@ except:
 
 
 from edRig import dcc
-reload(dcc)
+importlib.reload(dcc)
 
 # import all the things
 from edRig.dcc import cmds, mel, om, oma, omui, \
 	hou, stateutils, objecttoolutils, hutil,\
 	bpy, \
-	hostDict
-	#QtCore, QtWidgets, QtGui, \
+	hostDict, \
+	QtCore, QtWidgets, QtGui \
 
-#from edRig.lib.python import debug
+from edRig.lib.python import debug
 
-#from edRig.node import AbsoluteNode, ECA, ECN
-#from edRig.attr import con
+from edRig.node import AbsoluteNode, ECA, ECN
+from edRig.attr import con
 
 sys.dont_write_bytecode = True
 ROOT_PATH = "F:" + "/" + "all_projects_desktop" # root path of asset system
@@ -47,7 +48,7 @@ def reloadEdRig(tesserae=True):
 	protecc = {"tesserae" : ("layers", "tesserae")}
 	attacc = ("edRig", "tree")
 	import sys
-	for i in sys.modules.keys():
+	for i in list(sys.modules.keys()):
 		if any( n in i for n in attacc):
 			del sys.modules[i]
 

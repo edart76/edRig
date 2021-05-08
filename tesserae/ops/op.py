@@ -150,7 +150,7 @@ class Op(MayaReal):
 		""":type abstract AbstractNode"""
 		super(Op, self).__init__(name=name)
 		self.character = None
-		print "Op instantiated"
+		print("Op instantiated")
 		self._opName = None
 		self.opName = name or self.__class__.__name__
 		self.abstract = abstract
@@ -237,7 +237,7 @@ class Op(MayaReal):
 			self.outputRoot = self.outputRoot.fromDict(outDict, node=abstract)
 		# no luck all skill
 
-		print ""
+		print("")
 		self.sync = self.abstract.sync
 		self.attrsChanged = self.abstract.attrsChanged
 		self.attrValueChanged = self.abstract.attrValueChanged
@@ -602,9 +602,9 @@ class Op(MayaReal):
 		def _addInputWithAction(op=self, parent=parent, name=name, datatype=datatype,
 		                        copy=copy, suffix=suffix, desc=desc):
 			if not name:
-				name = raw_input(prompt="name of attribute") + suffix
+				name = input(prompt="name of attribute") + suffix
 			if not datatype:
-				datatype = raw_input(prompt="datatype of attribute (in units of D)")
+				datatype = input(prompt="datatype of attribute (in units of D)")
 
 			op.addInput(parent=parent, name=name, dataType=datatype, desc=desc)
 
@@ -722,7 +722,7 @@ class Op(MayaReal):
 	@staticmethod
 	def plugFromAttr(attr):
 		"""gets plug from either attrItem or attrInterface"""
-		if isinstance(attr, basestring):
+		if isinstance(attr, str):
 			result = attr
 		elif getattr(attr, "plug"):
 			result = attr.plug()

@@ -1,5 +1,5 @@
 # lib for adding and modifying attributes
-from __future__ import print_function
+
 import random
 
 from tree import Tree
@@ -169,7 +169,7 @@ def con3(a, b, f=True):
 	"""
 	targets = [a, b]
 	for i in targets:
-		if isinstance(i, basestring):
+		if isinstance(i, str):
 			tree = treeFromPlug(i)
 
 
@@ -242,7 +242,7 @@ def checkTag(tagNode, tagName, tagContent):
 		return False
 
 def setTagsFromDict(tagNode, tagDict):
-	for k, v in tagDict.iteritems():
+	for k, v in tagDict.items():
 		addTag(tagNode, k, v)
 
 def getDictFromTags(tagNode):
@@ -341,7 +341,7 @@ def addAttr(target, parent=None, **kwargs):
 	attrType = kwargs.get("at", kwargs.get("dt", kwargs.get("attrType")))
 	if attrType == "int" : attrType = "long"
 
-	for flag, values in attrTypeMap.items():
+	for flag, values in list(attrTypeMap.items()):
 		if attrType in values:
 			kwargs.pop("at", None)
 			kwargs.pop("dt", None)
@@ -376,13 +376,13 @@ def makeAttrsFromDict(node, attrDict, parent=None):
 					}"""
 	"""the syntax including "children" key is clunky, but it's most explicit
 	and futureproof for array attributes"""
-	for k, v in attrDict.iteritems():
+	for k, v in attrDict.items():
 		if v.get("children"): # it's a compound
 			parent = addAttr(node, attrName=k, attrType="compound",
-			                 nc=len(v["children"].keys()))
+			                 nc=len(list(v["children"].keys())))
 			makeAttrsFromDict(node, v["children"], parent=parent)
 		elif v.get("dt"): # it's a normal attribute
-			kwargs = {nk : nv for nk, nv in v.iteritems() if nk != "dt"}
+			kwargs = {nk : nv for nk, nv in v.items() if nk != "dt"}
 			addAttr(node, attrName=k, attrType=v["dt"], parent=parent, **kwargs)
 
 def copyAttr(sourcePlug, targetNode, newName=None, driveOriginal=True):
@@ -452,7 +452,7 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 		attrValue = eval("{} {} {}".format(base, operator, attrValue) )
 		kwargs.pop("relative")
 
-	elif isinstance(attrValue, basestring):
+	elif isinstance(attrValue, str):
 		# check for enum:
 		#print "plug type is {}".format(plugType(targetPlug))
 		if plugType(targetPlug) == "enum":
@@ -490,7 +490,7 @@ def _setAttrSafe(*args, **kwargs):
 
 def setAttrsFromDict(attrDict, node=None):
 	"""expects dict of format {"attr" : value}"""
-	for k, v in attrDict.iteritems():
+	for k, v in attrDict.items():
 		plug = node+"."+k if node else k
 		setAttr(plug, v)
 
@@ -598,7 +598,7 @@ def getTransformPlugs(node, t=True, r=True, s=True):
 	no more loops"""
 	plugs = []
 	mapping = {"translate" : t, "rotate" : r, "scale" : s}
-	for i in [k for k, v in mapping.iteritems() if v]:
+	for i in [k for k, v in mapping.items() if v]:
 		for n in "XYZ":
 			plugs.append(node + "." + i + n)
 	return plugs

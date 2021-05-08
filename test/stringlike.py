@@ -61,7 +61,7 @@ def testSimple():
 	cmds.parent(dObj, obj)
 	cmds.warning(dObj)
 	dObj._inner = cmds.rename(dObj, "childDuplicatePoly")
-	print(cmds.listRelatives(dObj, allParents=1))
+	print((cmds.listRelatives(dObj, allParents=1)))
 
 	cmds.parent(dObj, world=1)
 	cmds.parent(obj, dObj)
@@ -76,7 +76,7 @@ def testSimple():
 class StringLikeMeta(type):
 
 	def __call__(self, *args, **kwargs):
-		print("meta __call__", args, kwargs)
+		print(("meta __call__", args, kwargs))
 		return super(StringLikeMeta, self).__call__(*args, **kwargs)
 
 
@@ -92,7 +92,7 @@ class StringLikeFull(str):
 
 	@staticmethod
 	def __new__(S, *more):
-		print("str __new__", S, more)
+		print(("str __new__", S, more))
 		return str.__new__(S, *more)
 		# return type.__new__(S) # user class is not subtype of type
 		# return object.__new__(S, *more) # 'not safe' ok mum
@@ -100,7 +100,7 @@ class StringLikeFull(str):
 		#  returns literally a different object - not useful
 
 	def __init__(self, value=""):
-		print("str __init__", value)
+		print(("str __init__", value))
 		self._inner = value
 
 	@property
@@ -116,7 +116,7 @@ class StringLikeFull(str):
 	def __str__(self):
 		print("str __str__ called")
 		val = str(self._inner)
-		print("returning", val)
+		print(("returning", val))
 		return val
 	def __repr__(self):
 		print("str __repr__ called")
@@ -128,14 +128,14 @@ def testComplex():
 	poly = cmds.polyCube()[0]
 
 	obj = StringLikeFull(poly)
-	print("type", type(obj))
+	print(("type", type(obj)))
 	cmds.warning(obj)
 	bMObj = getMObject(obj)
 
 	obj.value = "NEW VALUE"
 	cmds.warning(obj) # does not update
 	# obj still associated with its previous value
-	print("obj", obj) # of course actual python calls work fine
+	print(("obj", obj)) # of course actual python calls work fine
 
 	result = cmds.rename(obj, "newPolyName")
 	obj.value = result

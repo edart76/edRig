@@ -9,7 +9,7 @@ from maya import cmds
 import os
 
 userSetupPath = "" # can be annoying to know
-userSetupPath = "C:/Users/Ed/Documents/maya/2018/scripts\userSetup.py"
+userSetupPath = "C:/Users/Ed/Documents/maya/2018/scripts\\userSetup.py"
 
 # set environment paths
 oldPath = os.environ["MAYA_PLUG_IN_PATH"]
@@ -113,7 +113,7 @@ def makeCodeNode():
 			else:	addLiveCallback(codeNode)
 		else:
 			removeLiveCallback(codeNode)
-		print state
+		print(state)
 
 	def addLiveCallback(node, timeStep=0.1):
 		liveTimePlug.setInt(1)
@@ -137,7 +137,7 @@ def makeCodeNode():
 		passed: ( time since last running in seconds,
 			time taken to execute in seconds,
 			userData)"""
-		print "args {}".format(args)
+		print("args {}".format(args))
 		liveTimePlug.setInt( liveTimePlug.asInt() + 1)
 		dtPlug.setFloat( args[0] )
 
@@ -165,18 +165,18 @@ def makeCodeNode():
 
 
 def afterSave(*args, **kwargs):
-	print
-	print "afterSave args are {}".format(args)
-	print "afterSave kwargs are {}".format(kwargs)
+	print()
+	print("afterSave args are {}".format(args))
+	print("afterSave kwargs are {}".format(kwargs))
 	sceneName = cmds.file(q=True, sceneName=True)
-	print "sceneName is {}".format(sceneName)
+	print("sceneName is {}".format(sceneName))
 	#cmds.evalDeferred("import edRig;edRig.pipeline.makeLegit('"+sceneName+"')", lp=True)
 	pipeline.makeLegit(sceneName)
 
 def afterOpen(*args, **kwargs):
 	sceneName = cmds.file(q=True, sceneName=True)
 	clearCallbacks()
-	print "sceneName is " + sceneName
+	print("sceneName is " + sceneName)
 	#pipeline.makeBogus(sceneName)
 	#makeCodeNode()
 	pass
@@ -189,15 +189,15 @@ def afterNew(*args, **kwargs):
 
 
 def beforeSaveCheck(*args, **kwargs):
-	print
+	print()
 	toBeSaved = omOld.MFileIO.beforeSaveFilename()
-	print "toBeSaved is " + toBeSaved
+	print("toBeSaved is " + toBeSaved)
 
 	return True
 
 def beforeOpenCheck(*args, **kwargs):
 	toBeOpened = omOld.MFileIO.beforeOpenFilename()
-	print "toBeOpened is " + toBeOpened
+	print("toBeOpened is " + toBeOpened)
 
 	return True
 

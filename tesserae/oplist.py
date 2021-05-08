@@ -19,7 +19,7 @@ from edRig.lib.python import itersubclasses, \
 
 from edRig import ROOT_PATH, layers
 
-print(layers.__file__)
+print((layers.__file__))
 layerDir = os.path.dirname(layers.__file__)
 
 layerModuleNames = ("pointlayers", "curvelayers",
@@ -110,7 +110,7 @@ class OpList(object):
 		return self.ops
 
 ValidList = OpList()
-print "opList imported"
+print("opList imported")
 
 """we need a better way to import stuff
 

@@ -29,7 +29,7 @@ class StatusPane(QtWidgets.QFrame):
 		self.vBox.addWidget(self.coreDisplay)
 
 		self.currentDisplay = AbstractSearchWidget(parent=None,
-		                        items=pipeline.getExistingAssets().keys())
+		                        items=list(pipeline.getExistingAssets().keys()))
 		self.vBox.addWidget(self.currentDisplay)
 
 		self.setLayout(self.vBox)
@@ -46,17 +46,17 @@ class StatusPane(QtWidgets.QFrame):
 	def onAssetChanged(self, newName, force=False):
 		"""called whenever user tries to change asset context"""
 		change = False # is change successful?
-		print ""
-		print "current asset is {}".format(self.currentAsset)
-		if not newName in pipeline.getExistingAssets().keys():
-			print "no asset {} found".format(newName)
+		print("")
+		print("current asset is {}".format(self.currentAsset))
+		if not newName in list(pipeline.getExistingAssets().keys()):
+			print("no asset {} found".format(newName))
 			return False
 		newPath = pipeline.getExistingAssets()[newName].path
-		print "new path is {}".format(newPath)
+		print("new path is {}".format(newPath))
 		if newPath == self.currentAsset:
 			return
 		if not pipeline.isAsset(newPath):
-			print "requested {} is not an asset (has no asset.txt)".format(newPath)
+			print("requested {} is not an asset (has no asset.txt)".format(newPath))
 			return False
 		if not force:
 			if self.currentAssetItem: # don't confirm if there's no danger
@@ -113,7 +113,7 @@ class StatusPane(QtWidgets.QFrame):
 	def contextMenuEvent(self, event):
 		""" let user choose from existing assets """
 		self.menu.clearCustomEntries()
-		for i in pipeline.getExistingAssets().keys():
+		for i in list(pipeline.getExistingAssets().keys()):
 			self.menu.addAction(action=
 			    ActionItem(fn=self.onAssetChanged, name=i,
 			               args=[i], kwargs={"force" : True}

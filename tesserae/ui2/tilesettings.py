@@ -71,7 +71,7 @@ QTreeView::branch::closed::has-children {
 subs = {"@square_centre@" : squarePath,
         "@square_down@" : downPath}
 
-for k, v in subs.iteritems():
+for k, v in subs.items():
 	styleSheet = styleSheet.replace(k, v)
 
 class WheelEventFilter(QtCore.QObject):
@@ -314,7 +314,7 @@ class TileSettings(QtWidgets.QTreeView):
 		self.menu.addAction(func=self.resizeToTree)
 
 	def display(self):
-		print(self.tree.display())
+		print((self.tree.display()))
 
 
 	def copyEntries(self):
@@ -348,7 +348,7 @@ class TileSettings(QtWidgets.QTreeView):
 		index = indices[0]
 		clip = QtGui.QGuiApplication.clipboard()
 		data = clip.mimeData()
-		print( "mime is {}".format(data.text()) )
+		print(( "mime is {}".format(data.text()) ))
 		regenDict = eval(data.text()) # this is probably extremely dangerous lol
 		pasteTree = AbstractTree.fromDict(regenDict)
 
@@ -482,7 +482,7 @@ class TileSettings(QtWidgets.QTreeView):
 
 		"""
 
-		print("settings keyPress event {}".format(event.key()))
+		print(("settings keyPress event {}".format(event.key())))
 		self.keyState.keyPressed(event)
 
 		sel = self.selectionModel().selectedRows()

@@ -20,7 +20,7 @@ class HoudiniSceneProcess(object):
 	"""
 
 	def __init__(self):
-		print(self.inputNodes())
+		print((self.inputNodes()))
 
 	def inputNodes(self):
 		"""return list of file nodes in inputs"""

@@ -21,7 +21,7 @@ class CubeMapCamera(object):
 	def __init__(self):
 		self.cameras = {
 			k : Camera.create(name=k)
-			for k in self.directionMap.keys()
+			for k in list(self.directionMap.keys())
 		}
 		self.orientCameras()
 		self.unifyCameras()

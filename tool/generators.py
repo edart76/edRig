@@ -1,6 +1,6 @@
 """ don't really know what to do with this stuff
 basically things to generate things algorithmically from maya """
-from __future__ import print_function
+
 
 from maya import cmds
 from edRig import deformer, AbsoluteNode, ECA, dynamics, muscle

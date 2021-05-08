@@ -25,7 +25,7 @@ class JointOp(LayerOp):
 
 	def matchOutputsToSettings(self):
 		jointTree = self.settings["joints"]
-		outputs = jointTree.keys()
+		outputs = list(jointTree.keys())
 		pointPlug = self.getOutput("points")
 		specList = [ {"name" : i} for i in outputs]
 		pointPlug.matchArrayToSpec(spec=specList)

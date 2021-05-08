@@ -76,7 +76,7 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 	#### NB #####
 	# this is vulnerable at build to uneven parameterisation of the input curve
 	# after that it should be alright, but feed it straight curves if you can
-	for i in xrange(numJnts+1):
+	for i in range(numJnts+1):
 		#with the last joint being an end
 		u = 1.0 / numJnts * i
 		jnt = ECN("joint", "{}_vFk_{}jnt".format(name, i))
@@ -115,12 +115,12 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 			parts["stretchMags"].append(stretch)
 
 
-		print "jnt is {}".format(jnt)
-		print ""
+		print("jnt is {}".format(jnt))
+		print("")
 		placeMat = curve.matrixAtU(inShape, u=u)
 		transform.matchMatrix(jnt, placeMat)
 
-	for i in xrange(numJnts):
+	for i in range(numJnts):
 		# connect
 		decomp = ECN("matDecomp", "matDecomp")
 		parts["jnts"][i].rotate = parts["initAims"][i].constraintRotate
@@ -162,7 +162,7 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 	# still want to investigate that ik stretch stuff thing
 	parts["jnts"][-1].rotate = (0, 0, 0)
 	parts["sinInfMults"] = {}
-	for i in xrange(numCtrls):
+	for i in range(numCtrls):
 		# parent controls to init grp so they move
 		# then mult rotation of init grp and control to get effect on joints
 		u = 1.0 / numCtrls * i
@@ -232,7 +232,7 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 		parts["sinInfMults"][i] = []
 		# numpy where you at
 		# set points on sin crv
-		for n in xrange(numJnts):
+		for n in range(numJnts):
 			loc = core.loc("sin{}_{}loc".format(i, n))
 			pci = ECn("pci", "sin{}_{}pci".format(i, n))
 			ratioDiv = ECn("md", "sin{}_{}ratioDiv".format(i, n), "div")
@@ -263,9 +263,9 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 
 		# there's a pretty dope way to do this with sequential abnars but I'm optimising for
 		# minimum nodes right now
-	print "sinInfMults is {}".format(parts["sinInfMults"])
+	print("sinInfMults is {}".format(parts["sinInfMults"]))
 
-	for m in xrange(numJnts):
+	for m in range(numJnts):
 		finalAdd = ECN("pma", "finalAdd")
 		#finalAim = ECn("aim", "finalAim")
 		finalConvert = ECN("choice", "final convert")
@@ -278,7 +278,7 @@ def variableFk(targetCrv, name="varFk", numCtrls=4, numJnts=20 ):
 
 		# doing everything in linear radians is sort of sexy i supppose
 
-		for i in xrange(numCtrls):
+		for i in range(numCtrls):
 			# head hurt yet?
 			cmds.connectAttr(parts["sinInfMults"][i][m]+".output",
 				finalAdd+".input3D[{}]".format(i))

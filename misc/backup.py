@@ -65,7 +65,7 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 		#       (description, full file name) } }
 
 		saves = []
-		for title, data in versions.iteritems():
+		for title, data in versions.items():
 			maxVersion = max(data.keys())
 			saves.append(data[maxVersion][1])
 
@@ -101,7 +101,7 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 	for i, val in enumerate(paths):
 		if nCurrent == nSegment:
 			percentDone = percentDone + 10.0
-			print("at {} percent".format(percentDone))
+			print(("at {} percent".format(percentDone)))
 			nCurrent = 0
 		else:
 			nCurrent = nCurrent + 1
@@ -111,7 +111,7 @@ def makeBackup( rootFolder, outputFilePath, test=False):
 			#shutil.copy2(fullFilePath, destFilePath)
 			shutil.copy2(val[0], val[1])
 		except:
-			print( "error encountered copying file {}".format(val[0]))
+			print(( "error encountered copying file {}".format(val[0])))
 			continue
 
 

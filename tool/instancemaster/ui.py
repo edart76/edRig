@@ -38,7 +38,7 @@ class InstanceMasterUI(QtWidgets.QMainWindow):
 
 		self.wireSignals()
 
-		print "IM init finished"
+		print("IM init finished")
 
 	def initUi(self):
 		parent = self.getMayaWindow()
@@ -69,7 +69,7 @@ class InstanceMasterUI(QtWidgets.QMainWindow):
 		self.tree.sync()
 
 	def mainDimensions(self):
-		print "QtWidgets frame geo is {}".format(self.frameGeometry())
+		print("QtWidgets frame geo is {}".format(self.frameGeometry()))
 		sizeRect = self.frameGeometry()
 		width = sizeRect.width()
 		height = sizeRect.height()
@@ -83,7 +83,7 @@ class InstanceMasterUI(QtWidgets.QMainWindow):
 
 	def getMayaWindow(self):
 		pointer = omui.MQtUtil.mainWindow()
-		return shiboken2.wrapInstance(long(pointer), QtWidgets.QWidget)
+		return shiboken2.wrapInstance(int(pointer), QtWidgets.QWidget)
 
 class InstanceCatalogue(QtWidgets.QListWidget):
 	"""flat list of all master instances"""

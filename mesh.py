@@ -275,7 +275,7 @@ def setSkinData(skinNode, skinData):
 	# check that all influences are found in scene
 	# if not, create temp joints at origin
 	influences = getNameIndexMap(skinNode)
-	for name, index in skinData["names"].iteritems():
+	for name, index in skinData["names"].items():
 		if not cmds.objExists(name):
 			jnt = cmds.createNode("joint", n=name)
 			cmds.skinCluster(skinNode, e=1, add=jnt)
@@ -288,7 +288,7 @@ def setSkinData(skinNode, skinData):
 
 	weights = skinData["weights"]
 
-	for vtx, weightData in weights.iteritems():
+	for vtx, weightData in weights.items():
 		weightPlug.selectAncestorLogicalIndex(
 			vtx, listPlug.attribute())
 
@@ -349,23 +349,23 @@ class DeformerWrapper(object):
 
 		self.node = AbsoluteNode(deformerNode)
 		self.deformerType = self.node.MFnDependency.typeName
-		print( "new deformer wrapper is type {}".format(self.deformerType))
+		print(( "new deformer wrapper is type {}".format(self.deformerType)))
 
 		if self.node.MObject.hasFn(681): # skinClusterFilter
 			self.fn = oma.MFnSkincluster(self.node.MObject)
 		else:
 			self.fn = oma.MFnGeometryFilter(self.node.MObject)
 
-		if self.deformerType in self.defaults.keys():
+		if self.deformerType in list(self.defaults.keys()):
 			self.treatment = self.defaults[self.deformerType]
 		else:
 			self.treatment = self.defaults["default"]
-		self.attrs = self.treatment.keys()
+		self.attrs = list(self.treatment.keys())
 
 	def getComponentObject(self):
 		setFn = om.MFnSet(self.fn.deformerSet())
 		members = setFn.getMembers(True) # MSelectionList, flatten=True
-		print( "members is {}".format(members) )
+		print(( "members is {}".format(members) ))
 
 
 
@@ -393,7 +393,7 @@ class DeformerWrapper(object):
 			#infIds[infId] = i
 			returnDict[infId] = {}
 
-			for n in xrange(wlPlug.numElements()):
+			for n in range(wlPlug.numElements()):
 				# iterating over all vertices
 
 				# point the wPlug to index representing this vertex

@@ -178,7 +178,7 @@ def listTaggedNodes(searchNodes=None, searchTag="", searchContent=None, searchDi
 	tests = searchNodes or listAllNodes()
 	#print "tests are {}".format(tests)
 	if searchDict:
-		for k, v in searchDict.iteritems():
+		for k, v in searchDict.items():
 			tests = listTaggedNodes(tests, k, v)
 		return tests
 
@@ -261,12 +261,12 @@ def addNamespace(name):
 
 def removeNamespace(name, deleteNodes=False):
 	if name[0] != ":" : name = ":" + name
-	print("name {}".format(name.split(":")))
+	print(("name {}".format(name.split(":"))))
 	for i, val in enumerate(name.split(":")):
 		#space = ":".join(name.split(":"))
 		space = name.split(":")[-1]
 		parent = ":".join(name.split(":")[:-(i+2)]) or ":"
-		print("namespace {}, parent {}".format(space, parent))
+		print(("namespace {}, parent {}".format(space, parent)))
 		if cmds.namespace(exists=space):
 			if deleteNodes:
 				cmds.delete( cmds.namespaceInfo(space,

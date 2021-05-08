@@ -90,7 +90,7 @@ def setSkinData(skinNode, skinData):
 	# check that all influences are found in scene
 	# if not, create temp joints at origin
 	influences = getNameIndexMap(skinNode)
-	for name, index in skinData["names"].items():
+	for name, index in list(skinData["names"].items()):
 		if not cmds.objExists(name):
 			jnt = cmds.createNode("joint", n=name)
 			cmds.skinCluster(skinNode, e=1, add=jnt)
@@ -358,7 +358,7 @@ class MeshStruct(object):
 
 	def iterFaceVertices(self, local=False):
 		""" return tuples of (face, globalVtx) """
-		return zip(self.faceVertexBuffers(local))
+		return list(zip(self.faceVertexBuffers(local)))
 
 	# region dcc specific
 	# region maya
@@ -540,23 +540,23 @@ class MeshStruct(object):
 		# attributes
 		for i in ("point", "face", "vertex", "whole"):
 			key = i + "Attrs"
-			for k, v in rich[key].items(): # individual point attributes
+			for k, v in list(rich[key].items()): # individual point attributes
 				compName = i + "_" + k
 				# positions becomes point_positions
 				flat[compName] = v
 		# submeshes (uv sets)
 		# uvsets are serialised whole, so that they can be applied as one
 		# also nobody's trying to apply UV-space positions to anything but uvs
-		for k, v in rich["subMeshes"].get("UVs", {}).items():
+		for k, v in list(rich["subMeshes"].get("UVs", {}).items()):
 			compName = "subMesh_" + k
 			flat[compName] = v
-		print(flat.keys())
+		print((list(flat.keys())))
 		return flat
 
 	@staticmethod
 	def saveComponentsToFiles(folder, flatData):
 		""""""
-		for k, v in flatData.items():
+		for k, v in list(flatData.items()):
 			json.dump(v, open(os.path.join(folder, k) + ".json", "w"))
 
 	# endregion
@@ -680,6 +680,6 @@ class MeshStruct(object):
 					pointSets[pt] = set()
 				pointSets[pt].add(points[lead])
 				pointSets[pt].add(points[trail])
-		return [tuple(i) for i in pointSets.values()]
+		return [tuple(i) for i in list(pointSets.values())]
 
 	# endregion

@@ -42,8 +42,8 @@ def doIntersect(pos):
 	rs = pos[0]
 	rd = pos[1]
 
-	print("Ray source:", rs[0], rs[1], rs[2])
-	print("Ray direction:", rd[0], rd[1], rd[2])
+	print(("Ray source:", rs[0], rs[1], rs[2]))
+	print(("Ray direction:", rd[0], rd[1], rd[2]))
 
 	# position should be transform of selected object, if nothing selected it is 0 0 0, otherwise it should be selected dag object's world position to create object plane. I'll just implement view plane here
 	position = om.MPoint(0, 0, 0)
@@ -57,27 +57,27 @@ def doIntersect(pos):
 
 		dl = (position - rs) * nPlane
 		if dl == 0:
-			print
+			print()
 			"On the plane"
 		else:
-			print
+			print()
 			"Parallel"
 	else:
 		d = (position - rs) * nPlane / dl
 		point = rs + d * rd
-		print("Intersect with view plane at:", point[0], point[1], point[2])
+		print(("Intersect with view plane at:", point[0], point[1], point[2]))
 
 
 def dragger_onPress():
 	pos = cmds.draggerContext(draggerContextName, query=True, anchorPoint=True)
-	print("pos", pos[0], pos[1])
+	print(("pos", pos[0], pos[1]))
 	pos = viewToWorld(pos[0], pos[1])
 	doIntersect(pos)
 
 
 def dragger_onDrag():
 	pos = cmds.draggerContext(draggerContextName, query=True, dragPoint=True)
-	print("pos", pos[0], pos[1])
+	print(("pos", pos[0], pos[1]))
 	pos = viewToWorld(pos[0], pos[1])  # get the first value of the tuple
 	doIntersect(pos)
 

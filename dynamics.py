@@ -298,7 +298,7 @@ class NConstraint(NDynamicsElement):
 		         self + ".currentTime" )
 
 		vacant = attr.getNextAvailableIndex(nucleus + ".inputCurrent")
-		print("vacant {}".format(vacant))
+		print(("vacant {}".format(vacant)))
 		self.con("evalCurrent[0]", "{}.inputCurrent[{}]".format(
 			nucleus, vacant))
 		self.con("evalStart[0]", "{}.inputStart[{}]".format(
@@ -443,7 +443,7 @@ def makeCurveDynamic(targetCurve,
 
 def constrainClosestPoints(systemA, systemB):
 	"""creates weld constraint between nearest CVs"""
-	print "constraining"
+	print("constraining")
 
 
 

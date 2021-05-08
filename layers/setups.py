@@ -29,7 +29,7 @@ class Memory(object):
 		self._storage = dict(*args, **kwargs)
 
 	def __getitem__(self, key):
-		if not key in self._storage.keys():
+		if not key in list(self._storage.keys()):
 			return False
 		else:
 			return self._storage[key]
@@ -81,10 +81,10 @@ class Memory(object):
 		no memory cell will ever store different infotypes per node"""
 
 	def infoNames(self):
-		return self._storage.keys()
+		return list(self._storage.keys())
 
 	def infoTypes(self, infoName):
-		return self._storage[infoName].keys()
+		return list(self._storage[infoName].keys())
 
 	def remember(self, infoName, infoType, nodes=None, **kwargs):
 		"""add information to op's memory if none exists
@@ -102,7 +102,7 @@ class Memory(object):
 			#print "allocating blank space for {}".format(infoName)
 			self._allocateSpace(infoName, nodes=nodes)
 
-		if not infoType in self._storage[infoName].keys():
+		if not infoType in list(self._storage[infoName].keys()):
 			#print "gathering goss, making blank info"
 			# only gather info if none exists??
 			self._storage[infoName][infoType] = self.makeBlankInfoType(infoType)
@@ -138,14 +138,14 @@ class Memory(object):
 	def refresh(self, infoName="", infoType="", *args, **kwargs):
 		"""updates existing memory with info from scene
 		DOES NOT create new info if none exists"""
-		print
-		print "memory refresh - nodesFromInfoName {} are {}".format(
-			infoName, self.nodesFromInfoName(infoName))
+		print()
+		print("memory refresh - nodesFromInfoName {} are {}".format(
+			infoName, self.nodesFromInfoName(infoName)))
 		gatheredGoss = [self._gatherInfo(infoType, target=i)
 		                for i in self.nodesFromInfoName(infoName)]
 		self._storage[infoName][infoType] = gatheredGoss
-		print "{}-{} is now {}".format(infoName, infoType,
-		                               self._storage[infoName][infoType])
+		print("{}-{} is now {}".format(infoName, infoType,
+		                               self._storage[infoName][infoType]))
 
 	def remove(self, infoName, infoType=None):
 		"""clears memory selectively without going into the datafile
@@ -162,14 +162,14 @@ class Memory(object):
 		# USE ONLY AS GUIDE - USE REFRESH TO UPDATE MEMORY
 		returnDict = {}
 		#pprint.pprint("storage is {}".format(self._storage))
-		for k, v in self._storage.iteritems():
+		for k, v in self._storage.items():
 			if k == "nodes" :
 				continue
 			#print "k is {}, v is {}".format(k, v)
 			if v.get("closed"):
 				continue
 			returnDict[k] = []
-			for vk in v.keys():
+			for vk in list(v.keys()):
 				#print "vk is {}".format(vk)
 				if vk == "nodes" or vk == "closed" :
 					continue
@@ -185,8 +185,8 @@ class Memory(object):
 		if not cmds.objExists(target):
 			raise RuntimeError("no object found named {}".format(target))
 
-		print ""
-		print "GATHERING GOSS"
+		print("")
+		print("GATHERING GOSS")
 
 		returnDict = {}
 		target = edRig.node.AbsoluteNode(target)  # speed
@@ -268,7 +268,7 @@ class Memory(object):
 			if not cmds.objExists(target):
 				raise RuntimeError("APPLYINFO TARGET {} DOES NOT EXIST".format(target))
 			if infoType == "attr":
-				for k, v in info.iteritems():
+				for k, v in info.items():
 					#print "setting attr {}.{} to {}".format(target, k, v)
 					attr.setAttr(target + "." + k, v)
 
@@ -306,17 +306,17 @@ class Memory(object):
 		return [str(i) for i in self.nodes]
 
 	def flattenNodes(self):
-		for k, v in self._storage.iteritems():
+		for k, v in self._storage.items():
 			v["nodes"] = [str(i) for i in v["nodes"]]
 
 	def restoreAbsoluteNodes(self):
 		"""restore strings to absNodes, assuming the same names exist"""
 		self.nodes = [edRig.node.AbsoluteNode(i) for i in self.nodes]
-		for k, v in self._storage.iteritems():
-			print "k is {}, v is {}, v keys are {}".format(k, v, v.keys())
-			if "nodes" in v.keys():
+		for k, v in self._storage.items():
+			print("k is {}, v is {}, v keys are {}".format(k, v, list(v.keys())))
+			if "nodes" in list(v.keys()):
 				v["nodes"] = [edRig.node.AbsoluteNode(i) for i in v["nodes"]]
-			print "restored {}".format(v["nodes"])
+			print("restored {}".format(v["nodes"]))
 		pass
 
 	@staticmethod
@@ -373,7 +373,7 @@ class Memory(object):
 			kSuccess = surface.setSurfaceInfo(info, target, parent=parent)
 
 		else:
-			print "shape regen failed for some reason, likely mismatch in shapeType - try refreshing"
+			print("shape regen failed for some reason, likely mismatch in shapeType - try refreshing")
 			return
 
 

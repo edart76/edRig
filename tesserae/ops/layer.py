@@ -23,7 +23,7 @@ class LayerOp(Op):
 
 	def __init__(self, *args, **kwargs):
 		super(LayerOp, self).__init__(*args, **kwargs)
-		print "layer sync is {}".format(self.sync)
+		print("layer sync is {}".format(self.sync))
 		self.controller = None
 
 		self.saveData = None
@@ -65,10 +65,10 @@ class LayerOp(Op):
 		if self.abstract:
 			return True
 		if edRig.pipeline.checkJsonFileExists(self.dataFilePath):
-			print "data file for {} exists".format(self.opName)
+			print("data file for {} exists".format(self.opName))
 			self.dataFileExists = True
 		else:
-			print "data file for {} does not exist, making new one".format(self.opName)
+			print("data file for {} does not exist, making new one".format(self.opName))
 			edRig.pipeline.makeBlankFile(path=self.dataFilePath)
 			self.dataFileExists = True
 
@@ -80,10 +80,10 @@ class LayerOp(Op):
 
 		returnDict = OrderedDict()
 		# add "all" options
-		if len(openDict.keys()) > 1:
+		if len(list(openDict.keys())) > 1:
 			returnDict["all"] = ActionItem(
 				{"func" : self.refreshAllMemory}, name="all")
-		for k,v in openDict.iteritems():
+		for k,v in openDict.items():
 			returnDict[k] = {}
 
 			for i in v:
@@ -104,7 +104,7 @@ class LayerOp(Op):
 
 	def refreshAllMemory(self):
 		"""refreshes all open memory cells"""
-		for k, v in self.memory.renewableMemory().iteritems():
+		for k, v in self.memory.renewableMemory().items():
 			for i in v:
 				self.memory.refresh(infoName=k, infoType=i)
 		#self.saveOutMemory()
@@ -125,7 +125,7 @@ class LayerOp(Op):
 							"nodes" : [nodes] },
 				"otherInfoName" : {etc} }
 			"""
-			for k, v in kwargs.pop("compound").iteritems():
+			for k, v in kwargs.pop("compound").items():
 				self.remember(infoName=k,
 				              infoType=v["infoType"],
 				              nodes=v["nodes"],
@@ -171,8 +171,8 @@ class LayerOp(Op):
 		try:
 			base.update({"memory": self.memoryActions()})
 		except Exception as e:
-			print "memory actions error"
-			print "error is {}".format(e)
+			print("memory actions error")
+			print("error is {}".format(e))
 		return base
 
 	# convenience and standardisation

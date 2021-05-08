@@ -4,10 +4,11 @@ This is the first proper cross-dcc python file """
 
 
 import edRig
-reload(edRig)
+import importlib
+importlib.reload(edRig)
 
 from edRig import reload
-reload(edRig)
+importlib.reload(edRig)
 
 from edRig import cmds, hou, hutil
 
@@ -19,7 +20,7 @@ from edRig import cmds, hou, hutil
 from PySide2 import QtWidgets, QtCore, QtGui
 
 from edRig.tool.rename import lib
-reload(lib)
+importlib.reload(lib)
 
 class LabelContainer(QtWidgets.QWidget):
 	""" for putting text label alongside widget

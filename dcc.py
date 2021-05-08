@@ -75,8 +75,8 @@ try:
 			fn = getattr(cmds, fnName)
 			setattr(cmds, fnName, returnList(fn))
 		except:
-			print("error wrapping {}".format(fn.__name__))
-			print(traceback.format_exc())
+			print(("error wrapping {}".format(fn.__name__)))
+			print((traceback.format_exc()))
 
 
 except Exception as e:

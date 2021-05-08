@@ -182,7 +182,7 @@ class SourceOp(LayerOp):
 			path = QtWidgets.QFileDialog.getExistingDirectory(
 				caption="open folder",
 				dir=self.assetPath)
-			print("folder path {}".format(path))
+			print(("folder path {}".format(path)))
 		else: path = ""
 		if not path:
 			self.log("no path given")

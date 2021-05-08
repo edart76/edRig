@@ -75,7 +75,7 @@ class SkinOp(MeshOp):
 		self.liveInfs = self.getLiveInfluences()
 
 		self.skin = self.makeSkin(targetMesh)
-		print "self.skin is {}".format(self.skin)
+		print("self.skin is {}".format(self.skin))
 
 
 	# above line will do whatever conversion it has to and create a new

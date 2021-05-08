@@ -19,7 +19,7 @@ def incrementName(name, currentNames=None):
 	# check if name already taken
 	if currentNames and name in currentNames:
 		return incrementName(name, currentNames)
-	print("found name is {}".format(name))
+	print(("found name is {}".format(name)))
 	return name
 
 def camelCase(name):

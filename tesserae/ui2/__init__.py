@@ -7,5 +7,5 @@ from shiboken2 import wrapInstance
 
 def getMayaWindow():
 	ptr = omui.MQtUtil.mainWindow()
-	widget = wrapInstance( long( ptr ), QtWidgets.QWidget )
+	widget = wrapInstance( int( ptr ), QtWidgets.QWidget )
 	return widget

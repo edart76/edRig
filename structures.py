@@ -19,7 +19,7 @@ class DataAesthetics(object):
 	}
 
 	def __getitem__(self, item):
-		if item in self.data.keys():
+		if item in list(self.data.keys()):
 			return self.data[item]
 		else:
 			return self.data["default"]
@@ -74,7 +74,7 @@ class ActionItem(object):
 
 		self._name = name or execDict["func"].__name__
 		for i, val in enumerate(["func", "args", "kwargs"]):
-			self.items[i] = execDict[val] if val in execDict.keys() else None
+			self.items[i] = execDict[val] if val in list(execDict.keys()) else None
 
 	@property
 	def func(self):
@@ -129,8 +129,8 @@ class ActionItem(object):
 
 		def _mergeDicts(master=None, slave=None):
 			#print "master is {}, slave is {}".format(master, slave)
-			for k, v in slave.iteritems():
-				if k not in master.keys():
+			for k, v in slave.items():
+				if k not in list(master.keys()):
 					master[k] = v
 				elif isinstance(v, dict):
 					# key exists in master, merge

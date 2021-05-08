@@ -9,8 +9,9 @@ from six import string_types, iteritems
 
 from edRig import hou
 from edRig.houdini import network, parm, core
-reload(core)
-reload(network)
+import importlib
+importlib.reload(core)
+importlib.reload(network)
 
 # node types in houdini are so weird
 conformNodeTypeNames = ("null", )
@@ -28,8 +29,7 @@ def gatherTopoPoints(
 
 	topoChildren = core.sortNodes(topoSubnet.children())
 	# filter only null nodes
-	topoChildren = list(filter(
-		lambda x: (x.type() in conformNodeTypes), topoChildren))
+	topoChildren = list([x for x in topoChildren if (x.type() in conformNodeTypes)])
 
 	# check for mirror membership
 	mirrorBox = network.getNetworkBox(topoSubnet, "MIRROR")
@@ -151,7 +151,7 @@ def pointProcessMain(topoSubnet, topoMerge,
 	# reset connections on new topo points
 	newTopoPoints = [i for i in allTopoPoints if not i in prevTopoNodes]
 	#print("prev", prevTopoNodes)
-	print("new", newTopoPoints)
+	print(("new", newTopoPoints))
 	for newPoint in newTopoPoints:
 		parms = getPointPathParms(newPoint)
 		for i in parms:
@@ -187,7 +187,7 @@ def pointProcessMain(topoSubnet, topoMerge,
 
 		# form map of {topo point : shape points}
 		found = [i.evalAsNode() for i in params if i.evalAsNode()]
-		print("found", found)
+		print(("found", found))
 		if not found:
 			# check if matching node exists
 			if shapeSubnet.node(topoPoint.name()):

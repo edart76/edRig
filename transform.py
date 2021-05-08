@@ -1,7 +1,7 @@
 # move stuff around
 import edRig.node
 from edRig import core, attr, cmds, om, con
-from core import ECN
+from .core import ECN
 from edRig.node import AbsoluteNode, ECA
 
 
@@ -127,7 +127,7 @@ def blendTwoMatrixPlugs(a, b, weight=0.5):
 	blend = ECA("wtAddMatrix", name="matrixBlend")
 	cmds.connectAttr(a, blend+".wtMatrix[0].matrixIn")
 	cmds.connectAttr(b, blend + ".wtMatrix[1].matrixIn")
-	if isinstance(weight, basestring): # it's a plug
+	if isinstance(weight, str): # it's a plug
 		weightB = getReverseOfPlug(weight)
 		cmds.connectAttr(weight, blend + ".wtMatrix[0].weightIn")
 		cmds.connectAttr(weightB, blend + ".wtMatrix[1].weightIn")
@@ -159,8 +159,8 @@ def staticVecMatrixMult(mat, point=(1,0,0), length=1):
 	startPoint = om.MPoint(*point)
 	mat = om.MMatrix(mat)
 	endPoint = startPoint * mat
-	print ""
-	print "endPoint is {}".format(endPoint)
+	print("")
+	print("endPoint is {}".format(endPoint))
 	return endPoint.x, endPoint.y, endPoint.z
 
 def matchMatrix(transform, matchMat, pos=True, rot=True):
@@ -172,12 +172,12 @@ def matchMatrix(transform, matchMat, pos=True, rot=True):
 		matchMat = matchMat
 	mat = om.MTransformationMatrix(matchMat)
 
-	print "transform is {}".format(transform)
+	print("transform is {}".format(transform))
 	tFn = core.MFnTransformFrom(transform)
-	print "tFn is {}".format(tFn)
+	print("tFn is {}".format(tFn))
 	if pos:
 		trans = om.MVector(mat.translation(4))
-		print "trans is {}".format(trans)
+		print("trans is {}".format(trans))
 		tFn.setTranslation(trans, om.MSpace.kTransform)
 	if rot:
 		rot = mat.rotation(space)
@@ -342,7 +342,7 @@ def zeroTransforms(node):
 def unpackTRS(t, r, s):
 	""" gets translate, rotate, scale as strings from booleans """
 	attrs = {"translate" : t, "rotate" : r, "scale" : s}
-	return [k for k, v in attrs.items() if k]
+	return [k for k, v in list(attrs.items()) if k]
 
 def decomposeMatrixPlug(plug, target=None, t=1, r=1, s=1, shear=0):
 	"""basic atomic decomposition"""

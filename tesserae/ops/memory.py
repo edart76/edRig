@@ -50,17 +50,17 @@ class Memory2(AbstractTree):
 		no memory cell will ever store different infotypes per node"""
 
 	def infoNames(self):
-		return self.keys()
+		return list(self.keys())
 
 	def infoTypes(self, infoName):
-		return self[infoName].keys()
+		return list(self[infoName].keys())
 
 	def _initialiseCell(self, infoName, infoType, nodes=None):
 		if not infoName in self.infoNames():
 			#print "allocating blank space for infoName {}".format(infoName)
 			self._allocateSpace(infoName, nodes=nodes)
 
-		if not infoType in self[infoName].keys():
+		if not infoType in list(self[infoName].keys()):
 			#print "gathering goss, making blank info"
 			self[infoName][infoType] = self.makeBlankInfoType(
 				infoType)
@@ -69,9 +69,9 @@ class Memory2(AbstractTree):
 		"""add information to op's memory if none exists
 		we remember lists here
 		main entrypoint"""
-		print("remember infoName {}, infotype {}, nodes {}".format(
+		print(("remember infoName {}, infotype {}, nodes {}".format(
 			infoName, infoType, nodes)
-		)
+		))
 
 		# multi memory support
 		if isinstance(infoType, list):
@@ -143,7 +143,7 @@ class Memory2(AbstractTree):
 				continue
 			returnDict[i.name] = []
 			#print("i branches {}".format(i.branches))
-			for n in i.value.keys():
+			for n in list(i.value.keys()):
 				#print("n branch {}".format(n))
 				if n == "nodes" or n== "closed":
 					continue
@@ -236,8 +236,8 @@ class Memory2(AbstractTree):
 
 		allInfo = self[infoName]
 
-		print("allInfo {}".format(allInfo))
-		print("target {}".format(target))
+		print(("allInfo {}".format(allInfo)))
+		print(("target {}".format(target)))
 
 		space = kwargs.get("space") or "world"
 
@@ -250,21 +250,21 @@ class Memory2(AbstractTree):
 			info = allInfo[infoType]
 
 
-		print "info to apply is {}".format(info)
+		print("info to apply is {}".format(info))
 		# it's really, really for the best if you just work by sequence
 		for target, info in zip(target, info):
-			print("target {}, info {}".format(target, info))
+			print(("target {}, info {}".format(target, info)))
 
 
 			if not cmds.objExists(target):
 				raise RuntimeError("APPLYINFO TARGET {} DOES NOT EXIST".format(target))
 			if infoType == "attr":
-				for k, v in info.iteritems():
+				for k, v in info.items():
 					#print "setting attr {}.{} to {}".format(target, k, v)
 					try:
 						attr.setAttr(target + "." + k, v)
 					except Exception as e:
-						print("could not remember attr {}, value {}".format(k, v))
+						print(("could not remember attr {}, value {}".format(k, v)))
 
 			elif infoType == "xform":
 				info = info[space]

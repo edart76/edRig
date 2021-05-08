@@ -1,5 +1,5 @@
 """AbsoluteNode wrapper """
-from __future__ import print_function
+
 import weakref, ctypes, ast
 
 from edRig.dcc import cmds, om
@@ -114,7 +114,7 @@ class AbsoluteNode(StringLike):
 			return cls(node[0])
 		elif isinstance(node, om.MObject):
 			return cls.fromMObject(node)
-		elif isinstance(node, unicode):
+		elif isinstance(node, str):
 			return cls(str(node))
 
 		#absolute = str.__new__(cls, node)
@@ -416,7 +416,7 @@ class AbsoluteNode(StringLike):
 		mapping = {"T" : "translate", "R" : "rotate", "S" : "scale"}
 		if not args:
 			args = ["T", "R", "S", "X", "Y", "Z"]
-		elif isinstance(args[0], basestring):
+		elif isinstance(args[0], str):
 			args = [i for i in args[0]]
 
 		args = [i.upper() for i in args]
@@ -467,7 +467,7 @@ class AbsoluteNode(StringLike):
 		print(args)
 		for i in range(len(args)):
 			val = args[i]
-			if not isinstance(val, basestring):
+			if not isinstance(val, str):
 				# print("{} is not str".format())
 				continue
 			if not "." in val:

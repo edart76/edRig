@@ -1,15 +1,17 @@
 # reusable ui items
 from edRig import QtWidgets, QtCore
 from edRig.structures import ActionItem, ActionList
-# from edRig.tesserae.jchan2.widgets.stylesheet import STYLE_QMENU
 from edRig.tesserae.ui2.style import STYLE_QMENU
+from edRig.lib.python import DataRef
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import maya.OpenMayaUI as omui
 import shiboken2, weakref
 import maya.cmds as cmds
 from shiboken2 import wrapInstance
+from functools import partial
 import itertools
 import pprint
+import tree
 
 expandingPolicy = QtWidgets.QSizePolicy(
 	QtWidgets.QSizePolicy.Expanding,
@@ -35,11 +37,11 @@ staticPolicy = QtWidgets.QSizePolicy(
 
 def getMayaWindow():
 	pointer = omui.MQtUtil.mainWindow()
-	return shiboken2.wrapInstance(long(pointer), QtWidgets.QWidget)
+	return shiboken2.wrapInstance(int(pointer), QtWidgets.QWidget)
 
 def getMayaMainWindow():
 	pointer = omui.MQtUtil.mainWindow()
-	return shiboken2.wrapInstance(long(pointer), QtWidgets.QMainWindow)
+	return shiboken2.wrapInstance(int(pointer), QtWidgets.QMainWindow)
 
 
 '''
@@ -65,7 +67,7 @@ def dock_window(dialog_class):
 	# now lets get a C++ pointer to it using OpenMaya
 	control_widget = omui.MQtUtil.findControl(dialog_class.CONTROL_NAME)
 	# conver the C++ pointer to Qt object we can use
-	control_wrap = wrapInstance(long(control_widget), QtWidgets.QWidget)
+	control_wrap = wrapInstance(int(control_widget), QtWidgets.QWidget)
 
 	# control_wrap is the widget of the docking window and now we can start working with it:
 	control_wrap.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -147,25 +149,31 @@ class KeyState(object):
 	currently requires events to update, may not be a good idea to
 	query continuously """
 
-	class _BoolRef(object):
-		""" wrapper for consistent references to bool value """
-		def __init__(self, val):
-			self._val = val
-		def __call__(self, *args, **kwargs):
-			self._val = args[0]
-		def __str__(self):
-			return str(self._val)
-		def __nonzero__(self):
-			return self._val.__nonzero__()
+	# class _BoolRef(object):
+	# 	""" wrapper for consistent references to bool value """
+	# 	def __init__(self, val):
+	# 		self._val = val
+	# 	def __call__(self, *args, **kwargs):
+	# 		self._val = args[0]
+	# 	def __str__(self):
+	# 		return str(self._val)
+	# 	def __bool__(self):
+	# 		return self._val.__nonzero__()
 
 
 	def __init__(self):
-		self.LMB = self._BoolRef(False)
-		self.RMB = self._BoolRef(False)
-		self.MMB = self._BoolRef(False)
-		self.alt = self._BoolRef(False)
-		self.ctrl = self._BoolRef(False)
-		self.shift = self._BoolRef(False)
+		# self.LMB = self._BoolRef(False)
+		# self.RMB = self._BoolRef(False)
+		# self.MMB = self._BoolRef(False)
+		# self.alt = self._BoolRef(False)
+		# self.ctrl = self._BoolRef(False)
+		# self.shift = self._BoolRef(False)
+		self.LMB = DataRef(False)
+		self.RMB = DataRef(False)
+		self.MMB = DataRef(False)
+		self.alt = DataRef(False)
+		self.ctrl = DataRef(False)
+		self.shift = DataRef(False)
 
 		self.mouseMap = {
 			self.LMB : QtCore.Qt.LeftButton,
@@ -182,12 +190,12 @@ class KeyState(object):
 		# shift and ctrl are swapped for me I kid you not
 
 	def mousePressed(self, event):
-		for button, v in self.mouseMap.iteritems():
+		for button, v in self.mouseMap.items():
 			button( event.button() == v)
 		self.syncModifiers(event)
 
 	def mouseReleased(self, event):
-		for button, v in self.mouseMap.iteritems():
+		for button, v in self.mouseMap.items():
 			if event.button() == v:
 				button(False)
 		self.syncModifiers(event)
@@ -212,7 +220,7 @@ class KeyState(object):
 		# 	for key in sequence:
 		# 		key(False)
 
-		for key, v in self.keyMap.iteritems():
+		for key, v in self.keyMap.items():
 			key((event.modifiers() == v)) # not iterable
 		if event.modifiers() == (QtCore.Qt.ShiftModifier | QtCore.Qt.ControlModifier):
 			self.ctrl(True)
@@ -220,8 +228,8 @@ class KeyState(object):
 
 
 	def debug(self):
-		print(self.mouseMap)
-		print(self.keyMap)
+		print((self.mouseMap))
+		print((self.keyMap))
 
 
 class ConfirmDialogue(QtWidgets.QMessageBox):
@@ -283,15 +291,23 @@ class ContextMenu(object):
 		parent.addMenu(menu)
 		return menu
 
-	def addSubAction(self, actionObject=None, parent=None):
-		"""not robust at all but idgaf"""
-		# regen bug affects this
+	def addSubAction(self, actionObject:ActionItem=None,
+	                 actionPartial:partial=None, name=None,
+	                 parent=None):
+
 		if not parent:
 			parent = self.rootMenu
 
-		newAction = EmbeddedAction(actionObject=actionObject, parent=parent)
-		newAction.setText(newAction.name)
-		#print "addSubAction name is {}".format(newAction.name)
+		newAction = QtWidgets.QAction(parent=parent)
+
+		if actionObject:
+			name = name or actionObject.name
+			newAction.triggered.connect(actionObject.execute)
+		else:
+			name = name or actionPartial.func.__name__
+			newAction.triggered.connect(actionPartial)
+
+		newAction.setText(name)
 		parent.addAction(newAction)
 		return newAction
 
@@ -323,7 +339,8 @@ class ContextMenu(object):
 		try:
 			#print "context menuDict is {}".format(menuDict)
 			self.buildMenu(menuDict=menuDict, parent=self.rootMenu)
-		except RuntimeError("SOMETHING WENT WRONG WITH CONTEXT MENU"):
+		except Exception as e:
+			raise e
 			pass
 
 	"""CONTEXT MENU ACTIONS for allowing procedural function execution"""
@@ -333,11 +350,11 @@ class ContextMenu(object):
 		currently expects actionItems as leaves"""
 		# print ""
 		menuDict = menuDict or {}
-		for k, v in menuDict.iteritems():
+		for k, v in menuDict.items():
 			#print "k is {}, v is {}".format(k, v)
 			if isinstance(v, dict):
 				#print "buildMenu v is dict {}".format(v)
-				if not v.keys():
+				if not list(v.keys()):
 				#	print "skipping"
 					continue
 				newParent = self.addSubMenu(name=k, parent=parent)
@@ -354,19 +371,25 @@ class ContextMenu(object):
 
 		pass
 
-	def buildMenusFromTree(self, tree, parent=None):
+	def buildMenusFromTree(self, actionTree, parent=None):
 		""" builds recursively from tree
 		only actions at leaves are considered """
-		if tree.branches: # add menu for multiple actions
-			parent = self.addSubMenu(name=tree.name, parent=parent)
-			for branch in tree.branches:
+		if actionTree.branches: # add menu for multiple actions
+			parent = self.addSubMenu(name=actionTree.name, parent=parent)
+			for branch in actionTree.branches:
 				self.buildMenusFromTree(branch, parent)
 			return parent
 		else: # add single entry for single action
-			if not isinstance(tree.value, (ActionItem, ActionList)):
-				return None
-			action = self.addSubAction(tree.value, parent)
-
+			if isinstance(actionTree.value, (ActionItem, ActionList)):
+				action = self.addSubAction(actionObject=actionTree.value,
+				                           parent=parent)
+			elif isinstance(actionTree.value, partial):
+				action = self.addSubAction(actionPartial=actionTree.value,
+				                           parent=parent)
+			elif isinstance(actionTree.value, function):
+				action = self.addSubAction(
+					actionPartial=partial(func=actionTree.value),
+				    parent=parent)
 
 
 

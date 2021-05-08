@@ -1,7 +1,8 @@
 
 from edRig import hou
 from edRig.houdini import core
-reload(core)
+import importlib
+importlib.reload(core)
 
 """ functions supporting component-based modelling """
 

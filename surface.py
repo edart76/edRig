@@ -63,7 +63,7 @@ def setSurfaceInfo(info, target=None, create=True, parent=None):
 
 	parent = AbsoluteNode(parent)
 
-	print "info to set is {}".format(info)
+	print("info to set is {}".format(info))
 
 	cvs = [om.MPoint(i) for i in info["cvs"]]
 	shapeObj = fn.create(
@@ -79,7 +79,7 @@ def setSurfaceInfo(info, target=None, create=True, parent=None):
 	)
 	fn.updateSurface()
 	newShape = AbsoluteNode.fromMObject(shapeObj)
-	print "newShape is " + newShape
+	print("newShape is " + newShape)
 	cmds.select(newShape, ne=True)
 	for i in (info["cached"], info["tf"]):
 		#cmd = str("".join(i).replace("\t", ""))

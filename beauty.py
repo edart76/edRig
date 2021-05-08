@@ -18,7 +18,7 @@ colourPresets = {
 
 def getColour(colour=None, normalise=False):
 	"""if i see a default colour control i'm gonna flip"""
-	if isinstance(colour, basestring):
+	if isinstance(colour, str):
 		colour = colourPresets.get(colour) or (60,60, 256)
 	elif isinstance(colour, tuple):
 		colour = list(colour)

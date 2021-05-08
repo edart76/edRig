@@ -20,7 +20,7 @@ def reloadEdRig(tesserae=True):
 	protecc = {"tesserae" : ("layers", "tesserae")}
 	attacc = ("edRig", "tree")
 	import sys
-	names = (sys.modules.copy().keys())
+	names = (list(sys.modules.copy().keys()))
 	for i in names:
 		if any( n in i for n in attacc):
 			pass
@@ -121,7 +121,7 @@ class FilePathTree(object):
 	def files(self):
 		"""all child files at current level, not directories"""
 		files = []
-		for i in self.children.values():
+		for i in list(self.children.values()):
 			if self.isFile(i):
 				files.append(i)
 		return files
@@ -141,7 +141,7 @@ class FilePathTree(object):
 			try:
 				os.mkdir(newPath)
 			except:
-				print( "failed to create folder {}".format(name))
+				print(( "failed to create folder {}".format(name)))
 			return FilePathTree(newPath)
 
 	def makeChildFile(self, name, suffix=".txt"):
@@ -315,13 +315,13 @@ def checkAssetStructure(dir, core=True):
 	"""checks that core structure exists"""
 	for i in coreFolders:
 		if not FilePathTree.isDir(dir+"/"+i):
-			print ("found no coreFolder {} in asset {}".format(i,
-			                                                  dir))
+			print(("found no coreFolder {} in asset {}".format(i,
+			                                                  dir)))
 			return False
 	for i in coreFiles:
 		if not FilePathTree.isFile(dir+"/"+i):
-			print ("found no coreFile {} in asset {}".format(i,
-			                                                  dir))
+			print(("found no coreFile {} in asset {}".format(i,
+			                                                  dir)))
 			return False
 	return True
 
@@ -330,11 +330,11 @@ def makeAssetStructure(dir, core=True, all=False):
 	tree = FilePathTree(dir)
 	for i in coreFolders:
 		if not i in tree.children:
-			print ("making child core folder {}".format(i))
+			print(("making child core folder {}".format(i)))
 			tree.makeChildFolder(i)
 	for i in coreFiles:
 		if not i in tree.children:
-			print ("making child core file {}".format(i))
+			print(("making child core file {}".format(i)))
 			tree.makeChildFile(i, suffix=".txt")
 
 def getExistingAssets(checkPath=ROOT_PATH):
@@ -345,7 +345,7 @@ def getExistingAssets(checkPath=ROOT_PATH):
 		checkPath = [checkPath]
 	for i in checkPath:
 		tree = FilePathTree(i)
-		for name, path in tree.children.iteritems():
+		for name, path in tree.children.items():
 			if isAsset(path):
 				if isDir(path+"/components"): # check fractally for elements of asset groups
 					assets.update(getExistingAssets(path+"/components"))
@@ -358,25 +358,25 @@ def safeLoadModule(mod):
 	DEPRECATED, use lib/python/safeLoadModule"""
 	# print "loading module {}".format(mod)
 	module = None
-	for i in sys.modules.keys():
+	for i in list(sys.modules.keys()):
 		# if "edRig" in i: del sys.modules[i] # how about FUCKIN NO
 		# if mod in i : del sys.modules[i]
 		pass
 	try:
 		module = importlib.import_module(mod)
 	except Exception as e:
-		print ("ERROR in loading module {}".format(mod))
-		print ("error is {}".format(str(e)))
+		print(("ERROR in loading module {}".format(mod)))
+		print(("error is {}".format(str(e))))
 	return module
 
 def renameFile(old="", new="", suffix=""):
 	if suffix: # legacy, don't use this
 		new = checkSuffix(new, suffix)
 		old = checkSuffix(old, suffix)
-	print ("rename old is {}, new is {}".format(old, new))
+	print(("rename old is {}, new is {}".format(old, new)))
 	if os.path.exists(old):
 		try:
-			print ("found file {}, renaming to {}".format(old, new))
+			print(("found file {}, renaming to {}".format(old, new)))
 			os.rename(old, new)
 		except  RuntimeError("could not rename file {}".format(old)):
 			pass
@@ -406,7 +406,7 @@ def makeLegit(path):
 	technically i am still meant to be at university :) """
 
 	if not os.path.exists(path):
-		print ("unable to legitify path {}".format(path))
+		print(("unable to legitify path {}".format(path)))
 		return False
 	with open(path, mode="r+") as f:
 		heinous = f.readlines()
@@ -429,7 +429,7 @@ def makeLegit(path):
 def makeBogus(path):
 	"""pretend like you're some washed-up pauper using the student version"""
 	if not os.path.exists(path):
-		print ("unable to strip path {} of material and spiritual wealth".format(path))
+		print(("unable to strip path {} of material and spiritual wealth".format(path)))
 		return False
 	with open(path, mode="r+") as f:
 		wealthy = f.readlines()
@@ -482,7 +482,7 @@ class AssetItem(object):
 		
 	def __getitem__(self, item):
 		"""alternative was writing out loads of properties"""
-		print ("asset {} getting item {}".format(self.path, item))
+		print(("asset {} getting item {}".format(self.path, item)))
 		if item in coreFiles or item in defaultFiles:
 			if not self.tree[item]:
 				self.tree.makeChildFile(item, ".txt")
@@ -585,7 +585,7 @@ def sortVersions(files=None, path=None, formats=None):
 		if isDir(path):
 			files = os.listdir(path)
 		else:
-			print("path {} is not valid directory".format(path))
+			print(("path {} is not valid directory".format(path)))
 			return {}
 	if not files: return {}
 	outDict = {}
@@ -631,7 +631,7 @@ def sortVersions(files=None, path=None, formats=None):
 			desc = s[1]
 		# possibly the most revolting thing I've ever done
 
-		if not title in outDict.keys():
+		if not title in list(outDict.keys()):
 			#outDict[title] = {}
 			outDict[title] = OrderedDict()
 		outDict[title].update({version : (desc, fileName)})
@@ -761,7 +761,7 @@ def reloadAllReferences():
 			           )
 		except Exception as e:
 			print(e)
-			print("failed to reload reference {}".format(i))
+			print(("failed to reload reference {}".format(i)))
 
 
 ### file export functions
@@ -806,13 +806,13 @@ def exportToAlembic(targetGeo=None, path=None, f=True):
 		if not cmds.listAttr(i, ud=1):
 			continue
 		for n in cmds.listAttr(i, ud=1):
-			print("custom attr {}".format(n))
+			print(("custom attr {}".format(n)))
 			attrString += "-attr {} ".format(n)
 
 	# gather all objects to list
 	itemString = ""
 	for i in targetGeo:
-		full = cmds.ls(i, long=1)[0]
+		full = cmds.ls(i, int=1)[0]
 		itemString += "-root {} ".format(full)
 
 	pathString = "-file {}".format(path)

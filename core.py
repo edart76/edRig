@@ -204,8 +204,8 @@ def isAttr(test, *args):
 def debug(var):
 	# print repr(eval(var)) + "is" + var
 	#print [i for i in globals().iteritems()]
-	xName = [k for k, v in globals().iteritems() if v is var]
-	print ("{} is {}".format(xName, var))
+	xName = [k for k, v in globals().items() if v is var]
+	print(("{} is {}".format(xName, var)))
 
 
 
@@ -374,7 +374,7 @@ def isEqual(x, y, tolerance=0.0001):
 def MObjectFrom(node):
 	# get the MObject from anything
 	if not cmds.ls(node):
-		print("node {} not found".format(node))
+		print(("node {} not found".format(node)))
 		return None
 	sel = om.MSelectionList()
 	sel.add( cmds.ls(node)[0] )

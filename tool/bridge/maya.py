@@ -2,8 +2,9 @@
 """ maya-facing sync functions """
 
 from edRig import cmds, om, pipeline, scene
-reload(pipeline)
-reload(scene)
+import importlib
+importlib.reload(pipeline)
+importlib.reload(scene)
 from edRig.node import AbsoluteNode, ECA, ObjectSet
 
 from edRig.core import debug
@@ -44,7 +45,7 @@ def syncBridgeSets():
 	topSet = getBridgeSet()
 	exportSet = ObjectSet("export_set")
 	exportSetItems = exportSet.objects()
-	print("topSetItems {}".format(exportSetItems))
+	print(("topSetItems {}".format(exportSetItems)))
 
 	path = pipeline.getScenePath()
 

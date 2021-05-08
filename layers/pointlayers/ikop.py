@@ -53,11 +53,11 @@ class IkOp(PointLayerOp):
 			               n=self.name + "_" + i + "Loc", parent=locGrp)
 			locs[i] = loc
 
-		print(self.memory["nodes"])
-		print(self.memory["nodes"])
-		print(self.memory.display())
+		print((self.memory["nodes"]))
+		print((self.memory["nodes"]))
+		print((self.memory.display()))
 
-		self.remember("markers", infoType="xform", nodes=locs.values())
+		self.remember("markers", infoType="xform", nodes=list(locs.values()))
 
 		# get upvectors from cross product of joint vectors
 		vecMidBase = plug.vecFromTo(

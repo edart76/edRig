@@ -4,7 +4,8 @@ import json, os, sys
 from PySide2 import QtWidgets, QtCore, QtGui
 from edRig import cmds, om, mel
 from edRig import meshstruct
-reload(meshstruct)
+import importlib
+importlib.reload(meshstruct)
 
 
 def getMObject(node):
@@ -47,7 +48,7 @@ class MeshStructUI(QtWidgets.QWidget):
 	def onFolderBtnPress(self):
 		name = cmds.file(q=1, sceneName=1) #type: str
 		folderPath = "/".join(name.split("/")[:-1])
-		print("folderPath", folderPath)
+		print(("folderPath", folderPath))
 		path = QtWidgets.QFileDialog.getExistingDirectory(
 			parent=self, dir=folderPath
 		)
@@ -83,7 +84,7 @@ class MeshStructUI(QtWidgets.QWidget):
 		struct = meshstruct.MeshStruct.fromShape(shape)
 
 		# set components
-		print("components", comps)
+		print(("components", comps))
 		for comp in comps:
 			data = json.load(open(comp, "r"))
 			name = comp.split("/")[-1].split(".")[0]
@@ -92,7 +93,7 @@ class MeshStructUI(QtWidgets.QWidget):
 
 			attrs = getattr(struct, attrType + "Attrs", None)
 			if not attrs:
-				print(name + "Attrs", "not found")
+				print((name + "Attrs", "not found"))
 				continue
 			attrs[attrName] = data
 

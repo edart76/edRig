@@ -21,27 +21,27 @@ def ioinfo(name="", mode="in", info=None, path=tempPath):
 	path = checkJsonSuffix(path)
 
 	if mode == "in":
-		print ""
+		print("")
 		with open("{}".format(path)) as file:
 			#goss = json.load(file)
 			#goss = json.loads(eval(file.read()))
 			goss = file.read()
 			pass
-		print "goss is type {}".format(type(goss))
+		print("goss is type {}".format(type(goss)))
 		if isinstance(goss, dict):
-			print "goss is dict"
+			print("goss is dict")
 			return goss
 
 		try:
 			goss = ast.literal_eval(str(goss))
-			print "goss is type {}".format(type(goss))
+			print("goss is type {}".format(type(goss)))
 
 			# while isinstance(goss, str):
 			# 	goss = eval(goss)
-			print "new goss is type {}".format(type(goss))
+			print("new goss is type {}".format(type(goss)))
 		except Exception as e:
-			print "ERROR in attrio reading from file {}".format(path)
-			print "error is {}".format(str(e))
+			print("ERROR in attrio reading from file {}".format(path))
+			print("error is {}".format(str(e)))
 		#print "goss is {}".format(goss)
 		return goss
 
@@ -96,8 +96,8 @@ def totalio(node, mode, infoName="", path=tempPath, apply=False, parent=""):
 		# this will set the value of top-level key "infoName" to nodeInfo
 		name = nodeInfo["name"]
 		if nodeInfo["createdBy"] != "totalio":
-			print "totalio used on {}, a non-totalio image, proceed at own risk".format(
-				node)
+			print("totalio used on {}, a non-totalio image, proceed at own risk".format(
+				node))
 		if apply:
 			if not cmds.objExists(node):
 				cmds.createNode(nodeInfo["type"], n=nodeInfo["name"])
@@ -129,17 +129,17 @@ def setNodeAttrsFromDict(node, nodeInfo):
 
 def getData(infoName, path=tempPath):
 	# look for a key in the datafile and return its value, else return False
-	print "GET DATA PATH IS {}".format(path)
+	print("GET DATA PATH IS {}".format(path))
 	goss = ioinfo(mode="in", path=path)
 
-	print "GET DATA GOSS IS {}".format(goss)
+	print("GET DATA GOSS IS {}".format(goss))
 	if not goss:
-		print "GET DATA GOT NO DATA"
+		print("GET DATA GOT NO DATA")
 		raise RuntimeError
 		#return None
 	# returns the whole dict
-	elif infoName in goss.keys():
-		print "GET DATA GOT GOSS {}".format(goss[infoName])
+	elif infoName in list(goss.keys()):
+		print("GET DATA GOT GOSS {}".format(goss[infoName]))
 		return goss[infoName]
 	else:
 		return None
@@ -148,7 +148,7 @@ def getData(infoName, path=tempPath):
 def updateData(infoName, data, path=tempPath):
 	# open the datafile and update it
 	goss = ioinfo(mode="in", path=path)
-	if infoName not in goss.keys():
+	if infoName not in list(goss.keys()):
 		goss[infoName] = {}
 	goss[infoName].update(data)
 	ioinfo(mode="out", path=path, info=goss)
@@ -161,10 +161,10 @@ def renameFile(old="", new=""):
 
 def deleteFile(path):
 	path = checkJsonSuffix(path)
-	print ""
-	print "#### D E L E T I N G ####"
-	print "target is {}".format(path)
+	print("")
+	print("#### D E L E T I N G ####")
+	print("target is {}".format(path))
 	os.remove(path)
-	print ""
+	print("")
 
 

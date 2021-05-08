@@ -16,7 +16,7 @@ def trigNodeMenu():
 	mainLayout = cmds.columnLayout(w = 100, h =100)
 	# add trig nodes as buttons
 
-	for i in reversed(plug.trigModes.keys()):
+	for i in reversed(list(plug.trigModes.keys())):
 		cmds.button(label=i, w=100, command=functools.partial(
 			plug.trigPlug, mode=i))
 	cmds.showWindow("trigMenu")

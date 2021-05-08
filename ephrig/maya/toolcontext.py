@@ -72,9 +72,9 @@ class MayaToolContext(object):
 
 	def onRelease(self):
 		print("onRelease")
-		print("button", self.button)
-		print("modifier", self.modifier)
-		print("dragPos", self.dragPos)
+		print(("button", self.button))
+		print(("modifier", self.modifier))
+		print(("dragPos", self.dragPos))
 
 	def onHold(self): # not called?
 		print("onHold")

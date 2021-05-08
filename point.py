@@ -8,7 +8,7 @@ from edRig import core, transform, curve, ECA
 def getPoint(on=None, near=None, live=True):
 	"""blanket catch-all method for getting closest point
 	on curves, meshes, surfaces"""
-	print "on is {}".format(on)
+	print("on is {}".format(on))
 	plug = None
 	if core.isPlug(on):
 		plug = getPointFromPlug(on, near)

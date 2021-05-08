@@ -91,7 +91,7 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
 				painter.drawText(0, top, self.lineNumberArea.width(),
 				                 self.fontMetrics().height(),
 				                 QtCore.Qt.AlignRight, number)
-			block = block.next()
+			block = next(block)
 			top = bottom # cats and dogs
 			bottom = top + int(self.blockBoundingRect(block).height())
 			blockNumber += 1

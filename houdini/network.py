@@ -125,7 +125,7 @@ def makeMultiFileMerge(targetMerge=None, paths=None,
 		try:
 			fileNode.parm("file").set(path)
 		except:
-			print("could not set path {}".format(path))
+			print(("could not set path {}".format(path)))
 			fileNode.destroy()
 			continue
 		fileNodes.append(fileNode)

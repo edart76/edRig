@@ -36,7 +36,7 @@ def makeBackup( rootFolder, outputFilePath):
 	"""
 
 	if os.path.exists(outputFilePath):
-		print "already exists"
+		print("already exists")
 		#os.rmdir(outputFilePath)
 		shutil.rmtree(outputFilePath)
 		#return
@@ -56,8 +56,8 @@ def makeBackup( rootFolder, outputFilePath):
 		if not saves:
 			continue
 		treeDict[x[0]] = saves
-		print
-		print "saves {}".format(saves)
+		print()
+		print("saves {}".format(saves))
 
 		fullDirPath = x[0]
 		destDirPath = fullDirPath.replace(rootFolder, outputFilePath)
@@ -72,7 +72,7 @@ def makeBackup( rootFolder, outputFilePath):
 			try:
 				shutil.copy2(fullFilePath, destFilePath)
 			except:
-				print "error encountered copying file {}".format(fullFilePath)
+				print("error encountered copying file {}".format(fullFilePath))
 				continue
 
 

@@ -409,7 +409,7 @@ class ProximityControl(Control):
 		currently only floats supported"""
 		self.knots = knots or {"knot" : 1.0}
 		self.knotCtrls = []
-		for k, v in self.knots.iteritems():
+		for k, v in self.knots.items():
 			self.knotCtrls.append(self.makeSphere(name=k))
 
 		self.outputs = [self.makeSphere() for i in range(numberOutputs)]

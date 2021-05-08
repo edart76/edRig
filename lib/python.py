@@ -1,5 +1,5 @@
 """general lib for nifty python things like decorators and debugs"""
-from __future__ import print_function
+
 import inspect,importlib, pprint, pkgutil, string, re, os, ast
 from weakref import WeakSet, WeakKeyDictionary, proxy
 from collections import OrderedDict, MutableSet
@@ -14,7 +14,7 @@ import tree
 
 from importlib import reload
 
-reload(tree)
+importlib.reload(tree)
 Tree = tree.Tree
 Signal = tree.Signal
 
@@ -57,7 +57,7 @@ class ContextDecorator(object):
 def getUserInput(prompt=None, default="eyyy"):
 	prompt = prompt or "user input"
 	try:
-		name = input(prompt)
+		name = eval(input(prompt))
 	except EOFError:
 		# nothing entered
 		print("nothing entered, defaulting")
@@ -180,9 +180,7 @@ def poolToTree(items, treeCls=Tree, key=None):
 # stand up lizard jokes : stand up chamaeleon
 
 #class StringLikeMeta(ABCMeta):
-class StringLikeMeta(type):
-
-	__metaclass__ = ABCMeta
+class StringLikeMeta(type, metaclass=ABCMeta):
 
 	"""hopefully a more efficient 'mutable string' than doing directly that -
 	works on an internal _base string, which is free to change
@@ -236,13 +234,11 @@ to work either """
 
 #class StringLike(str, object):
 #class StringLike(object, str):
-class StringLike(str): # best I can do for now
+class StringLike(str, metaclass=StringLikeMeta): # best I can do for now
 #class StringLike(object):
 	""" a proper, usable user string
 	intelligent maya nodes, maya plugs, self-formatting email addresses
 	we can do it"""
-
-	__metaclass__ = StringLikeMeta
 
 	def __init__(self, base=""):
 		self._base = str(base) # no unicode
@@ -371,7 +367,7 @@ class AbstractTree(Tree):
 		:param insertFn: function executed on each branch inserted into map"""
 		newMap = OrderedDict()
 		for i in sequence:
-			if i in self.keys():
+			if i in list(self.keys()):
 				newMap[i] = self._map.pop(i)
 			elif create:
 				#newBranch = self.__class__(name=i, val=None)
@@ -494,11 +490,11 @@ def iterSubModuleNames(package=None, path=None, fullPath=True, debug=False):
 	names = []
 	if not path:
 		loader = pkgutil.get_loader(package)
-		if not loader.is_package(loader.fullname):
+		if not loader.is_package(loader.name):
 			names.append(package.__name__)
 			return names
 
-		path = [loader.filename]
+		path = [loader.name]
 
 		if debug: print("path {}".format(path))
 
@@ -535,6 +531,10 @@ class DataRef(object):
 		return self._val
 	def __call__(self, *args, **kwargs):
 		self._val = args[0]
+	def __str__(self):
+		return str(self._val)
+	def __bool__(self):
+		return bool(self._val)
 
 
 

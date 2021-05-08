@@ -1,5 +1,5 @@
 # layers working with transforms, hierarchy, point data, joints
-from __future__ import division, print_function
+
 import edRig.node
 from edRig.core import ECN
 from edRig import core, transform, attrio, control, curve, point, ECA, plug, \
@@ -71,7 +71,7 @@ class JointCurveOp(SpookyLayerOp):
 
 	def matchOutputsToSettings(self):
 		jointTree = self.settings("joints")
-		outputs = jointTree.keys()
+		outputs = list(jointTree.keys())
 		pointPlug = self.getOutput("points")
 		specList = [ {"name" : i} for i in outputs]
 		self.log( "specList {}".format(specList))

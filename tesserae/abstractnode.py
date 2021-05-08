@@ -1,5 +1,5 @@
 
-from __future__ import print_function
+
 # container interfacing with the graph - concerned with connections
 from edRig.structures import ActionItem
 from edRig.core import shortUUID
@@ -438,7 +438,7 @@ class AbstractNode(AbstractTree):
 		extras = {"options" : options,
 		          "min" : min,
 		          "max" : max}
-		branch.extras = {k : v for k, v in extras.iteritems() if v}
+		branch.extras = {k : v for k, v in extras.items() if v}
 		branch.value = value
 
 	# sets
@@ -508,7 +508,7 @@ class AbstractNode(AbstractTree):
 		realClass = None
 		# try to load real component class from module
 
-		if "real" in fromDict.keys():
+		if "real" in list(fromDict.keys()):
 			realDict = fromDict["real"]
 			realClass = loadObjectClass(realDict["objInfo"])
 
@@ -532,7 +532,7 @@ class AbstractNode(AbstractTree):
 		newInst.inputRoot._node = newInst
 		newInst.settings = AbstractTree.fromDict(fromDict["settings"])
 
-		if "real" in fromDict.keys():
+		if "real" in list(fromDict.keys()):
 			realDict = fromDict["real"]
 			realInstance = realClass.fromDict(realDict, abstract=newInst)
 			newInst.setRealInstance(realInstance, define=False)

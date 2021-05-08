@@ -1,6 +1,6 @@
 #useful tools and larger procedures
-import core
-from core import ECN
+from . import core
+from .core import ECN
 from edRig import curve, transform, mesh, surface, attr, control, \
 	cmds, om, plug, con
 import time
@@ -88,7 +88,7 @@ def quatAxis(inSpace="", pos=[1,0,0], axis=[0,0,1],
 
 	return thetaInput, lengthInput
 	#my tools are the best
-	print "ey"
+	print("ey")
 
 # get vector from start to end
 def vecFromTo(start, end):
@@ -103,7 +103,7 @@ def vecFromTo(start, end):
 		if not core.isAttr(i):
 			#print "i is {}".format(i)
 			if core.isType(i, "transform"):
-				print "yup"
+				print("yup")
 				i = i+".translate"
 		transformList.append(i)
 
@@ -130,7 +130,7 @@ def planeIntersect(vecBase, vecEnd, plane, planeNormal=[1,0,0],
 		if not core.isAttr(i):
 			#print "i is {}".format(i)
 			if core.isType(i, "transform"):
-				print "yup"
+				print("yup")
 				i = i+".translate"
 		transformList.append(i)
 	vecBase, vecEnd, target = transformList

@@ -17,5 +17,5 @@ class PythonOp(LayerOp):
 	def execute(self):
 		text = self.getInput("code")
 		scope = (locals(), globals())
-		exec text in scope
+		exec(text, scope)
 

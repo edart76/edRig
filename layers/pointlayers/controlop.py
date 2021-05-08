@@ -36,10 +36,10 @@ class ControlOp(PointLayerOp):
 
 		self.connectInputs()
 
-		print("controlOp memoryInfo {}".format(self.control.memoryInfo()))
+		print(("controlOp memoryInfo {}".format(self.control.memoryInfo())))
 
 		self.remember(compound=self.control.memoryInfo() )
-		print("controlOp memory is {}".format(self.memory.display()))
+		print(("controlOp memory is {}".format(self.memory.display())))
 		# self.remember("offset", "xform", self.control.uiOffset)
 		# self.remember("ctrlShapes", "shape", self.control.shapes)
 

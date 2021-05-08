@@ -26,7 +26,7 @@ class Material(AbsoluteNode):
 
 	def setColour(self, colour):
 		colour = beauty.getColour(colour, normalise=True)
-		print "colour {}".format(colour)
+		print("colour {}".format(colour))
 		self.set(self.outColour, colour)
 
 	def setTransparency(self, colour):

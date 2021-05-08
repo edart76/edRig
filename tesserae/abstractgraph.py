@@ -1,6 +1,6 @@
 # manages connectivity and execution order of a dag graph
 
-from __future__ import print_function
+
 import pprint
 from weakref import WeakSet, WeakValueDictionary
 
@@ -249,19 +249,19 @@ class AbstractGraph2(AbstractTree):
 
 	@property
 	def registeredClassNames(self):
-		return [i for i in self.registeredNodes.keys()]
+		return [i for i in list(self.registeredNodes.keys())]
 
 	@property
 	def knownUIDs(self):
-		return self.nodeGraph.keys()
+		return list(self.nodeGraph.keys())
 
 	@property
 	def knownNames(self):
-		return [i["node"].nodeName for i in self.nodeGraph.values()]
+		return [i["node"].nodeName for i in list(self.nodeGraph.values())]
 
 	@property
 	def nodes(self):
-		return set(i["node"] for i in self.nodeGraph.values())
+		return set(i["node"] for i in list(self.nodeGraph.values()))
 
 	def createNode(self, nodeType, real=None):
 		"""accepts string of node class name to create"""
@@ -593,18 +593,18 @@ class AbstractGraph2(AbstractTree):
 			node = self.nodeFromUID(node)
 		elif isinstance(node, AbstractAttr):
 			node = node.node
-		elif isinstance(node, dict) and "node" in node.keys(): # node entry
+		elif isinstance(node, dict) and "node" in list(node.keys()): # node entry
 			node = node["node"]
 		# node is now absolutely definitely a node
 		if not entry:
 			return node
-		return [i for i in self.nodeGraph.values() if i["node"]==node][0]
+		return [i for i in list(self.nodeGraph.values()) if i["node"]==node][0]
 
 
 	### node sets
 	@property
 	def nodeSetNames(self):
-		return self.nodeSets.keys()
+		return list(self.nodeSets.keys())
 
 	def addNodeToSet(self, node, setName):
 		"""adds node to set - creates set if it doesn't exist
@@ -643,7 +643,7 @@ class AbstractGraph2(AbstractTree):
 	def getSetsFromNode(self, node):
 		node = self.getNode(node)
 		sets = set()
-		for i in self.nodeSets.iteritems():
+		for i in self.nodeSets.items():
 			if node in i[1]:
 				sets.add(i)
 
@@ -676,12 +676,12 @@ class AbstractGraph2(AbstractTree):
 		         "asset" : self.asset.name,
 		         "memory" : self.nodeMemory.serialise(),
 		         }
-		for uid, entry in self.nodeGraph.iteritems():
+		for uid, entry in self.nodeGraph.items():
 			graph["nodes"][uid] = entry["node"].serialise()
 			# don't worry about fedBy and feeding - these will be reconstructed
 			# from edges
 		graph["edges"] = [i.serialise() for i in self.edges]
-		graph["nodeSets"] = {k : [i.nodeName for i in v] for k, v in self.nodeSets.iteritems()}
+		graph["nodeSets"] = {k : [i.nodeName for i in v] for k, v in self.nodeSets.items()}
 		# add another section for groupings when necessary
 
 		return graph
@@ -695,9 +695,9 @@ class AbstractGraph2(AbstractTree):
 		memory = AbstractTree.fromDict(regen["memory"])
 		newGraph.addChild(memory, force=True)
 
-		if "asset" in regen.keys():
+		if "asset" in list(regen.keys()):
 			newGraph.setAsset(pipeline.assetFromName(regen["asset"]))
-		for uid, nodeInfo in regen["nodes"].iteritems():
+		for uid, nodeInfo in regen["nodes"].items():
 			newNode = AbstractNode.fromDict(nodeInfo, newGraph)
 			newNode.uid = uid
 			newGraph.addNode(newNode)

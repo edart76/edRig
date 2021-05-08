@@ -1,6 +1,6 @@
 # in framestore, they called me the curve guy
-import core as core
-from core import ECN
+from . import core as core
+from .core import ECN
 from edRig.node import AbsoluteNode, ECA
 from edRig import attr, plug, transform, cmds, om, con
 from edRig.plug import conOrSet
@@ -91,7 +91,7 @@ def getCurveDiff(base, target):
 	targetCvs = targetInfo["cvs"]
 	diffs = []
 	if len(baseCvs) != len(targetCvs):
-		print "getCurveDiff may not work with different cv numbers"
+		print("getCurveDiff may not work with different cv numbers")
 	for i in range(len(baseCvs)):
 		diffs.append([])
 		for e in range(3):
@@ -102,9 +102,9 @@ def matchCurve(base, target):
 	baseInfo = getCurveInfo(base)
 	targetInfo = getCurveInfo(target)
 	baseCvs = baseInfo["cvs"]
-	print "baseCvs is {}".format(baseCvs)
+	print("baseCvs is {}".format(baseCvs))
 	targetCvs = targetInfo["cvs"]
-	print "targetCvs is {}".format(targetCvs)
+	print("targetCvs is {}".format(targetCvs))
 	for i in range(len(baseCvs)):
 		cmds.move(targetCvs[i][0], targetCvs[i][1], targetCvs[i][2],
 			"{}.cv[{}]".format(base, i), a=True, ws=True)
@@ -255,7 +255,7 @@ def curveFromCvs(points, closed=False, deg=3, name="pointCrv",
 
 def curveFromCvPlugs(plugs, closed=False, deg=1, name="pointCrv", useApi=True):
 	""" improved rewrite of above to explicitly deal with plugs """
-	print( "cvPlugs {}".format(plugs))
+	print(( "cvPlugs {}".format(plugs)))
 	startSpans = len(plugs) - 1
 	base = createBaseCurve(name, useApi=0, nPoints=startSpans+1)
 
@@ -392,7 +392,7 @@ def pciAtU(crvPlug, u=0.1, percentage=True,
 				break
 		if not constantU:
 			purposeTest = attr.getTag(i, tagName="purpose")
-			print("pci purposeTest is {}".format(purpose))
+			print(("pci purposeTest is {}".format(purpose)))
 			if constantTest == "False" and purposeTest == purpose:
 				targetPci = i
 				break

@@ -38,7 +38,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		newAbstract = self.abstractGraph.createNode(nodeType)
 		self.abstractGraph.addNode(newAbstract)
 		self.makeTile(abstract=newAbstract, pos=pos)
-		print "end addnode"
+		print("end addnode")
 		#self.sync()
 
 	def sync(self):
@@ -52,24 +52,24 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		# print "current graph is {}".format(abstractNodes)
 
 		for i in abstractNodes:
-			if i not in self.tiles.keys():
+			if i not in list(self.tiles.keys()):
 				self.tiles[i] = self.makeTile(i)
-		for i in self.tiles.keys():
+		for i in list(self.tiles.keys()):
 			if i not in abstractNodes:
 				self.deleteTile(i)
 
-		for i in self.tiles.values():
+		for i in list(self.tiles.values()):
 			i.sync()
 
 		abstractEdges = self.abstractGraph.edges
 		for i in abstractEdges:
-			if i not in self.pipes.keys():
+			if i not in list(self.pipes.keys()):
 				self.pipes[i] = self.makePipe(edge=i)
 				self.addPipe(self.pipes[i])
-		for i in self.pipes.keys():
+		for i in list(self.pipes.keys()):
 			if i not in abstractEdges:
 				self.deletePipe(i)
-		print "finished scene sync"
+		print("finished scene sync")
 
 		self.updatePipePaths()
 
@@ -109,7 +109,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 	def updatePipePaths(self, nodes=None):
 		"""updates everything for now - if that gets laggy only redraw changed"""
-		for i in self.pipes.values():
+		for i in list(self.pipes.values()):
 			i.redrawPath()
 
 	# def clearSelectionAttr(self):
@@ -118,7 +118,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 	def deleteTile(self, tile):
 		"""ONLY VISUAL"""
 		if isinstance(tile, AbstractNode):
-			if tile not in self.tiles.keys():
+			if tile not in list(self.tiles.keys()):
 				return
 			tile = self.tiles[tile]
 		for i in tile.abstract.edges:
@@ -133,7 +133,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 	def deletePipe(self, pipe):
 		if isinstance(pipe, AbstractEdge):
-			if pipe not in self.pipes.keys():
+			if pipe not in list(self.pipes.keys()):
 				return
 			pipe = self.pipes[pipe]
 		# for k, v in self.pipes.iteritems():
@@ -151,11 +151,11 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 	def onDeleteCalled(self):
 		"""delete selected tiles and pipes"""
-		print "selection is {}".format(self.selectedItems())
+		print("selection is {}".format(self.selectedItems()))
 		# first selected nodes - in theory can just update graph and call sync
 		for i in self.selectedNodes():
 			self.abstractGraph.deleteNode(i.abstract)
-			print "abstract graph nodes are {}".format(self.abstractGraph.knownNames)
+			print("abstract graph nodes are {}".format(self.abstractGraph.knownNames))
 			self.deleteTile(i)
 		for i in self.selectedPipes():
 			self.abstractGraph.deleteEdge(i.edge)
@@ -282,12 +282,12 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 	def serialiseUi(self, graphData):
 		"""adds ui information to serialised output from graph
 		no idea where better to put this"""
-		for node, tile in self.tiles.iteritems():
+		for node, tile in self.tiles.items():
 			graphData["nodes"][node.uid]["ui"] = tile.serialise()
 
 	def regenUi(self, graphData):
 		"""reapplies saved ui information to tiles"""
-		for uid, info in graphData["nodes"].iteritems():
+		for uid, info in graphData["nodes"].items():
 			node = self.abstractGraph.nodeFromUID(uid)
 			tile = self.tiles[node]
 			tile.setPos(QtCore.QPointF(*info["ui"]["pos"]))

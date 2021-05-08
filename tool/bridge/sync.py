@@ -32,7 +32,7 @@ def syncBridgeSets():
 	""" sync bridge sets found in maya scene """
 	topSet = getBridgeSet()
 	topSetItems = topSet.objects()
-	print("topSetItems {}".format(topSetItems))
+	print(("topSetItems {}".format(topSetItems)))
 
 	path = pipeline.getScenePath()
 

@@ -87,7 +87,7 @@ class AbstractAttr(AbstractTree):
 		try:
 			return self.extras["flags"]["dataType"]
 		except Exception as e:
-			print("error getting datatype for attritem {}".format(self.name))
+			print(("error getting datatype for attritem {}".format(self.name)))
 			return "nD"
 	@dataType.setter
 	def dataType(self, val):
@@ -206,7 +206,7 @@ class AbstractAttr(AbstractTree):
 		connection"""
 		if edge in self.connections:
 			#self.log("skipping duplicate edge on attr {}".format(self.name))
-			print( "skipping duplicate edge on attr {}".format(self.name) )
+			print(( "skipping duplicate edge on attr {}".format(self.name) ))
 			return
 		if self.role == "output":
 			self.connections.append(edge)
@@ -259,7 +259,7 @@ class AbstractAttr(AbstractTree):
 		if not target:
 			warn = "attr {} not found and cannot be removed, skipping".format(name)
 
-			print warn
+			print(warn)
 			return
 		# what if target has children?
 		for i in target.getChildren():
@@ -316,17 +316,17 @@ class AbstractAttr(AbstractTree):
 		excessChildren = childSet - nameSet
 		newNames = nameSet - childSet
 
-		print( "newNames {}".format(newNames))
+		print(( "newNames {}".format(newNames)))
 
 		for i in excessChildren:
 			self.remove(i)
 
 		for i in newNames:
-			print( "newName i {}".format(i))
+			print(( "newName i {}".format(i)))
 			nameSpec = [n for n in spec if n["name"] == i][0]
 			kwargs = {}
 			# override defaults with only what is defined in spec
-			for k, v in self.childKwargs.iteritems():
+			for k, v in self.childKwargs.items():
 				kwargs[k] = nameSpec.get(k) or v
 				# safer than update
 

@@ -27,7 +27,7 @@ class PulleySystem(object):
 		#for i, val in enumerate((self.wheels)):
 			nextIndex = (i + 1) % nWheels
 			prevIndex = (i - 1 + nWheels) % nWheels
-			print("index {} next {} prev {}".format(i, nextIndex, prevIndex))
+			print(("index {} next {} prev {}".format(i, nextIndex, prevIndex)))
 			val.next = self.wheels[ nextIndex ]
 			val.prev = self.wheels[ prevIndex ]
 

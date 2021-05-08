@@ -13,7 +13,7 @@ def addToDeformer(geo, deformer):
 
 def getDeformers(geo):
 	""":returns list of deformers in history, beginning with earliest"""
-	print "ls his {} {}".format(geo, cmds.listHistory(geo))
+	print("ls his {} {}".format(geo, cmds.listHistory(geo)))
 	return [i for i in cmds.listHistory(geo) if isDeformer(i)]
 
 

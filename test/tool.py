@@ -6,7 +6,8 @@ from edRig.test import test
 from edRig import cmds, om, AbsoluteNode, ECA
 
 from edRig.tool import pulley
-reload(pulley)
+import importlib
+importlib.reload(pulley)
 
 @test
 def testPulley(nWheels=4, randRange=10.0, flat=True):

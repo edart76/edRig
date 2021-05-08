@@ -1,7 +1,7 @@
 # real node components to be attached to an abstractNode
 # currently for use only in maya, but fully extensible to anything
 
-from __future__ import print_function, with_statement
+
 from edRig.lib.python import AbstractTree
 
 from edRig.tesserae.lib import GeneralExecutionManager

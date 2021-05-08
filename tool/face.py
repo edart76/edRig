@@ -31,8 +31,8 @@ def faceMuscleSetup():
 	contractPlugs = []
 	for i in contractCurves:
 		d = AbsoluteNode(cmds.duplicate(i, n=i + "_contract")[0])
-		print d
-		print cmds.objExists(d)
+		print(d)
+		print(cmds.objExists(d))
 		cmds.parent(d, rigGrp)
 		d.addAttr(attrName="contraction", dv=0, min=0.01, max=0.99)
 		d.addAttr(attrName="minLength", dv=0.7, min=0.01, max=0.99)
@@ -53,7 +53,7 @@ def faceMuscleSetup():
 	scalp.con( loft , "create")
 	scalp.parentTo(rigGrp)
 
-	print "browPlugs {}".format(browPlugs)
+	print("browPlugs {}".format(browPlugs))
 
 	# create brow anchor curve
 	browAnchor = curve.curveFromCvPlugs(browPlugs, name="frontalisAnchor_crv",
