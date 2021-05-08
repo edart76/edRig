@@ -25,11 +25,15 @@ class StringLikeSimple(object):
 
 	def __init__(self, base="_default"):
 		self._inner = str(base)
+		# self.__class__ = str
 
 	def __repr__(self):
 		return self.__str__()
 	def __str__(self):
 		return str(self._inner)
+
+	# def __class__(self):
+	# 	return str
 
 
 def testSimple():
@@ -64,8 +68,8 @@ def testSimple():
 	# all seems to work
 
 	# # fails at the openmaya stage
-	# dMObj = getMObject(dObj)
-	# bMObj = getMObject(obj)
+	dMObj = getMObject(dObj)
+	bMObj = getMObject(obj)
 
 
 
@@ -105,6 +109,9 @@ class StringLikeFull(str):
 	@value.setter
 	def value(self, value):
 		self._inner = value
+
+	def __class__(self):
+		return str
 
 	def __str__(self):
 		print("str __str__ called")

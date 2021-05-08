@@ -14,11 +14,13 @@ of a way to present a densely-connected control scheme to the user.
 I guess it could be useful for cloth or something.
 
 for expanding influence from controls, increase depth
-not by individual nodes, but by NODE GROUPS
+not by individual nodes, but by SECTIONS
 
 eg not hand1, forearm, upperArm, clavicle etc -
 rather hand, arm, torso, etc
 
+These sections might be defined explicitly, or could be inferred by
+finding regions between "breakpoint" nodes
 
 
 

@@ -83,71 +83,6 @@ def rotOrder(order, toInt=False, toString=False):
 		string = stringList[order]
 		return string
 
-# def con(start, end, *args):
-# 	# cmds.connectAttr is so fun to type every single time
-# 	# no apologies
-# 	# this will literally save my hands
-#
-# 	# or so i thought
-# 	# i was very young and very stupid
-#
-# 	startBool = isAttr(start)
-# 	endBool = isAttr(end)
-# 	force = True
-# 	if "nf" or "noForce" in args:
-# 		force = False
-# 	next = False
-# 	startChilds = []
-# 	endChilds = []
-# 	if startBool and endBool:
-# 		startChilds = isAttr(start, "multi")
-# 		endChilds = isAttr(end, "multi")
-# 		#
-# 		# print startChilds
-# 		# print endChilds
-#
-# 		if not (startChilds or endChilds):
-# 			cmds.connectAttr(start, end, f=force, na=next)
-# 			# simples
-#
-# 		elif startChilds or endChilds:
-# 			if not startChilds:
-# 				startChilds.append(start)
-# 			if not endChilds:
-# 				endChilds.append(end)
-#
-# 			if len(startChilds) > 1 and len(endChilds) > 1:
-# 				if len(startChilds) == len(endChilds):
-# 					cmds.connectAttr(start, end, f=force, na=next)
-# 					# visually i prefer every individual connection to be shown,
-# 					# but this evaluates faster (i think)
-# 				else:
-# 					x = 0
-# 					if len(startChilds) < len(endChilds):
-# 						x = len(startChilds)
-# 					else:
-# 						x = len(endChilds)
-# 					for i in range(x):
-# 						cmds.connectAttr(startChilds[i], endChilds[i],
-# 						                 f=force, na=next)
-#
-# 			elif len(endChilds) > 1 and not len(startChilds) > 1:
-# 				# print "start is {}, startChilds is {}".format(start, startChilds)
-# 				# print "end is {}, endChilds is {}".format(end, endChilds)
-# 				for i in endChilds:
-# 					print i
-# 					cmds.connectAttr(start, i, f=force, na=next)
-#
-# 			elif len(startChilds) > 1 and not len(endChilds) > 1 and "1D" in endChilds[0]:
-# 				# aaaaaa
-# 				print "it's a 1D pma"
-# 				for i in startChilds:
-# 					cmds.connectAttr(i, "{}[{}]".format(end, nextIndex(end)))
-#
-# 	else:
-# 		#print "failed - one of {}, {} doesn't exist".format(start, end)
-# 		return False
-
 
 def nextIndex(attr, startIndex=0):
 	# testList = attr.split(".")
@@ -175,24 +110,6 @@ def edSet(attr, val):
 	# just don't feed this stuff that doesn't exist?
 
 
-# # free code and messy code are the same thing
-# def argLink(arg, target, *args):
-# 	# connects argument if it's an attribute,
-# 	# sets it if not
-# 	if isAttr(arg):
-# 		con(arg, target)
-# 	elif cmds.objExists(arg):
-# 		if args:
-# 			# so structure is (transform, attr, ".rotateY")
-# 			try:
-# 				con(arg, target)
-# 			except:
-# 				con(arg + args[0], target)
-# 	else:
-# 		edSet(target, arg)
-# 		# is it a node, do we need to get the translate?
-# 		# only set once sure it's not any kind of live information
-#
 
 def isType(node, kind):
 	if not cmds.objExists(node):
@@ -288,7 +205,7 @@ def debug(var):
 	# print repr(eval(var)) + "is" + var
 	#print [i for i in globals().iteritems()]
 	xName = [k for k, v in globals().iteritems() if v is var]
-	print "{} is {}".format(xName, var)
+	print ("{} is {}".format(xName, var))
 
 
 

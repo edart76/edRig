@@ -38,7 +38,7 @@ class EnvironmentSettings(object):
 		if self.logMethod:
 			self.logMethod(message, **kwargs)
 		else:
-			print message
+			print (message)
 
 class AttributeWrapper(object):
 	"""might be useful idk"""

@@ -2,7 +2,7 @@
 
 from edRig.tesserae.ui2 import tilesettings
 from edRig.lib.python import AbstractTree
-from edRig.tests import test
+from edRig.test import test
 
 
 testTree = AbstractTree(name="testRoot", val=100)

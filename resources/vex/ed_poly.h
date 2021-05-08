@@ -437,7 +437,8 @@ function matrix3 tangentmatrix(int geo;
 
 function vector projectsurfacespace(int geo;
     vector origin; vector dir; int face;
-    int mode;
+    int lengthmode;
+    int hookoutput;
     // output references
     int escapehedge;
     vector escapepos;
@@ -447,9 +448,13 @@ function vector projectsurfacespace(int geo;
     /* given face and vector to project,
     flatten it into surface space and project it out
 
-    mode: either squash a high-angle vector
+    lengthmode: either squash a high-angle vector
     to its direct projection,
     or restore its length in surface space
+
+    hookoutput: should escape vector "hook" over the edge of
+    the polygon to its neighbour, averaging the faces' normals -
+    guarantees vector can be projected directly to next face
 
     escapehedge: returns the prim hedge index crossed by the
     flattened vector, or -1 if vector terminates in this prim

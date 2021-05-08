@@ -4,6 +4,15 @@ it's probably not ready for use outside of helping manage tesserae"""
 import os, sys, importlib, pprint, io, tempfile
 import re
 from collections import OrderedDict
+from six import string_types
+
+
+global reload
+try:
+	reload = reload
+except:
+	from importlib import reload as rl
+	reload = rl
 
 def reloadEdRig(tesserae=True):
 	"""force reload all edRig packages
@@ -11,8 +20,10 @@ def reloadEdRig(tesserae=True):
 	protecc = {"tesserae" : ("layers", "tesserae")}
 	attacc = ("edRig", "tree")
 	import sys
-	for i in sys.modules.keys():
+	names = (sys.modules.copy().keys())
+	for i in names:
 		if any( n in i for n in attacc):
+			pass
 			del sys.modules[i]
 
 from edRig.lib.python import AbstractTree, debug
@@ -29,7 +40,7 @@ dataFolder = "F:/all projects desktop/common/edCode/edRig/data/"
 tempPath = dataFolder + "tempData"
 
 
-class FilePathTree(str):
+class FilePathTree(object):
 	"""structure for walking and searching directories
 	easily and safely
 	"""
@@ -37,7 +48,6 @@ class FilePathTree(str):
 		#print "filePathTree path is {}".format # works
 		if isinstance(path, FilePathTree):
 			path = path.path
-		super(FilePathTree, self).__init__(path)
 		if self.isPath(path):
 			self.path = path
 		else:
@@ -181,7 +191,7 @@ class FilePathTree(str):
 
 	@staticmethod
 	def isFile(path, ext=False):
-		if isinstance(path, basestring):
+		if isinstance(path, string_types):
 			if not ext:
 				path = FilePathTree.stripExt(path)
 				return any([FilePathTree.isFile(path+i, ext=True) for i in defaultExtensions])
@@ -229,7 +239,7 @@ def getTempFile(usage="temp"):
 	""""""
 
 def isFile(path, ext=False):
-	if isinstance(path, basestring):
+	if isinstance(path, string_types):
 		if not ext:
 			path = FilePathTree.stripExt(path)
 			return any([isFile(path+i, ext=True) for i in defaultExtensions])
@@ -461,10 +471,9 @@ def getMostRecentVersion(dir):
 	specified by v01, v_01 etc"""
 
 
-class AssetItem(str):
+class AssetItem(object):
 	"""pythonic wrapper around assets, passed the top folder"""
 	def __init__(self, path):
-		super(AssetItem, self).__init__(path)
 		if not isAsset(path):
 			raise RuntimeError("path {} is not an asset".format(path))
 		self.path = str(path)

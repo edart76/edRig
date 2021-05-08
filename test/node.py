@@ -3,7 +3,7 @@ sick of it breaking"""
 
 from edRig import AbsoluteNode, ECA
 from edRig.lib.python import StringLike
-from edRig.tests import test
+from edRig.test import test
 
 from maya import cmds
 

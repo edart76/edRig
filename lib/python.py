@@ -6,13 +6,19 @@ from collections import OrderedDict, MutableSet
 from functools import partial, wraps
 from abc import ABCMeta
 import types
+from six import string_types
 
 import threading
 
 import tree
+
+from importlib import reload
+
 reload(tree)
 Tree = tree.Tree
 Signal = tree.Signal
+
+from tree.lib import safeLoadModule, saveObjectClass, loadObjectClass
 
 
 class Decorator(object):
@@ -51,7 +57,7 @@ class ContextDecorator(object):
 def getUserInput(prompt=None, default="eyyy"):
 	prompt = prompt or "user input"
 	try:
-		name = raw_input(prompt)
+		name = input(prompt)
 	except EOFError:
 		# nothing entered
 		print("nothing entered, defaulting")
@@ -339,7 +345,7 @@ class AbstractTree(Tree):
 			""" convert to list and eval """
 			return rawToList(self._value)
 
-		if isinstance(self._value, (int, float, basestring)):
+		if isinstance(self._value, (int, float, string_types)):
 			return [self._value]
 		if self._value is None: return []
 		return []
@@ -380,7 +386,7 @@ class AbstractTree(Tree):
 
 
 	@staticmethod
-	def templateTree(tree):
+	def templateTree(tree, templateKey="template"):
 		""" runs over tree looking for branches named 'template'
 		L_armUpper_grp : [L_humerus]
 		 + - template : [L_, R_,]
@@ -504,68 +510,6 @@ def iterSubModuleNames(package=None, path=None, fullPath=True, debug=False):
 		names = [package.__name__ + "." + i for i in names]
 	return names
 
-def safeLoadModule(mod, logFunction=None):
-	"""takes string name of module
-	"""
-	logFunction = logFunction or print
-	module = None
-	try:
-		module = importlib.import_module(mod)
-	except ImportError() as e:
-		logFunction("ERROR in loading module {}".format(mod))
-		logFunction("error is {}".format(str(e)))
-	return module
-
-uniqueSign = "|@|" # something that will never appear in file path
-def saveObjectClass(obj, regenFunc="fromDict", relative=True, uniqueKey=True,
-					legacy=False):
-	""" saves a module and class reference for any object
-	if relative, will return path from root folder"""
-	keys = [ "NAME", "CLASS", "MODULE", "regenFn" ]
-	if uniqueKey: # not always necessary
-		for i in range(len(keys)): keys[i] = "?" + keys[i]
-
-	#path = convertRootPath(obj.__class__.__module__, toRelative=relative)
-	path = obj.__class__.__module__
-	if legacy: # old inefficient dict method
-		return {
-			keys[0]: obj.__name__,
-			keys[1]: obj.__class__.__name__,
-			keys[2]: path,
-			keys[3]: regenFunc
-		}
-	data = uniqueSign.join([obj.__class__.__name__, path])
-	return data
-
-def loadObjectClass(objData):
-	""" recreates a class object from any known module """
-	if isinstance(objData, dict):
-		for i in ("?MODULE", "?CLASS"):
-			if not objData.get(i):
-				print("objectData {} has no key {}, cannot reload class".format(objData, i))
-				return None
-		path = objData["?MODULE"]
-		className = objData["?CLASS"]
-
-	elif isinstance(objData, (tuple, list)):
-		# sequence [ class, modulepath, regenFn ]
-		path = objData[1]
-		className = objData[0]
-	elif isinstance(objData, basestring):
-		className, path = objData.split(uniqueSign)
-
-	#module = convertRootPath( path, toAbsolute=True)
-	module = path
-	loadedModule = safeLoadModule(module)
-	try:
-		newClass = getattr(loadedModule, className)
-		return newClass
-	except Exception as e:
-		print("ERROR in reloading class {} from module {}")
-		print("has it moved, or module files been shifted?")
-		print( "error is {}".format(str(e)) )
-		return None
-
 
 def matchSequence():
 	""" ?????????? """
@@ -592,73 +536,6 @@ class DataRef(object):
 	def __call__(self, *args, **kwargs):
 		self._val = args[0]
 
-
-class OrderedSet(MutableSet):
-	"""Set the remembers the order elements were added
-	code recipe 576696 """
-
-	def __init__(self, iterable=None):
-		self.__root = root = Link()         # sentinel node for doubly linked list
-		root.prev = root.next = root
-		self.__map = {}                     # key --> link
-		if iterable is not None:
-			self |= iterable
-
-	def __len__(self):
-		return len(self.__map)
-
-	def __contains__(self, key):
-		return key in self.__map
-
-	def add(self, key):
-		# Store new key in a new link at the end of the linked list
-		if key not in self.__map:
-			self.__map[key] = link = Link()
-			root = self.__root
-			last = root.prev
-			link.prev, link.next, link.key = last, root, key
-			last.next = root.prev = proxy(link)
-
-	def discard(self, key):
-		# Remove an existing item using self.__map to find the link which is
-		# then removed by updating the links in the predecessor and successors.
-		if key in self.__map:
-			link = self.__map.pop(key)
-			link.prev.next = link.next
-			link.next.prev = link.prev
-
-	def __iter__(self):
-		# Traverse the linked list in order.
-		root = self.__root
-		curr = root.next
-		while curr is not root:
-			yield curr.key
-			curr = curr.next
-
-	def __reversed__(self):
-		# Traverse the linked list in reverse order.
-		root = self.__root
-		curr = root.prev
-		while curr is not root:
-			yield curr.key
-			curr = curr.prev
-
-	def pop(self, last=True):
-		if not self:
-			raise KeyError('set is empty')
-		key = next(reversed(self)) if last else next(iter(self))
-		self.discard(key)
-		return key
-
-	def __repr__(self):
-		if not self:
-			return '%s()' % (self.__class__.__name__,)
-		return '%s(%r)' % (self.__class__.__name__, list(self))
-
-	def __eq__(self, other):
-		if isinstance(other, OrderedSet):
-			return len(self) == len(other) and list(self) == list(other)
-		return not self.isdisjoint(other)
 
 
 # test for interfaces with the tree structure

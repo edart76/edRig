@@ -5,7 +5,6 @@ import pprint
 from weakref import WeakSet, WeakValueDictionary
 
 
-from tree import Graph
 
 from edRig import ROOT_PATH, pipeline, naming
 from edRig.lib.python import Signal

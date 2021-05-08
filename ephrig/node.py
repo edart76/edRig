@@ -43,6 +43,8 @@ class EphNode(object):
 		self.graph = graph
 		# will node receive direct user input
 		self.isUserInput = False
+		# does node delimit a region
+		self.isBreakpoint = False
 		self.tf = transformNode
 
 	def __hash__(self):

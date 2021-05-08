@@ -1,12 +1,13 @@
 from __future__ import print_function
 import sys, os
 
-
+global reload
 try:
 	reload = reload
 except:
-	from importlib import reload
-	reload = reload
+	from importlib import reload as rl
+	reload = rl
+
 
 from edRig import dcc
 reload(dcc)

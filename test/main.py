@@ -1,7 +1,7 @@
-from edRig.tests import *
-from edRig.tests.node import testAbsoluteNode
-from edRig.tests.tesserae import testTesserae
-from edRig.tests import tool
+from edRig.test import *
+from edRig.test.node import testAbsoluteNode
+from edRig.test.tesserae import testTesserae
+from edRig.test import tool
 
 
 def testAll():

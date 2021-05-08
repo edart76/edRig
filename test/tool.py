@@ -2,7 +2,7 @@
 
 import random
 
-from edRig.tests import test
+from edRig.test import test
 from edRig import cmds, om, AbsoluteNode, ECA
 
 from edRig.tool import pulley
