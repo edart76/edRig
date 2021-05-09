@@ -37,11 +37,10 @@ class AbstractAttr(AbstractTree):
 		self.extras["desc"] = desc
 
 		self._connections = []
-		self.connections = [] # override with whatever the hell you want
+		# self.connections = [] # override with whatever the hell you want
 		# edges saved separately by graph, not within attr tree
 
 		self.connectionChanged = Signal()
-		#self.childrenChanged = Signal()
 
 
 		# default kwargs passed to attributes created through array behaviour

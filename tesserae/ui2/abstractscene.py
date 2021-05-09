@@ -7,7 +7,7 @@ from edRig.tesserae.abstractedge import AbstractEdge
 from edRig.tesserae.ui2.style import (VIEWER_BG_COLOR,
                                       VIEWER_GRID_COLOR,
                                       VIEWER_GRID_OVERLAY)
-
+from edRig.tesserae.constant import debugEvents
 
 class AbstractScene(QtWidgets.QGraphicsScene):
 	"""graphics scene for interfacing with abstractgraph and ui
@@ -175,7 +175,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		        if isinstance(i, Pipe)]
 
 	def mousePressEvent(self, event):
-		print("scene mousePress")
+		if debugEvents: print("scene mousePress")
 		selected_nodes = self.selectedNodes()
 		if self.activeView:
 			self.activeView.sceneMousePressEvent(event)

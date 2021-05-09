@@ -489,12 +489,13 @@ def iterSubModuleNames(package=None, path=None, fullPath=True, debug=False):
 	"""yields names of all modules in package - DOES NOT import them"""
 	names = []
 	if not path:
-		loader = pkgutil.get_loader(package)
-		if not loader.is_package(loader.name):
-			names.append(package.__name__)
-			return names
-
-		path = [loader.name]
+		# loader = pkgutil.get_loader(package)
+		# if not loader.is_package(loader.name):
+		# 	names.append(package.__name__)
+		# 	return names
+		#
+		# path = [loader.path]
+		path = package.__path__
 
 		if debug: print("path {}".format(path))
 

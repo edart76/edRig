@@ -8,6 +8,7 @@ from edRig.tesserae.ui2.tabsearch import TabSearchWidget
 from edRig.tesserae.ui2.abstracttile import AbstractTile, Knob, Pipe
 from edRig.tesserae.ui2.style import *
 from edRig.tesserae.ui2.context import ContextMenu
+from edRig.tesserae.constant import debugEvents
 from edRig.tesserae.ui2.lib import ConfirmDialogue, KeyState
 from edRig.structures import ActionItem, ActionList
 from edRig import pipeline, ROOT_PATH
@@ -67,7 +68,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		# tab search
 		self.tabSearch = TabSearchWidget(parent=self)
-		self.tabSearch.set_nodes(list(self.graph.registeredNodes.keys()))
+		self.tabSearch.setItems(list(self.graph.registeredNodes.keys()))
 
 
 		# signals
@@ -198,7 +199,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 
 	def mousePressEvent(self, event):
-		print ("view mousePress event")
+		if debugEvents: print ("view mousePress event")
 		super(AbstractView, self).mousePressEvent(event)
 
 		self.keyState.mousePressed(event)

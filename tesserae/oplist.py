@@ -89,19 +89,22 @@ class OpList(object):
 		"""find all known op (real) classes"""
 		# first import all packages where op classes might be
 		for package in self.opPackages:
-			moduleNames = iterSubModuleNames(package=package)
+			print(package)
+			moduleNames = iterSubModuleNames(
+				package=package, debug=True)
+			print(moduleNames)
 			for moduleName in moduleNames:
-				#print "moduleName {}".format(moduleName)
+				#print ("moduleName {}".format(moduleName))
 				module = safeLoadModule(moduleName)
 
 		# now load ops
 		for op in itersubclasses(Op):
 			# for now we skip parent ops - this may not be desired
-			if op.__subclasses__() and not op.forceInclude:
-				continue
+			# if op.__subclasses__() and not op.forceInclude:
+			# 	continue
 			self.ops.add(op)
 
-		#print (pprint.pformat("ops {}".format(self.ops)))
+		print (pprint.pformat("ops {}".format(self.ops)))
 		#pprint.pprint(self.ops)
 
 		# works for now, just don't sneeze near it

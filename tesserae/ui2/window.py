@@ -5,6 +5,7 @@ import maya.OpenMayaUI as omui
 #from edRig import omui
 from edRig.tesserae.ui2.abstractview import AbstractView
 from edRig.tesserae.ui2.statuspane import StatusPane
+from edRig.tesserae.constant import debugEvents
 from edRig.tesserae.ui2.lib import  MyDockingUI, dock_window, getMayaWindow
 from edRig.pipeline import TempAsset
 from edRig import ROOT_PATH
@@ -125,7 +126,7 @@ class TilePileUI(QtWidgets.QMainWindow):
 		self.graphView.keyPressEvent(event)
 
 	def mousePressEvent(self, event):
-		print("main mousePress")
+		if debugEvents: print("main mousePress")
 		super(TilePileUI, self).mousePressEvent(event)
 
 	# def focusInEvent(self, event):

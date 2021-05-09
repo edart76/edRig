@@ -1,8 +1,12 @@
 # base machinery for all visual nodes in TilePile
+
+from tree import Tree
+
 from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
 from edRig.tesserae.ui2 import tilewidgets, tilesettings
 from edRig.tesserae.ui2.style import *
+
 #import math
 
 
@@ -288,7 +292,7 @@ class AbstractTile(QtWidgets.QGraphicsItem):
 class TileEntry(QtWidgets.QGraphicsRectItem):
 	"""individual shelf for knob and associated widget
 	 """
-	def __init__(self, parent=None, attrItem=None,
+	def __init__(self, parent=None, attrItem:AbstractAttr=None,
 	             text=True, depth=0):
 		if not attrItem:
 			raise RuntimeError("no attrItem supplied!")
@@ -362,7 +366,7 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 
 	def getEntryMap(self):
 		""" returns map of {address : entry} for all child entries """
-		entryMap = {self.attr.address : self}
+		entryMap = {self.attr.stringAddress() : self}
 		for i in self.children:
 			entryMap.update(i.getEntryMap())
 		return entryMap
