@@ -20,20 +20,27 @@ class AbstractReal(type):
 		return real
 
 class RealComponent(AbstractTree):
+# class RealComponent(AbstractNode):
 	"""base real class to interface with DCCs
 	contains memory functionality, attribute lookup and execution
-	to be attached to an abstractNode"""
+	to be attached to an abstractNode
+
+	this will actually just become an abstract node instead
+	for now assume that real components cannot exist without an abstract
+	enclosure - no need for checking anywhere
+
+	"""
 
 	def __init__(self, *args, **kwargs):
 		super(RealComponent, self).__init__(*args, **kwargs)
 		self._abstract = None
 
 	@property
-	def abstract(self):
+	def abstract(self)->AbstractNode:
 		""":rtype AbstractNode"""
 		return self._abstract
 	@abstract.setter
-	def abstract(self, val):
+	def abstract(self, val:AbstractNode):
 		self._abstract = val
 
 	def executionManager(self):
@@ -41,17 +48,19 @@ class RealComponent(AbstractTree):
 
 	@property
 	def inputs(self):
-		#return {i.name : i for i in self.inputRoot.getAllChildren()}
-		if self.abstract:
-			return self.abstract.inputRoot.getAllChildren()
-		return self.inputRoot.getAllChildren()
+		# #return {i.name : i for i in self.inputRoot.getAllChildren()}
+		# if self.abstract:
+		# 	return self.abstract.inputRoot.getAllChildren()
+		# return self.inputRoot.getAllChildren()
+		return self.abstract.inputs
 
 	@property
 	def outputs(self):
 		#return {i.name : i for i in self.outputRoot.getAllChildren()}
-		if self.abstract:
-			return self.abstract.outputRoot.getAllChildren()
-		return self.outputRoot.getAllChildren()
+		# if self.abstract:
+		# 	return self.abstract.outputRoot.getAllChildren()
+		# return self.outputRoot.getAllChildren()
+		return self.abstract.outputs
 
 
 	@staticmethod
@@ -188,14 +197,6 @@ class RealAttrInterface(object):
 class MayaReal(RealComponent):
 	"""base real class for Maya"""
 
-# # class MayaStack(DeltaStack):
-# class MayaStack(object):
-# 	"""maya-specialised stack for tracking deltas in scenes"""
-#
-# class MayaDelta(StackDelta):
-# 	"""atomic maya scene delta, tracking addition, removal or
-# 	modification of nodes"""
-#
 
 class HoudiniReal(RealComponent):
 	"""one day"""

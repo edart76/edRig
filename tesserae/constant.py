@@ -1,6 +1,6 @@
 
 
-debugEvents = False
+debugEvents = True
 
 """
 mouse event flow goes:

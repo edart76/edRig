@@ -3,19 +3,20 @@
 
 import pprint
 from weakref import WeakSet, WeakValueDictionary
-
-
+from typing import List, Callable, Dict, Union
+from functools import partial
+from enum import Enum
+from importlib import reload
+from tree import Tree, Signal
 
 from edRig import ROOT_PATH, pipeline, naming
-from edRig.lib.python import Signal
+#from edRig.lib.python import Signal
 from edRig.lib.python import AbstractTree
 from edRig.pipeline import TempAsset
 from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
 from edRig.tesserae.abstractedge import AbstractEdge
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
-
-
 
 
 class ExecutionPath(object):
@@ -133,26 +134,48 @@ class AbstractGraphExecutionManager(GeneralExecutionManager):
 
 
 class AbstractGraph2(AbstractTree):
-	"""setting out the inheritance from AbstractTree"""
+	"""setting out the inheritance from AbstractTree
+	abstractNodes and child graphs are BRANCHES.
+
+	node groups might be value of branch 'groups'
+
+	scripting tesserae should be as simple as
+	>>>import tesserae
+	>>>tesserae.graph.addNode("JointCurveOp")
+	# node is added, ui updated automatically
+
+	>>>tesserae.view.arrange()
+	"""
 
 	# register of all active graphs to async lookup and interaction
 	graphRegister = AbstractTree(name="graphs")
 
 	branchesInherit = False
 
-	states = ["neutral", "executing", "complete", "failed", "approved"]
+	class State(Enum): # graph states
+		Neutral = "neutral"
+		Executing = "executing",
+		Complete = "complete",
+		Failed = "failed",
+		Approved = "approved"
 
-	def __init__(self, parent=None, name="main"):
-		""":param parent : AbstractGraph"""
+	states = State._member_names_[:]
+
+	# reserved names for graph components,
+	# not to be used for node names
+	reservedKeys = ["nodeGroups", "nodeMemory", "edges"]
+
+
+
+	def __init__(self, #parent=None,
+	             name="main"):
 		super(AbstractGraph2, self).__init__(name=name)
 
 		self.graphName = name
-		self.parent = parent
+		self.parent = None
 		# add to register
-		if parent:
-			self.graphRegister[parent.name + "." + self.graphName] = self
-		else:
-			self.graphRegister[self.graphName] = self
+		# we ignore parent on initialisation
+		self.graphRegister[self.graphName] = self
 
 		self.nodeGraph = {} # node catalogue indexed by UID
 		"""{1040 : {
@@ -187,19 +210,29 @@ class AbstractGraph2(AbstractTree):
 		self.nodeSetsChanged = Signal()
 		self.wireSignals()
 
+	# serialised special graph attributes
 	@property
 	def nodeMemory(self):
 		return self("nodeMemory")
 
-	def initGraph(self):
-		"""override for specific implementations"""
-		from edRig.tesserae.oplist import ValidList
+	@property
+	def edges(self):
+		return self["edges"] or []
+	@edges.setter
+	def edges(self, val):
+		self["edges"] = val
 
-		# register real classes that nodes can represent
-		self.realClasses = ValidList.ops
-		self.registerNodeClasses()
-		self._asset = TempAsset # maybe?
+	@property
+	def nodeSets(self):
+		return self["nodeSets"]
+	@nodeSets.setter
+	def nodeSets(self, val):
+		self["nodeSets"] = val
 
+	@property
+	def nodes(self):
+		#return set(i["node"] for i in list(self.nodeGraph.values()))
+		return [i for i in self.branches if not i.name in self.reservedKeys]
 
 	def log(self, message):
 		print(message)
@@ -259,12 +292,12 @@ class AbstractGraph2(AbstractTree):
 	def knownNames(self):
 		return [i["node"].nodeName for i in list(self.nodeGraph.values())]
 
-	@property
-	def nodes(self):
-		return set(i["node"] for i in list(self.nodeGraph.values()))
+	### region node creation and deletion
 
-	def createNode(self, nodeType, real=None):
-		"""accepts string of node class name to create"""
+	def createNode(self, nodeType="", real=None)->AbstractNode:
+		"""accepts string of node class name to create
+		does not directly add node to graph
+		:param real : optional existing real class"""
 
 		if not nodeType in self.registeredClassNames:
 			raise RuntimeError("nodeType "+nodeType+" not registered in graph")
@@ -274,16 +307,20 @@ class AbstractGraph2(AbstractTree):
 		return newAbsInstance
 
 
-	def addNode(self, node):
+	def addNode(self, node:Union[str, AbstractNode])->AbstractNode:
 		"""adds a node to the active graph"""
 		if self.state != "neutral":
 			self.log ("cannot add node during execution")
+			return
+
+		if isinstance(node, str):
+			node = self.createNode(nodeType=node)
+
 		if node.uid in self.knownUIDs:
 			print("uid {} already exists, retrying".format(node.uid))
 			node.uid += 1
 			return self.addNode(node)
 		elif node.nodeName in self.knownNames:
-			# print("name {} already exists - rename it NOW".format(node.nodeName))
 			newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
 			node.rename(newName)
 		self.nodeGraph[node.uid] = {
@@ -291,7 +328,58 @@ class AbstractGraph2(AbstractTree):
 			"feeding" : set(), # lists of AbstractNodes, use methods to process
 			"fedBy" : set(), # only single level
 		}
+
+		# add node as branch
+		self.addChild(node)
+
 		return node
+
+	def deleteNode(self, node):
+		if self.state != "neutral":
+			return False
+		entry = self.getNode(node, entry=True)
+
+		node = entry["node"]
+		for i in node.edges:
+			self.deleteEdge(i)
+
+		node.delete()
+		self.nodeGraph.pop(node.uid)
+		# goodnight sweet prince
+		del node
+
+	#endregion
+
+	### region node querying
+	def nodesFromName(self, name):
+		"""may by its nature return multiple nodes"""
+		return [i for i in self.nodes if i.nodeName == name]
+
+	def nodeFromUID(self, uid):
+		return self.nodeGraph[uid]["node"]
+
+	def getNode(self, node, entry=False):
+		"""returns an AbstractNode object from
+		an AbstractNode, node name, node UID, or AbstractAttr(?)
+		:returns AbstractNode"""
+		if isinstance(node, AbstractNode):
+			node = node
+		elif isinstance(node, str):
+			node = self.nodesFromName(node)[0] # don't do this
+		elif isinstance(node, int):
+			node = self.nodeFromUID(node)
+		elif isinstance(node, AbstractAttr):
+			node = node.node
+		elif isinstance(node, dict) and "node" in list(node.keys()): # node entry
+			node = node["node"]
+		# node is now absolutely definitely a node
+		if not entry:
+			return node
+		return [i for i in list(self.nodeGraph.values()) if i["node"]==node][0]
+
+	#endregion
+
+	### region adding edges
 
 	def addEdge(self, sourceAttr, destAttr, newEdge=None):
 		"""adds edge between two attributes
@@ -348,23 +436,11 @@ class AbstractGraph2(AbstractTree):
 			sourceEntry["feeding"].difference({destNode})
 			destEntry["fedBy"].difference({sourceNode})
 
-
-	def deleteNode(self, node):
-		if self.state != "neutral":
-			return False
-		entry = self.getNode(node, entry=True)
-
-		node = entry["node"]
-		for i in node.edges:
-			self.deleteEdge(i)
-
-		node.delete()
-		self.nodeGraph.pop(node.uid)
-		# goodnight sweet prince
-		del node
+	# endregion
 
 
-	### CONNECTIVITY AND TOPOLOGY ###
+
+	### region CONNECTIVITY AND TOPOLOGY ###
 	def getNodesInHistory(self, node, entries=True):
 		"""returns all preceding nodes"""
 		return self.getInlineNodes(node, history=True,
@@ -499,8 +575,9 @@ class AbstractGraph2(AbstractTree):
 
 		return betweenSet
 
+	#endregion
 
-	### node execution ###
+	### region node execution ###
 	def getExecPath(self, nodes):
 		"""creates execution path from unordered nodes"""
 		if nodes:
@@ -572,36 +649,10 @@ class AbstractGraph2(AbstractTree):
 		self.state = state
 		self.stateChanged()
 
-
-	### node querying
-	def nodesFromName(self, name):
-		"""may by its nature return multiple nodes"""
-		return [i for i in self.nodes if i.nodeName == name]
-
-	def nodeFromUID(self, uid):
-		return self.nodeGraph[uid]["node"]
-
-	def getNode(self, node, entry=False):
-		"""returns an AbstractNode object from
-		an AbstractNode, node name, node UID, or AbstractAttr(?)
-		:returns AbstractNode"""
-		if isinstance(node, AbstractNode):
-			node = node
-		elif isinstance(node, str):
-			node = self.nodesFromName(node)[0] # don't do this
-		elif isinstance(node, int):
-			node = self.nodeFromUID(node)
-		elif isinstance(node, AbstractAttr):
-			node = node.node
-		elif isinstance(node, dict) and "node" in list(node.keys()): # node entry
-			node = node["node"]
-		# node is now absolutely definitely a node
-		if not entry:
-			return node
-		return [i for i in list(self.nodeGraph.values()) if i["node"]==node][0]
+	#endregion
 
 
-	### node sets
+	### region node sets
 	@property
 	def nodeSetNames(self):
 		return list(self.nodeSets.keys())
@@ -646,9 +697,9 @@ class AbstractGraph2(AbstractTree):
 		for i in self.nodeSets.items():
 			if node in i[1]:
 				sets.add(i)
+	# endregion
 
-
-	### node memory
+	### region node memory
 	def getNodeMemoryCell(self, node):
 		""" retrieves or creates key in memory dict of
 		uid : {
@@ -667,7 +718,18 @@ class AbstractGraph2(AbstractTree):
 		return cell
 
 
-	# serialisation and regeneration
+	def initGraph(self):
+		"""override for specific implementations"""
+		from edRig.tesserae.oplist import ValidList
+
+		# register real classes that nodes can represent
+		self.realClasses = ValidList.ops
+		self.registerNodeClasses()
+		self._asset = TempAsset # maybe?
+
+	# endregion
+
+	# region serialisation and regeneration
 	def serialise(self):
 		"""oof ouchie"""
 		graph = {"nodes" : {},
@@ -708,6 +770,8 @@ class AbstractGraph2(AbstractTree):
 		for k, v in regen["nodeSets"]:
 			newGraph.nodeSets[k] = set([newGraph.getNode(n) for n in v])
 		return newGraph
+
+	# endregion
 
 	### initial startup when tesserae is run for the first time
 	#@staticmethod

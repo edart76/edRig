@@ -47,7 +47,7 @@ class TabSearchCompleter(QtWidgets.QCompleter):
 class AbstractSearchWidget(QtWidgets.QLineEdit):
 	"""general implementation"""
 	
-	search_submitted = QtCore.Signal(str)
+	searchSubmitted = QtCore.Signal(str)
 	
 	def __init__(self, parent=None, items=None):
 		super(AbstractSearchWidget, self).__init__(parent)
@@ -61,10 +61,7 @@ class AbstractSearchWidget(QtWidgets.QLineEdit):
 		self.setCompleter(self.completerWidg)
 		if items:
 			self.setItems(items)
-
-
-
-		self.returnPressed.connect(self._on_search_submitted)
+		self.returnPressed.connect(self.onSearchSubmitted)
 
 	def setItems(self, items=None):
 		"""set completer options"""
@@ -79,9 +76,9 @@ class AbstractSearchWidget(QtWidgets.QLineEdit):
 		print(self.nodeNames)
 
 
-	def _on_search_submitted(self):
+	def onSearchSubmitted(self):
 		text = self.text()
-		self.search_submitted.emit(text)
+		self.searchSubmitted.emit(text)
 		self.close()
 		self.parentWidget().clearFocus()
 
@@ -89,24 +86,3 @@ class AbstractSearchWidget(QtWidgets.QLineEdit):
 class TabSearchWidget(AbstractSearchWidget):
 	"""originally emitted a node type - now just pass and emit strings,
 	processed centrally"""
-
-	# def __init__(self, parent=None, nodeNames=None):
-	# 	super(TabSearchWidget, self).__init__(parent=parent, items=nodeNames)
-	#
-	# 	self.setMinimumSize(200, 22)
-	# 	self.setTextMargins(2, 0, 2, 0)
-	# 	self.hide()
-	#
-	# def showEvent(self, event):
-	# 	super(TabSearchWidget, self).showEvent(event)
-	# 	self.setSelection(0, len(self.text()))
-	# 	self.setFocus()
-	# 	print(self.nodeNames)
-	#
-	# def set_nodes(self, nodeNames=None):
-	# 	super(TabSearchWidget, self).setItems(nodeNames)
-	#
-	# def _on_search_submitted(self):
-	# 	super(TabSearchWidget, self)._on_search_submitted()
-	# 	self.close()
-	# 	self.parentWidget().clearFocus()

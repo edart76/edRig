@@ -1,6 +1,19 @@
+from __future__ import annotations
+
+from functools import partial, wraps
+from tree import Tree, Signal
+from typing import TYPE_CHECKING, Union
+
+# ugly fake imports for type hinting
+if TYPE_CHECKING:
+	from edRig.tesserae.ui2.abstractview import AbstractView
+	from edRig.tesserae import AbstractGraph
+
+
 # scene holding visual node graph
 from PySide2 import QtCore, QtWidgets, QtGui
-from edRig.tesserae.ui2.abstracttile import AbstractTile2, Knob, Pipe
+#from edRig.tesserae.ui2.abstracttile import AbstractTile, Knob, Pipe
+from edRig.tesserae.ui3.abstracttile import AbstractTile, Knob, Pipe
 #from edRig.tesserae.ui2.abstractview import AbstractView
 from edRig.tesserae.abstractnode import AbstractNode
 from edRig.tesserae.abstractedge import AbstractEdge
@@ -11,18 +24,25 @@ from edRig.tesserae.constant import debugEvents
 
 class AbstractScene(QtWidgets.QGraphicsScene):
 	"""graphics scene for interfacing with abstractgraph and ui
-	ideally we would tie this directly to the state of the graph
-	by the standard tree signals
+	hook directly into abstractgraph tree signals
 
 	"""
-	def __init__(self, parent=None, graph=None, view=None):
+	def __init__(self, parent=None, graph:AbstractGraph=None,
+	             # view:"edRig.tesserae.ui2.AbstractView"=None
+	             view:"AbstractView"=None
+	             ):
 		super(AbstractScene, self).__init__(parent)
-		#self.abstractGraph = graph # AbstractGraph object
+		#self.graph = graph # AbstractGraph object
 		self.views = [view]
 		# eventually allowing multiple codependent views of the same graph
 		self.activeView = view
+
+		# scene is tied to GRAPH, not to view
+		self._graph = graph
+
+
 		self.setSceneRect(1000, 200, 0, 0)
-		self.tiles = {} # AbstractNode : AbstractTile2
+		self.tiles = {} # AbstractNode : AbstractTile
 		self.pipes = {} # AbstractEdge : Pipe
 
 
@@ -30,26 +50,66 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		self.grid = VIEWER_GRID_OVERLAY
 		self.grid_color = VIEWER_GRID_COLOR
 
-	@property
-	def abstractGraph(self):
-		return self.views[0].graph
+		# tree signal hookups
+		self.graph.structureChanged.connect(self.onNodesChanged)
 
-	def addNode(self, nodeType, pos):
-		newAbstract = self.abstractGraph.createNode(nodeType)
-		self.abstractGraph.addNode(newAbstract)
+	@property
+	def graph(self)->AbstractGraph:
+		return self._graph
+
+	def getTile(self, node):
+		"""returns tile for the given node, name, path or uuid
+		"""
+		print("scene getTile", node)
+		node = self.graph.getNode(node)
+		result = self.tiles.get(node)
+		if not result:
+			print("no tile for node {} found".format(node))
+			return None
+		return result
+
+	### region graph signal functions
+	def onNodesChanged(self, node, parent=None,
+	                   eventType=Tree.StructureEvents.branchRemoved):
+		print("scene onNodesChanged")
+		print("node", node, "parent", parent)
+		print("tiles", self.tiles)
+		if not isinstance(node, AbstractNode):
+			print("node is not abstract, skipping")
+			return
+		# node created
+		if eventType == Tree.StructureEvents.branchAdded:
+			print("scene signal node added")
+			tile = self.makeTile(abstract=node)
+			return tile
+		elif eventType == Tree.StructureEvents.branchRemoved:
+			print("scene signal node removed")
+			tile = self.getTile(node)
+			if tile:
+				self.deleteTile(tile)
+			return tile
+
+
+	def addNode(self, nodeType:Union[str, AbstractNode], pos=None):
+		"""This should not be called with string, only temporary
+		till routing is fixed
+		"""
+		print("scene addNode", nodeType)
+		# print("nodes", self.tiles)
+		if isinstance(nodeType, str):
+			newAbstract = self.graph.createNode(nodeType)
+			self.graph.addNode(newAbstract)
+			return
+		else: newAbstract = nodeType
+		pos = pos or self.activeView.camCentre
 		self.makeTile(abstract=newAbstract, pos=pos)
-		print("end addnode")
-		#self.sync()
 
 	def sync(self):
 		"""catch-all method to keep ui in sync with graph"""
+		print("scene sync")
+		return
 
-		abstractNodes = self.abstractGraph.nodes
-		#current = {tile:tile.abstract for tile in self.tiles.keys()}
-
-		# print ""
-		# print "current scene is {}".format(self.tiles)
-		# print "current graph is {}".format(abstractNodes)
+		abstractNodes = self.graph.nodes
 
 		for i in abstractNodes:
 			if i not in list(self.tiles.keys()):
@@ -61,7 +121,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		for i in list(self.tiles.values()):
 			i.sync()
 
-		abstractEdges = self.abstractGraph.edges
+		abstractEdges = self.graph.edges
 		for i in abstractEdges:
 			if i not in list(self.pipes.keys()):
 				self.pipes[i] = self.makePipe(edge=i)
@@ -75,21 +135,28 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 		#super(AbstractScene, self).update()
 
-	def makeTile(self, abstract=None, pos=(0,0)):
-		#print "making tile for {}".format(abstract)
-		if isinstance(self.tiles.get(abstract), AbstractTile2):
+	def makeTile(self, abstract:AbstractNode=None,
+	             pos:Union[
+		             QtCore.QPoint, QtCore.QPointF, None]=None
+	             )->AbstractTile:
+		#print("scene makeTile", abstract)
+		#print("tiles", self.tiles)
+		if isinstance(self.tiles.get(abstract), AbstractTile):
 			raise RuntimeError("added abstract already in scene")
-		tile = AbstractTile2(abstractNode=abstract)
+		tile = AbstractTile(abstractNode=abstract,
+		                    widgetParent=self.parent(),
+		                    #widgetParent=self.activeView,
+		                    )
 		self.addItem(tile)
-		if isinstance(pos, QtCore.QPointF):
+		# get default position
+		if pos is None:
+			pos = pos or self.activeView.camCentre
+		if isinstance(pos, (QtCore.QPointF, QtCore.QPoint)):
 			tile.setPos(pos)
 		else:
 			tile.setPos(*pos)
-		tile.sync()
-
 		self.tiles[abstract] = tile
-
-		#print "added tile"
+		#self.addItem(tile.settingsProxy)
 		return tile
 
 	def makePipe(self, edge=None, start=None, end=None):
@@ -151,14 +218,15 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 	def onDeleteCalled(self):
 		"""delete selected tiles and pipes"""
+		print("scene onDeleteCalled")
 		print("selection is {}".format(self.selectedItems()))
 		# first selected nodes - in theory can just update graph and call sync
 		for i in self.selectedNodes():
-			self.abstractGraph.deleteNode(i.abstract)
-			print("abstract graph nodes are {}".format(self.abstractGraph.knownNames))
+			self.graph.deleteNode(i.abstract)
+			print("abstract graph nodes are {}".format(self.graph.knownNames))
 			self.deleteTile(i)
 		for i in self.selectedPipes():
-			self.abstractGraph.deleteEdge(i.edge)
+			self.graph.deleteEdge(i.edge)
 			self.deletePipe(i)
 
 		#print self.selectedNodes()
@@ -166,7 +234,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 	def selectedNodes(self):
 		nodes = []
 		for item in self.selectedItems():
-			if isinstance(item, AbstractTile2):
+			if isinstance(item, AbstractTile):
 				nodes.append(item)
 		return nodes
 
@@ -176,26 +244,17 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 	def mousePressEvent(self, event):
 		if debugEvents: print("scene mousePress")
-		selected_nodes = self.selectedNodes()
-		if self.activeView:
-			self.activeView.sceneMousePressEvent(event)
 		super(AbstractScene, self).mousePressEvent(event)
-		# keep_selection = any([
-		# 	event.button() == QtCore.Qt.MiddleButton,
-		# 	event.button() == QtCore.Qt.RightButton,
-		# 	event.modifiers() == QtCore.Qt.AltModifier
-		# ])
-		# if keep_selection:
-		# 	for node in selected_nodes:
-		# 		print "selected node is {}".format(node)
-		# 		node.setSelected(True)
-		#
-		# for pipe in self.selectedPipes():
-		# 	pipe.setSelected(True)
+		if event.isAccepted():
+			print("scene mousePress accepted, returning")
+			return True
+		selected_nodes = self.selectedNodes()
+		# if self.activeView:
+		# 	self.activeView.sceneMousePressEvent(event)
 
 	def mouseMoveEvent(self, event):
-		if self.activeView:
-			self.activeView.sceneMouseMoveEvent(event)
+		# if self.activeView:
+		# 	self.activeView.sceneMouseMoveEvent(event)
 		super(AbstractScene, self).mouseMoveEvent(event)
 
 	def mouseReleaseEvent(self, event):
@@ -207,6 +266,122 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		print("scene keyPressEvent")
 		super(AbstractScene, self).keyPressEvent(event)
 
+
+	def sceneMouseMoveEvent(self, event):
+		""" update test pipe"""
+		if self.testPipe:
+			knobs = self._items_near(event.scenePos(), Knob, 5, 5)
+			pos = event.scenePos()
+			if knobs:
+				self._live_pipe.drawPath(self._start_port, None, knobs[0].scenePos())
+
+				#self.testPipe.setEnd(knobs[0])
+			else:
+				self._live_pipe.drawPath(self._start_port, None, pos)
+				#
+				# self.testPipe.setEnd(event)
+
+		if self.keyState.LMB:
+			# nodes could be moving
+			# self.scene.updatePipePaths()
+			self.updatePipePaths()
+
+	def sceneMousePressEvent(self, event):
+		"""triggered mouse press event for the scene (takes priority over viewer).
+		 - detect selected pipe and start connection
+		 - remap Shift and Ctrl modifier
+		currently we control pipe connections from here"""
+		ctrl_modifier = event.modifiers() == QtCore.Qt.ControlModifier
+		alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
+		shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
+		if shift_modifier:
+			event.setModifiers(QtCore.Qt.ControlModifier)
+		elif ctrl_modifier:
+			event.setModifiers(QtCore.Qt.ShiftModifier)
+
+		if not alt_modifier:
+			pos = event.scenePos()
+			knobs = self._items_near(pos, Knob, 5, 5)
+			if knobs:
+				self.testPipe = self.beginTestConnection(knobs[0]) # begins test visual connection
+				#self.testPipe.setEnd(event)
+
+
+	def sceneMouseReleaseEvent(self, event):
+		""" if a valid testPipe is created, check legality against graph
+		before connecting in graph and view"""
+
+		if event.modifiers() == QtCore.Qt.ShiftModifier:
+			event.setModifiers(QtCore.Qt.ControlModifier)
+
+		pos = event.scenePos()
+		if self.testPipe:
+			# look for juicy knobs
+			knobs = self._items_near(pos, Knob, 5, 5)
+			if not knobs:
+				# destroy test pipe
+				self.end_live_connection()
+
+				return
+			# making connections in reverse is fine - reorder knobs in this case
+			if knobs[0].role == "output":
+				legality = self.checkLegalConnection(knobs[0], self.testPipe.start)
+			else:
+				legality = self.checkLegalConnection(self.testPipe.start, knobs[0])
+			print(( "legality is {}".format(legality)))
+			if legality:
+				self.makeRealConnection(#pipe=self.testPipe,
+										source=self.testPipe.start, dest=knobs[0])
+			self.end_live_connection()
+
+	#def start_live_connection(self, selected_port):
+	def beginTestConnection(self, selected_port):
+		"""	create new pipe for the connection.	"""
+		if not selected_port:
+			return
+		self._start_port = selected_port
+		self._live_pipe = Pipe()
+		self._live_pipe.activate()
+		self._live_pipe.style = PIPE_STYLE_DASHED
+		# if self._start_port.type == IN_PORT:
+		# 	self._live_pipe.input_port = self._start_port
+		# elif self._start_port == OUT_PORT:
+		# 	self._live_pipe.output_port = self._start_port
+		self._live_pipe.start = self._start_port
+
+		# self.scene.addItem(self._live_pipe)
+		self.addItem(self._live_pipe)
+		return self._live_pipe
+
+	def end_live_connection(self):
+		"""	delete live connection pipe and reset start port."""
+		if self._live_pipe:
+			self._live_pipe.delete()
+			self._live_pipe = None
+		self._start_port = None
+		self.testPipe = None
+
+	def checkLegalConnection(self, start, dest):
+		"""checks with graph if attempted connection is legal
+		ONLY WORKS ON KNOBS"""
+		startAttr = start.attr
+		endAttr = dest.attr
+		legality = self.graph.checkLegalConnection(
+			source=startAttr, dest=endAttr)
+		return legality
+
+	def makeRealConnection(self, source, dest):
+		"""eyy"""
+		self.graph.addEdge(source.attr, dest.attr)
+		self.sync()
+
+	def addPipe(self, source, dest):
+		newPipe = Pipe(start=source, end=dest)
+		#self.pipes.append(newPipe)
+		# self.scene.addItem(newPipe)
+		self.addItem(newPipe)
+
+	### region drawing
 
 	def _draw_grid(self, painter, rect, pen, grid_size):
 		# change to points
@@ -241,14 +416,15 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			pen = QtGui.QPen(color, 0.65)
 			self._draw_grid(painter, rect, pen, grid_size)
 		color = QtGui.QColor(*VIEWER_BG_COLOR)
-		#color = color.darker(130)
-		if zoom < -0.0:
-			#color = color.darker(100 - int(zoom * 110))
-			pass
+		color = color.lighter(130)
+		color = QtCore.Qt.lightGray
+		# if zoom < -0.0:
+		# 	color = color.lighter(100 - int(zoom * 110))
+		# 	pass
 		pen = QtGui.QPen(color, 0.65)
 		self._draw_grid(painter, rect, pen, grid_size * 8)
 		#painter.restore()
-
+	# endregion
 
 	@property
 	def grid(self):
@@ -288,6 +464,6 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 	def regenUi(self, graphData):
 		"""reapplies saved ui information to tiles"""
 		for uid, info in graphData["nodes"].items():
-			node = self.abstractGraph.nodeFromUID(uid)
+			node = self.graph.nodeFromUID(uid)
 			tile = self.tiles[node]
 			tile.setPos(QtCore.QPointF(*info["ui"]["pos"]))

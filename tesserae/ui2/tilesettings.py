@@ -27,7 +27,7 @@ I would need extra interface infrastructure to interact with it during
 a node's execution
 
 conceptually, if not technically, it is more elegant to me that direct interaction
-happen only between pure objects: abstractNode, abstractTree, abstractGraph etc,
+happen only between pure objects: abstractNode, abstractTree, graph etc,
 and have no 'direct' dependence on a third party
 """
 

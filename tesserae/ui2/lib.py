@@ -149,25 +149,7 @@ class KeyState(object):
 	currently requires events to update, may not be a good idea to
 	query continuously """
 
-	# class _BoolRef(object):
-	# 	""" wrapper for consistent references to bool value """
-	# 	def __init__(self, val):
-	# 		self._val = val
-	# 	def __call__(self, *args, **kwargs):
-	# 		self._val = args[0]
-	# 	def __str__(self):
-	# 		return str(self._val)
-	# 	def __bool__(self):
-	# 		return self._val.__nonzero__()
-
-
 	def __init__(self):
-		# self.LMB = self._BoolRef(False)
-		# self.RMB = self._BoolRef(False)
-		# self.MMB = self._BoolRef(False)
-		# self.alt = self._BoolRef(False)
-		# self.ctrl = self._BoolRef(False)
-		# self.shift = self._BoolRef(False)
 		self.LMB = DataRef(False)
 		self.RMB = DataRef(False)
 		self.MMB = DataRef(False)

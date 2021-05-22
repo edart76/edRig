@@ -5,7 +5,8 @@ import edRig.pipeline
 from edRig.tesserae.ui2.abstractscene import AbstractScene
 from edRig.tesserae.abstractgraph import AbstractGraph
 from edRig.tesserae.ui2.tabsearch import TabSearchWidget
-from edRig.tesserae.ui2.abstracttile import AbstractTile, Knob, Pipe
+# from edRig.tesserae.ui2.abstracttile import AbstractTile2, Knob, Pipe
+from edRig.tesserae.ui3.abstracttile import AbstractTile2, Knob, Pipe
 from edRig.tesserae.ui2.style import *
 from edRig.tesserae.ui2.context import ContextMenu
 from edRig.tesserae.constant import debugEvents
@@ -20,9 +21,35 @@ ZOOM_MAX = 2.0
 view receives events first
 """
 
+def widgets_at(pos):
+	"""Return ALL widgets at `pos`
+
+	Arguments:
+		pos (QPoint): Position at which to get widgets
+
+	"""
+
+	widgets = []
+	# widget_at = QtGui.qApp.widgetAt(pos)
+	widget_at = QtWidgets.QApplication.instance().widgetAt(pos)
+
+
+	while widget_at:
+		widgets.append(widget_at)
+
+		# Make widget invisible to further enquiries
+		widget_at.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+		widget_at = QtWidgets.QApplication.instance().widgetAt(pos)
+
+	# Restore attribute
+	for widget in widgets:
+		widget.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
+
+	return widgets
+
 
 class AbstractView(QtWidgets.QGraphicsView):
-	"""simple class to view an abstractGraph's contents"""
+	"""simple class to view an graph's contents"""
 
 	nodeDeleteCalled = QtCore.Signal()
 	nodesSelected = QtCore.Signal(list)
@@ -53,7 +80,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		self._rubber_band = QtWidgets.QRubberBand(
 			QtWidgets.QRubberBand.Rectangle, self)
-		self.pipes = []
 
 		#self.keyState.LMB = self.keyState.LMB
 		self.RMB_state = False
@@ -72,7 +98,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 
 		# signals
-		self.tabSearch.search_submitted.connect(self.searchReceived)
+		self.tabSearch.searchSubmitted.connect(self.onSearchReceived)
 		self.nodeDeleteCalled.connect( self.scene.onDeleteCalled )
 
 		self._savePath = None
@@ -139,20 +165,17 @@ class AbstractView(QtWidgets.QGraphicsView):
 		#print( info.serialise(pretty=True))
 
 	def _init_actions(self):
-		# setup tab search shortcut.
-		tab = QtWidgets.QAction('Search Nodes', self)
-		tab.setShortcut('tab')
-		tab.triggered.connect(self.tabSearchToggle)
-		self.addAction(tab)
-
-		delete = QtWidgets.QAction("Delete Selected", self)
-		delete.setShortcut("del")
-		delete.triggered.connect(self.nodeDeleteCalled)
-		self.addAction(delete)
-
-		#setup_actions(self)
-	# def setAsset(self, assetItem):
-	# 	self.currentAsset = assetItem
+		pass
+	# 	# setup tab search shortcut.
+	# 	tab = QtWidgets.QAction('Search Nodes', self)
+	# 	tab.setShortcut('tab')
+	# 	tab.triggered.connect(self.tabSearchToggle)
+	# 	self.addAction(tab)
+	#
+	# 	delete = QtWidgets.QAction("Delete Selected", self)
+	# 	delete.setShortcut("del")
+	# 	delete.triggered.connect(self.nodeDeleteCalled)
+	# 	self.addAction(delete)
 
 	def sync(self):
 		self.scene.sync()
@@ -184,15 +207,18 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 	def keyPressEvent(self, event):
 		print("view keyPressEvent")
+
 		super(AbstractView, self).keyPressEvent(event)
 
 	def contextMenuEvent(self, event):
 		"""i'm really honestly quite sick of this softlocking my program"""
 
 		super(AbstractView, self).contextMenuEvent(event)
-
+		if event.isAccepted():
+			return
 		self.buildContext()
 		self.contextMenu.exec_(event.globalPos())
+
 
 
 	""" view receives events first - calling super passes them to scene """
@@ -200,7 +226,22 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 	def mousePressEvent(self, event):
 		if debugEvents: print ("view mousePress event")
+
+		#check if any proxy widgets are under click
+		pos = event.pos()
+		found = self.items(pos)
+		proxies = [i for i in found if isinstance(
+			i, QtWidgets.QGraphicsProxyWidget)]
+		# if proxies:
+		# 	proxies[0].widget().mousePressEvent(event)
+		# 	# event.accept()
+		# 	# return True
+		# 	#return
+
 		super(AbstractView, self).mousePressEvent(event)
+		if event.isAccepted():
+			#print("view mousePress accepted, returning")
+			return True
 
 		self.keyState.mousePressed(event)
 
@@ -209,7 +250,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		shift_modifier = self.keyState.shift
 
 		items = self._items_near(self.mapToScene(event.pos()), None, 20, 20)
-		nodes = [i for i in items if isinstance(i, AbstractTile)]
+		nodes = [i for i in items if isinstance(i, AbstractTile2)]
 
 		if self.keyState.LMB:
 			# toggle extend node selection.
@@ -249,7 +290,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 				#self.node_selected.emit()
 				self.nodesSelected.emit(self.selectedNodes())
 
-		# super(AbstractView, self).mousePressEvent(event)
+		super(AbstractView, self).mousePressEvent(event)
 
 	def mouseReleaseEvent(self, event):
 		self.keyState.mouseReleased(event)
@@ -294,118 +335,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self._previous_pos = event.pos()
 		super(AbstractView, self).mouseMoveEvent(event)
 
-	def sceneMouseMoveEvent(self, event):
-		""" update test pipe"""
-		if self.testPipe:
-			knobs = self._items_near(event.scenePos(), Knob, 5, 5)
-			pos = event.scenePos()
-			if knobs:
-				self._live_pipe.drawPath(self._start_port, None, knobs[0].scenePos())
-
-				#self.testPipe.setEnd(knobs[0])
-			else:
-				self._live_pipe.drawPath(self._start_port, None, pos)
-				#
-				# self.testPipe.setEnd(event)
-
-		if self.keyState.LMB:
-			# nodes could be moving
-			self.scene.updatePipePaths()
-
-	def sceneMousePressEvent(self, event):
-		"""triggered mouse press event for the scene (takes priority over viewer).
-		 - detect selected pipe and start connection
-		 - remap Shift and Ctrl modifier
-		currently we control pipe connections from here"""
-		ctrl_modifier = event.modifiers() == QtCore.Qt.ControlModifier
-		alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
-		shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
-		if shift_modifier:
-			event.setModifiers(QtCore.Qt.ControlModifier)
-		elif ctrl_modifier:
-			event.setModifiers(QtCore.Qt.ShiftModifier)
-
-		if not alt_modifier:
-			pos = event.scenePos()
-			knobs = self._items_near(pos, Knob, 5, 5)
-			if knobs:
-				self.testPipe = self.beginTestConnection(knobs[0]) # begins test visual connection
-				#self.testPipe.setEnd(event)
-
-
-	def sceneMouseReleaseEvent(self, event):
-		""" if a valid testPipe is created, check legality against graph
-		before connecting in graph and view"""
-
-		if event.modifiers() == QtCore.Qt.ShiftModifier:
-			event.setModifiers(QtCore.Qt.ControlModifier)
-
-		pos = event.scenePos()
-		if self.testPipe:
-			# look for juicy knobs
-			knobs = self._items_near(pos, Knob, 5, 5)
-			if not knobs:
-				# destroy test pipe
-				self.end_live_connection()
-
-				return
-			# making connections in reverse is fine - reorder knobs in this case
-			if knobs[0].role == "output":
-				legality = self.checkLegalConnection(knobs[0], self.testPipe.start)
-			else:
-				legality = self.checkLegalConnection(self.testPipe.start, knobs[0])
-			print(( "legality is {}".format(legality)))
-			if legality:
-				self.makeRealConnection(#pipe=self.testPipe,
-										source=self.testPipe.start, dest=knobs[0])
-			self.end_live_connection()
-
-	#def start_live_connection(self, selected_port):
-	def beginTestConnection(self, selected_port):
-		"""	create new pipe for the connection.	"""
-		if not selected_port:
-			return
-		self._start_port = selected_port
-		self._live_pipe = Pipe()
-		self._live_pipe.activate()
-		self._live_pipe.style = PIPE_STYLE_DASHED
-		# if self._start_port.type == IN_PORT:
-		# 	self._live_pipe.input_port = self._start_port
-		# elif self._start_port == OUT_PORT:
-		# 	self._live_pipe.output_port = self._start_port
-		self._live_pipe.start = self._start_port
-
-		self.scene.addItem(self._live_pipe)
-		return self._live_pipe
-
-	def end_live_connection(self):
-		"""	delete live connection pipe and reset start port."""
-		if self._live_pipe:
-			self._live_pipe.delete()
-			self._live_pipe = None
-		self._start_port = None
-		self.testPipe = None
-
-	def checkLegalConnection(self, start, dest):
-		"""checks with graph if attempted connection is legal
-		ONLY WORKS ON KNOBS"""
-		startAttr = start.attr
-		endAttr = dest.attr
-		legality = self.graph.checkLegalConnection(
-			source=startAttr, dest=endAttr)
-		return legality
-
-	def makeRealConnection(self, source, dest):
-		"""eyy"""
-		self.graph.addEdge(source.attr, dest.attr)
-		#self.addPipe(source, dest)
-		self.sync()
-
-	def addPipe(self, source, dest):
-		newPipe = Pipe(start=source, end=dest)
-		self.pipes.append(newPipe)
-		self.scene.addItem(newPipe)
-
 	# event effects #######
 	# view
 	def _items_near(self, pos, item_type=None, width=20, height=20):
@@ -436,9 +365,11 @@ class AbstractView(QtWidgets.QGraphicsView):
 			self.tabSearch.setVisible(False)
 			#self.clearFocus()
 
-	def searchReceived(self, name):
+	def onSearchReceived(self, name):
 		pos = self.mapToScene(self._previous_pos)
-		self.scene.addNode(name, pos)
+		#self.scene.addNode(name, pos)
+		# direct graph connection?
+		self.graph.addNode(name)
 
 	# nodes
 	def selectedNodes(self):
@@ -514,6 +445,25 @@ class AbstractView(QtWidgets.QGraphicsView):
 		scroll_y = self.verticalScrollBar()
 		scroll_x.setValue(scroll_x.value() - pos_x)
 		scroll_y.setValue(scroll_y.value() - pos_y)
+
+	@property
+	def posX(self):
+		"""viewport x position"""
+		return self.horizontalScrollBar().value()
+
+	@property
+	def posY(self):
+		"""viewport Y position"""
+		return self.verticalScrollBar().value()
+
+	@property
+	def camPos(self):
+		"""return x and y of current view scroll"""
+		return QtCore.QPoint(self.posX, self.posY)
+
+	@property
+	def camCentre(self):
+		return self.mapToScene(self.viewport().rect().center())
 
 	# serialisation and regeneration
 	def serialise(self):

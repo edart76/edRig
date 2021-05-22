@@ -38,7 +38,7 @@ class StatusPane(QtWidgets.QFrame):
 
 		self.menu = ContextMenu(self, title="Select asset")
 		# signals
-		self.currentDisplay.search_submitted.connect(self.onAssetChanged)
+		self.currentDisplay.searchSubmitted.connect(self.onAssetChanged)
 
 		self.onStartup()
 
