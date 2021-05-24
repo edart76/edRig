@@ -1,4 +1,8 @@
 
+from __future__ import annotations
+from typing import List, Dict, Union, TYPE_CHECKING, Set
+
+from weakref import WeakSet, WeakValueDictionary
 
 # container interfacing with the graph - concerned with connections
 from edRig.structures import ActionItem
@@ -10,6 +14,9 @@ from edRig.tesserae.abstractattr import AbstractAttr
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.lib.python import Signal, AbstractTree, \
 	loadObjectClass
+
+if TYPE_CHECKING:
+	from edRig.tesserae.abstractgraph import AbstractGraph, AbstractEdge
 
 # temp, find a better order for this
 from edRig.tesserae.ops.memory import Memory2
@@ -98,8 +105,8 @@ class AbstractNode(AbstractTree):
 		self.wireSignals()
 
 		self.extras = {}
-		self.inEdges = set()
-		self.outEdges = set()
+		# self.inEdges = set() #type:Set["AbstractEdge"]
+		# self.outEdges = set() #type:Set["AbstractEdge"]
 
 		self.index = None # execution order index
 
@@ -127,13 +134,37 @@ class AbstractNode(AbstractTree):
 		pass
 
 	@property
-	def graph(self):
+	def graph(self)->"AbstractGraph":
 		""" i can't make tensorflow go away
 		:returns AbstractGraph"""
 		return self._graph
 	@graph.setter
-	def graph(self, val):
+	def graph(self, val:"AbstractGraph"):
 		self._graph = val
+
+	@property
+	def inEdges(self)->Set["AbstractEdge"]:
+		"""look up edges in graph"""
+		return self.graph.nodeEdges(self, outputs=False)
+
+	@property
+	def outEdges(self) -> Set["AbstractEdge"]:
+		"""look up edges in graph"""
+		return self.graph.nodeEdges(self, outputs=True)
+
+	@property
+	def feeding(self)-> Set[AbstractNode]:
+		""" all nodes in this node's direct history
+		might get a bit pricey but
+		not a problem for now """
+		return self.graph.adjacentNodes(self, future=True)
+
+	@property
+	def fedBy(self) -> Set[AbstractNode]:
+		""" all nodes in this node's direct history
+		might get a bit pricey but
+		not a problem for now """
+		return self.graph.adjacentNodes(self, history=True)
 
 	@property
 	def data(self):
@@ -206,7 +237,7 @@ class AbstractNode(AbstractTree):
 		return self.nodeName + "_" + str(self.uid)
 
 	@property
-	def edges(self):
+	def edges(self)->Set["AbstractEdge"]:
 		return self.inEdges.union(self.outEdges)
 
 	def instantiateReal(self, name=None):
@@ -243,13 +274,6 @@ class AbstractNode(AbstractTree):
 	def future(self):
 		return self.graph.getNodesInFuture(self)
 
-	@property
-	def fedBy(self):
-		return self.graph.getNode(self, entry=True)["fedBy"]
-
-	@property
-	def feeding(self):
-		return self.graph.getNode(self, entry=True)["feeding"]
 
 	# execution
 	def executionStages(self):

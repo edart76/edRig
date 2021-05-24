@@ -1,10 +1,20 @@
 # edge object in abstract graph
+from __future__ import annotations
+from typing import TYPE_CHECKING, Dict, List, Tuple
+if TYPE_CHECKING:
+	from edRig.tesserae.abstractnode import AbstractNode
+	from edRig.tesserae.abstractattr import AbstractAttr
+	from edRig.tesserae.abstractgraph import AbstractGraph
 
+from tree import Signal
 
 class AbstractEdge(object):
 	"""connects two abstractNode/abstractAttr objects"""
 
-	def __init__(self, source=None, dest=None, graph=None):
+
+	def __init__(self, source:"AbstractAttr"=None,
+	             dest:"AbstractAttr"=None,
+	             graph:"AbstractGraph"=None):
 		"""source and dest to be abstractAttrItems"""
 		self.graph = graph
 		if source:
@@ -15,21 +25,28 @@ class AbstractEdge(object):
 			self.destNode = dest.node
 		self.dataType = self.sourceAttr.dataType
 
+		# signal on edge garbage collected / destroyed
+		self.edgeDestroyed = Signal()
+
 
 	def __str__(self):
 		""" dirty solution to remove edge objects from serialisation process """
 		return str( self.serialise() )
 
+	def __del__(self):
+		"""fires edge death signal"""
+		self.edgeDestroyed()
+
 	# for anything dealing with nodes and attributes, return node first
 	@property
-	def source(self):
+	def source(self)->Tuple["AbstractNode", "AbstractAttr"]:
 		return self.sourceNode, self.sourceAttr
 
 	@property
-	def dest(self):
+	def dest(self)->Tuple["AbstractNode", "AbstractAttr"]:
 		return self.destNode, self.destAttr
 
-	def oppositeAttr(self, attr):
+	def oppositeAttr(self, attr)->"AbstractAttr":
 		""" given one attr, return its opposite,
 		or None if attr is not recognised """
 		if attr == self.sourceAttr:

@@ -80,6 +80,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		self._rubber_band = QtWidgets.QRubberBand(
 			QtWidgets.QRubberBand.Rectangle, self)
+		self.pipes = []
 
 		#self.keyState.LMB = self.keyState.LMB
 		self.RMB_state = False
@@ -89,7 +90,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.alt_state = False
 
 		self._previous_pos = 0,0
-		self.testPipe = None
+		self.testPipe = None #type: Pipe
+		self._livePipe = None #type: Pipe
 		self._prev_selection = []
 
 		# tab search
@@ -112,6 +114,20 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		self._init_actions()
 
+		#self.setFocusPolicy(QtCore.Qt.ClickFocus)
+
+	# def focusNextChild(self):
+	# 	return self
+
+	# def focusWidget(self):
+	# 	return self
+
+	# def focusOutEvent(self, event:QtGui.QFocusEvent):
+	# 	print("view focusOutEvent")
+	# 	return False
+
+
+
 
 	@property
 	def currentAsset(self):
@@ -131,6 +147,11 @@ class AbstractView(QtWidgets.QGraphicsView):
 	@filePath.setter
 	def filePath(self, val):
 		self._filePath = val
+		
+	def mapToScene(self, val):
+		if isinstance(val, QtCore.QPointF):
+			val = val.toPoint()
+		return super(AbstractView, self).mapToScene(val)
 
 	def saveToScene(self):
 		"""saves current file path"""
@@ -166,11 +187,12 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 	def _init_actions(self):
 		pass
-	# 	# setup tab search shortcut.
-	# 	tab = QtWidgets.QAction('Search Nodes', self)
-	# 	tab.setShortcut('tab')
-	# 	tab.triggered.connect(self.tabSearchToggle)
-	# 	self.addAction(tab)
+		# setup tab search shortcut.
+		# couldn't find another way to override focusing
+		tab = QtWidgets.QAction('Search Nodes', self)
+		tab.setShortcut('tab')
+		tab.triggered.connect(self.tabSearchToggle)
+		self.addAction(tab)
 	#
 	# 	delete = QtWidgets.QAction("Delete Selected", self)
 	# 	delete.setShortcut("del")
@@ -206,7 +228,14 @@ class AbstractView(QtWidgets.QGraphicsView):
 			pass
 
 	def keyPressEvent(self, event):
-		print("view keyPressEvent")
+		# print("view keyPressEvent", event.key())
+		self.keyState.keyPressed(event)
+		if event.key() in (QtCore.Qt.Key_Delete, QtCore.Qt.Key_Backspace):
+			self.nodeDeleteCalled.emit()
+			return True
+		# elif event.key() == QtCore.Qt.Key_Tab:
+		# 	self.tabSearchToggle()
+		# 	return True
 
 		super(AbstractView, self).keyPressEvent(event)
 
@@ -222,7 +251,10 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 
 	""" view receives events first - calling super passes them to scene """
-
+	
+	def dragMoveEvent(self, event:QtGui.QDragMoveEvent):
+		print("view dragMoveEvent")
+		return super(AbstractView, self).dragMoveEvent(event)
 
 	def mousePressEvent(self, event):
 		if debugEvents: print ("view mousePress event")
@@ -249,7 +281,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 		alt_modifier = self.keyState.alt
 		shift_modifier = self.keyState.shift
 
-		items = self._items_near(self.mapToScene(event.pos()), None, 20, 20)
+		items = self.itemsNear(self.mapToScene(event.pos()), None, 20, 20)
 		nodes = [i for i in items if isinstance(i, AbstractTile2)]
 
 		if self.keyState.LMB:
@@ -258,14 +290,14 @@ class AbstractView(QtWidgets.QGraphicsView):
 				for node in nodes:
 					node.selected = not node.selected
 			else:
-				for i in self.selectedNodes():
+				for i in self.selectedTiles():
 					i.setSelected(False)
 				for i in nodes:
 					i.setSelected(True)
 
 		self._origin_pos = event.pos()
 		self._previous_pos = event.pos()
-		self._prev_selection = self.selectedNodes()
+		self._prev_selection = self.selectedTiles()
 
 		# close tab search
 		if self.tabSearch.isVisible():
@@ -286,10 +318,11 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		if event.button() == QtCore.Qt.LeftButton:
 			# emit specific node selected signal
-			if self.selectedNodes():
+			if self.selectedTiles():
 				#self.node_selected.emit()
-				self.nodesSelected.emit(self.selectedNodes())
+				self.nodesSelected.emit(self.selectedTiles())
 
+		self.beginDrawPipes(event)
 		super(AbstractView, self).mousePressEvent(event)
 
 	def mouseReleaseEvent(self, event):
@@ -302,9 +335,12 @@ class AbstractView(QtWidgets.QGraphicsView):
 			self._rubber_band.hide()
 			self.scene.update(map_rect)
 
+		self.endDrawPipes(event)
 		super(AbstractView, self).mouseReleaseEvent(event)
 
 	def mouseMoveEvent(self, event):
+		"""Managing selection first,
+		then updating pipe paths"""
 
 		if self.keyState.MMB or (self.keyState.LMB and self.keyState.alt):
 			pos_x = (event.x() - self._previous_pos.x())
@@ -329,15 +365,122 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 			if self.keyState.shift and self._prev_selection:
 				for node in self._prev_selection:
-					if node not in self.selectedNodes():
+					if node not in self.selectedTiles():
 						node.selected = True
 
 		self._previous_pos = event.pos()
+
+		# update pipe drawing
+		self.updatePipePaths(event)
+
 		super(AbstractView, self).mouseMoveEvent(event)
+
+	def updatePipePaths(self, event):
+		""" update test pipe"""
+		if self.testPipe:
+			pos = self.mapToScene(event.pos())
+			# knobs = self.itemsNear(event.scenePos(), Knob, 5, 5)
+			knobs = self.itemsNear(pos, Knob, 5, 5)
+			if knobs:
+				self._livePipe.drawPath(self._startPort, None, knobs[0].scenePos())
+
+				#self.testPipe.setEnd(knobs[0])
+			else:
+				self._livePipe.drawPath(self._startPort, None, pos)
+				#
+				# self.testPipe.setEnd(event)
+
+		if self.keyState.LMB:
+			# nodes could be moving
+			self.scene.updatePipePaths()
+
+	def beginDrawPipes(self, event):
+		"""triggered mouse press event for the scene (takes priority over viewer).
+		 - detect selected pipe and start connection
+		 - remap Shift and Ctrl modifier
+		currently we control pipe connections from here"""
+		self.keyState.keyPressed(event)
+
+		if not self.keyState.alt:
+			pos = self.mapToScene(event.pos())
+			knobs = self.itemsNear(pos, Knob, 5, 5)
+			if knobs:
+				self.testPipe = self.beginTestConnection(knobs[0]) # begins test visual connection
+				#self.testPipe.setEnd(event)
+
+
+	def endDrawPipes(self, event):
+		""" if a valid testPipe is created, check legality against graph
+		before connecting in graph and view"""
+		self.keyState.keyPressed(event)
+		if isinstance(event.pos(), QtCore.QPointF):
+			pos = event.pos().toPoint()
+		else:
+			pos = event.pos()
+		pos = self.mapToScene(pos)
+		if self.testPipe:
+			# look for juicy knobs
+			knobs = self.itemsNear(pos, Knob, 5, 5)
+			if not knobs:
+				# destroy test pipe
+				self.endLiveConnection()
+
+				return
+			# making connections in reverse is fine - reorder knobs in this case
+			if knobs[0].role == "output":
+				legality = self.checkLegalConnection(knobs[0], self.testPipe.start)
+			else:
+				legality = self.checkLegalConnection(self.testPipe.start, knobs[0])
+			print(( "legality is {}".format(legality)))
+			if legality:
+				self.makeRealConnection(#pipe=self.testPipe,
+										source=self.testPipe.start, dest=knobs[0])
+			self.endLiveConnection()
+
+	def beginTestConnection(self, selected_port:Knob):
+		"""	create new pipe for the connection.	"""
+		if not selected_port:
+			return
+		self._startPort = selected_port
+		self._livePipe = Pipe()
+		self._livePipe.activate()
+		self._livePipe.style = PIPE_STYLE_DASHED
+		self._livePipe.start = self._startPort
+
+		self.scene.addItem(self._livePipe)
+		return self._livePipe
+
+	def endLiveConnection(self):
+		"""	delete live connection pipe and reset start port."""
+		if self._livePipe:
+			self._livePipe.delete()
+			self.scene.removeItem(self._livePipe)
+			self._livePipe = None
+		self._startPort = None
+		self.testPipe = None
+
+	def checkLegalConnection(self, start:Knob, dest:Knob):
+		"""checks with graph if attempted connection is legal
+		ONLY WORKS ON KNOBS"""
+		startAttr = start.tree
+		endAttr = dest.tree
+		legality = self.graph.checkLegalConnection(
+			source=startAttr, dest=endAttr)
+		return legality
+
+	def makeRealConnection(self, source, dest):
+		"""eyy"""
+		self.graph.addEdge(source.tree, dest.tree)
+		self.sync()
+
+	def addPipe(self, source, dest):
+		newPipe = Pipe(start=source, end=dest)
+		self.pipes.append(newPipe)
+		self.scene.addItem(newPipe)
 
 	# event effects #######
 	# view
-	def _items_near(self, pos, item_type=None, width=20, height=20):
+	def itemsNear(self, pos, item_type=None, width=20, height=20):
 		x, y = pos.x() - width, pos.y() - height
 		rect = QtCore.QRect(x, y, width, height)
 		items = []
@@ -372,8 +515,8 @@ class AbstractView(QtWidgets.QGraphicsView):
 		self.graph.addNode(name)
 
 	# nodes
-	def selectedNodes(self):
-		return  self.scene.selectedNodes()
+	def selectedTiles(self):
+		return  self.scene.selectedTiles()
 
 	def move_nodes(self, nodes, pos=None, offset=None):
 		group = self.scene.createItemGroup(nodes)
@@ -486,7 +629,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 			nodeActions["nodes"].append(nodeExecActions)
 
 		execActions = { "execution" : self.graph.getExecActions(
-			nodes=[i.abstract for i in self.selectedNodes()])}
+			nodes=[i.abstract for i in self.selectedTiles()])}
 		ioActions = { "io" : self.getIoActions()}
 
 		if nodeActions["nodes"]:
@@ -500,7 +643,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def getTileExecActions(self):
 		"""allows building specific tiles to specific stages"""
 		actions = {}
-		for i in self.selectedNodes():
+		for i in self.selectedTiles():
 			actions.update(i.abstract.getExecActions())
 		return actions
 
@@ -522,9 +665,9 @@ class AbstractView(QtWidgets.QGraphicsView):
 		similar actions into the same menu"""
 		actions = {}
 		tileDicts = []
-		if not self.selectedNodes():
+		if not self.selectedTiles():
 			return {}
-		for i in self.selectedNodes():
+		for i in self.selectedTiles():
 			# print "tile get actions is {}".format(i.getActions())
 			actions.update(i.getActions())
 			tileDicts.append(i.getActions())

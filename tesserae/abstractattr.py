@@ -1,5 +1,11 @@
 
 import copy
+from __future__ import annotations
+from typing import List, Set, Dict, TYPE_CHECKING, Union
+if TYPE_CHECKING:
+	from edRig.tesserae.abstractnode import AbstractNode
+	from edRig.tesserae.abstractgraph import AbstractGraph
+	from edRig.tesserae.abstractedge import AbstractEdge
 
 from edRig.lib.python import AbstractTree, Signal
 from edRig.structures import DataStyle # still around for now, not hurting anything
@@ -60,7 +66,7 @@ class AbstractAttr(AbstractTree):
 		return self.extras["desc"]
 
 	@property
-	def node(self):
+	def node(self)->"AbstractNode":
 		""" points to abstractNode which owns this attr
 		:rtype AbstractNode"""
 		if self.parent:
@@ -69,17 +75,26 @@ class AbstractAttr(AbstractTree):
 
 
 	@property
-	def abstract(self):
+	def abstract(self)->"AbstractNode":
 		return self.node
 
 	@property
-	def connections(self):
+	def graph(self)->"AbstractGraph":
+		return self.node.graph
+
+	@property
+	def connections(self)->Set[AbstractEdge]:
+		"""edge register is maintained by Graph - this
+		only indexes into it """
+		return self.graph.attrEdgeMap[self] or set()
 		#return self["connections"]
-		return self._connections
-	@connections.setter
-	def connections(self, val):
-		#self["connections"] = val
-		self._connections = val
+		#return self._connections
+
+
+	# @connections.setter
+	# def connections(self, val):
+	# 	#self["connections"] = val
+	# 	self._connections = val
 
 	@property
 	def dataType(self):
@@ -321,7 +336,7 @@ class AbstractAttr(AbstractTree):
 			self.remove(i)
 
 		for i in newNames:
-			print(( "newName i {}".format(i)))
+			#print(( "newName i {}".format(i)))
 			nameSpec = [n for n in spec if n["name"] == i][0]
 			kwargs = {}
 			# override defaults with only what is defined in spec

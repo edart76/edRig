@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from functools import partial, wraps
 from tree import Tree, Signal
-from typing import TYPE_CHECKING, Union
+from tree.ui.lib import KeyState, keyDict
+from typing import TYPE_CHECKING, Union, Dict, List
 
 # ugly fake imports for type hinting
 if TYPE_CHECKING:
@@ -42,8 +43,8 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 
 		self.setSceneRect(1000, 200, 0, 0)
-		self.tiles = {} # AbstractNode : AbstractTile
-		self.pipes = {} # AbstractEdge : Pipe
+		self.tiles = {} #type: Dict[AbstractNode, AbstractTile]
+		self.pipes = {} #type: Dict[AbstractEdge, Pipe]
 
 
 		self.background_color = VIEWER_BG_COLOR
@@ -52,6 +53,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 		# tree signal hookups
 		self.graph.structureChanged.connect(self.onNodesChanged)
+
 
 	@property
 	def graph(self)->AbstractGraph:
@@ -107,21 +109,21 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 	def sync(self):
 		"""catch-all method to keep ui in sync with graph"""
 		print("scene sync")
-		return
 
 		abstractNodes = self.graph.nodes
 
-		for i in abstractNodes:
-			if i not in list(self.tiles.keys()):
-				self.tiles[i] = self.makeTile(i)
-		for i in list(self.tiles.keys()):
-			if i not in abstractNodes:
-				self.deleteTile(i)
+		# for i in abstractNodes:
+		# 	if i not in list(self.tiles.keys()):
+		# 		self.tiles[i] = self.makeTile(i)
+		# for i in list(self.tiles.keys()):
+		# 	if i not in abstractNodes:
+		# 		self.deleteTile(i)
 
-		for i in list(self.tiles.values()):
-			i.sync()
+		# for i in list(self.tiles.values()):
+		# 	i.sync()
 
 		abstractEdges = self.graph.edges
+		print("edges", self.graph.edges)
 		for i in abstractEdges:
 			if i not in list(self.pipes.keys()):
 				self.pipes[i] = self.makePipe(edge=i)
@@ -134,6 +136,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		self.updatePipePaths()
 
 		#super(AbstractScene, self).update()
+		self.update()
 
 	def makeTile(self, abstract:AbstractNode=None,
 	             pos:Union[
@@ -159,11 +162,18 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		#self.addItem(tile.settingsProxy)
 		return tile
 
-	def makePipe(self, edge=None, start=None, end=None):
+	def makePipe(self, edge:AbstractEdge=None, start=None, end=None):
 		"""can only be done with an existing abstractEdge"""
 		if edge:
-			start = self.tiles[edge.source[0]].getKnob(edge.source[1].name)
-			end = self.tiles[edge.dest[0]].getKnob(edge.dest[1].name)
+			# start = self.tiles[edge.source[0]].getKnob(edge.source[1].name)
+			# end = self.tiles[edge.dest[0]].getKnob(edge.dest[1].name)
+			print("start", edge.source[1])
+			print("start", edge.source[1].stringAddress())
+			print("start", self.tiles[edge.source[0]].knobs)
+			start = self.tiles[edge.source[0]].knobs[
+				edge.source[1].stringAddress()]
+			end = self.tiles[edge.dest[0]].knobs[
+				edge.dest[1].stringAddress()]
 			pipe = Pipe(start=start, end=end, edge=edge)
 			start.pipes.append(pipe)
 			end.pipes.append(pipe)
@@ -174,9 +184,16 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		self.addItem(pipe)
 		pipe.drawPath(pipe.start, pipe.end)
 
-	def updatePipePaths(self, nodes=None):
+	def updatePipePaths(self, nodes:List[AbstractTile]=None):
 		"""updates everything for now - if that gets laggy only redraw changed"""
-		for i in list(self.pipes.values()):
+		if nodes:
+			edges = set()
+			for i in nodes:
+				edges.update(i.abstract.edges)
+			pipes = [self.pipes[i] for i in edges]
+		else:
+			pipes = self.pipes.values()
+		for i in pipes:
 			i.redrawPath()
 
 	# def clearSelectionAttr(self):
@@ -221,7 +238,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		print("scene onDeleteCalled")
 		print("selection is {}".format(self.selectedItems()))
 		# first selected nodes - in theory can just update graph and call sync
-		for i in self.selectedNodes():
+		for i in self.selectedTiles():
 			self.graph.deleteNode(i.abstract)
 			print("abstract graph nodes are {}".format(self.graph.knownNames))
 			self.deleteTile(i)
@@ -229,9 +246,9 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			self.graph.deleteEdge(i.edge)
 			self.deletePipe(i)
 
-		#print self.selectedNodes()
+		#print self.selectedTiles()
 
-	def selectedNodes(self):
+	def selectedTiles(self):
 		nodes = []
 		for item in self.selectedItems():
 			if isinstance(item, AbstractTile):
@@ -248,138 +265,34 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		if event.isAccepted():
 			print("scene mousePress accepted, returning")
 			return True
-		selected_nodes = self.selectedNodes()
+		selected_nodes = self.selectedTiles()
 		# if self.activeView:
-		# 	self.activeView.sceneMousePressEvent(event)
+		# 	self.activeView.beginDrawPipes(event)
 
 	def mouseMoveEvent(self, event):
+		self.updatePipePaths(self.selectedTiles())
+		# for i in self.selectedTiles():
+		# 	edges = i.abstract.edges
+		# 	for edge in edges:
+
 		# if self.activeView:
-		# 	self.activeView.sceneMouseMoveEvent(event)
+		# 	self.activeView.updatePipePaths(event)
 		super(AbstractScene, self).mouseMoveEvent(event)
 
 	def mouseReleaseEvent(self, event):
 		if self.activeView:
-			self.activeView.sceneMouseReleaseEvent(event)
+			self.activeView.endDrawPipes(event)
 		super(AbstractScene, self).mouseReleaseEvent(event)
 
 	def keyPressEvent(self, event):
-		print("scene keyPressEvent")
+		#print("scene keyPressEvent", keyDict[event.key()])
+		# for some reason focus events mess everything up
 		super(AbstractScene, self).keyPressEvent(event)
 
+	def dragMoveEvent(self, event:QtWidgets.QGraphicsSceneDragDropEvent):
+		print("scene dragMoveEvent")
+		return super().dragMoveEvent(event)
 
-	def sceneMouseMoveEvent(self, event):
-		""" update test pipe"""
-		if self.testPipe:
-			knobs = self._items_near(event.scenePos(), Knob, 5, 5)
-			pos = event.scenePos()
-			if knobs:
-				self._live_pipe.drawPath(self._start_port, None, knobs[0].scenePos())
-
-				#self.testPipe.setEnd(knobs[0])
-			else:
-				self._live_pipe.drawPath(self._start_port, None, pos)
-				#
-				# self.testPipe.setEnd(event)
-
-		if self.keyState.LMB:
-			# nodes could be moving
-			# self.scene.updatePipePaths()
-			self.updatePipePaths()
-
-	def sceneMousePressEvent(self, event):
-		"""triggered mouse press event for the scene (takes priority over viewer).
-		 - detect selected pipe and start connection
-		 - remap Shift and Ctrl modifier
-		currently we control pipe connections from here"""
-		ctrl_modifier = event.modifiers() == QtCore.Qt.ControlModifier
-		alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
-		shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
-		if shift_modifier:
-			event.setModifiers(QtCore.Qt.ControlModifier)
-		elif ctrl_modifier:
-			event.setModifiers(QtCore.Qt.ShiftModifier)
-
-		if not alt_modifier:
-			pos = event.scenePos()
-			knobs = self._items_near(pos, Knob, 5, 5)
-			if knobs:
-				self.testPipe = self.beginTestConnection(knobs[0]) # begins test visual connection
-				#self.testPipe.setEnd(event)
-
-
-	def sceneMouseReleaseEvent(self, event):
-		""" if a valid testPipe is created, check legality against graph
-		before connecting in graph and view"""
-
-		if event.modifiers() == QtCore.Qt.ShiftModifier:
-			event.setModifiers(QtCore.Qt.ControlModifier)
-
-		pos = event.scenePos()
-		if self.testPipe:
-			# look for juicy knobs
-			knobs = self._items_near(pos, Knob, 5, 5)
-			if not knobs:
-				# destroy test pipe
-				self.end_live_connection()
-
-				return
-			# making connections in reverse is fine - reorder knobs in this case
-			if knobs[0].role == "output":
-				legality = self.checkLegalConnection(knobs[0], self.testPipe.start)
-			else:
-				legality = self.checkLegalConnection(self.testPipe.start, knobs[0])
-			print(( "legality is {}".format(legality)))
-			if legality:
-				self.makeRealConnection(#pipe=self.testPipe,
-										source=self.testPipe.start, dest=knobs[0])
-			self.end_live_connection()
-
-	#def start_live_connection(self, selected_port):
-	def beginTestConnection(self, selected_port):
-		"""	create new pipe for the connection.	"""
-		if not selected_port:
-			return
-		self._start_port = selected_port
-		self._live_pipe = Pipe()
-		self._live_pipe.activate()
-		self._live_pipe.style = PIPE_STYLE_DASHED
-		# if self._start_port.type == IN_PORT:
-		# 	self._live_pipe.input_port = self._start_port
-		# elif self._start_port == OUT_PORT:
-		# 	self._live_pipe.output_port = self._start_port
-		self._live_pipe.start = self._start_port
-
-		# self.scene.addItem(self._live_pipe)
-		self.addItem(self._live_pipe)
-		return self._live_pipe
-
-	def end_live_connection(self):
-		"""	delete live connection pipe and reset start port."""
-		if self._live_pipe:
-			self._live_pipe.delete()
-			self._live_pipe = None
-		self._start_port = None
-		self.testPipe = None
-
-	def checkLegalConnection(self, start, dest):
-		"""checks with graph if attempted connection is legal
-		ONLY WORKS ON KNOBS"""
-		startAttr = start.attr
-		endAttr = dest.attr
-		legality = self.graph.checkLegalConnection(
-			source=startAttr, dest=endAttr)
-		return legality
-
-	def makeRealConnection(self, source, dest):
-		"""eyy"""
-		self.graph.addEdge(source.attr, dest.attr)
-		self.sync()
-
-	def addPipe(self, source, dest):
-		newPipe = Pipe(start=source, end=dest)
-		#self.pipes.append(newPipe)
-		# self.scene.addItem(newPipe)
-		self.addItem(newPipe)
 
 	### region drawing
 

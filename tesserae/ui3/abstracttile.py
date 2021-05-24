@@ -1,9 +1,9 @@
 # base machinery for all visual nodes in TilePile
-
+from  __future__ import annotations
 from tree import Tree, TreeWidget
 from tree.ui.widget import AllEventEater
 
-from typing import List
+from typing import List, Dict
 
 from weakref import WeakValueDictionary, WeakSet
 
@@ -97,12 +97,22 @@ class AbstractTile2(QtWidgets.QGraphicsItem):
 		self.sync()
 
 	@property
-	def entries(self):
+	def entries(self)->Dict[str, TileEntry]:
 		"""full flat composite string address map of all items"""
-		entries = WeakValueDictionary()
+		# entries = WeakValueDictionary()
+		entries = {}
 		for i in self.attrBlocks:
 			entries.update(i.getEntryMap())
 		return entries
+
+	@property
+	def knobs(self)->Dict[str, Knob]:
+		"""return flat map of address : Knob object"""
+		# knobs = WeakValueDictionary()
+		knobs = {}
+		for k, v in self.entries.items():
+			knobs[k] = v.knob
+		return knobs
 
 
 	def sync(self):
@@ -143,6 +153,10 @@ class AbstractTile2(QtWidgets.QGraphicsItem):
 
 		self.getSize()
 
+	def dragMoveEvent(self, event:QtWidgets.QGraphicsSceneDragDropEvent):
+		"""test"""
+		print("tile dragMoveEvent")
+		return super(AbstractTile2, self).dragMoveEvent(event)
 
 
 	def _onNameTagChange(self, widget, name):
@@ -707,6 +721,9 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 		pen = QtGui.QPen(QtGui.QColor(*self.color), 2)
 		pen.setStyle(PIPE_STYLES.get(self.style))
 		self.setPen(pen)
+
+	def delete(self):
+		pass
 
 	@property
 	def start(self):

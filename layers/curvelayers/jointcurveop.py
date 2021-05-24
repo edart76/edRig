@@ -74,7 +74,7 @@ class JointCurveOp(SpookyLayerOp):
 		outputs = list(jointTree.keys())
 		pointPlug = self.getOutput("points")
 		specList = [ {"name" : i} for i in outputs]
-		self.log( "specList {}".format(specList))
+		#self.log( "specList {}".format(specList))
 		#print( pointPlug.display())
 		pointPlug.matchArrayToSpec(spec=specList)
 

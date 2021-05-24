@@ -3,7 +3,8 @@
 
 import pprint
 from weakref import WeakSet, WeakValueDictionary
-from typing import List, Callable, Dict, Union
+from collections import defaultdict
+from typing import List, Callable, Dict, Union, Set, TYPE_CHECKING
 from functools import partial
 from enum import Enum
 from importlib import reload
@@ -153,11 +154,15 @@ class AbstractGraph2(AbstractTree):
 	branchesInherit = False
 
 	class State(Enum): # graph states
-		Neutral = "neutral"
-		Executing = "executing",
-		Complete = "complete",
-		Failed = "failed",
-		Approved = "approved"
+		neutral = "neutral"
+		executing = "executing",
+		complete = "complete",
+		failed = "failed",
+		approved = "approved"
+
+	class EdgeEvents(Enum):
+		added = "added"
+		removed = "removed"
 
 	states = State._member_names_[:]
 
@@ -189,7 +194,24 @@ class AbstractGraph2(AbstractTree):
 		tuples of nodes and attrs stored by edges
 				"""
 
-		self.edges = []
+		"""
+		# reorganise edges to more literal system
+		# single map of edges, everything else indexes into it if needed
+		
+		
+		"""
+
+		self.edges = set() # single source of truth on edges
+
+		def _edgeItemFactory():
+			return WeakSet()
+
+		# self.attrEdgeMap = WeakValueDictionary() #type: Dict[AbstractAttr, AbstractEdge]
+		# self.nodeEdgeMap = WeakValueDictionary() #type: Dict[AbstractNode, AbstractEdge]
+		self.attrEdgeMap = defaultdict(_edgeItemFactory) #type: Dict[AbstractAttr, Set[AbstractEdge]]
+		# self.nodeEdgeMap = defaultdict(_edgeItemFactory)
+
+		#self.edges = []
 		self.selectedNodes = []
 		self.nodeSets = {}
 
@@ -204,9 +226,11 @@ class AbstractGraph2(AbstractTree):
 
 		# signals
 		self.sync = Signal()
+		# edgesChanged signature : edge object, event type
 		self.edgesChanged = Signal()
 		self.stateChanged = Signal()
 		self.nodeChanged = Signal()
+		# nodeSetsChanged signature : node set, event type
 		self.nodeSetsChanged = Signal()
 		self.wireSignals()
 
@@ -216,10 +240,10 @@ class AbstractGraph2(AbstractTree):
 		return self("nodeMemory")
 
 	@property
-	def edges(self):
-		return self["edges"] or []
+	def edges(self)->Set[AbstractEdge]:
+		return self["edges"]
 	@edges.setter
-	def edges(self, val):
+	def edges(self, val:Set[AbstractEdge]):
 		self["edges"] = val
 
 	@property
@@ -230,7 +254,7 @@ class AbstractGraph2(AbstractTree):
 		self["nodeSets"] = val
 
 	@property
-	def nodes(self):
+	def nodes(self)->List[AbstractNode]:
 		#return set(i["node"] for i in list(self.nodeGraph.values()))
 		return [i for i in self.branches if not i.name in self.reservedKeys]
 
@@ -323,11 +347,11 @@ class AbstractGraph2(AbstractTree):
 		elif node.nodeName in self.knownNames:
 			newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
 			node.rename(newName)
-		self.nodeGraph[node.uid] = {
-			"node" : node,
-			"feeding" : set(), # lists of AbstractNodes, use methods to process
-			"fedBy" : set(), # only single level
-		}
+		# self.nodeGraph[node.uid] = {
+		# 	"node" : node,
+		# 	"feeding" : set(), # lists of AbstractNodes, use methods to process
+		# 	"fedBy" : set(), # only single level
+		# }
 
 		# add node as branch
 		self.addChild(node)
@@ -337,14 +361,14 @@ class AbstractGraph2(AbstractTree):
 	def deleteNode(self, node):
 		if self.state != "neutral":
 			return False
-		entry = self.getNode(node, entry=True)
-
-		node = entry["node"]
+		# entry = self.getNode(node, entry=True)
+		#
+		# node = entry["node"]
 		for i in node.edges:
 			self.deleteEdge(i)
 
 		node.delete()
-		self.nodeGraph.pop(node.uid)
+		# self.nodeGraph.pop(node.uid)
 		# goodnight sweet prince
 		del node
 
@@ -356,9 +380,10 @@ class AbstractGraph2(AbstractTree):
 		return [i for i in self.nodes if i.nodeName == name]
 
 	def nodeFromUID(self, uid):
-		return self.nodeGraph[uid]["node"]
+		# return self.nodeGraph[uid]["node"]
+		return [i for i in self.nodes ]
 
-	def getNode(self, node, entry=False):
+	def getNode(self, node, entry=False)->Union[AbstractNode, Dict]:
 		"""returns an AbstractNode object from
 		an AbstractNode, node name, node UID, or AbstractAttr(?)
 		:returns AbstractNode"""
@@ -380,8 +405,7 @@ class AbstractGraph2(AbstractTree):
 	#endregion
 
 	### region adding edges
-
-	def addEdge(self, sourceAttr, destAttr, newEdge=None):
+	def addEdge(self, sourceAttr:AbstractAttr, destAttr:AbstractAttr, newEdge=None):
 		"""adds edge between two attributes
 		DOES NOT CHECK LEGALITY
 		edges in future should not use bidirectional references -
@@ -389,52 +413,96 @@ class AbstractGraph2(AbstractTree):
 
 		"""
 		if self.state != "neutral":
+			print("graph state is ", self.state, "skipping")
+
 			return False
+
 		self.log( "")
 		self.log( " ADDING EDGE")
 		newEdge = newEdge or AbstractEdge(
 			source=sourceAttr, dest=destAttr, graph=self)
-		# in regeneration the edge object is already created
-		sourceAttr.addConnection(newEdge)
-		destAttr.addConnection(newEdge)
-		self.edges.append(newEdge)
 
-		sourceAttr.node.outEdges.add(newEdge)
-		destAttr.node.inEdges.add(newEdge)
-		sourceEntry = self.getNode(sourceAttr.node, entry=True)
-		destEntry = self.getNode(destAttr.node, entry=True)
+		# add edge to master edge set
+		self.edges.add(newEdge)
+		self.attrEdgeMap[sourceAttr].add(newEdge)
 
-		sourceEntry["feeding"] = sourceEntry["feeding"].union({destAttr.node})
-		destEntry["fedBy"] = destEntry["fedBy"].union({sourceAttr.node})
-		self.log("source feeding is {}".format(sourceEntry["feeding"]))
-
+		# remove existing dest connections
+		self.attrEdgeMap[destAttr].clear()
+		self.attrEdgeMap[destAttr].add(newEdge)
+		self.edgesChanged(newEdge, self.EdgeEvents.added)
 		return newEdge
 
+
+		# # in regeneration the edge object is already created
+		# # remove existing connections to destAttr for now
+		# # for edge in destAttr.connections:
+		# # 	self.edges.remove(edge)
+		# # destAttr.connections.clear()
+		# # sourceAttr.addConnection(newEdge)
+		# # destAttr.addConnection(newEdge)
+		# # self.edges.append(newEdge)
+		#
+		# sourceAttr.node.outEdges.add(newEdge)
+		# destAttr.node.inEdges.add(newEdge)
+		# sourceEntry = self.getNode(sourceAttr.node, entry=True)
+		# destEntry = self.getNode(destAttr.node, entry=True)
+		#
+		# sourceEntry["feeding"] = sourceEntry["feeding"].union({destAttr.node})
+		# destEntry["fedBy"] = destEntry["fedBy"].union({sourceAttr.node})
+		# self.log("source feeding is {}".format(sourceEntry["feeding"]))
+		#
+		# return newEdge
+
 	def deleteEdge(self, edge):
-		if self.state != "neutral":
+		if self.state != self.State.neutral:
 			return False
-		sourceNode = edge.source[0]
-		sourceEntry = self.getNode(sourceNode, True)
-		self.log("feeding before delete is {}".format(sourceEntry["feeding"]) )
-		if edge in self.edges:
-			self.edges.remove(edge)
+		# in theory this should be it
+		self.edges.remove(edge)
 
-		sourceNode = edge.source[0]
-		destNode = edge.dest[0]
-		sourceNode.outEdges.remove(edge)
-		destNode.inEdges.remove(edge)
-		# update entries how?
-		# WITH TOPOLOGY OF COURSE
+		return
 
-		# two nodes are disconnected if the whole sets of their edges are disjoint
+		# sourceNode = edge.source[0]
+		# sourceEntry = self.getNode(sourceNode, True)
+		# self.log("feeding before delete is {}".format(sourceEntry["feeding"]) )
+		# if edge in self.edges:
+		# 	self.edges.remove(edge)
+		#
+		# sourceNode = edge.source[0]
+		# destNode = edge.dest[0]
+		# sourceNode.outEdges.remove(edge)
+		# destNode.inEdges.remove(edge)
+		# # update entries how?
+		# # WITH TOPOLOGY OF COURSE
+		# # two nodes are disconnected if the whole sets of their edges are disjoint
+		# if sourceNode.edges.isdisjoint(destNode.edges):
+		# 	self.log("sets are disjoint")
+		# 	sourceEntry = self.getNode(sourceNode, True)
+		# 	destEntry = self.getNode(destNode, True)
+		# 	#print "feeding is {}".format(sourceEntry["feeding"])
+		# 	sourceEntry["feeding"].difference({destNode})
+		# 	destEntry["fedBy"].difference({sourceNode})
 
-		if sourceNode.edges.isdisjoint(destNode.edges):
-			self.log("sets are disjoint")
-			sourceEntry = self.getNode(sourceNode, True)
-			destEntry = self.getNode(destNode, True)
-			#print "feeding is {}".format(sourceEntry["feeding"])
-			sourceEntry["feeding"].difference({destNode})
-			destEntry["fedBy"].difference({sourceNode})
+
+	def nodeEdges(self, node:AbstractNode, outputs=False)->Set[AbstractEdge]:
+		"""return either edges for either inputs or outputs
+		could have done this directly on node object
+		but seems easier to follow this way """
+		edges = WeakSet()
+		tree = node.outputRoot if outputs else node.inputRoot
+		for i in tree.allBranches():
+			edges.update(self.attrEdgeMap[i])
+		return edges
+
+	def adjacentNodes(self, node, future=True, history=True)->Set[AbstractNode]:
+		"""return direct neighbours of node"""
+		nodes = WeakSet()
+		if future:
+			for i in self.nodeEdges(node, outputs=True):
+				nodes.add(i.destAttr.node)
+		if history:
+			for i in self.nodeEdges(node, outputs=False):
+				nodes.add(i.sourceAttr.node)
+		return nodes
 
 	# endregion
 
@@ -451,47 +519,38 @@ class AbstractGraph2(AbstractTree):
 		return self.getInlineNodes(node, history=False,
 		                           future=True, entries=entries)
 
-	def getCombinedHistory(self, nodes, entries=False):
+	def getCombinedHistory(self, nodes):
 		"""returns common history between a set of nodes"""
 		history = set()
 		for i in nodes:
-			history = history.union(i.history)
-		if not entries:
-			return history
-		""" real talk: I don't know what entries flag does"""
+			# history = history.union(i.history)
+			history.update(self.getNodesInHistory(i))
+		return history
 
 	def getCombinedFuture(self, nodes, entries=False):
 		"""returns common future between a set of nodes"""
 		future = set()
 		for i in nodes:
-			future = future.union(i.future)
+			future.update(self.getNodesInFuture(i))
 		if not entries:
 			return future
 
-	def getInlineNodes(self, node, history=True, future=True, entries=False):
+	def getInlineNodes(self, node, history=True, future=True)->Set[AbstractNode]:
 		"""gets all nodes directly in the path of selected node
 		forwards and backwards is handy way of working out islands"""
 		inline = set()
-		node = self.getNode(node, entry=True)
-		for n, k, in zip([history, future], ["fedBy", "feeding"]):
-			if n:
-				found = set()
-				for i in node[k]:
-					found.add(i) #?
-					newNodes = self.getInlineNodes(i, history, future, entries)
-					found = found.union(newNodes)
-				inline = inline.union(found)
-		if entries:
-			return inline
-		else:
-			return [i["node"] for i in inline]
+		for n in self.adjacentNodes(node, history=history, future=future):
+			inline.add(n)
+			inline.update(self.getInlineNodes(node, history=history, future=future))
+		return inline
 
 	def getContainedEdges(self, nodes=None):
 		"""get edges entirely contained in a set of nodes"""
 		nodes = self.getNodesBetween(nodes, include=False)
 		edges = set()
 		for i in nodes:
-			nodeEdges = i.edges
+			nodeEdges = self.nodeEdges(i, outputs=True).union(
+				self.nodeEdges(i, outputs=False))
 			edges = edges.union(nodeEdges)
 			# imperfect - contained nodes may have escaping connections
 		return edges
@@ -501,7 +560,8 @@ class AbstractGraph2(AbstractTree):
 		do not trust them"""
 		seeds = set()
 		for i in self.nodes:
-			if not i.history:
+			# if not i.history:
+			if not self.nodeEdges(i, outputs=False):
 				seeds.add(i)
 		return seeds
 
@@ -520,7 +580,7 @@ class AbstractGraph2(AbstractTree):
 		"""checks that a connection wouldn't undermine DAG-ness"""
 		if self.state != "neutral": # graph is executing
 			return False
-		if source.node.uid == dest.node.uid:
+		if source.node.uid == dest.node.uid: # same node
 			self.log("put some effort into it for god's sake")
 			return False
 		elif source in source.node.inputs or dest in dest.node.outputs:
