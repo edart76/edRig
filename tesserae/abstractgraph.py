@@ -182,7 +182,7 @@ class AbstractGraph2(AbstractTree):
 		# we ignore parent on initialisation
 		self.graphRegister[self.graphName] = self
 
-		self.nodeGraph = {} # node catalogue indexed by UID
+		# self.nodeGraph = {} # node catalogue indexed by UID
 		"""{1040 : {
 				"node" : AbstractNode,
 				"feeding" : set() # list of nodes fed by outputs
@@ -219,7 +219,7 @@ class AbstractGraph2(AbstractTree):
 
 		self.initGraph()
 
-		self.state = "neutral"
+		self.state = self.State.neutral
 		"""used to check if execution is in progress; prevents any change to topology
 		if it is. states are neutral, executing, (routing, for massive graphs?)"""
 
@@ -255,8 +255,14 @@ class AbstractGraph2(AbstractTree):
 
 	@property
 	def nodes(self)->List[AbstractNode]:
+		"""excludes child graphs"""
 		#return set(i["node"] for i in list(self.nodeGraph.values()))
-		return [i for i in self.branches if not i.name in self.reservedKeys]
+		return [i for i in self.branches if isinstance(i, AbstractNode)]
+
+	@property
+	def nodeMap(self)->Dict[str, AbstractNode]:
+		"""returns map of {node name : node }"""
+		return {i.name : i for i in self.branches if isinstance(i, AbstractNode)}
 
 	def log(self, message):
 		print(message)
@@ -265,8 +271,13 @@ class AbstractGraph2(AbstractTree):
 		self._asset = assetItem
 
 	def clearSession(self):
-		self.nodeGraph.clear()
-		self.edges = []
+		#self.nodeGraph.clear()
+		self.edges.clear()
+		for i in self.branches:
+			if i.name in self.reservedKeys:
+				continue
+			# clear all nodes
+			self.remove(i.name)
 
 	# signals
 	def onNodeAttrsChanged(self, node):
@@ -310,11 +321,12 @@ class AbstractGraph2(AbstractTree):
 
 	@property
 	def knownUIDs(self):
-		return list(self.nodeGraph.keys())
+		return [i.uid for i in self.nodes]
 
 	@property
 	def knownNames(self):
-		return [i["node"].nodeName for i in list(self.nodeGraph.values())]
+		# return [i["node"].nodeName for i in list(self.nodeGraph.values())]
+		return [i.name for i in self.nodes]
 
 	### region node creation and deletion
 
@@ -331,27 +343,25 @@ class AbstractGraph2(AbstractTree):
 		return newAbsInstance
 
 
-	def addNode(self, node:Union[str, AbstractNode])->AbstractNode:
+	def addNode(self, node:Union[str, AbstractNode], name:str="")->AbstractNode:
 		"""adds a node to the active graph"""
-		if self.state != "neutral":
+		if self.state != self.State.neutral:
 			self.log ("cannot add node during execution")
 			return
 
 		if isinstance(node, str):
 			node = self.createNode(nodeType=node)
 
-		if node.uid in self.knownUIDs:
-			print("uid {} already exists, retrying".format(node.uid))
-			node.uid += 1
-			return self.addNode(node)
-		elif node.nodeName in self.knownNames:
-			newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
-			node.rename(newName)
-		# self.nodeGraph[node.uid] = {
-		# 	"node" : node,
-		# 	"feeding" : set(), # lists of AbstractNodes, use methods to process
-		# 	"fedBy" : set(), # only single level
-		# }
+		# if node.uid in self.knownUIDs:
+		# 	print("uid {} already exists, retrying".format(node.uid))
+		# 	node.uid += 1
+		# 	return self.addNode(node)
+		# elif node.nodeName in self.knownNames:
+		# 	newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
+		# 	node.rename(newName)
+
+		if name:
+			node.name = name
 
 		# add node as branch
 		self.addChild(node)
@@ -359,17 +369,13 @@ class AbstractGraph2(AbstractTree):
 		return node
 
 	def deleteNode(self, node):
-		if self.state != "neutral":
+		if self.state != self.State.neutral:
 			return False
-		# entry = self.getNode(node, entry=True)
-		#
-		# node = entry["node"]
 		for i in node.edges:
 			self.deleteEdge(i)
 
+		self.nodes.remove(node)
 		node.delete()
-		# self.nodeGraph.pop(node.uid)
-		# goodnight sweet prince
 		del node
 
 	#endregion
@@ -383,7 +389,7 @@ class AbstractGraph2(AbstractTree):
 		# return self.nodeGraph[uid]["node"]
 		return [i for i in self.nodes ]
 
-	def getNode(self, node, entry=False)->Union[AbstractNode, Dict]:
+	def getNode(self, node)->Union[AbstractNode, Dict]:
 		"""returns an AbstractNode object from
 		an AbstractNode, node name, node UID, or AbstractAttr(?)
 		:returns AbstractNode"""
@@ -398,9 +404,8 @@ class AbstractGraph2(AbstractTree):
 		elif isinstance(node, dict) and "node" in list(node.keys()): # node entry
 			node = node["node"]
 		# node is now absolutely definitely a node
-		if not entry:
-			return node
-		return [i for i in list(self.nodeGraph.values()) if i["node"]==node][0]
+		return node
+
 
 	#endregion
 
@@ -412,7 +417,7 @@ class AbstractGraph2(AbstractTree):
 		only inputs know their own drivers - outputs know nothing
 
 		"""
-		if self.state != "neutral":
+		if self.state != self.State.neutral:
 			print("graph state is ", self.state, "skipping")
 
 			return False
@@ -433,61 +438,27 @@ class AbstractGraph2(AbstractTree):
 		return newEdge
 
 
-		# # in regeneration the edge object is already created
-		# # remove existing connections to destAttr for now
-		# # for edge in destAttr.connections:
-		# # 	self.edges.remove(edge)
-		# # destAttr.connections.clear()
-		# # sourceAttr.addConnection(newEdge)
-		# # destAttr.addConnection(newEdge)
-		# # self.edges.append(newEdge)
-		#
-		# sourceAttr.node.outEdges.add(newEdge)
-		# destAttr.node.inEdges.add(newEdge)
-		# sourceEntry = self.getNode(sourceAttr.node, entry=True)
-		# destEntry = self.getNode(destAttr.node, entry=True)
-		#
-		# sourceEntry["feeding"] = sourceEntry["feeding"].union({destAttr.node})
-		# destEntry["fedBy"] = destEntry["fedBy"].union({sourceAttr.node})
-		# self.log("source feeding is {}".format(sourceEntry["feeding"]))
-		#
-		# return newEdge
-
 	def deleteEdge(self, edge):
 		if self.state != self.State.neutral:
+			print("graph state is not neutral, skipping")
 			return False
 		# in theory this should be it
 		self.edges.remove(edge)
-
+		self.edgesChanged(edge, self.EdgeEvents.removed)
+		print("graph deleteEdge complete")
 		return
 
-		# sourceNode = edge.source[0]
-		# sourceEntry = self.getNode(sourceNode, True)
-		# self.log("feeding before delete is {}".format(sourceEntry["feeding"]) )
-		# if edge in self.edges:
-		# 	self.edges.remove(edge)
-		#
-		# sourceNode = edge.source[0]
-		# destNode = edge.dest[0]
-		# sourceNode.outEdges.remove(edge)
-		# destNode.inEdges.remove(edge)
-		# # update entries how?
-		# # WITH TOPOLOGY OF COURSE
-		# # two nodes are disconnected if the whole sets of their edges are disjoint
-		# if sourceNode.edges.isdisjoint(destNode.edges):
-		# 	self.log("sets are disjoint")
-		# 	sourceEntry = self.getNode(sourceNode, True)
-		# 	destEntry = self.getNode(destNode, True)
-		# 	#print "feeding is {}".format(sourceEntry["feeding"])
-		# 	sourceEntry["feeding"].difference({destNode})
-		# 	destEntry["fedBy"].difference({sourceNode})
 
-
-	def nodeEdges(self, node:AbstractNode, outputs=False)->Set[AbstractEdge]:
+	def nodeEdges(self, node:AbstractNode, outputs=False,
+	              all=False)->Set[AbstractEdge]:
 		"""return either edges for either inputs or outputs
 		could have done this directly on node object
 		but seems easier to follow this way """
-		edges = WeakSet()
+		if all:
+			return self.nodeEdges(node, outputs=True).union(
+				self.nodeEdges(node, outputs=False)	)
+		# edges = WeakSet()
+		edges = set()
 		tree = node.outputRoot if outputs else node.inputRoot
 		for i in tree.allBranches():
 			edges.update(self.attrEdgeMap[i])
@@ -495,7 +466,8 @@ class AbstractGraph2(AbstractTree):
 
 	def adjacentNodes(self, node, future=True, history=True)->Set[AbstractNode]:
 		"""return direct neighbours of node"""
-		nodes = WeakSet()
+		# nodes = WeakSet()
+		nodes = set()
 		if future:
 			for i in self.nodeEdges(node, outputs=True):
 				nodes.add(i.destAttr.node)
@@ -509,15 +481,15 @@ class AbstractGraph2(AbstractTree):
 
 
 	### region CONNECTIVITY AND TOPOLOGY ###
-	def getNodesInHistory(self, node, entries=True):
+	def getNodesInHistory(self, node):
 		"""returns all preceding nodes"""
 		return self.getInlineNodes(node, history=True,
-		                           future=False, entries=entries)
+		                           future=False)
 
-	def getNodesInFuture(self, node, entries=True):
+	def getNodesInFuture(self, node):
 		"""returns all proceeding nodes"""
 		return self.getInlineNodes(node, history=False,
-		                           future=True, entries=entries)
+		                           future=True)
 
 	def getCombinedHistory(self, nodes):
 		"""returns common history between a set of nodes"""
@@ -527,13 +499,12 @@ class AbstractGraph2(AbstractTree):
 			history.update(self.getNodesInHistory(i))
 		return history
 
-	def getCombinedFuture(self, nodes, entries=False):
+	def getCombinedFuture(self, nodes):
 		"""returns common future between a set of nodes"""
 		future = set()
 		for i in nodes:
 			future.update(self.getNodesInFuture(i))
-		if not entries:
-			return future
+		return future
 
 	def getInlineNodes(self, node, history=True, future=True)->Set[AbstractNode]:
 		"""gets all nodes directly in the path of selected node
@@ -578,7 +549,7 @@ class AbstractGraph2(AbstractTree):
 
 	def checkLegalConnection(self, source, dest):
 		"""checks that a connection wouldn't undermine DAG-ness"""
-		if self.state != "neutral": # graph is executing
+		if self.state != self.State.neutral: # graph is executing
 			return False
 		if source.node.uid == dest.node.uid: # same node
 			self.log("put some effort into it for god's sake")
@@ -606,17 +577,17 @@ class AbstractGraph2(AbstractTree):
 		if removeList:
 			for i in removeList:
 				self.deleteEdge(i)
-				self.edgesChanged()
+				#self.edgesChanged()
 			return False # going for semantics here
 		return True
 
 
 
-	def getNodesBetween(self, nodes=[], entry=False, include=True):
+	def getNodesBetween(self, nodes:List=None, include=True):
 		"""get nodes only entirely contained by selection
 		include sets whether to return passed nodes or not
 		return node items"""
-		starters = set(self.getNode(i, entry=False) for i in nodes)
+		starters = set(self.getNode(i) for i in nodes)
 		for i in starters:
 			#""" do fancy topology shit """
 			"""get all inline nodes for all search nodes
@@ -685,8 +656,7 @@ class AbstractGraph2(AbstractTree):
 
 	def reset(self):
 		self.resetNodes(self.nodes)
-		self.setState("neutral")
-		self.stateChanged()
+		self.setState(self.State.neutral)
 
 	def getExecActions(self, nodes=None):
 		"""returns available execution actions for target nodes, or all"""
@@ -702,10 +672,10 @@ class AbstractGraph2(AbstractTree):
 				"func": self.reset}, name="reset all")
 		}
 
-	def setState(self, state):
+	def setState(self, state:State):
 		"""didn't know this was also a magic method but whatevs"""
-		if not state in self.states:
-			raise RuntimeError("tried to set invalid state {}".format(state))
+		# if not state in self.states:
+		# 	raise RuntimeError("tried to set invalid state {}".format(state))
 		self.state = state
 		self.stateChanged()
 

@@ -123,7 +123,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 	# 	return self
 
 	# def focusOutEvent(self, event:QtGui.QFocusEvent):
-	# 	print("view focusOutEvent")
+	# 	if debugEvents: print("view focusOutEvent")
 	# 	return False
 
 
@@ -253,7 +253,7 @@ class AbstractView(QtWidgets.QGraphicsView):
 	""" view receives events first - calling super passes them to scene """
 	
 	def dragMoveEvent(self, event:QtGui.QDragMoveEvent):
-		print("view dragMoveEvent")
+		if debugEvents: print("view dragMoveEvent")
 		return super(AbstractView, self).dragMoveEvent(event)
 
 	def mousePressEvent(self, event):

@@ -158,11 +158,11 @@ def show():
 	ref = win.show()
 
 	# add jointcurveop for testing
-	node = win.graph.addNode("JointCurveOp")
-	# node = win.graphView.graph.createNode("JointCurveOp")
-	# win.graphView.graph.addNode(node)
+	nodeA = win.graph.addNode("JointCurveOp", name="jc_A")
+	nodeB = win.graph.addNode("JointCurveOp", name="jc_B")
 
-	#win.graphView.scene.addNode("JointCurveOp")
+	win.graph.addEdge(nodeA.getOutput("joint0"),
+	                  nodeB.getInput("parent"))
 
 
 	windows.append(win)

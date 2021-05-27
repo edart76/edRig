@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List, Dict, Union, TYPE_CHECKING, Set
 
 from weakref import WeakSet, WeakValueDictionary
+from enum import Enum
 
 # container interfacing with the graph - concerned with connections
 from edRig.structures import ActionItem
@@ -64,7 +65,13 @@ class AbstractNode(AbstractTree):
 
 	defaultName = "basicAbstract"
 	realClass = None
-	states = ["neutral", "executing", "complete", "failed", "approved", "guides"]
+	# states = ["neutral", "executing", "complete", "failed", "approved", "guides"]
+	class State(Enum):
+		neutral = "neutral"
+		executing = "executing"
+		complete = "complete"
+		failed = "failed"
+		approved = "approved"
 
 	#evaluatorClass = EVALUATOR
 
@@ -80,9 +87,7 @@ class AbstractNode(AbstractTree):
 	def __init__(self, graph, name=None, realInstance=None):
 		"""this is where the spaghetti begins"""
 		self.real = None
-		self.nodeName = name or self.defaultName + shortUUID(2)
-		
-		super(AbstractNode, self).__init__(name=self.nodeName)
+		super(AbstractNode, self).__init__(name=name)
 
 		self.uid = shortUUID(8)
 		self._graph = graph
@@ -222,11 +227,15 @@ class AbstractNode(AbstractTree):
 		self.settings = AbstractTree(self.__class__.__name__+"_settings", None)
 		#self.evaluator = self.evaluatorClass(graph=self.graph, node=self)
 
-	def setState(self, state):
-		if state not in self.states:
-			raise RuntimeError("invalid abstractNode state {}".format(state))
+	def setState(self, state:State):
+		# if state not in self.states:
+		# 	raise RuntimeError("invalid abstractNode state {}".format(state))
 		self.state = state
 		self.stateChanged()
+
+	@property
+	def nodeName(self):
+		return self.name
 
 	@property
 	def dataPath(self):
@@ -250,7 +259,8 @@ class AbstractNode(AbstractTree):
 
 	def rename(self, name):
 		origPath = self.dataPath
-		self.nodeName = name
+		# self.nodeName = name
+		self.name = name
 		#name = self._processName(name)
 		# if we ever want to add "-op" to the end of real items or something
 		self.real.rename(name) # it's just that easy

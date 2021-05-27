@@ -26,16 +26,17 @@ class AbstractEdge(object):
 		self.dataType = self.sourceAttr.dataType
 
 		# signal on edge garbage collected / destroyed
-		self.edgeDestroyed = Signal()
+		# self.edgeDestroyed = Signal()
 
 
 	def __str__(self):
 		""" dirty solution to remove edge objects from serialisation process """
 		return str( self.serialise() )
 
-	def __del__(self):
-		"""fires edge death signal"""
-		self.edgeDestroyed()
+	# def __del__(self):
+	# 	"""fires edge death signal"""
+	# 	print("edge __del__")
+	# 	self.edgeDestroyed(self)
 
 	# for anything dealing with nodes and attributes, return node first
 	@property

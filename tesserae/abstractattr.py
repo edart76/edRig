@@ -1,11 +1,13 @@
+from __future__ import annotations
 
 import copy
-from __future__ import annotations
 from typing import List, Set, Dict, TYPE_CHECKING, Union
 if TYPE_CHECKING:
 	from edRig.tesserae.abstractnode import AbstractNode
 	from edRig.tesserae.abstractgraph import AbstractGraph
 	from edRig.tesserae.abstractedge import AbstractEdge
+
+from weakref import WeakSet, WeakKeyDictionary, WeakValueDictionary
 
 from edRig.lib.python import AbstractTree, Signal
 from edRig.structures import DataStyle # still around for now, not hurting anything
@@ -42,7 +44,6 @@ class AbstractAttr(AbstractTree):
 
 		self.extras["desc"] = desc
 
-		self._connections = []
 		# self.connections = [] # override with whatever the hell you want
 		# edges saved separately by graph, not within attr tree
 
@@ -90,11 +91,6 @@ class AbstractAttr(AbstractTree):
 		#return self["connections"]
 		#return self._connections
 
-
-	# @connections.setter
-	# def connections(self, val):
-	# 	#self["connections"] = val
-	# 	self._connections = val
 
 	@property
 	def dataType(self):

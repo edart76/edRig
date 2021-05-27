@@ -12,4 +12,9 @@ def mainGraph(self)->AbstractGraph:
 """Going to stop with the absract/real divide, 
 and set nodes as proper branches of graph
 complexity is killing this project and me
+
+currently all the application-type stuff like file saving and asset
+interfacing is bundled into the abstractview - create a new class
+for the tesserae program itself, that just tracks its own graphs.
+
 """

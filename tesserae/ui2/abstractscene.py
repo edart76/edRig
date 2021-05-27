@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from functools import partial, wraps
+import math, random
 from tree import Tree, Signal
 from tree.ui.lib import KeyState, keyDict
 from typing import TYPE_CHECKING, Union, Dict, List
-
+from weakref import WeakSet, WeakValueDictionary, WeakKeyDictionary
 # ugly fake imports for type hinting
 if TYPE_CHECKING:
 	from edRig.tesserae.ui2.abstractview import AbstractView
@@ -16,12 +17,14 @@ from PySide2 import QtCore, QtWidgets, QtGui
 #from edRig.tesserae.ui2.abstracttile import AbstractTile, Knob, Pipe
 from edRig.tesserae.ui3.abstracttile import AbstractTile, Knob, Pipe
 #from edRig.tesserae.ui2.abstractview import AbstractView
+from edRig.tesserae.abstractgraph import AbstractGraph
 from edRig.tesserae.abstractnode import AbstractNode
 from edRig.tesserae.abstractedge import AbstractEdge
 from edRig.tesserae.ui2.style import (VIEWER_BG_COLOR,
                                       VIEWER_GRID_COLOR,
                                       VIEWER_GRID_OVERLAY)
 from edRig.tesserae.constant import debugEvents
+from edRig.tesserae.ui2 import relax
 
 class AbstractScene(QtWidgets.QGraphicsScene):
 	"""graphics scene for interfacing with abstractgraph and ui
@@ -43,8 +46,10 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 
 		self.setSceneRect(1000, 200, 0, 0)
-		self.tiles = {} #type: Dict[AbstractNode, AbstractTile]
+		# self.tiles = {} #type: Dict[AbstractNode, AbstractTile]
+		self.tiles = WeakKeyDictionary() #type: Dict[AbstractNode, AbstractTile]
 		self.pipes = {} #type: Dict[AbstractEdge, Pipe]
+		# self.pipes = WeakKeyDictionary() #type: Dict[AbstractEdge, Pipe]
 
 
 		self.background_color = VIEWER_BG_COLOR
@@ -53,6 +58,10 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 		# tree signal hookups
 		self.graph.structureChanged.connect(self.onNodesChanged)
+		self.graph.edgesChanged.connect(self.onEdgesChanged)
+
+		# temp
+		self.mouseMoveCounter = 0
 
 
 	@property
@@ -104,7 +113,21 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			return
 		else: newAbstract = nodeType
 		pos = pos or self.activeView.camCentre
-		self.makeTile(abstract=newAbstract, pos=pos)
+		tile = self.makeTile(abstract=newAbstract, pos=pos)
+
+
+	def onEdgesChanged(self, edge:AbstractEdge,
+	                   event=AbstractGraph.EdgeEvents.added):
+		"""called when an edge is created or dereferenced in the graph"""
+		print("scene onEdgesChanged")
+		if event == AbstractGraph.EdgeEvents.removed:
+			pipe = self.pipes.get(edge)
+			if not pipe:
+				return
+			self.deletePipe(pipe)
+		elif event == AbstractGraph.EdgeEvents.added:
+			self.addEdgePipe(edge)
+
 
 	def sync(self):
 		"""catch-all method to keep ui in sync with graph"""
@@ -126,7 +149,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		print("edges", self.graph.edges)
 		for i in abstractEdges:
 			if i not in list(self.pipes.keys()):
-				self.pipes[i] = self.makePipe(edge=i)
+				self.pipes[i] = self.addEdgePipe(edge=i)
 				self.addPipe(self.pipes[i])
 		for i in list(self.pipes.keys()):
 			if i not in abstractEdges:
@@ -142,7 +165,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 	             pos:Union[
 		             QtCore.QPoint, QtCore.QPointF, None]=None
 	             )->AbstractTile:
-		#print("scene makeTile", abstract)
+		print("scene makeTile", abstract)
 		#print("tiles", self.tiles)
 		if isinstance(self.tiles.get(abstract), AbstractTile):
 			raise RuntimeError("added abstract already in scene")
@@ -153,30 +176,43 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		self.addItem(tile)
 		# get default position
 		if pos is None:
-			pos = pos or self.activeView.camCentre
+			print("adding random pos")
+			# pos = (self.activeView.camCentre +
+			# 	QtCore.QPoint(random.random(), random.random()) * 10)
+			pos = self.activeView.camCentre #type: QtCore.QPoint
+			pos.setX(pos.x() + random.random() * 100)
+
+		# # set random jitter position
+		# tile.setPos(random.random(), random.random())
+		# self.relaxItems([tile])
 		if isinstance(pos, (QtCore.QPointF, QtCore.QPoint)):
 			tile.setPos(pos)
 		else:
 			tile.setPos(*pos)
 		self.tiles[abstract] = tile
 		#self.addItem(tile.settingsProxy)
+		self.relaxItems([tile], iterations=2)
 		return tile
 
-	def makePipe(self, edge:AbstractEdge=None, start=None, end=None):
+	def addEdgePipe(self, edge:AbstractEdge=None):
 		"""can only be done with an existing abstractEdge"""
+		if debugEvents: print("scene addEdgePipe")
 		if edge:
 			# start = self.tiles[edge.source[0]].getKnob(edge.source[1].name)
 			# end = self.tiles[edge.dest[0]].getKnob(edge.dest[1].name)
-			print("start", edge.source[1])
-			print("start", edge.source[1].stringAddress())
-			print("start", self.tiles[edge.source[0]].knobs)
+			# print("start", edge.source[1])
+			# print("start", edge.source[1].stringAddress())
+			# print("start", self.tiles[edge.source[0]].knobs)
 			start = self.tiles[edge.source[0]].knobs[
 				edge.source[1].stringAddress()]
 			end = self.tiles[edge.dest[0]].knobs[
 				edge.dest[1].stringAddress()]
 			pipe = Pipe(start=start, end=end, edge=edge)
-			start.pipes.append(pipe)
-			end.pipes.append(pipe)
+			# start.pipes.append(pipe) # hmmmm
+			# end.pipes.append(pipe)
+			self.pipes[edge] = pipe
+
+			self.addPipe(pipe)
 
 			return pipe
 
@@ -186,10 +222,13 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 	def updatePipePaths(self, nodes:List[AbstractTile]=None):
 		"""updates everything for now - if that gets laggy only redraw changed"""
+		# print("scene update")
+		# print("graph edges", self.graph.edges)
 		if nodes:
 			edges = set()
 			for i in nodes:
-				edges.update(i.abstract.edges)
+				# edges.update(i.abstract.edges)
+				edges.update(self.graph.nodeEdges(i.abstract, all=True))
 			pipes = [self.pipes[i] for i in edges]
 		else:
 			pipes = self.pipes.values()
@@ -198,6 +237,22 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 	# def clearSelectionAttr(self):
 	# 	"""clears "selected" attr for tiles and pipes that are not selected"""
+
+	def onDeleteCalled(self):
+		"""delete selected tiles and pipes"""
+		if debugEvents:print("scene onDeleteCalled")
+		if debugEvents: print("selection is {}".format(self.selectedItems()))
+		# first selected nodes - in theory can just update graph and call sync
+		for i in self.selectedTiles():
+			self.graph.deleteNode(i.abstract)
+			print("abstract graph nodes are {}".format(self.graph.knownNames))
+			self.deleteTile(i)
+		for i in self.selectedPipes():
+			self.graph.deleteEdge(i.edge)
+			#self.deletePipe(i)
+
+		#print self.selectedTiles()
+
 
 	def deleteTile(self, tile):
 		"""ONLY VISUAL"""
@@ -215,15 +270,18 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		self.tiles.pop(tile.abstract)
 		self.removeItem(tile)
 
-	def deletePipe(self, pipe):
-		if isinstance(pipe, AbstractEdge):
-			if pipe not in list(self.pipes.keys()):
-				return
-			pipe = self.pipes[pipe]
-		# for k, v in self.pipes.iteritems():
-		# 	if v == pipe:
-		# 		self.pipes.pop(k)
-		#self.pipes.pop([k for k, v in self.pipes.iteritems() if v == pipe][0])
+	def deleteEdgePipe(self, edge:AbstractEdge):
+		"""called when a graph edge is deleted or dereferenced
+		"""
+
+
+	def deletePipe(self, pipe:Pipe):
+		if debugEvents: print("scene deletePipe")
+		# if isinstance(pipe, AbstractEdge):
+		# 	if pipe not in list(self.pipes.keys()):
+		# 		return
+		# 	pipe = self.pipes[pipe]
+
 		self.pipes.pop(pipe.edge)
 
 		# remove pipe references from knobs
@@ -233,20 +291,6 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		self.removeItem(pipe)
 		# i never want to tipe pipe
 
-	def onDeleteCalled(self):
-		"""delete selected tiles and pipes"""
-		print("scene onDeleteCalled")
-		print("selection is {}".format(self.selectedItems()))
-		# first selected nodes - in theory can just update graph and call sync
-		for i in self.selectedTiles():
-			self.graph.deleteNode(i.abstract)
-			print("abstract graph nodes are {}".format(self.graph.knownNames))
-			self.deleteTile(i)
-		for i in self.selectedPipes():
-			self.graph.deleteEdge(i.edge)
-			self.deletePipe(i)
-
-		#print self.selectedTiles()
 
 	def selectedTiles(self):
 		nodes = []
@@ -263,21 +307,45 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		if debugEvents: print("scene mousePress")
 		super(AbstractScene, self).mousePressEvent(event)
 		if event.isAccepted():
-			print("scene mousePress accepted, returning")
+			if debugEvents: print("scene mousePress accepted, returning")
 			return True
 		selected_nodes = self.selectedTiles()
 		# if self.activeView:
 		# 	self.activeView.beginDrawPipes(event)
 
 	def mouseMoveEvent(self, event):
-		self.updatePipePaths(self.selectedTiles())
-		# for i in self.selectedTiles():
-		# 	edges = i.abstract.edges
-		# 	for edge in edges:
+		self.mouseMoveCounter += 1
+		self.mouseMoveCounter = self.mouseMoveCounter % 6
+		if self.mouseMoveCounter:
+			return super(AbstractScene, self).mouseMoveEvent(event)
 
-		# if self.activeView:
-		# 	self.activeView.updatePipePaths(event)
+		# only activate occasionally
+
+		self.updatePipePaths(self.selectedTiles())
+
+		# get intersecting tiles
+		toRelax = []
+		expand = 20
+		margins = QtCore.QMargins(expand, expand, expand, expand)
+		for i in self.selectedTiles():
+			items = self.items(i.sceneBoundingRect().marginsAdded(margins))
+			items = set(filter(lambda x: isinstance(x, AbstractTile), items))
+			items = (items).difference(set(self.selectedTiles()))
+
+			toRelax.extend(items)
+
+		#for i in self.selectedTiles():
+		self.relaxItems(toRelax)
+		self.update()
 		super(AbstractScene, self).mouseMoveEvent(event)
+
+	def relaxItems(self, items, iterations=1):
+		print("scene relax items")
+		for n in range(iterations):
+			for i in items:
+				force = relax.getForce(i)
+				print("force", force)
+				i.setPos(i.pos() + force.toPointF())
 
 	def mouseReleaseEvent(self, event):
 		if self.activeView:
@@ -290,7 +358,7 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		super(AbstractScene, self).keyPressEvent(event)
 
 	def dragMoveEvent(self, event:QtWidgets.QGraphicsSceneDragDropEvent):
-		print("scene dragMoveEvent")
+		if debugEvents:print("scene dragMoveEvent")
 		return super().dragMoveEvent(event)
 
 

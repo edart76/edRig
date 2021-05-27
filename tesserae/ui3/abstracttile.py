@@ -172,6 +172,7 @@ class AbstractTile2(QtWidgets.QGraphicsItem):
 		"""
 		minRect = self.nameTag.boundingRect()
 		minWidth = minRect.x() + 150
+		#minWidth = minRect.x()
 		minHeight = minRect.y() + 20
 
 		for i in self.attrBlocks:
