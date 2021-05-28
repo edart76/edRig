@@ -164,6 +164,8 @@ def show():
 	win.graph.addEdge(nodeA.getOutput("joint0"),
 	                  nodeB.getInput("parent"))
 
+	win.graphView.scene.layoutTiles()
+
 
 	windows.append(win)
 	return win

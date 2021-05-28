@@ -49,12 +49,12 @@ def getForce(tile:AbstractTile)->QtGui.QVector2D:
 	items = tuple(filter(lambda x: isinstance(x, AbstractTile), items))
 	sumForce = QtGui.QVector2D(0, 0)
 
-	print(rect)
+	#print(rect)
 	for i in items: #type: AbstractTile
 		if i is tile:
 			continue
 
-		print("item", i.abstract.name)
+		#print("item", i.abstract.name)
 		#print(i.boundingRect())
 		# get intersection
 		# iRect = rect.intersected(i.boundingRect())
@@ -62,11 +62,11 @@ def getForce(tile:AbstractTile)->QtGui.QVector2D:
 		#print("iRect", iRect)
 		# get span of intersection
 		span = QtGui.QVector2D(iRect.bottomRight() - iRect.topLeft()).length()
-		print("span", span)
+		# print("span", span)
 		fDir = QtGui.QVector2D(rect.center() - iRect.center()).normalized()
 		# fDir = QtGui.QVector2D(iRect.center()) -QtGui.QVector2D(rect.center())
-		print(iRect.center(), rect.center())
-		print(fDir)
+		# print(iRect.center(), rect.center())
+		# print(fDir)
 		force = fDir * span
 		sumForce = sumForce + force
 	return sumForce * 0.4

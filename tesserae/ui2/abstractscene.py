@@ -46,8 +46,8 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 
 
 		self.setSceneRect(1000, 200, 0, 0)
-		# self.tiles = {} #type: Dict[AbstractNode, AbstractTile]
-		self.tiles = WeakKeyDictionary() #type: Dict[AbstractNode, AbstractTile]
+		self.tiles = {} #type: Dict[AbstractNode, AbstractTile]
+		#self.tiles = WeakKeyDictionary() #type: Dict[AbstractNode, AbstractTile]
 		self.pipes = {} #type: Dict[AbstractEdge, Pipe]
 		# self.pipes = WeakKeyDictionary() #type: Dict[AbstractEdge, Pipe]
 
@@ -220,13 +220,13 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		self.addItem(pipe)
 		pipe.drawPath(pipe.start, pipe.end)
 
-	def updatePipePaths(self, nodes:List[AbstractTile]=None):
+	def updatePipePaths(self, tiles:List[AbstractTile]=None):
 		"""updates everything for now - if that gets laggy only redraw changed"""
 		# print("scene update")
 		# print("graph edges", self.graph.edges)
-		if nodes:
+		if tiles:
 			edges = set()
-			for i in nodes:
+			for i in tiles:
 				# edges.update(i.abstract.edges)
 				edges.update(self.graph.nodeEdges(i.abstract, all=True))
 			pipes = [self.pipes[i] for i in edges]
@@ -335,17 +335,42 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			toRelax.extend(items)
 
 		#for i in self.selectedTiles():
-		self.relaxItems(toRelax)
-		self.update()
+		#self.relaxItems(toRelax) # not needed
+		#self.update()
 		super(AbstractScene, self).mouseMoveEvent(event)
 
 	def relaxItems(self, items, iterations=1):
-		print("scene relax items")
+		#print("scene relax items")
 		for n in range(iterations):
 			for i in items:
 				force = relax.getForce(i)
-				print("force", force)
+				#print("force", force)
 				i.setPos(i.pos() + force.toPointF())
+
+	def layoutTiles(self, tiles:List[AbstractTile]=None):
+		"""single shot layout of all given nodes
+		seed nodes are only arranged vertically
+		Longest critical path taken as the baseline,
+		other nodes laid out relative to it
+
+
+		"""
+		tiles = tiles or set(self.tiles.values())
+		nodes = set(i.abstract for i in tiles)
+		islands = self.graph.getIslands(nodes)
+		for index, island in islands.items():
+			ordered = self.graph.orderNodes(island)
+
+			# only x for now
+			baseTile = self.tiles[ordered[0]]
+			separation = 75
+			baseX = baseTile.pos().x() + baseTile.sceneBoundingRect().width() + separation
+			x = baseX
+			for i in ordered[1:]:
+				tile = self.tiles[i]
+				tile.setX(x)
+				x += tile.sceneBoundingRect().width() + separation
+		self.updatePipePaths(tiles)
 
 	def mouseReleaseEvent(self, event):
 		if self.activeView:

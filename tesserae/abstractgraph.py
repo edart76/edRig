@@ -1,12 +1,14 @@
 # manages connectivity and execution order of a dag graph
-
+from __future__ import annotations
 
 import pprint
 from weakref import WeakSet, WeakValueDictionary
 from collections import defaultdict
-from typing import List, Callable, Dict, Union, Set, TYPE_CHECKING
+from typing import List, Callable, Dict, Union, Set, TYPE_CHECKING, Sequence
 from functools import partial
 from enum import Enum
+
+import itertools
 from importlib import reload
 from tree import Tree, Signal
 
@@ -77,7 +79,7 @@ class ExecutionPath(object):
 				self.setIndexBranchSafe(n)
 		# donezo????????????
 
-	def setIndexBranchSafe(self, node):
+	def setIndexBranchSafe(self, node:AbstractNode):
 		"""sets index of target, or looks back til it finds a node with an index"""
 		if node.index:
 			return
@@ -95,7 +97,8 @@ class ExecutionPath(object):
 		self.sequence.append(node) # sure why not
 
 	@staticmethod
-	def getExecPathToNodes(graph=None, targets=None):
+	def getExecPathToNodes(graph:"AbstractGraph"=None,
+	                       targets:Set[AbstractNode]=None)->ExecutionPath:
 		"""gets execution path to nodes"""
 		path = ExecutionPath(graph)
 		path.setNodes(targets)
@@ -506,13 +509,22 @@ class AbstractGraph2(AbstractTree):
 			future.update(self.getNodesInFuture(i))
 		return future
 
-	def getInlineNodes(self, node, history=True, future=True)->Set[AbstractNode]:
+	def getInlineNodes(self, node:AbstractNode, history=True, future=True,
+	                   )->Set[AbstractNode]:
 		"""gets all nodes directly in the path of selected node
-		forwards and backwards is handy way of working out islands"""
+		forwards and backwards is handy way of working out islands
+		can't work out how to factor out the copying"""
 		inline = set()
-		for n in self.adjacentNodes(node, history=history, future=future):
-			inline.add(n)
-			inline.update(self.getInlineNodes(node, history=history, future=future))
+		if future:
+			for n in self.adjacentNodes(node, history=False, future=True):
+				inline.add(n)
+				inline.update(self.getInlineNodes(
+						n, history=False, future=True))
+		if history:
+			for n in self.adjacentNodes(node, history=True, future=False):
+				inline.add(n)
+				inline.update(self.getInlineNodes(
+						n, history=True, future=False))
 		return inline
 
 	def getContainedEdges(self, nodes=None):
@@ -605,6 +617,56 @@ class AbstractGraph2(AbstractTree):
 			betweenSet = betweenSet.difference(nodes)
 
 		return betweenSet
+
+	def orderNodes(self, nodes:Set[AbstractNode], dfs=True)\
+			->List[AbstractNode]:
+		""" sort nodes in order - assumes all nodes are connected
+		if dfs, do depth-first, else b r e a d-first """
+		path = ExecutionPath.getExecPathToNodes(self, nodes)
+		return sorted(list(nodes), key=lambda x: x.index)
+
+	def getLongestPath(self, seeds=List[AbstractNode],
+	                   ends=List[AbstractNode]):
+		"""Return the longest continuous path of nodes
+		between ends given
+		SUPER inefficient but we're not going to start caring now
+		"""
+		maxPath = set()
+		for pair in itertools.product(seeds, ends):
+			path = self.getNodesBetween(pair) or set()
+			if len(path) > len(maxPath):
+				maxPath = path
+		return self.orderNodes(maxPath)
+
+
+	def getIslands(self, nodes:Sequence[AbstractNode]=None)\
+			->Dict[int, Set[AbstractNode]]:
+		""" Return sets of totally disjoint nodes
+		"""
+		toTest = set(nodes or self.nodes)
+		regions = defaultdict(set)
+		index = 0
+		while toTest:
+			seed = toTest.pop()
+			island = {seed}
+			found = 0
+			for node in self.getInlineNodes(seed):
+				# has node already been found
+				if node not in toTest:
+					for n in island:
+						regions[node.index].add(n)
+					found = 1
+					break
+				toTest.remove(node)
+				island.add(node)
+			if found:
+				continue
+
+			regions[index].update(island)
+			index += 1
+		return regions
+
+
 
 	#endregion
 
