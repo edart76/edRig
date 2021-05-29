@@ -198,18 +198,12 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		"""can only be done with an existing abstractEdge"""
 		if debugEvents: print("scene addEdgePipe")
 		if edge:
-			# start = self.tiles[edge.source[0]].getKnob(edge.source[1].name)
-			# end = self.tiles[edge.dest[0]].getKnob(edge.dest[1].name)
-			# print("start", edge.source[1])
-			# print("start", edge.source[1].stringAddress())
-			# print("start", self.tiles[edge.source[0]].knobs)
 			start = self.tiles[edge.source[0]].knobs[
 				edge.source[1].stringAddress()]
 			end = self.tiles[edge.dest[0]].knobs[
 				edge.dest[1].stringAddress()]
 			pipe = Pipe(start=start, end=end, edge=edge)
-			# start.pipes.append(pipe) # hmmmm
-			# end.pipes.append(pipe)
+
 			self.pipes[edge] = pipe
 
 			self.addPipe(pipe)
@@ -314,15 +308,16 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		# 	self.activeView.beginDrawPipes(event)
 
 	def mouseMoveEvent(self, event):
+
+		self.updatePipePaths(self.selectedTiles())
+
 		self.mouseMoveCounter += 1
 		self.mouseMoveCounter = self.mouseMoveCounter % 6
+
 		if self.mouseMoveCounter:
 			return super(AbstractScene, self).mouseMoveEvent(event)
 
 		# only activate occasionally
-
-		self.updatePipePaths(self.selectedTiles())
-
 		# get intersecting tiles
 		toRelax = []
 		expand = 20
@@ -424,11 +419,57 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 		color = QtGui.QColor(*VIEWER_BG_COLOR)
 		color = color.lighter(130)
 		color = QtCore.Qt.lightGray
-		# if zoom < -0.0:
-		# 	color = color.lighter(100 - int(zoom * 110))
-		# 	pass
+
 		pen = QtGui.QPen(color, 0.65)
 		self._draw_grid(painter, rect, pen, grid_size * 8)
+
+		# draw node set fields
+		# how many sets is each node part of
+		tileDepth = {i : 1 for i in self.tiles.values()}
+		for n, (name, data) in enumerate(
+				self.graph.nodeSets.items()):
+			tiles = [self.tiles[i] for i in data.nodes]
+
+			# get random colour for this set
+			# replace with proper pastels at some point
+			s = hash(name)
+			random.seed(a=s)
+			#random.setstate()
+			colour = QtGui.QColor.fromRgbF(
+				random.random(), random.random(), random.random(),
+			)
+			#colour = QtCore.Qt.yellow
+			painter.pen().setColor(colour)
+			painter.setPen(colour)
+			colour.setAlphaF(0.2)
+			painter.brush().setColor(colour)
+			painter.setBrush(colour)
+
+			# gather corner points of all nodes
+			points = [None] * len(tiles) * 4
+			for i, tile in enumerate(tiles):
+
+				# expand for each set node is part of
+				expansion = 10 * tileDepth[tile]
+				margins = QtCore.QMargins(
+					expansion, expansion, expansion, expansion
+				)
+
+				r = tile.sceneBoundingRect()
+				r = r.marginsAdded(margins)
+				points[i * 4] = r.topLeft()
+				points[i * 4 + 1] = r.topRight()
+				points[i * 4 + 2] = r.bottomRight()
+				points[i * 4 + 3] = r.bottomLeft()
+
+				tileDepth[tile] += 1
+			# points = [QtCore.QPoint(j) for j in points]
+			points = [j.toPoint() for j in points]
+			poly = QtGui.QPolygon.fromList(points)
+			#painter.drawConvexPolygon(points)
+			painter.drawConvexPolygon(poly)
+
+
 		#painter.restore()
 	# endregion
 

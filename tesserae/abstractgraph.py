@@ -16,8 +16,10 @@ from edRig import ROOT_PATH, pipeline, naming
 #from edRig.lib.python import Signal
 from edRig.lib.python import AbstractTree
 from edRig.pipeline import TempAsset
-from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
+from edRig.tesserae.abstractnode import AbstractNode#, AbstractAttr
+from edRig.tesserae.abstractattr import AbstractAttr
 from edRig.tesserae.abstractedge import AbstractEdge
+from edRig.tesserae.abstractset import AbstractNodeSet
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.structures import ActionItem
 
@@ -162,12 +164,17 @@ class AbstractGraph2(AbstractTree):
 		complete = "complete",
 		failed = "failed",
 		approved = "approved"
+	states = State._member_names_[:]
 
 	class EdgeEvents(Enum):
 		added = "added"
 		removed = "removed"
 
-	states = State._member_names_[:]
+	class SetEvents(Enum):
+		added = "added"
+		removed = "removed"
+
+
 
 	# reserved names for graph components,
 	# not to be used for node names
@@ -216,7 +223,7 @@ class AbstractGraph2(AbstractTree):
 
 		#self.edges = []
 		self.selectedNodes = []
-		self.nodeSets = {}
+		self.nodeSets = {} #type: Dict[str, AbstractNodeSet]
 
 		self.registeredNodes = {} # dict of className : class
 
@@ -250,7 +257,7 @@ class AbstractGraph2(AbstractTree):
 		self["edges"] = val
 
 	@property
-	def nodeSets(self):
+	def nodeSets(self)->Dict[str, AbstractNodeSet]:
 		return self["nodeSets"]
 	@nodeSets.setter
 	def nodeSets(self, val):
@@ -354,14 +361,6 @@ class AbstractGraph2(AbstractTree):
 
 		if isinstance(node, str):
 			node = self.createNode(nodeType=node)
-
-		# if node.uid in self.knownUIDs:
-		# 	print("uid {} already exists, retrying".format(node.uid))
-		# 	node.uid += 1
-		# 	return self.addNode(node)
-		# elif node.nodeName in self.knownNames:
-		# 	newName = naming.incrementName(node.nodeName, currentNames=self.knownNames)
-		# 	node.rename(newName)
 
 		if name:
 			node.name = name
@@ -736,8 +735,6 @@ class AbstractGraph2(AbstractTree):
 
 	def setState(self, state:State):
 		"""didn't know this was also a magic method but whatevs"""
-		# if not state in self.states:
-		# 	raise RuntimeError("tried to set invalid state {}".format(state))
 		self.state = state
 		self.stateChanged()
 
@@ -749,13 +746,22 @@ class AbstractGraph2(AbstractTree):
 	def nodeSetNames(self):
 		return list(self.nodeSets.keys())
 
+	def addNodeSet(self, name):
+		self.nodeSets[name] = AbstractNodeSet(name)
+		self.nodeSetsChanged()
+
+	def getNodeSet(self, name):
+		if not name in self.nodeSets:
+			nodeSet = self.addNodeSet(name)
+		return self.nodeSets[name]
+
 	def addNodeToSet(self, node, setName):
 		"""adds node to set - creates set if it doesn't exist
 		:param node : AbstractNode
 		:param setName : str"""
 		origSet = self.nodeSets.get(setName)
 		if not origSet:
-			self.nodeSets[setName] = set()
+			self.nodeSets[setName] = AbstractNodeSet(name=setName)
 		self.nodeSets[setName].add(node)
 
 	def removeNodeFromSet(self, node, setName):
@@ -772,9 +778,6 @@ class AbstractGraph2(AbstractTree):
 			return
 		targetSet.remove(node)
 
-		if not targetSet:
-			# we aint even mad?
-			self.nodeSets.pop(setName)
 
 	def getNodesInSet(self, setName):
 		nodes = set()
