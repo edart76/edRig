@@ -11,7 +11,7 @@ except:
 
 
 from edRig import dcc
-importlib.reload(dcc)
+reload(dcc)
 
 # import all the things
 from edRig.dcc import cmds, mel, om, oma, omui, \

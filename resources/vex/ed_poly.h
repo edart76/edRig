@@ -3,7 +3,7 @@
 
 #define _ED_POLY_H
 #include "array.h"
-
+#include "ed_vector.h"
 
 // ---- points -----
 function int iscornerpoint( int geo; int pointId ){
@@ -233,6 +233,14 @@ function int primpointshedge( int geo; int prim; int pointa, pointb){
         geo, pointedge(geo, pointa, pointb)))[0];
 }
 
+function vector[] hedgeray( int geo; int hedge ){
+    // return pos and dir corresponding to source and dest hedge point
+    int pts[] = hedgepoints(geo, hedge);
+    vector pos = point(geo, "P", pts[0]);
+    return array(pos, point(geo, "P", pts[1]) - pos );
+}
+
+
 // higher topo functions
 
 // time for a diagram
@@ -435,14 +443,17 @@ function matrix3 tangentmatrix(int geo;
 #define SS_FLATTENLENGTH 0
 #define SS_PRESERVELENGTH 1
 
-function vector projectsurfacespace(int geo;
-    vector origin; vector dir; int face;
+function void projectsurfacespace(int geo;
+    vector origin; vector dir; int face; int ptnum;
     int lengthmode;
-    int hookoutput;
+    //int hookoutput;
     // output references
     int escapehedge;
     vector escapepos;
-    vector escapedir
+    vector outputlin;
+    vector outputhook;
+
+    float debugweight; // temp
 )
     {
     /* given face and vector to project,
@@ -452,21 +463,175 @@ function vector projectsurfacespace(int geo;
     to its direct projection,
     or restore its length in surface space
 
-    hookoutput: should escape vector "hook" over the edge of
+    escapehedge: returns the prim hedge index crossed by the
+    flattened vector, or -1 if vector terminates in this prim
+    escapepos: position on edge at which vector escapes
+
+    outputlin : escape vector linear span beyond given face,
+    or within if it terminates
+
+    outputhook: escape vector span "hooked" over the edge of
     the polygon to its neighbour, averaging the faces' normals -
     guarantees vector can be projected directly to next face
 
-    escapehedge: returns the prim hedge index crossed by the
-    flattened vector, or -1 if vector terminates in this prim
-    escapepos: position at which vector escapes
-    escapedir: portion of vector lying outside prim
+    if ray falls within primitive, escapehedge will be -1
+
+    we assume that origin will be located within the projective face -
+    if not ray will immediately intersect with a halfedge and return
+
     */
 
     // matrix to rotate all points to surface space
-    matrix orientmat = tangentmatrix(geo, face);
+    matrix3 orientmat = tangentmatrix(geo, face);
+    float dirlength = length(dir);
 
-    return dir;
+    vector normal = set(
+        getcomp(orientmat, 1, 0),
+        getcomp(orientmat, 1, 1),
+        getcomp(orientmat, 1, 0));
+    //printf("%s\n", normal );
 
+    vector midpos = prim(geo, "P", face);
+
+    // double cross dir to get surface space
+    vector tandir = normalize(cross( normal, cross(normal, dir)));
+    //tandir = normalize(cross( normal, cross(dir, normal)));
+    //tandir = normalize(cross( cross(normal, dir), normal));
+
+    vector debugpos = (origin + normal);
+
+    float tanlen;
+
+    // either flatten dir to projection or preserve length
+    if( lengthmode == SS_FLATTENLENGTH){
+        tanlen = dot(dir, normalize(tandir));
+    }
+    else if( lengthmode == SS_PRESERVELENGTH){
+        tanlen = dirlength;
+    }
+    // scale tangent vector directly
+    vector tanvec = normalize(tandir) * tanlen; // correct
+
+    //tanvec = tandir;
+
+    // check tan forces
+    int linepts[] = addpointline(0, origin + tanvec, ptnum);
+    setpointgroup(0, "bound", linepts[0], 1);
+    setpointgroup(0, "debug", linepts[0], 1);
+
+    origin = projectpostoplane(midpos, normalize(normal), origin); // correct in general
+    escapepos = origin;
+
+    // iterate over halfedges
+
+    int start = primhedge( geo, face);
+    int current = start;
+
+    float pscale = 0.0; // debug to show depth
+
+    do{
+        // get hedge ray
+        vector hedgevecs[] = hedgeray(geo, current);
+        vector hedgepos = hedgevecs[0];
+        vector hedgespan = hedgevecs[1];
+        vector hedgedir = normalize(hedgespan);
+
+        // get skew data
+        vector skewpointa, skewpointb;
+
+        vector e = {EPS, EPS, EPS};
+
+        // skewlinepoints(
+        //     hedgepos + e, hedgedir,
+        //     origin - e, tandir,
+        //     skewpointa, skewpointb
+        // );
+
+        skewlinepoints(
+            hedgepos, hedgedir,
+            origin, tandir,
+            skewpointa, skewpointb
+        );
+
+        escapepos = skewpointa;
+        //escapepos = skewpointb;
+        //escapepos = origin;
+
+        // check hedge point within line segment
+        float hedgedot = dot(skewpointa - hedgepos, hedgespan);
+
+        hedgedot = dot(skewpointa - hedgepos, normalize(hedgespan));
+        //hedgedot = dot(hedgepos - skewpointa, normalize(hedgespan));
+
+        if ((hedgedot < 0) || (length(hedgespan) < hedgedot)){
+            // outside, ignore hedge
+            //print_once("point outside hedge, ignoring \n");
+            current = hedge_next( geo, current );
+
+            pscale += 0.2;
+
+            continue;
+        }
+
+
+        // skewline crosses hedge, compute outputs
+        // does tangent vector escape
+        float tandot = dot(skewpointa - origin, tandir);
+        if(tandot < 0){ // goes backwards, ignore hedge
+            current = hedge_next( geo, current );
+            //print_once("backwards tandot, ignoring \n");
+            pscale += 0.2;
+            // if(start == current){
+            //     break;
+            // }
+            continue;
+        }
+        // if (tandot < dot(tanvec, tanvec)){ // does not escape
+        if (tandot < length(tanvec)){ // does not escape
+            //print_once("vector ends on prim, returning \n");
+            escapehedge = -1;
+            outputlin = tanvec;
+            outputhook = tanvec;
+
+            setpointattrib(0, "stat", ptnum, 0.5);
+            setpointattrib(0, "pscale", ptnum, pscale);
+            return;
+        }
+
+        // vector escapes face
+        escapehedge = current;
+
+        //outputlin = tanvec - (escapepos - origin);
+        outputlin = tanvec - (escapepos - origin);
+        outputlin = tandir * (length(tanvec) - length(escapepos - origin));
+
+        // hook vector over to next face if it exists
+        int nextprim = hedge_prim(geo, hedge_nextequiv(geo, current));
+        vector nextnormal = prim(geo, "N", nextprim);
+
+        // quaternion representing half of this rotation
+        float rotaterad = acos(dot(normal, nextnormal));
+        vector4 rotquat = quaternion(rotaterad, normalize(hedgespan));
+
+        vector rotresult = qrotate(rotquat, outputlin);
+        outputhook = rotresult;
+        setpointattrib(0, "stat", ptnum, 1);
+
+        setpointattrib(0, "pscale", ptnum, pscale);
+
+        return;
+
+    }while(start != current);
+
+    //print_once("no correct hedge found \n");
+    escapehedge = -1;
+
+    // debug attr
+    setpointattrib(0, "stat", ptnum, 0.0);
+
+    setpointattrib(0, "pscale", ptnum, pscale);
+
+    return;
 
     }
 

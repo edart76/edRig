@@ -6,8 +6,21 @@ I had a bit of trouble figuring this out """
 from collections import defaultdict
 import json
 from six import string_types, iteritems
+from typing import List, Dict, Tuple, Set
 
-from edRig import hou
+from tree import Tree
+
+# import site
+#
+# site.addsitedir("C:\Program Files\Side Effects Software\Houdini 18.5.596\houdini\python3.7libs")
+
+
+
+#from edRig import hou
+#
+import hou
+
+
 from edRig.houdini import network, parm, core
 import importlib
 importlib.reload(core)
@@ -30,6 +43,10 @@ def gatherTopoPoints(
 	topoChildren = core.sortNodes(topoSubnet.children())
 	# filter only null nodes
 	topoChildren = list([x for x in topoChildren if (x.type() in conformNodeTypes)])
+	# remove ignored
+	ignoreBox = network.getNetworkBox(topoSubnet, "IGNORE")
+	ignoreNodes = set(network.itemsInNetworkBox(ignoreBox))
+	topoChildren = [i for i in topoChildren if not i in ignoreNodes]
 
 	# check for mirror membership
 	mirrorBox = network.getNetworkBox(topoSubnet, "MIRROR")
@@ -42,6 +59,16 @@ def gatherTopoPoints(
 	# but one created point will be mirrored by default
 
 	return {"single" : list(single), "mirror" : list(mirrorItems)}
+
+
+templatePointName = "TEMPLATE_POINT"
+
+def getTemplatePoint(topoSubnet):
+	"""return the null to be used as template
+	I'm not using custom node types yet"""
+	return topoSubnet.node(templatePointName)
+
+
 
 def validateTopoPointNaming(node, isMirror=False):
 	"""check naming of topo point nodes - singles are given "C_" if
@@ -85,7 +112,7 @@ def addPointPathConnections(point, nConnections=1):
 
 	point.setParmTemplateGroup(group)
 
-def getPointPathParms(point):
+def getPointPathParms(point)->List[hou.Parm]:
 	"""retrieve individual path parametres from point"""
 	result = []  # return connection parametres
 	for param in point.parms():
@@ -134,6 +161,9 @@ def pointProcessMain(topoSubnet, topoMerge,
 	""" main function run by superconform point processing
 	:param data: any random data needed """
 
+	print(hou)
+	print(hou.__file__)
+
 	prevTopoPaths = data.get("prevTopoNodes") or []
 	#print("prevPaths", prevTopoPaths)
 	prevTopoNodes = [hou.node(i) for i in prevTopoPaths]
@@ -169,25 +199,21 @@ def pointProcessMain(topoSubnet, topoMerge,
 	shapeMirrorMap = {} # not used yet
 
 	for topoPoint in allTopoPoints:
+
+		print("lookup ", topoPoint.name())
+
 		nConnections = 1 if topoPoint.name()[0].lower() == "c" else 2
 		params = checkPointParms(topoPoint, nConnections)
 
-		# check connections
-		# if topo point params are empty:
-			# check shape points by name
-			# if matching name found:
-				# populate topo point connections
-			# else:
-				# create new shape point(s) based on mirror status of topo
-				# link to topo
 
 		# if TOPO is in mirror but SHAPE is not (has been moved out of it)
 		# create corresponding SHAPE point
 		# if SHAPE is in mirror, ignore any corresponding SHAPE points
 
 		# form map of {topo point : shape points}
-		found = [i.evalAsNode() for i in params if i.evalAsNode()]
+		found = [i.evalAsNode() for i in params if i.evalAsNode()] #type: List[hou.Node]
 		print(("found", found))
+
 		if not found:
 			# check if matching node exists
 			if shapeSubnet.node(topoPoint.name()):
@@ -204,8 +230,10 @@ def pointProcessMain(topoSubnet, topoMerge,
 				shapePoints["single"].append(shapePoint)
 
 		if len(found) == 1: # match name exactly
-			print("len 1")
+			#print("len 1")
 			found[0].setName(topoPoint.name())
+
+
 		elif len(found) == 2: # one point mapping to 2
 			print("len2")
 			found[0].setName("L" + topoPoint.name()[1:])
@@ -214,6 +242,9 @@ def pointProcessMain(topoSubnet, topoMerge,
 		topoShapeMap[topoPoint] = found
 		for shapePoint in found:
 			shapeTopoMap[shapePoint] = topoPoint
+			# set reverse path reference to topo point
+			params = getPointPathParms(shapePoint)
+			params[0].set(topoPoint.path())
 
 	shapeBox.fitAroundContents()
 	shapePoints["mirror"] = list(set(shapePoints["mirror"]))
@@ -238,7 +269,17 @@ def pointProcessMain(topoSubnet, topoMerge,
 	topoMirrorIndices = [topoOrdered.index(i) for i in topoPoints["mirror"]]
 	shapeMirrorIndices = [shapeOrdered.index(i) for i in shapePoints["mirror"]]
 
+	# get dangling shape points
+	knownShapePoints = set()
+	for linkedShapePoints in topoShapeMap.values():
+		knownShapePoints.update(linkedShapePoints)
+	orphanShapePoints = set(allShapePoints).difference(knownShapePoints)
 
+	# for now use validity of path connections as filter to enable/disable points?
+	for shapePoint in orphanShapePoints:
+		params = checkPointParms(shapePoint)
+		for i in params:
+			i.set("")
 
 	# output values
 	return {

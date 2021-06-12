@@ -175,52 +175,52 @@ def poolToTree(items, treeCls=Tree, key=None):
 	else only the tree itself will be created """
 
 
-
-# spider: web developer
-# stand up lizard jokes : stand up chamaeleon
-
-#class StringLikeMeta(ABCMeta):
-class StringLikeMeta(type, metaclass=ABCMeta):
-
-	"""hopefully a more efficient 'mutable string' than doing directly that -
-	works on an internal _base string, which is free to change
-
-	leaving all the weird and wonderful attempts at method shuffling here
-	for curiosity, in the end I just overrode them one by one manually"""
-
-	stringMethods = ['__add__', '__contains__',
-					 '__delslice__', '__doc__', '__eq__',
-					 '__format__', '__ge__', '__getitem__', #'__hash__',
-					 '__getslice__', '__gt__', '__iadd__', '__imul__',
-					 '__iter__', '__le__', '__len__', '__lt__',
-					 '__mul__', '__ne__', '__new__', '__reduce__',
-					 '__reduce_ex__', '__repr__', '__reversed__', '__rmul__',
-					 #'__setattr__', #'__setitem__', #'__setslice__',
-					 ]
-
-
-	def __new__(mcs, *args, **kwargs):
-		new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
-		return new
-	
-	def __call__(cls, *args, **kwargs):
-		#cls.register(basestring)
-		new = super(StringLikeMeta, cls).__call__(*args, **kwargs)
-		#StringLikeMeta.register(cls)
-	# 	for i in StringLikeMeta.stringMethods:
-	# 		if i in str.__dict__:
-	# 			new.__dict__[i] = str.__dict__[i]
-	# 			new.__dict__[i] = lambda *args, **kwargs : \
-	# 				str.__dict__[i](*args, **kwargs)
-	#
-		return new
-
-	# def __eq__(self, other):
-	# 	if other == type(str):
-	# 		return True
-	# 	if other == str or other == basestring:
-	# 		return True
-	# 	return super(StringLikeMeta, self).__eq__(other)
+#
+# # spider: web developer
+# # stand up lizard jokes : stand up chamaeleon
+#
+# #class StringLikeMeta(ABCMeta):
+# class StringLikeMeta(type, metaclass=ABCMeta):
+#
+# 	"""hopefully a more efficient 'mutable string' than doing directly that -
+# 	works on an internal _base string, which is free to change
+#
+# 	leaving all the weird and wonderful attempts at method shuffling here
+# 	for curiosity, in the end I just overrode them one by one manually"""
+#
+# 	stringMethods = ['__add__', '__contains__',
+# 					 '__delslice__', '__doc__', '__eq__',
+# 					 '__format__', '__ge__', '__getitem__', #'__hash__',
+# 					 '__getslice__', '__gt__', '__iadd__', '__imul__',
+# 					 '__iter__', '__le__', '__len__', '__lt__',
+# 					 '__mul__', '__ne__', '__new__', '__reduce__',
+# 					 '__reduce_ex__', '__repr__', '__reversed__', '__rmul__',
+# 					 #'__setattr__', #'__setitem__', #'__setslice__',
+# 					 ]
+#
+#
+# 	def __new__(mcs, *args, **kwargs):
+# 		new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
+# 		return new
+#
+# 	def __call__(cls, *args, **kwargs):
+# 		#cls.register(basestring)
+# 		new = super(StringLikeMeta, cls).__call__(*args, **kwargs)
+# 		#StringLikeMeta.register(cls)
+# 	# 	for i in StringLikeMeta.stringMethods:
+# 	# 		if i in str.__dict__:
+# 	# 			new.__dict__[i] = str.__dict__[i]
+# 	# 			new.__dict__[i] = lambda *args, **kwargs : \
+# 	# 				str.__dict__[i](*args, **kwargs)
+# 	#
+# 		return new
+#
+# 	# def __eq__(self, other):
+# 	# 	if other == type(str):
+# 	# 		return True
+# 	# 	if other == str or other == basestring:
+# 	# 		return True
+# 	# 	return super(StringLikeMeta, self).__eq__(other)
 
 #StringLikeMeta.register(str)
 #StringLikeMeta.register(basestring)
@@ -234,8 +234,8 @@ to work either """
 
 #class StringLike(str, object):
 #class StringLike(object, str):
-class StringLike(str, metaclass=StringLikeMeta): # best I can do for now
-#class StringLike(object):
+#class StringLike(str, metaclass=StringLikeMeta): # best I can do for now
+class StringLike(object):
 	""" a proper, usable user string
 	intelligent maya nodes, maya plugs, self-formatting email addresses
 	we can do it"""
