@@ -157,31 +157,6 @@ class Op(MayaReal):
 		self.actions = {}
 
 		self.uuid = self.shortUUID(8)
-		if self.abstract:
-			self.inputRoot = abstract.inputRoot
-			self.outputRoot = abstract.outputRoot
-			self.defineAttrs()
-		else:
-			#print "no abstract passed"
-			#raise RuntimeError("no abstract passed")
-			# self.inputRoot = AbstractAttr(role="input", hType="root", name="inputRoot")
-			# self.outputRoot = AbstractAttr(role="output", hType="root", name="outputRoot")
-			pass
-		# self.defineAttrs() # override this specific method with attr construction
-
-		# abstract interface
-		# signals and methods directly from abstract
-		self.sync = None
-		self.attrsChanged = None
-		self.attrValueChanged = None
-		self.settings = AbstractTree("proxy")
-		self.evaluator = None
-		self.addSetting = None
-
-		# sets
-		self.addToSet = None
-		self.removeFromSet = None
-		self.getConnectedSets = None
 
 		if self.abstract:
 			self.setAbstract(abstract)
@@ -212,43 +187,24 @@ class Op(MayaReal):
 
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		"""attach op to abstractNode, and merge input and outputRoots"""
-		self.abstract = abstract
-
-		# settings
-		self.settings = self.abstract.settings
-		#self.evaluator = self.abstract.evaluator
-		self.addSetting = self.abstract.addSetting
-
-		# sets
-		self.addToSet = self.abstract.addToSet
-		self.removeFromSet = self.abstract.removeFromSet
-		self.getConnectedSets = self.abstract.getConnectedSets
-
-		self.inputRoot = abstract.inputRoot
-		self.outputRoot = abstract.outputRoot
+		
+		super(Op, self).setAbstract(abstract)
+	
 		if define:
 			self.defineAttrs() # resets attributes, don't call on regeneration
 			self.defineSettings()
 
-		# support for redefining attributes from dict
-		if inDict:
-			self.inputRoot = self.inputRoot.fromDict(inDict, node=abstract)
-		if outDict:
-			self.outputRoot = self.outputRoot.fromDict(outDict, node=abstract)
-		# no luck all skill
+		# # support for redefining attributes from dict
+		# if inDict:
+		# 	self.inputRoot = self.inputRoot.fromDict(inDict, node=abstract)
+		# if outDict:
+		# 	self.outputRoot = self.outputRoot.fromDict(outDict, node=abstract)
+		# # no luck all skill
 
-		print("")
-		self.sync = self.abstract.sync
-		self.attrsChanged = self.abstract.attrsChanged
-		self.attrValueChanged = self.abstract.attrValueChanged
-		self.makeBaseActions()
+		#self.makeBaseActions()
 
 		self.sync.connect( self.onSync )
-
 		self.sync()
-
-		# i would really like some meta way to supplant all op-level methods
-		# with the "correct" abstract-level versions
 
 	def onSync(self):
 		""" user-facing method to update plugs, settings, anything """
@@ -310,7 +266,7 @@ class Op(MayaReal):
 		self.addSetting(parent=parent, entryName=entryName, value=value,
 		                options=(True, False))
 
-	def exposeNode(self, node, parent=None, entryName="node"):
+	def exposeNode(self, node, parent=None, entryName="exposedNode"):
 		"""CRUCIAL aspect of rigging system - allows exposing individual
 		nodes AND ATTRIBUTES in the graph, to be driven by expressions or
 		later lower-class graph connections"""

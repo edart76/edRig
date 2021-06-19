@@ -250,7 +250,7 @@ class AbstractNode(AbstractTree):
 		return self.inEdges.union(self.outEdges)
 
 	def instantiateReal(self, name=None):
-		return self.realClass(name=name)
+		return self.realClass(name=name, abstract=self)
 
 	def setRealInstance(self, real, inDict=None, outDict=None, define=True):
 		"""sets real component"""

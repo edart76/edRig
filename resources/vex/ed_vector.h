@@ -18,6 +18,37 @@ function vector projectpostoplane(
     return (dot(normaldir, normalpos - projectpos) * normaldir) + projectpos;
 }
 
+
+function vector vectortoline(
+    vector linestart; vector lineend;
+    vector point; float t;
+){
+    // parametric vector to line
+    return (1.0 - t) * linestart + t * lineend - point;
+}
+
+function vector nearestpointonline(
+    vector linestart; vector lineend;
+    vector point;
+){
+    // snap point to closest position on line between 2 other positions
+    // from John Hughes on maths stackexchange
+    vector nul = {0, 0, 0};
+    vector v = lineend - linestart;
+    vector u = linestart - point;
+    float t = - dot(v, u) / dot(v, v);
+    if((0.0 <= t) && (t <= 1.0)){
+        return vectortoline(linestart, lineend, nul, t);
+    }
+    float lena = length(vectortoline(linestart, lineend, point, 0.0));
+    float lenb = length(vectortoline(linestart, lineend, point, 1.0));
+    if(lena < lenb){
+        return linestart;    }
+    else{
+        return lineend;    }
+}
+
+
 function void skewlinepoints(
     vector origa; vector dira;
     vector origb; vector dirb;
@@ -27,7 +58,7 @@ function void skewlinepoints(
 
     // don't return point parametres,
     // they can be recovered trivially if needed
-    vector normal = cross(dira, dirb);
+    vector normal = normalize(cross(dira, dirb));
     //vector normal = cross(dirb, dira);
     // get perpendicular direction between skewlines
     vector normalb = cross(dirb, normal);
@@ -40,8 +71,8 @@ function void skewlinepoints(
     pointa = origa +  dira * displacement / dirslant;
 
     // same for other line
-    vector normal1 = cross(dira, normal);
-    pointb = origb + dirb * dot(origa - origb, normal1) / dot(dirb, normal1);
+    vector normala = cross(dira, normal);
+    pointb = origb + dirb * dot(origa - origb, normala) / dot(dirb, normala);
     return;
 }
 

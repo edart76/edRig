@@ -105,27 +105,10 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 		self._savePath = None
 		self._filePath = None
-		#self.saveFolder = None # given by asset
-
-		#self.setWindowModality(QtCore.Qt.WindowModal)
-		#self.setWindowModality(QtCore.Qt.ApplicationModal)
 
 		self.contextMenu = ContextMenu(self)
 
 		self._init_actions()
-
-		#self.setFocusPolicy(QtCore.Qt.ClickFocus)
-
-	# def focusNextChild(self):
-	# 	return self
-
-	# def focusWidget(self):
-	# 	return self
-
-	# def focusOutEvent(self, event:QtGui.QFocusEvent):
-	# 	if debugEvents: print("view focusOutEvent")
-	# 	return False
-
 
 
 
@@ -156,26 +139,19 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def saveToScene(self):
 		"""saves current file path"""
 		currentInfo = pipeline.getSceneData()
-		#print("saving to scene")
-		#print(currentInfo("tesserae"))
-		#print(currentInfo("tesserae.savePath"))
-		#print(currentInfo["tesserae.savePath"])
+
 		if self.savePath:
 
 			currentInfo["tesserae.savePath"] = self.savePath
 			currentInfo["tesserae.filePath"] = self.filePath
 			currentInfo["tesserae.asset"] = self.currentAsset.path
 		pipeline.saveSceneData(currentInfo)
-		#print( pipeline.getSceneData().serialise(pretty=True))
 
 	def loadFromScene(self, force=True):
 		""" loads current file path
 		if force, loads entire graph"""
 		info = pipeline.getSceneData()
-		#print("loading from scene")
-		#print(info("tesserae"))
-		#print(info("tesserae.savePath"))
-		#print(info["tesserae.savePath"])
+
 		if info["tesserae.asset"]:
 			self.graph.setAsset( pipeline.AssetItem( info["tesserae.asset"]) )
 		self.savePath = info["tesserae.savePath"]
@@ -183,21 +159,15 @@ class AbstractView(QtWidgets.QGraphicsView):
 		if force and pipeline.checkFileExists(self.filePath):
 			print(("forcing open from scene, self save path is {}".format(self.filePath)))
 			self.openTilePileFile(self.filePath, force=True)
-		#print( info.serialise(pretty=True))
 
 	def _init_actions(self):
-		pass
 		# setup tab search shortcut.
 		# couldn't find another way to override focusing
 		tab = QtWidgets.QAction('Search Nodes', self)
 		tab.setShortcut('tab')
 		tab.triggered.connect(self.tabSearchToggle)
 		self.addAction(tab)
-	#
-	# 	delete = QtWidgets.QAction("Delete Selected", self)
-	# 	delete.setShortcut("del")
-	# 	delete.triggered.connect(self.nodeDeleteCalled)
-	# 	self.addAction(delete)
+
 
 	def sync(self):
 		self.scene.sync()
@@ -233,21 +203,16 @@ class AbstractView(QtWidgets.QGraphicsView):
 		if event.key() in (QtCore.Qt.Key_Delete, QtCore.Qt.Key_Backspace):
 			self.nodeDeleteCalled.emit()
 			return True
-		# elif event.key() == QtCore.Qt.Key_Tab:
-		# 	self.tabSearchToggle()
-		# 	return True
 
 		super(AbstractView, self).keyPressEvent(event)
 
 	def contextMenuEvent(self, event):
 		"""i'm really honestly quite sick of this softlocking my program"""
-
 		super(AbstractView, self).contextMenuEvent(event)
 		if event.isAccepted():
 			return
 		self.buildContext()
 		self.contextMenu.exec_(event.globalPos())
-
 
 
 	""" view receives events first - calling super passes them to scene """
@@ -633,8 +598,6 @@ class AbstractView(QtWidgets.QGraphicsView):
 		ioActions = { "io" : self.getIoActions()}
 
 		if nodeActions["nodes"]:
-			#self.contextMenu.addSubMenu(name="nodes", nodeActions)
-			# print "context building from {}".format(nodeActions)
 			self.contextMenu.buildMenusFromDict(nodeActions)
 
 		self.contextMenu.buildMenusFromDict(execActions)
@@ -663,13 +626,11 @@ class AbstractView(QtWidgets.QGraphicsView):
 	def getTileActions(self):
 		"""desperately, desperately need a better way to concatenate
 		similar actions into the same menu"""
-		actions = {}
 		tileDicts = []
 		if not self.selectedTiles():
 			return {}
 		for i in self.selectedTiles():
 			# print "tile get actions is {}".format(i.getActions())
-			actions.update(i.getActions())
 			tileDicts.append(i.getActions())
 		if len(tileDicts) == 1:
 			return tileDicts[0]

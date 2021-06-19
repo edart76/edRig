@@ -25,15 +25,24 @@ class RealComponent(AbstractTree):
 	contains memory functionality, attribute lookup and execution
 	to be attached to an abstractNode
 
-	this will actually just become an abstract node instead
 	for now assume that real components cannot exist without an abstract
 	enclosure - no need for checking anywhere
 
+	Q: why not just inherit and save all the hardship
+	A: good point
+	it's so that abstract nodes can remain ABSTRACT, and the same tesserae
+	graph can be loaded (just not fully run) in different environments
+	if the real component can't be loaded, its data is still saved and visible
+	in the abstract
 	"""
 
-	def __init__(self, *args, **kwargs):
+	executionManagerType = GeneralExecutionManager
+
+	def __init__(self, *args, abstract=None, **kwargs):
 		super(RealComponent, self).__init__(*args, **kwargs)
 		self._abstract = None
+		if abstract:
+			self.abstract = abstract
 
 	@property
 	def abstract(self)->AbstractNode:
@@ -43,137 +52,93 @@ class RealComponent(AbstractTree):
 	def abstract(self, val:AbstractNode):
 		self._abstract = val
 
-	def executionManager(self):
-		return GeneralExecutionManager(self)
+	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
+		""" shuffle all required references on to this object
+		trying just assigning object methods directly """
 
+		# attributes
+		self.addAttr = self.abstract.addAttr
+		self.removeAttr = self.abstract.removeAttr
+		self.addInput = self.abstract.addInput
+		self.addOutput = self.abstract.addOutput
+		self.getInput = self.abstract.getInput
+		self.getOutput = self.abstract.getOutput
+
+		self.searchInputs = self.abstract.searchInputs
+		self.searchOutputs = self.abstract.searchOutputs
+
+		self.connectableInputs = self.abstract.connectableInputs
+		self.connectableOutputs = self.abstract.connectableOutputs
+
+		self.interactibleInputs = self.abstract.interactibleInputs
+
+		self.getConnectedInputs = self.abstract.getConnectedInputs
+		self.getConnectedOutputs = self.abstract.getConnectedOutputs
+
+		self.clearOutputs = self.abstract.clearOutputs
+		self.clearInputs = self.abstract.clearInputs
+
+		# settings
+		self.settings = self.abstract.settings
+		# self.evaluator = self.abstract.evaluator
+		self.addSetting = self.abstract.addSetting
+
+		# sets
+		self.addToSet = self.abstract.addToSet
+		self.removeFromSet = self.abstract.removeFromSet
+		self.getConnectedSets = self.abstract.getConnectedSets
+
+		# signals
+		self.sync = self.abstract.sync
+		self.attrsChanged = self.abstract.attrsChanged
+		self.attrValueChanged = self.abstract.attrValueChanged
+
+
+	def executionManager(self):
+			return self.executionManagerType(self)
+
+	# # attrs to look up on abstract when called from within real
+	# deferAttrs = [
+	# 	"inputs", "outputs", "inputRoot", "outputRoot",
+	# ]
+	# directLookups = [
+	# 	"abstract", "_abstract"
+	# ]
+	#
+	# # def __getattr__(self, item):
+	# # 	if item in RealComponent.directLookups:
+	# # 		return object.__getattr__(self, item)
+	# #
+	# # 	try:
+	# # 		return super(RealComponent).__getattr__(self, item)
+	# # 	# look up attribute on abstract
+	# # 	except:
+	# # 		return getattr(self.abstract, item)
+	#
+	# # dynamic lookups like this can't be run with code completion
+	# # feels bad
+
+
+	# ATTRIBUTES
 	@property
 	def inputs(self):
-		# #return {i.name : i for i in self.inputRoot.getAllChildren()}
-		# if self.abstract:
-		# 	return self.abstract.inputRoot.getAllChildren()
-		# return self.inputRoot.getAllChildren()
 		return self.abstract.inputs
 
 	@property
 	def outputs(self):
-		#return {i.name : i for i in self.outputRoot.getAllChildren()}
-		# if self.abstract:
-		# 	return self.abstract.outputRoot.getAllChildren()
-		# return self.outputRoot.getAllChildren()
 		return self.abstract.outputs
 
 
-	@staticmethod
-	def addAttr(parent=None, name=None, dataType=None,
-	            hType=None, desc="", default=None, attrItem=None,
-	            *args, **kwargs):
-		if attrItem:
-			result = parent.addChild(attrItem)
-
-		if parent.attrFromName(name=name):
-			result = parent.attrFromName(name)
-		else: result = parent.addAttr(name=name, dataType=dataType, hType=hType,
-		                      desc=desc, default=default, *args, **kwargs)
-		return result
-
-	def removeAttr(self, name, role="output"):
-		if role == "output":
-			attr = self.getOutput(name=name)
-		else:
-			attr = self.getInput(name=name)
-
-		attr.parent.removeAttr(name)
-		self.redraw = True
-		self.sync()
-
-
-	@staticmethod
-	def addAttrsFromDict(parent=None, fromDict=None):
-		pass
-		# for k, v in fromDict.iteritems():
-		# 	newAttr = None
-
-	def addInput(self,name=None,  parent=None, dataType=None,
-	             hType="leaf", desc="", default=None, attrItem=None,
-	             *args, **kwargs):
-		parent = parent or self.inputRoot
-		self.redraw = True
-		return self.addAttr(parent=parent, name=name, dataType=dataType,
-		                    hType=hType, desc=desc, default=default,
-		                    attrItem=attrItem, *args, **kwargs)
-
-	def addOutput(self, name=None, parent=None, dataType=None,
-	              hType="leaf", desc="", default=None, attrItem=None,
-	              *args, **kwargs):
-		parent = self.outputRoot if not parent else parent
-		self.redraw = True
-		return self.addAttr(parent=parent, name=name, dataType=dataType,
-		                    hType=hType, desc=desc, default=default,
-		                    attrItem=attrItem, *args, **kwargs)
-
-	def getInput(self, name):
-		""":returns AbstractAttr"""
-		return self.inputRoot.attrFromName(name)
-
-	def searchInputs(self, match):
-		return [i for i in self.inputs if match in i.name]
-
-	def searchOutputs(self, match):
-		return [i for i in self.outputs if match in i.name]
-
-	def getOutput(self, name):
-		"""
-		:param name:
-		:return: AbstractAttr
-		"""
-		# print "getting output {}".format(name)
-		# print "current outputs are {}".format(self.outputs)
-		return self.outputRoot.attrFromName(name)
-
-	def getConnectedInputs(self):
-		inputs = self.inputRoot.getAllChildren()
-		return [i for i in inputs if i.getConnections()]
-
-	def getConnectedOutputs(self):
-		outputs = self.outputRoot.getAllChildren()
-		return [i for i in outputs if i.getConnections()]
-
-	def clearOutputs(self, search=""):
-		for i in self.outputs:
-			if search in i.name or not search:
-				self.removeAttr(i)
-		#self.refreshIo()
-		# do not automatically refresh, let ops call it individually
-
-	def makeAttrArray(self, archetype=None):
-		"""intended to be called as part of refreshIo
-		:param archetype: base attribute to copy from
-		:archetype is """
-
-	def refreshIo(self):
-		"""leftover garbage, now used just to call sync"""
-		pass
-
-	def connectableInputs(self):
-		self.log("op connectableInputs are {}".format(self.inputRoot.getAllConnectable()))
-		return self.inputRoot.getAllConnectable()
-
-	def interactibleInputs(self):
-		return self.inputRoot.getAllInteractible()
-
-	def connectableOutputs(self):
-		return self.outputRoot.getAllConnectable()
-
-	def substituteRoot(self, role="input", newAttr=None):
-		"""used to supplant op root attributes with abstract ones"""
-		if role == "input":
-			attr = self.inputRoot
-			vals = attr.serialise()
-			self.inputRoot = newAttr.fromDict(vals)
-		else:
-			attr = self.outputRoot
-			vals = attr.serialise()
-			self.outputRoot = newAttr.fromDict(vals)
+	# def substituteRoot(self, role="input", newAttr=None):
+	# 	"""used to supplant op root attributes with abstract ones"""
+	# 	if role == "input":
+	# 		attr = self.inputRoot
+	# 		vals = attr.serialise()
+	# 		self.inputRoot = newAttr.fromDict(vals)
+	# 	else:
+	# 		attr = self.outputRoot
+	# 		vals = attr.serialise()
+	# 		self.outputRoot = newAttr.fromDict(vals)
 
 class RealAttrInterface(object):
 	"""this can be assigned to an attribute procedurally by real class

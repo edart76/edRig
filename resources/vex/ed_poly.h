@@ -66,6 +66,15 @@ function int[] addpointline(int geo; vector pos; int parentpt){
     return result;
 }
 
+function int[] addpointline(int geo; vector pos; int parentpt; string group){
+    // addpoint, but automatically adds a polyline from parent
+    int pts[] = addpointline(geo, pos, parentpt);
+    setpointgroup(geo, group, pts[0], 1);
+    setprimgroup(geo, group, pts[1], 1);
+    return pts;
+}
+
+
 
 int connectpointsbyattr( int geo; int ptnum; float range; string attr){
     vector pos = point(geo, "P", ptnum);
@@ -444,7 +453,7 @@ function matrix3 tangentmatrix(int geo;
 #define SS_PRESERVELENGTH 1
 
 function void projectsurfacespace(int geo;
-    vector origin; vector dir; int face; int ptnum;
+    vector origin; vector dir; int face; int starthedge; int ptnum;
     int lengthmode;
     //int hookoutput;
     // output references
@@ -454,6 +463,7 @@ function void projectsurfacespace(int geo;
     vector outputhook;
 
     float debugweight; // temp
+    int success;
 )
     {
     /* given face and vector to project,
@@ -481,6 +491,12 @@ function void projectsurfacespace(int geo;
 
     */
 
+    // check if force is negligible
+    // if(length(dir) < EPS){
+    //     escapehedge = -1;
+    //     return;
+    // }
+
     // matrix to rotate all points to surface space
     matrix3 orientmat = tangentmatrix(geo, face);
     float dirlength = length(dir);
@@ -489,14 +505,17 @@ function void projectsurfacespace(int geo;
         getcomp(orientmat, 1, 0),
         getcomp(orientmat, 1, 1),
         getcomp(orientmat, 1, 0));
-    //printf("%s\n", normal );
+
+    normal = prim(geo, "N", face);
+
+    setpointattrib(0, "N", ptnum, normal);
+
 
     vector midpos = prim(geo, "P", face);
 
     // double cross dir to get surface space
     vector tandir = normalize(cross( normal, cross(normal, dir)));
-    //tandir = normalize(cross( normal, cross(dir, normal)));
-    //tandir = normalize(cross( cross(normal, dir), normal));
+    tandir = normalize(cross( cross(normal, dir), normal));
 
     vector debugpos = (origin + normal);
 
@@ -512,24 +531,36 @@ function void projectsurfacespace(int geo;
     // scale tangent vector directly
     vector tanvec = normalize(tandir) * tanlen; // correct
 
-    //tanvec = tandir;
+    vector up = {0, 1, 0};
+    vector null = {0,0,0};
 
-    // check tan forces
-    int linepts[] = addpointline(0, origin + tanvec, ptnum);
-    setpointgroup(0, "bound", linepts[0], 1);
-    setpointgroup(0, "debug", linepts[0], 1);
+    setpointattrib(0, "tanvec", ptnum, tanvec);
 
     origin = projectpostoplane(midpos, normalize(normal), origin); // correct in general
     escapepos = origin;
 
     // iterate over halfedges
-
     int start = primhedge( geo, face);
     int current = start;
 
     float pscale = 0.0; // debug to show depth
 
+
+    // take the closest hedge skewpoint as result
+    float minskewd = 1000000.0;
+    vector minskewposa, minskewposb;
+    int skewhedge = 0;
+    vector minhedgepos, minhedgespan, minhedgedir;
+
+    vector e = {EPS, EPS, EPS};
+
+    int hedgescovered[];
+
     do{
+        if (current == starthedge){
+            current = hedge_next( geo, current );
+            continue;
+        }
         // get hedge ray
         vector hedgevecs[] = hedgeray(geo, current);
         vector hedgepos = hedgevecs[0];
@@ -539,13 +570,7 @@ function void projectsurfacespace(int geo;
         // get skew data
         vector skewpointa, skewpointb;
 
-        vector e = {EPS, EPS, EPS};
-
-        // skewlinepoints(
-        //     hedgepos + e, hedgedir,
-        //     origin - e, tandir,
-        //     skewpointa, skewpointb
-        // );
+        append(hedgescovered, current);
 
         skewlinepoints(
             hedgepos, hedgedir,
@@ -553,87 +578,88 @@ function void projectsurfacespace(int geo;
             skewpointa, skewpointb
         );
 
-        escapepos = skewpointa;
-        //escapepos = skewpointb;
-        //escapepos = origin;
+        // // check first if hedge is behind tangent vector
+        float tandot = dot(tanvec, skewpointa - origin);
 
-        // check hedge point within line segment
-        float hedgedot = dot(skewpointa - hedgepos, hedgespan);
-
-        hedgedot = dot(skewpointa - hedgepos, normalize(hedgespan));
-        //hedgedot = dot(hedgepos - skewpointa, normalize(hedgespan));
-
-        if ((hedgedot < 0) || (length(hedgespan) < hedgedot)){
-            // outside, ignore hedge
-            //print_once("point outside hedge, ignoring \n");
-            current = hedge_next( geo, current );
-
-            pscale += 0.2;
-
-            continue;
-        }
-
-
-        // skewline crosses hedge, compute outputs
-        // does tangent vector escape
-        float tandot = dot(skewpointa - origin, tandir);
         if(tandot < 0){ // goes backwards, ignore hedge
             current = hedge_next( geo, current );
-            //print_once("backwards tandot, ignoring \n");
-            pscale += 0.2;
-            // if(start == current){
-            //     break;
-            // }
             continue;
         }
-        // if (tandot < dot(tanvec, tanvec)){ // does not escape
-        if (tandot < length(tanvec)){ // does not escape
-            //print_once("vector ends on prim, returning \n");
-            escapehedge = -1;
-            outputlin = tanvec;
-            outputhook = tanvec;
 
-            setpointattrib(0, "stat", ptnum, 0.5);
-            setpointattrib(0, "pscale", ptnum, pscale);
-            return;
+
+        // check for lower distance to skewpoint
+        float dist = length(nearestpointonline(
+            hedgepos, hedgepos + hedgespan, skewpointa
+        ));
+
+        dist = 0; /// temp, sus, remove once everything else works
+
+        if(dist < minskewd){
+            minskewd = dist;
+            minskewposa = skewpointa;
+            minskewposb = skewpointb;
+            skewhedge = current;
+
+            minhedgepos = hedgepos;
+            minhedgespan = hedgespan;
+            minhedgedir = hedgedir;
         }
 
-        // vector escapes face
-        escapehedge = current;
-
-        //outputlin = tanvec - (escapepos - origin);
-        outputlin = tanvec - (escapepos - origin);
-        outputlin = tandir * (length(tanvec) - length(escapepos - origin));
-
-        // hook vector over to next face if it exists
-        int nextprim = hedge_prim(geo, hedge_nextequiv(geo, current));
-        vector nextnormal = prim(geo, "N", nextprim);
-
-        // quaternion representing half of this rotation
-        float rotaterad = acos(dot(normal, nextnormal));
-        vector4 rotquat = quaternion(rotaterad, normalize(hedgespan));
-
-        vector rotresult = qrotate(rotquat, outputlin);
-        outputhook = rotresult;
-        setpointattrib(0, "stat", ptnum, 1);
-
-        setpointattrib(0, "pscale", ptnum, pscale);
-
-        return;
-
+        current = hedge_next( geo, current );
     }while(start != current);
 
-    //print_once("no correct hedge found \n");
-    escapehedge = -1;
+    setpointattrib(0, "hedgescovered", ptnum, hedgescovered);
 
-    // debug attr
-    setpointattrib(0, "stat", ptnum, 0.0);
 
-    setpointattrib(0, "pscale", ptnum, pscale);
+    // point to intersection hedge
+    vector skewhegev[] = hedgeray(geo, skewhedge);
+    //addpointline(0, skewhegev[0] + skewhegev[1] / 2, ptnum);
+    //addpointline(0, minskewposa, ptnum, "debug");
+
+    // does tangent vector escape
+    if (length(minskewposa - origin) > length(tanvec)){ // does not escape
+        escapehedge = -1;
+        outputlin = tanvec * 0.9;
+
+        outputlin = projectpostoplane(
+            null, normalize(normal), outputlin); // correct in general
+
+        outputhook = outputlin;
+        setpointattrib(0, "stat", ptnum, 0.5);
+        success = 1;
+        return;
+    }
+
+    // vector escapes face
+    escapehedge = skewhedge;
+    escapepos = minskewposa;
+    //escapepos = minhedgepos + minhedgespan / 2;
+
+    outputlin = tandir * ((length(tanvec) - length(escapepos - origin)));
+
+    //outputlin = tanvec;
+
+    // hook vector over to next face if it exists
+    int nextprim = hedge_prim(geo, hedge_nextequiv(geo, escapehedge));
+    vector nextnormal = prim(geo, "N", nextprim);
+    outputlin = projectpostoplane(
+        null, normalize(nextnormal), outputlin); // correct in general
+
+    // quaternion representing half of this rotation
+    float rotaterad = acos(dot(normal, nextnormal));
+    rotaterad = (dot(normal, nextnormal));
+    vector4 rotquat = quaternion(rotaterad, minhedgedir);
+
+    vector rotresult = qrotate(rotquat, outputlin);
+    outputhook = rotresult;
+    setpointattrib(0, "stat", ptnum, 1);
+
+    //setpointattrib(0, "pscale", ptnum, pscale);
+    success = 1;
 
     return;
 
-    }
+}
 
 
 

@@ -375,6 +375,8 @@ class AbstractGraph2(AbstractTree):
 			return False
 		for i in node.edges:
 			self.deleteEdge(i)
+		for i in self.nodeSets.keys():
+			self.removeNodeFromSet(node, i)
 
 		self.nodes.remove(node)
 		node.delete()
