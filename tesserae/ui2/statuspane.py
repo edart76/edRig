@@ -3,7 +3,8 @@ from PySide2 import QtWidgets, QtCore
 from edRig import pipeline
 from edRig.pipeline import FilePathTree
 from edRig.tesserae.ui2.tabsearch import AbstractSearchWidget
-from edRig.tesserae.ui2.lib import ConfirmDialogue, ContextMenu #event
+from edRig.tesserae.ui2.context import ContextMenu
+from edRig.tesserae.ui2.lib import ConfirmDialogue
 from edRig.structures import ActionItem
 import os, tempfile
 

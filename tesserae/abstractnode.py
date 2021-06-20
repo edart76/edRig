@@ -1,12 +1,14 @@
 
 from __future__ import annotations
-from typing import List, Dict, Union, TYPE_CHECKING, Set
+from typing import List, Dict, Union, TYPE_CHECKING, Set, Callable
+
 
 from weakref import WeakSet, WeakValueDictionary
 from enum import Enum
 
 # container interfacing with the graph - concerned with connections
-from edRig.structures import ActionItem
+#from edRig.structures import ActionItem
+from edRig.tesserae.action import Action
 from edRig.core import shortUUID
 from edRig import pipeline
 # from edRig.tesserae.ops.op import Op
@@ -18,6 +20,7 @@ from edRig.lib.python import Signal, AbstractTree, \
 
 if TYPE_CHECKING:
 	from edRig.tesserae.abstractgraph import AbstractGraph, AbstractEdge
+	from edRig.tesserae.real import RealComponent
 
 # temp, find a better order for this
 from edRig.tesserae.ops.memory import Memory2
@@ -86,7 +89,7 @@ class AbstractNode(AbstractTree):
 
 	def __init__(self, graph, name=None, realInstance=None):
 		"""this is where the spaghetti begins"""
-		self.real = None
+		self.real = None #type:RealComponent
 		super(AbstractNode, self).__init__(name=name)
 
 		self.uid = shortUUID(8)
@@ -116,11 +119,9 @@ class AbstractNode(AbstractTree):
 		self.index = None # execution order index
 
 		"""right click actions for ui"""
-		self.actions = {}
-		self.addAction(actionItem=ActionItem(execDict={"func" : self.setApproved},
-		                                     name="set approved"))
-		self.addAction(actionItem=ActionItem(execDict={"func" : self.recastReal},
-		                                     name="recast real"))
+		self.actions = []
+		self.addAction(self.setApproved)
+		self.addAction(self.recastReal)
 		self.dataFileExists = False
 		#self.real.setAbstract(self)
 
@@ -485,30 +486,33 @@ class AbstractNode(AbstractTree):
 	def getConnectedSets(self):
 		return self.graph.getSetsFromNode(self)
 
-	def getAllActions(self):
+	def getAllActions(self)->List[Action]:
 		#self.addAction(self.getRealActions())
-		actions = {}
-		actions.update(self.actions)
-		actions.update(self.getRealActions())
+		actions = []
+		actions.extend(self.actions)
+		#actions.extend(self.getRealActions())
 		return actions
 		#return self.actions
 
 	def getRealActions(self):
-		return self.real.getAllActions() # dict
+		return self.real.getAllActions()
 
-	def addAction(self, actionDict=None, actionItem=None):
-		if actionDict:
-			self.actions.update(actionDict)
-		elif actionItem:
-			self.actions.update({actionItem.name : actionItem})
+	def addAction(self, actionItem=None):
+		if isinstance(actionItem, Callable):
+			print("wrapping ", actionItem, "with action")
+			actionItem = Action(actionItem)
+		self.actions.append(actionItem)
+
 
 	def getExecActions(self):
 		"""this is kind of a mess - allows executing specific nodes to specific
 		stages - although we currently only use one"""
-		actions = {}
+		actions = []
 		for i, val in enumerate(self.executionStages()):
-			actionDict = {"func" : self.execToStage, "args" : [i]}
-			actions.update({val : ActionItem(name=val, execDict=actionDict)})
+			#actionDict = {"func" : self.execToStage, "args" : [i]}
+			#actions.update({val : ActionItem(name=val, execDict=actionDict)})
+			action = Action(self.execToStage, name=val, args=[i])
+			actions.append(action)
 		return actions
 
 	def recastReal(self):
@@ -519,7 +523,7 @@ class AbstractNode(AbstractTree):
 		self.sync()
 
 
-	def serialise(self):
+	def serialise(self, includeAddress=False):
 		"""converts node and everything it contains to dict"""
 		serial = {
 			"uid" : self.uid,

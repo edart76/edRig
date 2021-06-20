@@ -17,8 +17,8 @@ import random
 
 class SpookyLayerOp(LayerOp):
 	# ops for working with spooky skeletons
-	def __init__(self, name):
-		super(SpookyLayerOp, self).__init__(name)
+	def __init__(self, *args, **kwargs):
+		super(SpookyLayerOp, self).__init__(*args, **kwargs)
 		print( "doot")
 
 

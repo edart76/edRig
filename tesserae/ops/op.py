@@ -1,4 +1,8 @@
-# base op
+
+
+from __future__ import annotations
+from typing import List, Set, Dict, Callable, Tuple, Sequence
+
 # from maya import cmds
 # import maya.api.OpenMaya as om
 from edRig import cmds, om
@@ -7,13 +11,14 @@ from edRig.node import AbsoluteNode, ECA, invokeNode
 from edRig import scene, attr, transform, pipeline
 # from edRig.tesserae.abstractnode import AbstractAttr
 
-from edRig.structures import ActionItem
+#from edRig.structures import ActionItem
+from edRig.tesserae.action import Action
 from edRig.pipeline import safeLoadModule
 from edRig.tesserae.real import MayaReal, RealAttrInterface
 from edRig.tesserae.lib import GeneralExecutionManager
 from edRig.lib.python import debug, outerVars, AbstractTree, \
 	saveObjectClass, loadObjectClass
-from edRig.layers.setups import InvokedNode
+from edRig.tesserae.layers.setups import InvokedNode
 
 class OpExecutionManager(GeneralExecutionManager):
 	"""manage execution of ops"""
@@ -156,6 +161,7 @@ class Op(MayaReal):
 		self.abstract = abstract
 		self.actions = {}
 
+
 		self.uuid = self.shortUUID(8)
 
 		if self.abstract:
@@ -211,10 +217,10 @@ class Op(MayaReal):
 		pass
 
 	def makeBaseActions(self):
-		self.addAction(actionItem=ActionItem(name="clear Maya scene", execDict=
-			{"func" : self.clearMayaRig}))
-		self.addAction(func=self.showGuidesWrapper, name="showGuides")
-		self.addAction(func=self.sync, name="sync")
+		self.addAction(
+			action=Action(self.clearMayaRig, name="clear Maya scene"))
+		self.addAction(action=self.showGuidesWrapper, name="showGuides")
+		self.addAction(action=self.sync, name="sync")
 
 	@property
 	def __name__(self):
@@ -539,16 +545,22 @@ class Op(MayaReal):
 	def getAllActions(self):
 		return self.actions
 
-	def addAction(self, actionDict=None, actionItem=None, func=None, name=None):
-		if actionDict:
-			self.actions.update(actionDict)
-		elif actionItem:
-			#print "adding action {}".format(actionItem)
-			self.actions.update({actionItem.name : actionItem})
-		elif func:  # just add the function
-			name = name or func.__name__
-			item = ActionItem(execDict={"func": func}, name=name)
-			self.actions.update({item.name : item})
+	# def addAction(self, actionDict=None, actionItem=None, func=None, name=None):
+	# 	if actionDict:
+	# 		self.actions.update(actionDict)
+	# 	elif actionItem:
+	# 		#print "adding action {}".format(actionItem)
+	# 		self.actions.update({actionItem.name : actionItem})
+	# 	elif func:  # just add the function
+	# 		name = name or func.__name__
+	# 		item = ActionItem(execDict={"func": func}, name=name)
+	# 		self.actions.update({item.name : item})
+
+	def addAction(self, action=None, name=None):
+		if isinstance(action, Callable):
+			action = Action(action, name)
+		name = name or action.name
+		self.actions.update({action.name : action})
 
 	def addInputWithAction(self, parent=None, name=None, datatype=None, copy=None,
 	                       suffix="", desc=""):
@@ -567,8 +579,9 @@ class Op(MayaReal):
 		actionDict = {
 			"func" : _addInputWithAction,
 			"kwargs" : {"op": self}}
-		inputAction = ActionItem(name="add_custom_input", execDict=actionDict)
-		self.addAction(actionItem=inputAction)
+		inputAction = Action(_addInputWithAction, name="add_custom_input",
+		                     kwargs={"op" : self})
+		self.addAction(action=inputAction)
 
 
 	# serialisation and regeneration

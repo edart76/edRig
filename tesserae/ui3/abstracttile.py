@@ -9,6 +9,7 @@ from weakref import WeakValueDictionary, WeakSet
 
 from PySide2 import QtCore, QtWidgets, QtGui
 from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
+from edRig.tesserae.action import Action
 #from edRig.tesserae.ui2 import tilewidgets, tilesettings
 from edRig.tesserae.ui2 import tilewidgets
 
@@ -269,7 +270,7 @@ class AbstractTile2(QtWidgets.QGraphicsItem):
 
 		return self.settingsWidg
 
-	def getActions(self):
+	def getActions(self)->List[Action]:
 		return self.abstract.getAllActions()
 
 	def serialise(self):

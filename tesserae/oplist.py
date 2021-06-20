@@ -7,7 +7,9 @@
 # from edRig.layers.misclayers import *
 import pprint, os, ast
 
-from edRig.layers import pointlayers, \
+from edRig.tesserae import layers
+
+from edRig.tesserae.layers import pointlayers, \
 	curvelayers, surfacelayers, misclayers, \
 	dynamiclayers
 
@@ -17,7 +19,7 @@ from edRig.tesserae.ops.op import Op
 from edRig.lib.python import itersubclasses, \
 	iterSubModuleNames, safeLoadModule
 
-from edRig import ROOT_PATH, layers
+from edRig import ROOT_PATH
 
 print((layers.__file__))
 layerDir = os.path.dirname(layers.__file__)

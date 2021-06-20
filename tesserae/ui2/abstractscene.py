@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import partial, wraps
 import math, random
+import colorsys
 from tree import Tree, Signal
 from tree.ui.lib import KeyState, keyDict
 from typing import TYPE_CHECKING, Union, Dict, List
@@ -25,6 +26,14 @@ from edRig.tesserae.ui2.style import (VIEWER_BG_COLOR,
                                       VIEWER_GRID_OVERLAY)
 from edRig.tesserae.constant import debugEvents
 from edRig.tesserae.ui2 import relax
+
+def randomPastel(seed):
+	random.seed(a=seed)
+	h = random.random()
+	s = 0.5 + ((random.random()) / 3.0)
+	v = 0.7 + ((random.random()) / 5.0)
+	rgb = colorsys.hsv_to_rgb(h, s, v)
+	return rgb
 
 class AbstractScene(QtWidgets.QGraphicsScene):
 	"""graphics scene for interfacing with abstractgraph and ui
@@ -431,14 +440,9 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			tiles = [self.tiles[i] for i in data.nodes]
 
 			# get random colour for this set
-			# replace with proper pastels at some point
 			s = hash(name)
-			random.seed(a=s)
-			#random.setstate()
-			colour = QtGui.QColor.fromRgbF(
-				random.random(), random.random(), random.random(),
-			)
-			#colour = QtCore.Qt.yellow
+			rgb = randomPastel(s)
+			colour = QtGui.QColor.fromRgbF( *rgb )
 			painter.pen().setColor(colour)
 			painter.setPen(colour)
 			colour.setAlphaF(0.2)
@@ -466,7 +470,6 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 			# points = [QtCore.QPoint(j) for j in points]
 			points = [j.toPoint() for j in points]
 			poly = QtGui.QPolygon.fromList(points)
-			#painter.drawConvexPolygon(points)
 			painter.drawConvexPolygon(poly)
 
 

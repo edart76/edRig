@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import List, Dict, Union, TYPE_CHECKING, Set, Callable
+
 # viewer widget for the abstract view
 from PySide2 import QtCore, QtWidgets, QtGui
 
@@ -11,7 +14,8 @@ from edRig.tesserae.ui2.style import *
 from edRig.tesserae.ui2.context import ContextMenu
 from edRig.tesserae.constant import debugEvents
 from edRig.tesserae.ui2.lib import ConfirmDialogue, KeyState
-from edRig.structures import ActionItem, ActionList
+#from edRig.structures import ActionItem, ActionList
+from edRig.tesserae.action import Action
 from edRig import pipeline, ROOT_PATH
 
 ZOOM_MIN = -0.95
@@ -587,17 +591,21 @@ class AbstractView(QtWidgets.QGraphicsView):
 		and adds them to default"""
 		self.contextMenu.clearCustomEntries()
 
-		nodeActions = { "nodes" : [self.getTileActions()]} # returns combined dict
-		nodeExecActions = self.getTileExecActions()
-		# print "nodeExecActions are {}".format(nodeExecActions)
-		if nodeExecActions:
-			nodeActions["nodes"].append(nodeExecActions)
+		#print("tile actions", self.getTileActions())
+		#return
+		nodeActions = Action.mergeActions(
+			self.getTileActions()) # returns combined dict
+		nodeExecActions = Action.mergeActions(
+			self.getTileExecActions())
 
-		execActions = { "execution" : self.graph.getExecActions(
-			nodes=[i.abstract for i in self.selectedTiles()])}
-		ioActions = { "io" : self.getIoActions()}
+		# if nodeExecActions:
+		# 	nodeActions["nodes"].extend(nodeExecActions)
+		execActions = self.graph.getExecActions(
+			nodes=[i.abstract for i in self.selectedTiles()])
 
-		if nodeActions["nodes"]:
+		ioActions = Action.mergeActions(self.getIoActions())
+
+		if nodeActions:
 			self.contextMenu.buildMenusFromDict(nodeActions)
 
 		self.contextMenu.buildMenusFromDict(execActions)
@@ -605,56 +613,37 @@ class AbstractView(QtWidgets.QGraphicsView):
 
 	def getTileExecActions(self):
 		"""allows building specific tiles to specific stages"""
-		actions = {}
+		actions = []
 		for i in self.selectedTiles():
-			actions.update(i.abstract.getExecActions())
+			actions.extend(i.abstract.getExecActions())
 		return actions
 
-	def mergeActionDicts(self, base, target):
-		"""if two identical paths appear, an actionList is created"""
-		for k, v in base.items():
-			if target.get(k):
-				if isinstance(v, dict) and isinstance(target[k], dict):
 
-					self.mergeActionDicts(v, target[k])
-				elif isinstance(v, (ActionItem, ActionList)) and \
-					isinstance(target[k], (ActionItem, ActionList)):
-						v.addAction(target[k])
-		return base
-
-
-	def getTileActions(self):
-		"""desperately, desperately need a better way to concatenate
-		similar actions into the same menu"""
-		tileDicts = []
+	def getTileActions(self)->List[Action]:
+		""""""
+		tileLists = []
 		if not self.selectedTiles():
-			return {}
+			return []
 		for i in self.selectedTiles():
-			# print "tile get actions is {}".format(i.getActions())
-			tileDicts.append(i.getActions())
-		if len(tileDicts) == 1:
-			return tileDicts[0]
+			tileLists.extend(i.getActions())
 
-		base = tileDicts[0]
-		for i in tileDicts:
-			base = self.mergeActionDicts(base, i)
-		return base
+		return tileLists
+
 
 
 	def getIoActions(self):
 		"""actions for opening, saving etc"""
-		saveAction = ActionItem(execDict={
-			"func" : self.saveTilePile}, name="Save")
-		saveAsAction = ActionItem(
-			execDict={"func" : self.saveAsTilePile, "kwargs" : {"defaultPath" :self.savePath}},
-			name="Save As")
-		openAction = ActionItem(execDict={
-			"func" : self.openTilePileFile, "kwargs" : {"path" : self.savePath}},
-			name="Open")
-		newAction = ActionItem(execDict={
-			"func" : self.newTilePile}, name="New")
+		saveAction = Action(self.saveTilePile, name="Save")
+		saveAsAction = Action(self.saveAsTilePile,
+		                      kwargs={"defaultPath" :self.savePath},
+		                      name="Save As")
+		openAction = Action(self.openTilePileFile,
+		                    kwargs={"path" : self.savePath},
+		                    name="Open")
+		newAction = Action(self.newTilePile, name="New")
 
-		return {i.name : i for i in [saveAction, saveAsAction, openAction, newAction]}
+		#return {i.name : i for i in [saveAction, saveAsAction, openAction, newAction]}
+		return [saveAction, saveAsAction, openAction, newAction]
 
 	# io for entire system, put here as this is the point of greatest
 	# user interaction

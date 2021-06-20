@@ -3,8 +3,7 @@
 a 'partial-plus' if you will """
 
 from __future__ import annotations
-
-from typing import List, Set, Dict, Callable
+from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
 from functools import partial
 
 def evalLambdaSequence(seq):
@@ -40,11 +39,28 @@ class Action(object):
 			action = Action(action)
 		self.subActions.append(action)
 
-	def execute(self):
+	def execute(self, *args, **kwargs):
 		"""calls the actions function with given parametres"""
-		if isinstance(self.fn, partial):
-			return self.fn()
-		result = self.fn(*self.args, **self.kwargs)
-		for i in self.subActions:
-			i.execute()
-		return result
+		#print(self.name, "execute")
+		try:
+			if isinstance(self.fn, partial):
+				return self.fn()
+			result = self.fn(*self.args, **self.kwargs)
+			for i in self.subActions:
+				i.execute()
+
+			return result
+		except:
+			pass
+
+	@staticmethod
+	def mergeActions(actionList:List[Action])->Dict[str, Action]:
+		"""from a list of actions,
+		merge all actions with the same name"""
+		visited = {}#type:Dict[str, Action]
+		for i in actionList:
+			if i.name in visited:
+				visited[i.name].addAction(i)
+			else:
+				visited[i.name] = i
+		return visited

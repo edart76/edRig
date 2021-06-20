@@ -1,10 +1,11 @@
 # manages connectivity and execution order of a dag graph
 from __future__ import annotations
+from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
+
 
 import pprint
 from weakref import WeakSet, WeakValueDictionary
 from collections import defaultdict
-from typing import List, Callable, Dict, Union, Set, TYPE_CHECKING, Sequence
 from functools import partial
 from enum import Enum
 
@@ -21,7 +22,10 @@ from edRig.tesserae.abstractattr import AbstractAttr
 from edRig.tesserae.abstractedge import AbstractEdge
 from edRig.tesserae.abstractset import AbstractNodeSet
 from edRig.tesserae.lib import GeneralExecutionManager
-from edRig.structures import ActionItem
+#from edRig.structures import ActionItem
+
+from edRig.tesserae.action import Action
+
 
 
 class ExecutionPath(object):
@@ -723,16 +727,16 @@ class AbstractGraph2(AbstractTree):
 
 	def getExecActions(self, nodes=None):
 		"""returns available execution actions for target nodes, or all"""
-		return {"execute nodes" : ActionItem(execDict={
-			"func" : self.executeNodes, "kwargs" : {"nodes" : nodes}},
+		return {"execute nodes" : Action(
+			self.executeNodes, kwargs={"nodes" : nodes},
 			name="execute nodes"),
-			"reset nodes": ActionItem(execDict={  # everything
-				"func": self.resetNodes, "kwargs" : {"nodes" : nodes}},
+			"reset nodes": Action(
+				self.resetNodes, kwargs={"nodes" : nodes},
 				name="reset nodes"),
-			"rig it like you dig it" : ActionItem(execDict={ # everything
-				"func" : self.executeNodes}, name="rig it like you dig it"),
-			"reset all": ActionItem(execDict={  # everything
-				"func": self.reset}, name="reset all")
+			"rig it like you dig it" : Action(
+				self.executeNodes, name="rig it like you dig it"),
+			"reset all": Action(
+				self.reset, name="reset all")
 		}
 
 	def setState(self, state:State):
