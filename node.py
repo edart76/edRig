@@ -47,8 +47,10 @@ only 4 strokes over 6, looks freaky, no argument support
 	
 """
 
-
-class AbsoluteNode(StringLike):
+# admitting defeat on subclassing string properly
+class AbsoluteNode(StringLike,
+                   #metaclass=Singleton
+                   ):
 	# DON'T LOSE YOUR WAAAAY
 
 	allInfo = {
@@ -95,46 +97,44 @@ class AbsoluteNode(StringLike):
 
 	withPrefix = None
 
-	def __new__(cls, node, useCache=True):
-		""" new mechanism now used only to check validity and cache -
-		  no more string shenanigans """
-
-		# check if absoluteNode already exists for uid
-		uid = cmds.ls(node, uid=1)
-		if useCache:
-			if not uid: # no node, empty list
-				pass
-			elif uid[0] in cls.nodeCache:
-				return cls.nodeCache[ uid[0] ]
-
-		if isinstance(node, AbsoluteNode):
-			return node
-		elif isinstance(node, list):
-			print ("node is list")
-			return cls(node[0])
-		elif isinstance(node, om.MObject):
-			return cls.fromMObject(node)
-		elif isinstance(node, str):
-			return cls(str(node))
-
-		#absolute = str.__new__(cls, node)
-		absolute = super(AbsoluteNode, cls).__new__(cls, node)
-		absolute.con = absolute._instanceCon
-		absolute.conOrSet = absolute._instanceConOrSet
-		absolute.nodeType = absolute._instanceNodeType
-
-		# add new node to cache
-		try:
-			cls.nodeCache[ uid[0] ] = absolute
-		except:
-			print("node {}".format(node))
-			print("node uid {}".format(cmds.ls(node, uid=1)))
-			print("uid {}".format(uid))
-			print("nodeCache {}".format(cls.nodeCache))
-			raise RuntimeError
-
-
-		return absolute
+	# def __new__(cls, node, useCache=True):
+	# 	""" new mechanism now used only to check validity and cache -
+	# 	  no more string shenanigans """
+	#
+	# 	# check if absoluteNode already exists for uid
+	# 	uid = cmds.ls(node, uid=1)
+	# 	if useCache:
+	# 		if not uid: # no node, empty list
+	# 			pass
+	# 		elif uid[0] in cls.nodeCache:
+	# 			return cls.nodeCache[ uid[0] ]
+	#
+	# 	if isinstance(node, AbsoluteNode):
+	# 		return node
+	# 	elif isinstance(node, list):
+	# 		print ("node is list")
+	# 		return cls(node[0])
+	# 	elif isinstance(node, om.MObject):
+	# 		return cls.fromMObject(node)
+	# 	elif isinstance(node, str):
+	# 		return cls(str(node))
+	#
+	# 	#absolute = str.__new__(cls, node)
+	# 	absolute = super(AbsoluteNode, cls).__new__(cls, node)
+	# 	absolute.con = absolute._instanceCon
+	# 	absolute.conOrSet = absolute._instanceConOrSet
+	# 	absolute.nodeType = absolute._instanceNodeType
+	#
+	# 	# add new node to cache
+	# 	try:
+	# 		cls.nodeCache[ uid[0] ] = absolute
+	# 	except:
+	# 		print("node {}".format(node))
+	# 		print("node uid {}".format(cmds.ls(node, uid=1)))
+	# 		print("uid {}".format(uid))
+	# 		print("nodeCache {}".format(cls.nodeCache))
+	# 		raise RuntimeError
+	# 	return absolute
 
 
 	def __init__(self, node="", useCache=True):
@@ -167,6 +167,9 @@ class AbsoluteNode(StringLike):
 
 		# callbacks attached to node, to delete on node deletion
 		self.callbacks = []
+		self.con = self._instanceCon
+		self.conOrSet = self._instanceConOrSet
+		self.nodeType = self._instanceNodeType
 
 	@property
 	def node(self):

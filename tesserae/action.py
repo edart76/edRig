@@ -5,6 +5,7 @@ a 'partial-plus' if you will """
 from __future__ import annotations
 from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
 from functools import partial
+from enum import Enum
 
 def evalLambdaSequence(seq):
 	"""if any entries in sequence are lambdas, evaluate them"""

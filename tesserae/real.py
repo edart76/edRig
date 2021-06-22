@@ -1,8 +1,14 @@
 # real node components to be attached to an abstractNode
 # currently for use only in maya, but fully extensible to anything
+from __future__ import annotations
+from typing import List, Dict, Union, TYPE_CHECKING, Set, Callable
+
 
 
 from edRig.lib.python import AbstractTree
+
+from edRig.tesserae.action import Action
+
 
 from edRig.tesserae.lib import GeneralExecutionManager
 # from edRig.lib.deltastack import DeltaStack, StackDelta
@@ -38,11 +44,13 @@ class RealComponent(AbstractTree):
 
 	executionManagerType = GeneralExecutionManager
 
-	def __init__(self, *args, abstract=None, **kwargs):
-		super(RealComponent, self).__init__(*args, **kwargs)
+	def __init__(self, name=None, abstract=None, **kwargs):
+		super(RealComponent, self).__init__(name=name, **kwargs)
 		self._abstract = None
 		if abstract:
 			self.abstract = abstract
+		self.actions = AbstractTree("realActions")
+
 
 	@property
 	def abstract(self)->AbstractNode:
@@ -128,8 +136,16 @@ class RealComponent(AbstractTree):
 	def outputs(self):
 		return self.abstract.outputs
 
+	def addAction(self, actionItem=None, name=None):
+		"""full on copied this, don't know how to structure it properly """
+		if isinstance(actionItem, Callable):
+			actionItem = Action(actionItem)
+		self.actions[name or actionItem.name] = actionItem
 
-	# def substituteRoot(self, role="input", newAttr=None):
+	def getAllActions(self)->AbstractTree[str, Action]:
+		return self.actions
+
+# def substituteRoot(self, role="input", newAttr=None):
 	# 	"""used to supplant op root attributes with abstract ones"""
 	# 	if role == "input":
 	# 		attr = self.inputRoot

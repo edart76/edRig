@@ -6,6 +6,8 @@ from typing import List, Dict, Union, TYPE_CHECKING, Set, Callable
 from weakref import WeakSet, WeakValueDictionary
 from enum import Enum
 
+from traceback import print_exc, format_exc
+
 # container interfacing with the graph - concerned with connections
 #from edRig.structures import ActionItem
 from edRig.tesserae.action import Action
@@ -51,8 +53,9 @@ class AbstractNodeExecutionManager(GeneralExecutionManager):
 			self.node.afterExecute(success=False)
 			print( "")
 			print ("node {} encountered error during execution".format(self.node.nodeName))
-			print ("error is {}".format(exc_val))
+			#print ("error is {}".format(exc_val))
 			#self.node.setState("failed")
+			print_exc()
 
 
 			# we want execution to stop in this case
@@ -113,18 +116,16 @@ class AbstractNode(AbstractTree):
 		self.wireSignals()
 
 		self.extras = {}
-		# self.inEdges = set() #type:Set["AbstractEdge"]
-		# self.outEdges = set() #type:Set["AbstractEdge"]
 
 		self.index = None # execution order index
 
-		"""right click actions for ui"""
-		self.actions = []
+		"""right click actions for ui
+		left as a tree to allow custom structuring when wanted"""
+		self.actions = AbstractTree(name="actions")
+
 		self.addAction(self.setApproved)
 		self.addAction(self.recastReal)
 		self.dataFileExists = False
-		#self.real.setAbstract(self)
-
 
 		self.initSettings()
 
@@ -490,18 +491,20 @@ class AbstractNode(AbstractTree):
 		#self.addAction(self.getRealActions())
 		actions = []
 		actions.extend(self.actions)
-		#actions.extend(self.getRealActions())
+		reals = self.getRealActions().values()
+		print("reals", reals)
+		actions.extend(reals)
 		return actions
 		#return self.actions
 
 	def getRealActions(self):
 		return self.real.getAllActions()
 
-	def addAction(self, actionItem=None):
+	def addAction(self, actionItem:Union[Callable, function]=None,
+	              name=""):
 		if isinstance(actionItem, Callable):
-			print("wrapping ", actionItem, "with action")
 			actionItem = Action(actionItem)
-		self.actions.append(actionItem)
+		self.actions[name or actionItem.name] = actionItem
 
 
 	def getExecActions(self):

@@ -1,5 +1,11 @@
 # lib for adding and modifying attributes
 
+from __future__ import annotations
+from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
+from functools import partial
+from enum import Enum
+
+
 import random
 
 from tree import Tree
@@ -20,6 +26,7 @@ class PlugTree(Tree):
 	"""specialised tree for interfacing with Maya plugs
 	name is attribute name,
 	value is entire plug
+	still unable to find a good way to use this
 	"""
 
 	def __repr__(self):
@@ -90,17 +97,6 @@ def plugHType(plug):
 		return "compound"
 	else:
 		return "leaf"
-	#
-	# try:
-	# 	found = cmds.attributeQuery(attr, node=node, listChildren=True)
-	# 	if found: return "compound"
-	# except:
-	# 	pass
-	#
-	# if "[" in plug:
-	# 	return "leaf"
-	# return "leaf"
-
 
 def getMPlug(plugName):
 	sel = om.MSelectionList()
@@ -185,7 +181,7 @@ def conOrSet(a, b, f=True):
 				conOrSet(val, unrollPlug(b, returnLen=len(a))[i] )
 
 	else:
-		setAttr(b, attrValue=a)
+		setAttr(b, value=a)
 
 # def getChildren(plug)
 
@@ -312,47 +308,100 @@ def addUntypedAttr(node, attrName="untypedAttr"):
 # track which maya types are defined as 'dt' or 'at'
 # coerce either to work
 # this is one of my least favourite bits of this software
-attrTypeMap = {
+
+class Types(Enum):
+	# at
+	Bool = "bool"
+	Byte = "byte"
+	Char = "char"
+	Compound = "compound"
+	Double = "double"
+	DoubleAngle = "doubleAngle"
+	Enum = "enum"
+	Float = "float"
+	Long = "long"
+	Message = "message"
+	Short = "short"
+	Time = "time"
+
+	# dt
+	DoubleArray = "doubleArray"
+	FloatArray = "floatArray"
+	Lattice = "lattice"
+	Matrix = "matrix"
+	Mesh = "mesh"
+	NurbsCurve = "nurbsCurve"
+	NurbsSurface = "nurbsSurface"
+	PointArray = "pointArray"
+	String = "string"
+	StringArray = "stringArray"
+	VectorArray = "vectorArray"
+
+attrTypeData = {
 	"at" : ("bool", "long", "short", "byte", "char", "enum", "float",
 	        "double", "doubleAngle", "compound", "time", "message"),
 	"dt" : ("matrix", "string", "stringArray", "doubleArray", "floatArray",
 	        "vectorArray", "nurbsCurve", "nurbsSurface", "mesh", "lattice",
 	        "pointArray")
 }
+# couldn't get dict comp working :(
+attrTypeMap = {}
+for k, v in attrTypeData.items():
+	for n in v:
+		attrTypeMap[n] = k
+
+pyTypeMap = {
+	bool : ("at", "bool"),
+	int : ("at", "long"),
+	float : ("at", "float"),
+	str : ("dt", "string")
+}
 
 # at=float3 and dt=float3 actually do different things, which is so dumb
 # figure that out yourself if you use it
-def addAttr(target, parent=None, **kwargs):
+def addAttr(target, name:str=None, default=0.0, attrType=None, parent:str=None, **kwargs)->str:
 	"""wrapper for more annoying attr types like string
 	returns plug"""
+
+	# check for pre-existing
+	name = name or kwargs.get("ln")
+	if name in cmds.listAttr(target):
+		return target + "." + name
+	kwargs["ln"] = name
+
+	# check parent
 	if parent:
 		if not target in parent:
 			parent = target + "." + parent
 		parent = ".".join(parent.split(".")[1:])
-		kwargs.update({"parent" : parent})
-
-	# check if already exists
-	attrName = kwargs.get("ln", kwargs.get("attrName"))
-	if not "ln" in kwargs: kwargs["ln"] = attrName
-	if attrName in cmds.listAttr(target):
-		return target+"."+attrName
+		kwargs["parent"] =  parent
 
 	# check for typing
-	attrType = kwargs.get("at", kwargs.get("dt", kwargs.get("attrType")))
+	attrType = attrType or kwargs.get("at", kwargs.get("dt"))
 	if attrType == "int" : attrType = "long"
 
-	for flag, values in list(attrTypeMap.items()):
-		if attrType in values:
-			kwargs.pop("at", None)
-			kwargs.pop("dt", None)
-			kwargs[flag] = attrType
-	# if not found in map, will fallback to what is specified by user
+	kwargs.pop("at", None)
+	kwargs.pop("dt", None)
+
+	if attrType:
+		# get "at" or "dt"
+		typeFlag = attrTypeMap[attrType]
+		kwargs[typeFlag] = attrType
+
+	# otherwise use the python type of the default supplied
+	else:
+		pyType = type(default)
+		typeFlag, attrType = pyTypeMap[pyType]
+		kwargs[typeFlag] = attrType
 
 	cmds.addAttr(target, **kwargs)
+	plugStr = parent + "." + name if parent else target + "." + name
 
-	if parent:
-		return parent + "." + attrName
-	return target+"."+attrName
+	if default:
+		#setAttr(plugStr, default)
+		cmds.setAttr(plugStr, default, type=attrType)
+
+	return plugStr
 
 def getAttr(*args, **kwargs):
 	"""J U S T I N C A S E"""
@@ -430,10 +479,10 @@ INTERFACE_ATTRS = { # attribute templates for io network nodes
 	# give me a minute
 	}
 
-def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
+def setAttr(targetPlug, value=None, absNode=None, **kwargs):
 	"""similar wrapper for setAttr dealing with strings, matrices, etc
 	absNode allows passing absoluteNode where performance is important"""
-	if not attrValue:
+	if not value:
 		cmds.setAttr(targetPlug, **kwargs)
 
 	#print "isPlug {} {}".format(targetPlug, isPlug(targetPlug))
@@ -449,36 +498,36 @@ def setAttr(targetPlug, attrValue=None, absNode=None, **kwargs):
 		operators = ("+", "-", "*", "/")
 		operator = op if op in operators else "+"
 		base = getAttr(targetPlug)
-		attrValue = eval("{} {} {}".format(base, operator, attrValue) )
+		value = eval("{} {} {}".format(base, operator, value))
 		kwargs.pop("relative")
 
-	elif isinstance(attrValue, str):
+	elif isinstance(value, str):
 		# check for enum:
 		#print "plug type is {}".format(plugType(targetPlug))
 		if plugType(targetPlug) == "enum":
-			setEnumFromString(targetPlug, attrValue)
+			setEnumFromString(targetPlug, value)
 		else:
 			#cmds.setAttr(targetPlug, attrValue, type="string")
-			_setAttrSafe(targetPlug, attrValue, type="string")
+			_setAttrSafe(targetPlug, value, type="string")
 		return
 
 	elif plugHType(targetPlug) == "compound":
-		if isinstance(attrValue, (tuple, list)):
+		if isinstance(value, (tuple, list)):
 			""" catch those fun times when you get a value like [ ( 1.0, ) ] """
-			attrValue = python.flatten(attrValue)
+			value = python.flatten(value)
 			#cmds.setAttr(targetPlug, *attrValue)
-			_setAttrSafe(targetPlug, *attrValue)
+			_setAttrSafe(targetPlug, *value)
 			return
 
 		# this is used to specify one value for a multi attr
 		targets = unrollPlug(targetPlug)
 		for i in targets:
-			setAttr(i, attrValue=attrValue)
+			setAttr(i, value=value)
 		return
 
 	else:
 		#cmds.setAttr(targetPlug, attrValue, **kwargs)
-		_setAttrSafe(targetPlug, attrValue, **kwargs)
+		_setAttrSafe(targetPlug, value, **kwargs)
 
 def _setAttrSafe(*args, **kwargs):
 	""" THIS close to catching errors when setting connected attributes """

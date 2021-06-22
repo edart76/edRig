@@ -1,14 +1,14 @@
 
 
 from __future__ import annotations
-from typing import List, Set, Dict, Callable, Tuple, Sequence
+from typing import Callable
 
 # from maya import cmds
 # import maya.api.OpenMaya as om
-from edRig import cmds, om
+from edRig import cmds
 from edRig.core import ECN, shortUUID
-from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import scene, attr, transform, pipeline
+from edRig.node import AbsoluteNode, invokeNode
+from edRig import scene, attr, transform
 # from edRig.tesserae.abstractnode import AbstractAttr
 
 #from edRig.structures import ActionItem
@@ -16,9 +16,8 @@ from edRig.tesserae.action import Action
 from edRig.pipeline import safeLoadModule
 from edRig.tesserae.real import MayaReal, RealAttrInterface
 from edRig.tesserae.lib import GeneralExecutionManager
-from edRig.lib.python import debug, outerVars, AbstractTree, \
-	saveObjectClass, loadObjectClass
-from edRig.tesserae.layers.setups import InvokedNode
+from edRig.lib.python import saveObjectClass, loadObjectClass
+
 
 class OpExecutionManager(GeneralExecutionManager):
 	"""manage execution of ops"""
@@ -153,16 +152,15 @@ class Op(MayaReal):
 
 	def __init__(self, name=None, abstract=None):
 		""":type abstract AbstractNode"""
-		super(Op, self).__init__(name=name)
-		self.character = None
+		super(Op, self).__init__(name=name, abstract=abstract)
+		#self.character = None
 		print("Op instantiated")
-		self._opName = None
-		self.opName = name or self.__class__.__name__
-		self.abstract = abstract
-		self.actions = {}
+		# self._opName = None
+		# self.opName = name or self.__class__.__name__
+		# self.abstract = abstract
 
 
-		self.uuid = self.shortUUID(8)
+		#self.uuid = self.shortUUID(8)
 
 		if self.abstract:
 			self.setAbstract(abstract)
@@ -178,6 +176,10 @@ class Op(MayaReal):
 	@property
 	def internal(self):
 		return self.abstract.internal
+
+	@property
+	def opName(self):
+		return self.name
 
 	@property
 	def data(self):
@@ -313,11 +315,8 @@ class Op(MayaReal):
 
 	def opTag(self, tagNode):
 		# add tag for the specific op
-		attr.addAttr(tagNode, attrName="opTag", attrType="string")
-		try:
-			attr.setAttr(tagNode + ".opTag", self.opName)
-		except:
-			pass
+		attr.addAttr(tagNode, name="opTag", default=self.opName)
+
 		attr.addTag(tagNode, "opUID", self.uuid)
 		# connect all created nodes to the input network node
 		# said the consummate idiot
@@ -424,7 +423,7 @@ class Op(MayaReal):
 
 		# add tags
 		for i in inputNetwork, outputNetwork:
-			attr.addTag(i, "category", "opIo")
+			attr.addTag(i(), "category", "opIo")
 		attr.addTag(inputNetwork, "role", "input")
 		attr.addTag(outputNetwork, "role", "output")
 
@@ -542,8 +541,6 @@ class Op(MayaReal):
 
 
 	# actions
-	def getAllActions(self):
-		return self.actions
 
 	# def addAction(self, actionDict=None, actionItem=None, func=None, name=None):
 	# 	if actionDict:
@@ -556,11 +553,11 @@ class Op(MayaReal):
 	# 		item = ActionItem(execDict={"func": func}, name=name)
 	# 		self.actions.update({item.name : item})
 
-	def addAction(self, action=None, name=None):
-		if isinstance(action, Callable):
-			action = Action(action, name)
-		name = name or action.name
-		self.actions.update({action.name : action})
+	# def addAction(self, action=None, name=None):
+	# 	if isinstance(action, Callable):
+	# 		action = Action(action, name)
+	# 	name = name or action.name
+	# 	self.actions.update({action.name : action})
 
 	def addInputWithAction(self, parent=None, name=None, datatype=None, copy=None,
 	                       suffix="", desc=""):
@@ -581,7 +578,7 @@ class Op(MayaReal):
 			"kwargs" : {"op": self}}
 		inputAction = Action(_addInputWithAction, name="add_custom_input",
 		                     kwargs={"op" : self})
-		self.addAction(action=inputAction)
+		self.addAction(inputAction)
 
 
 	# serialisation and regeneration

@@ -165,14 +165,9 @@ class LayerOp(Op):
 	def getAllActions(self):
 		"""super call freaks out for some reason with regen'd objects
 		no it freaked out because reloading edRig deleted all system modules"""
-		base = {}
 		base = super(LayerOp, self).getAllActions()
 
-		try:
-			base.update({"memory": self.memoryActions()})
-		except Exception as e:
-			print("memory actions error")
-			print("error is {}".format(e))
+		base["memory"] = self.memoryActions()
 		return base
 
 	# convenience and standardisation

@@ -73,7 +73,13 @@ try:
 	for fnName in listFunctions:
 		try:
 			fn = getattr(cmds, fnName)
-			setattr(cmds, fnName, returnList(fn))
+			base = getattr(cmds, "_" + fnName, None)
+			if base:
+				setattr(cmds, fnName, returnList(base))
+			else:
+				setattr(cmds, "_" + fnName, fn)
+				setattr(cmds, fnName, returnList(fn))
+
 		except:
 			print(("error wrapping {}".format(fn.__name__)))
 			print((traceback.format_exc()))
