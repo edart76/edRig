@@ -16,9 +16,11 @@ from edRig import pipeline
 # from edRig.tesserae.ops.op import Op
 
 from edRig.tesserae.abstractattr import AbstractAttr
-from edRig.tesserae.lib import GeneralExecutionManager
+from edRig.tesserae.lib import GeneralExecutionManager, mergeActionTrees
 from edRig.lib.python import Signal, AbstractTree, \
 	loadObjectClass
+
+
 
 if TYPE_CHECKING:
 	from edRig.tesserae.abstractgraph import AbstractGraph, AbstractEdge
@@ -121,7 +123,7 @@ class AbstractNode(AbstractTree):
 
 		"""right click actions for ui
 		left as a tree to allow custom structuring when wanted"""
-		self.actions = AbstractTree(name="actions")
+		self.actions = AbstractTree(name="actions") #type:AbstractTree[str, Action]
 
 		self.addAction(self.setApproved)
 		self.addAction(self.recastReal)
@@ -487,24 +489,23 @@ class AbstractNode(AbstractTree):
 	def getConnectedSets(self):
 		return self.graph.getSetsFromNode(self)
 
-	def getAllActions(self)->List[Action]:
-		#self.addAction(self.getRealActions())
-		actions = []
-		actions.extend(self.actions)
-		reals = self.getRealActions().values()
-		print("reals", reals)
-		actions.extend(reals)
-		return actions
-		#return self.actions
+	def getAllActions(self)->AbstractTree[Action]:
+		actionTree = mergeActionTrees(
+			[self.actions, self.real.getAllActions()])
+		return actionTree
 
 	def getRealActions(self):
 		return self.real.getAllActions()
 
-	def addAction(self, actionItem:Union[Callable, function]=None,
+	def addAction(self, action:Union[Callable, function, Action]=None,
 	              name=""):
-		if isinstance(actionItem, Callable):
-			actionItem = Action(actionItem)
-		self.actions[name or actionItem.name] = actionItem
+		if isinstance(action, Callable):
+			action = Action(action)
+		name = name or action.name
+		if self.actions.get(name):
+			self.actions[name].addAction(action)
+		else:
+			self.actions[name or action.name] = action
 
 
 	def getExecActions(self):

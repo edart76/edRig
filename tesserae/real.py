@@ -136,11 +136,15 @@ class RealComponent(AbstractTree):
 	def outputs(self):
 		return self.abstract.outputs
 
-	def addAction(self, actionItem=None, name=None):
-		"""full on copied this, don't know how to structure it properly """
-		if isinstance(actionItem, Callable):
-			actionItem = Action(actionItem)
-		self.actions[name or actionItem.name] = actionItem
+	def addAction(self, action:Union[Callable, function, Action]=None,
+	              name=""):
+		if isinstance(action, Callable):
+			actionItem = Action(action)
+		name = name or action.name
+		if self.actions.get(name):
+			self.actions[name].addAction(action)
+		else:
+			self.actions[name or action.name] = action
 
 	def getAllActions(self)->AbstractTree[str, Action]:
 		return self.actions

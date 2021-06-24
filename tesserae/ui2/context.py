@@ -10,6 +10,8 @@ from edRig.tesserae.action import Action
 from edRig.tesserae.ui2.style import STYLE_QMENU
 #from edRig.tesserae.ui2.lib import ContextMenu
 
+from edRig.lib.python import AbstractTree
+
 #EmbeddedAction = EmbeddedAction
 #ContextMenu = ContextMenu
 
@@ -130,11 +132,13 @@ class ContextMenu(object):
 				action = self.addSubAction(parent=parent, actionObject=v)
 		pass
 
-	def buildMenusFromTree(self, actionTree, parent=None):
+	def buildMenusFromTree(self, actionTree:AbstractTree, parent=None):
 		""" builds recursively from tree
 		only actions at leaves are considered """
+
 		if actionTree.branches: # add menu for multiple actions
-			parent = self.addSubMenu(name=actionTree.name, parent=parent)
+			parent = self.addSubMenu(name=actionTree.name,
+			                         parent=parent or self.rootMenu)
 			for branch in actionTree.branches:
 				self.buildMenusFromTree(branch, parent)
 			return parent

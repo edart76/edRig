@@ -5,6 +5,7 @@ from typing import List, Dict, Union, TYPE_CHECKING, Set, Callable
 from PySide2 import QtCore, QtWidgets, QtGui
 
 import edRig.pipeline
+from edRig.lib.python import AbstractTree
 from edRig.tesserae.ui2.abstractscene import AbstractScene
 from edRig.tesserae.abstractgraph import AbstractGraph
 from edRig.tesserae.ui2.tabsearch import TabSearchWidget
@@ -16,6 +17,7 @@ from edRig.tesserae.constant import debugEvents
 from edRig.tesserae.ui2.lib import ConfirmDialogue, KeyState
 #from edRig.structures import ActionItem, ActionList
 from edRig.tesserae.action import Action
+from edRig.tesserae import lib
 from edRig import pipeline, ROOT_PATH
 
 ZOOM_MIN = -0.95
@@ -591,22 +593,20 @@ class AbstractView(QtWidgets.QGraphicsView):
 		and adds them to default"""
 		self.contextMenu.clearCustomEntries()
 
-		#print("tile actions", self.getTileActions())
-		#return
-		nodeActions = Action.mergeActions(
-			self.getTileActions()) # returns combined dict
-		nodeExecActions = Action.mergeActions(
-			self.getTileExecActions())
+		nodeActions = lib.mergeActionTrees(
+			self.getTileActions())
+		nodeActions.name = "Nodes"
+		if nodeActions:
+			#self.contextMenu.buildMenusFromDict(nodeActions)
+			self.contextMenu.buildMenusFromTree(nodeActions)
 
-		# if nodeExecActions:
-		# 	nodeActions["nodes"].extend(nodeExecActions)
+		nodeExecActions =self.getTileExecActions()
+
 		execActions = self.graph.getExecActions(
 			nodes=[i.abstract for i in self.selectedTiles()])
 
 		ioActions = Action.mergeActions(self.getIoActions())
 
-		if nodeActions:
-			self.contextMenu.buildMenusFromDict(nodeActions)
 
 		self.contextMenu.buildMenusFromDict(execActions)
 		self.contextMenu.buildMenusFromDict(ioActions)
@@ -619,15 +619,10 @@ class AbstractView(QtWidgets.QGraphicsView):
 		return actions
 
 
-	def getTileActions(self)->List[Action]:
+	#def getTileActions(self)->List[Action]:
+	def getTileActions(self)->List[AbstractTree[str, Action]]:
 		""""""
-		tileLists = []
-		if not self.selectedTiles():
-			return []
-		for i in self.selectedTiles():
-			tileLists.extend(i.getActions())
-
-		return tileLists
+		return [i.abstract.getAllActions() for i in self.selectedTiles()]
 
 
 
