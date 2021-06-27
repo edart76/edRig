@@ -1,13 +1,11 @@
 
 """ maya-facing sync functions """
 
-from edRig import cmds, om, pipeline, scene
+from edRig import cmds, pipeline, scene
 import importlib
 importlib.reload(pipeline)
 importlib.reload(scene)
-from edRig.node import AbsoluteNode, ECA, ObjectSet
-
-from edRig.core import debug
+from edRig.maya.core.node import ObjectSet
 
 
 def toolClick():

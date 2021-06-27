@@ -1,7 +1,5 @@
-
-from maya import cmds
-from edRig import core, con
-from edRig.node import AbsoluteNode, ECA, NodeWrapper
+from edRig import con
+from edRig.maya.core.node import AbsoluteNode, ECA
 
 
 def collidePoint(collisionTransform, collisionMesh=None,

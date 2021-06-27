@@ -1,11 +1,8 @@
 # in framestore, they called me the curve guy
-from . import core as core
-from .core import ECN
-from edRig.node import AbsoluteNode, ECA
+from edRig.maya import core as core
+from edRig.maya.core import ECN
+from edRig.maya.core.node import AbsoluteNode, ECA
 from edRig import attr, plug, transform, cmds, om, con
-from edRig.plug import conOrSet
-
-import pprint
 
 sceneScale = 1
 # for later

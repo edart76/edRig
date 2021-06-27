@@ -1,6 +1,6 @@
 """oh hey look it's a legit thing that tech artists do"""
-from edRig import pipeline, attr, node, camera, AbsoluteNode, ECA
-from maya import cmds
+from edRig import attr, ECA
+
 
 def renderView(path=None, asset=None,
                fileType="exr", renderer="arnold",

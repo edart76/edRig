@@ -1,15 +1,12 @@
 # central data model for managing instances
 from maya import cmds
-import maya.api.OpenMaya as om
 from edRig import attr, transform
-from edRig.core import invokeNode
-from edRig.node import AbsoluteNode, ECA
-from PySide2 import QtCore
-from edRig.layers.setups import InvokedNode
+from edRig.maya.core import invokeNode
+from edRig.maya.core.node import ECA
 
-from edRig.tesserae.abstractgraph import AbstractGraph, AbstractGraphExecutionManager
-from edRig.tesserae.abstractnode import AbstractNode, AbstractAttr
-from edRig.tesserae.abstractedge import AbstractEdge
+from edRig.tesserae.abstractgraph import AbstractGraph
+from edRig.tesserae.abstractnode import AbstractNode
+
 """no way can i actually do this
 graph does not execute
 or does it lol

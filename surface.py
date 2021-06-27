@@ -1,7 +1,6 @@
 # s o o n
-import pprint
-from edRig.node import AbsoluteNode, ECA
-from edRig import curve, COMMON_PATH, pipeline, attr, cmds, om, oma, mel
+from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig import COMMON_PATH, attr, cmds, om, mel
 
 
 def loftCurves(curvePlugs, degree="linear"):

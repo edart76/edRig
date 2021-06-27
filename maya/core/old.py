@@ -1,28 +1,14 @@
 # core functions and useful things
 
 from edRig.dcc import cmds, om
-from edRig.lib.python import AbstractTree
+from .openmaya import getMObject
 
 import math, random, sys, functools, weakref
 
 sys.dont_write_bytecode = True
 
-
-nodeObjMap = weakref.WeakValueDictionary()
-
-
 def isNode(target):
 	return cmds.objExists(target)
-
-def getMObject(node):
-	uid = cmds.ls(node, uuid=1)
-	if nodeObjMap.get(uid):
-		return nodeObjMap[uid]
-	sel = om.MSelectionList()
-	sel.add(node)
-	obj = sel.getDependNode(0)
-	nodeObjMap[uid] = obj
-	return obj
 
 def isPlug(target):
 	"""returns true for format pCube1.translateX"""
@@ -37,12 +23,6 @@ def makeList(test):
 		return [test]
 	return test
 
-def shortUUID(length=4):
-	uid = ""
-	for i in range(length):
-		o = str(random.randint(0, 9))
-		uid += o
-	return uid
 
 def nodeFromAttr(attr):
 	node = (attr.split(".")).pop(0)
@@ -370,17 +350,6 @@ def isEqual(x, y, tolerance=0.0001):
 	# are x and y equal to within tolerance?
 	return abs(x - y) < tolerance
 
-
-def MObjectFrom(node):
-	# get the MObject from anything
-	if not cmds.ls(node):
-		print(("node {} not found".format(node)))
-		return None
-	sel = om.MSelectionList()
-	sel.add( cmds.ls(node)[0] )
-	ref = sel.getDependNode(0)
-	return ref
-
 def stringFromMObject(obj):
 	"""opposite, retrieves string name"""
 	return om.MFnDagNode(obj).fullPathName()
@@ -389,7 +358,7 @@ def MFnTransformFrom(dag):
 	# is this a transform or already an MObject?
 	#print "dag is {}".format(dag)
 	if cmds.objExists(dag):
-		object = MObjectFrom(dag)
+		object = getMObject(dag)
 	else:
 		object = dag
 	fn = om.MFnTransform(object)

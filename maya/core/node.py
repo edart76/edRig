@@ -1,11 +1,15 @@
 """AbsoluteNode wrapper """
 
-import weakref, ctypes, ast
+import ast
 
 from edRig.dcc import cmds, om
 
-from edRig.core import MObjectFrom, shapeFrom, tfFrom, \
-	stringFromMObject, ECN, nodeObjMap
+from edRig.maya.core.openmaya import getMObject
+from edRig.maya.core import (shapeFrom, tfFrom,
+	stringFromMObject, ECN)
+
+from edRig.maya.core.bases import NodeBase, PlugBase
+
 from edRig import attr, naming, beauty
 
 # saviour
@@ -50,6 +54,7 @@ only 4 strokes over 6, looks freaky, no argument support
 # admitting defeat on subclassing string properly
 class AbsoluteNode(StringLike,
                    #metaclass=Singleton
+                   NodeBase
                    ):
 	# DON'T LOSE YOUR WAAAAY
 
@@ -97,46 +102,6 @@ class AbsoluteNode(StringLike,
 
 	withPrefix = None
 
-	# def __new__(cls, node, useCache=True):
-	# 	""" new mechanism now used only to check validity and cache -
-	# 	  no more string shenanigans """
-	#
-	# 	# check if absoluteNode already exists for uid
-	# 	uid = cmds.ls(node, uid=1)
-	# 	if useCache:
-	# 		if not uid: # no node, empty list
-	# 			pass
-	# 		elif uid[0] in cls.nodeCache:
-	# 			return cls.nodeCache[ uid[0] ]
-	#
-	# 	if isinstance(node, AbsoluteNode):
-	# 		return node
-	# 	elif isinstance(node, list):
-	# 		print ("node is list")
-	# 		return cls(node[0])
-	# 	elif isinstance(node, om.MObject):
-	# 		return cls.fromMObject(node)
-	# 	elif isinstance(node, str):
-	# 		return cls(str(node))
-	#
-	# 	#absolute = str.__new__(cls, node)
-	# 	absolute = super(AbsoluteNode, cls).__new__(cls, node)
-	# 	absolute.con = absolute._instanceCon
-	# 	absolute.conOrSet = absolute._instanceConOrSet
-	# 	absolute.nodeType = absolute._instanceNodeType
-	#
-	# 	# add new node to cache
-	# 	try:
-	# 		cls.nodeCache[ uid[0] ] = absolute
-	# 	except:
-	# 		print("node {}".format(node))
-	# 		print("node uid {}".format(cmds.ls(node, uid=1)))
-	# 		print("uid {}".format(uid))
-	# 		print("nodeCache {}".format(cls.nodeCache))
-	# 		raise RuntimeError
-	# 	return absolute
-
-
 	def __init__(self, node="", useCache=True):
 		super(AbsoluteNode, self).__init__(base=node)
 
@@ -152,7 +117,7 @@ class AbsoluteNode(StringLike,
 		self._transform = None
 
 		try:
-			obj = MObjectFrom(node)
+			obj = getMObject(node)
 		except Exception as e:
 			print("absolute init failed for node {}".format(node))
 			raise e
@@ -213,6 +178,9 @@ class AbsoluteNode(StringLike,
 	def __call__(self, *args, **kwargs):
 		self.value = self.refreshPath()
 		return self.value
+
+	# def __class__(self):
+	# 	return str
 
 	def refreshDagPath(self):
 		#self.MDagPath = om.MDagPath.getAPathTo(self.MObject)

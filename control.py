@@ -1,10 +1,8 @@
 # define all the pretty colours, and how to saving them
 from edRig import CURRENT_PATH
-from edRig.core import ECN
-from edRig.node import AbsoluteNode, ECA, invokeNode
-from edRig import cmds, om, attr, transform, pipeline, material, beauty, plug, \
-	scene, con
-
+from edRig.maya.core import ECN
+from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig import cmds, transform, pipeline, beauty, plug
 
 import string
 

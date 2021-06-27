@@ -1,10 +1,8 @@
 """ module for space switches"""
 
-from edRig import AbsoluteNode, ECA, transform, attr, \
-	callback, node, naming
+from edRig import ECA, attr, \
+	naming
 
-from maya import cmds
-import maya.api.OpenMaya as om
 
 class SpaceSwitch(object):
 	"""base class for space switches affecting transforms"""

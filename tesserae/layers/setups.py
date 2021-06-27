@@ -3,19 +3,17 @@
 # goal is to have a "magic button" akin to Framestore's
 # data storage
 #from collections import MutableMapping
-import edRig.node
+import edRig.maya.core.node
 #from edRig.structures import AttrItem
 
-from edRig import core, attrio, mesh, curve, surface, attr, transform
-from edRig.node import AbsoluteNode, ECA
+from edRig import attrio, mesh, curve, surface, attr, transform
+from edRig.maya.core.node import AbsoluteNode, ECA
 #from edRig.tesserae.ops.op import Op
 #from edRig.layers import Env
 import copy
 from maya import cmds
 # import maya.api.OpenMaya as om
 # import maya.api.OpenMayaAnim as oma
-from edRig.lib.python import AbstractTree
-import pprint
 
 class Memory(object):
 	"""stores maya scene data in regular, serialisable container
@@ -113,7 +111,7 @@ class Memory(object):
 			self._storage[infoName][infoType] = gatheredGoss
 		# always set node regardless to ensure info is relevant in scene
 		# self.setNode(infoName, core.AbsoluteNode(node))
-		self._storage[infoName]["nodes"] = [edRig.node.AbsoluteNode(i) for i in nodes]
+		self._storage[infoName]["nodes"] = [maya.core.node.AbsoluteNode(i) for i in nodes]
 		#print ""
 
 
@@ -126,7 +124,7 @@ class Memory(object):
 			# returnDict = {}
 			# returnDict.clear()
 			for i in self.infoKinds.remove("all"):
-				# returnDict[i] = self.recall(infoName, infoType=i)
+				# returnDict[i] = self.reapplyData(infoName, infoType=i)
 				self.recall(infoName, infoType=i)
 			#return returnDict
 		else:
@@ -189,7 +187,7 @@ class Memory(object):
 		print("GATHERING GOSS")
 
 		returnDict = {}
-		target = edRig.node.AbsoluteNode(target)  # speed
+		target = edRig.maya.core.node.AbsoluteNode(target)  # speed
 		attrList = []
 		if infoType == "attr":
 			# gather dict of attribute names and values
@@ -311,11 +309,11 @@ class Memory(object):
 
 	def restoreAbsoluteNodes(self):
 		"""restore strings to absNodes, assuming the same names exist"""
-		self.nodes = [edRig.node.AbsoluteNode(i) for i in self.nodes]
+		self.nodes = [maya.core.node.AbsoluteNode(i) for i in self.nodes]
 		for k, v in self._storage.items():
 			print("k is {}, v is {}, v keys are {}".format(k, v, list(v.keys())))
 			if "nodes" in list(v.keys()):
-				v["nodes"] = [edRig.node.AbsoluteNode(i) for i in v["nodes"]]
+				v["nodes"] = [maya.core.node.AbsoluteNode(i) for i in v["nodes"]]
 			print("restored {}".format(v["nodes"]))
 		pass
 

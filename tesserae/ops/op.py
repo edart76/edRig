@@ -1,13 +1,12 @@
 
 
 from __future__ import annotations
-from typing import Callable
 
 # from maya import cmds
 # import maya.api.OpenMaya as om
 from edRig import cmds
-from edRig.core import ECN, shortUUID
-from edRig.node import AbsoluteNode, invokeNode
+from edRig.maya.core import ECN
+from edRig.maya.core.node import AbsoluteNode, invokeNode
 from edRig import scene, attr, transform
 # from edRig.tesserae.abstractnode import AbstractAttr
 
@@ -16,7 +15,7 @@ from edRig.tesserae.action import Action
 from edRig.pipeline import safeLoadModule
 from edRig.tesserae.real import MayaReal, RealAttrInterface
 from edRig.tesserae.lib import GeneralExecutionManager
-from edRig.lib.python import saveObjectClass, loadObjectClass
+from edRig.lib.python import saveObjectClass, loadObjectClass, shortUUID
 
 
 class OpExecutionManager(GeneralExecutionManager):
@@ -117,7 +116,7 @@ class Op(MayaReal):
 				for i in after:
 					try:
 						self.opTag(i)
-						attr.addTag(i, "category", category)
+						attr.addTag(i, "opCategory", category)
 					finally:
 						pass
 
@@ -182,11 +181,6 @@ class Op(MayaReal):
 		return self.name
 
 	@property
-	def data(self):
-		""" looks up abstract's data """
-		return self.abstract.data
-
-	@property
 	def s(self): # shorthand
 		return self.settings
 
@@ -201,13 +195,6 @@ class Op(MayaReal):
 		if define:
 			self.defineAttrs() # resets attributes, don't call on regeneration
 			self.defineSettings()
-
-		# # support for redefining attributes from dict
-		# if inDict:
-		# 	self.inputRoot = self.inputRoot.fromDict(inDict, node=abstract)
-		# if outDict:
-		# 	self.outputRoot = self.outputRoot.fromDict(outDict, node=abstract)
-		# # no luck all skill
 
 		#self.makeBaseActions()
 
@@ -229,29 +216,29 @@ class Op(MayaReal):
 		# return str(self.__class__) + "-" + self.opName + "-" + self.uuid
 		return str(self.__class__.__name__) + "-" + self.opName
 
-	def rename(self, newName):
-		"""called by graph"""
-		self.name = newName
+	# def rename(self, newName):
+	# 	"""called by graph"""
+	# 	self.name = newName
 
 	@property
 	def opName(self):
 		return self.name
 
-	@opName.setter
-	def opName(self, val):
-		self.name = val
+	# @opName.setter
+	# def opName(self, val):
+	# 	self.name = val
 
 	@staticmethod
 	def log(message, **kwargs):
 		"""if we implement proper logging replace everything here"""
-		#print(message, **kwargs)
 		print(message)
 
 
 	def defineAttrs(self):
 		"""override with op specifics"""
-		raise NotImplementedError("op class {} DOES NOT override defineAttrs, please fix".format(
-			self.__class__.__name__))
+		raise NotImplementedError(
+			"op class {} DOES NOT override defineAttrs, please fix".format(
+				self.__class__.__name__))
 
 
 	### handy settings methods
@@ -288,7 +275,6 @@ class Op(MayaReal):
 		# more tactile to have a little top tag
 		return attr.edTag(tagNode)
 
-
 	@staticmethod
 	def addTag(tagNode, tagName, tagContent=None):
 		return attr.addTag(tagNode, tagName, tagContent)
@@ -317,7 +303,7 @@ class Op(MayaReal):
 		# add tag for the specific op
 		attr.addAttr(tagNode, name="opTag", default=self.opName)
 
-		attr.addTag(tagNode, "opUID", self.uuid)
+		attr.addTag(tagNode, "opUID", str(self.uuid))
 		# connect all created nodes to the input network node
 		# said the consummate idiot
 
@@ -337,13 +323,14 @@ class Op(MayaReal):
 		# first check if node already exists, later
 		name = kwargs.get("n") or name or self.name + "_" + type
 		node = self.ECN(type, *args, name=name, cleanup=cleanup, **kwargs)
+		#print("ECASimple ECN node ", node)
 		return AbsoluteNode(node)
 
 	def ECA(self, type, name="blankName", category=None, *args, **kwargs):
 		node = self.ECAsimple(type, name, cleanup=False, *args, **kwargs)
 		self.nodes.update(node)
 		if category: # add specific tags
-			self.addTag(node, "category", category)
+			self.addTag(node, "opCategory", category)
 		#cmds.parent(node, self.opGrp)
 		return node
 
@@ -351,21 +338,29 @@ class Op(MayaReal):
 	@property
 	def nodes(self):
 		"""unsuitable for ordered or specific indexing. if we need that,
-		make a new function"""
-		return set(self.getTaggedNodes(searchTag="opUID",
-		                           searchContent=self.uuid))
+		make a new function
+
+		a consistent hash uuids
+		"""
+		uuid_found = set(scene.listTaggedNodes(searchTag="opUID",
+		                             searchContent=str(self.uuid)))
+		if uuid_found: return uuid_found
+		name_found = set(scene.listTaggedNodes(searchTag="opTag",
+		                             searchContent=str(self.name)))
+		return name_found
+
 	@property
 	def inputNetwork(self):
-		searchDict = {"opUID" : self.uuid,
-		              "category" : "opIo",
+		searchDict = {"opUID" : str(self.uuid),
+		              "opCategory" : "opIo",
 		              "role" : "input"}
 		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)
 		return None if not node else node[0]
 
 	@property
 	def outputNetwork(self):
-		searchDict = {"opUID" : self.uuid,
-		              "category" : "opIo",
+		searchDict = {"opUID" : str(self.uuid),
+		              "opCategory" : "opIo",
 		              "role" : "output"}
 		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)
 		return None if not node else AbsoluteNode(node[0])
@@ -382,16 +377,20 @@ class Op(MayaReal):
 	def reset(self, exclude=persistCategories):
 		"""as this rigging system should be purely additive,
 		just delete all associated nodes"""
+		print("resetting")
+		print(self.nodes)
 		for i in self.nodes:
 			if cmds.objExists(i):
-				#if not attr.getAttr(i+".category") in exclude: # nope
+
 				cmds.delete(i)
 
 	def beforeExecution(self):
 		"""create network nodes procedurally from attributes
 		called by context immediately before exec"""
-		#self.inputNetwork, self.outputNetwork = self.makeOpIoNodes()
+		self.reset()
 		self.makeOpIoNodes()
+
+		#print(self.inputNetwork, self.outputNetwork)
 
 		for i in self.inputRoot.getAllLeaves():
 			self.makeOpIoNodeAttrs(self.inputNetwork, i)
@@ -423,7 +422,7 @@ class Op(MayaReal):
 
 		# add tags
 		for i in inputNetwork, outputNetwork:
-			attr.addTag(i(), "category", "opIo")
+			attr.addTag(i(), "opCategory", "opIo")
 		attr.addTag(inputNetwork, "role", "input")
 		attr.addTag(outputNetwork, "role", "output")
 
@@ -446,14 +445,14 @@ class Op(MayaReal):
 		#print "i.dataType is {}".format(i.dataType)
 
 		if i.getChildren(): # need a compound
-			plug = attr.addAttr(node, attrName=i.name, attrType="compound",
+			plug = attr.addAttr(node, name=i.name, attrType="compound",
 			                    parent=parentPlug)
 			for n in i.getChildren():
 				self.makeOpIoNodeAttrs(node, n, parentItem=i)
 
 		if i.dataType == "enum":
 			options = ":".join(i.extras.get("items"))
-			plug = attr.addAttr(node, attrName=attrItem.name, attrType="enum",
+			plug = attr.addAttr(node, name=attrItem.name, attrType="enum",
 			             parent=parentPlug,
 						 enumName=options)
 		elif i.dataType == "nD":
@@ -465,9 +464,9 @@ class Op(MayaReal):
 			# 	self.makeOpIoNodeAttrs(node, newItem, parentItem)
 			# else:
 			# 	# dt = "matrix"
-			# 	# plug = attr.addAttr(node, attrName=i.name, attrType=dt)
+			# 	# plug = attr.addAttr(node, name=i.name, attrType=dt)
 			# 	pass
-			plug = attr.addUntypedAttr(node, attrName=i.name)
+			plug = attr.addUntypedAttr(node, name=i.name)
 
 		elif i.dataType in attr.INTERFACE_ATTRS:
 			dtdict = attr.INTERFACE_ATTRS[i.dataType]
@@ -483,7 +482,7 @@ class Op(MayaReal):
 			self.log(" attr dt is {}".format(i.dataType))
 			#kwargs = i.extras or {}
 			kwargs = {}
-			plug = attr.addAttr(node, attrName=attrItem.name, attrType=dt,
+			plug = attr.addAttr(node, name=attrItem.name, attrType=dt,
 			                    parent=parentPlug, **kwargs)
 
 		# add the real-facing component for the attrItem with the plug
@@ -542,22 +541,6 @@ class Op(MayaReal):
 
 	# actions
 
-	# def addAction(self, actionDict=None, actionItem=None, func=None, name=None):
-	# 	if actionDict:
-	# 		self.actions.update(actionDict)
-	# 	elif actionItem:
-	# 		#print "adding action {}".format(actionItem)
-	# 		self.actions.update({actionItem.name : actionItem})
-	# 	elif func:  # just add the function
-	# 		name = name or func.__name__
-	# 		item = ActionItem(execDict={"func": func}, name=name)
-	# 		self.actions.update({item.name : item})
-
-	# def addAction(self, action=None, name=None):
-	# 	if isinstance(action, Callable):
-	# 		action = Action(action, name)
-	# 	name = name or action.name
-	# 	self.actions.update({action.name : action})
 
 	def addInputWithAction(self, parent=None, name=None, datatype=None, copy=None,
 	                       suffix="", desc=""):

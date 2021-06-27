@@ -1,6 +1,6 @@
 #useful tools and larger procedures
-from . import core
-from .core import ECN
+from edRig.maya import core
+from edRig.maya.core import ECN
 from edRig import curve, transform, mesh, surface, attr, control, \
 	cmds, om, plug, con
 import time
@@ -50,7 +50,7 @@ def quatAxis(inSpace="", pos=[1,0,0], axis=[0,0,1],
 
 	#build
 	con(thetaInput+".output", thetaMult+".input1")
-	core.edSet(thetaMult+".input2", 2)
+	core.edSet(thetaMult + ".input2", 2)
 	con(thetaMult+".output", trigTheta+".inputRotateX")
 	con(trigTheta+".outputQuatX", nSinTheta+".input1")
 	con(axisVmp+".output", nSinTheta+".input2")
@@ -149,7 +149,7 @@ def planeIntersect(vecBase, vecEnd, plane, planeNormal=[1,0,0],
 
 	#build
 	con(plane+".matrix", pN+".matrix")
-	core.edSet(pN+".input1", planeNormal)
+	core.edSet(pN + ".input1", planeNormal)
 	con(pN+".output", DtimesN+".input1")
 	con(pN+".output", OminusAtimesN+".input1")
 	con(OminusA, OminusAtimesN+".input2")
@@ -159,7 +159,7 @@ def planeIntersect(vecBase, vecEnd, plane, planeNormal=[1,0,0],
 	con(intersectVec, DtimesN+".input2")
 	con(DtimesN+".output", neg+".input1")
 	#core.edSet(neg+".input2", -1)
-	core.edSet(neg+".input2", 1) # screw it
+	core.edSet(neg + ".input2", 1) # screw it
 	con(neg+".output", lowerCombine+".input1D")
 	con(lowerCombine+".output1D", overResult+".input2X")
 
@@ -244,8 +244,8 @@ def saveReset(ctrl, name="memory", targetAttr="", display=True):
 	# check out this one weird trick
 	cmds.addAttr(ctrl, ln=name+"Save", at="enum", en="saved:reset", k=True)
 	con(ctrl+"."+name+"Save", check+".firstTerm")
-	core.edSet(check+".colorIfTrueR", 2)
-	core.edSet(check+".colorIfFalseR", 0)
+	core.edSet(check + ".colorIfTrueR", 2)
+	core.edSet(check + ".colorIfFalseR", 0)
 
 	if display:
 		cmds.addAttr(ctrl, ln=name, k=True)
@@ -294,7 +294,7 @@ def sequentialLimits(attr, increment=1.0, steps=5, compound=False, n=""):
 			core.debug(input)
 			core.debug(clamp)
 			con(input+".output", clamp+".inputR")
-			core.edSet(clamp+".maxR", increment)
+			core.edSet(clamp + ".maxR", increment)
 			con(attr, input+".input1")
 		else:
 			if not compound:
@@ -308,7 +308,7 @@ def sequentialLimits(attr, increment=1.0, steps=5, compound=False, n=""):
 			else:
 				limitMult = ECN("mdl", n+pr+"limitMult")
 				con(clamps[0]+".maxR", limitMult+".input1")
-				core.edSet(limitMult+".input2", i+1)
+				core.edSet(limitMult + ".input2", i + 1)
 				con(limitMult+".output", clamp+".maxR")
 				con(input+".output", clamp+".inputR")
 

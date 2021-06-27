@@ -1,9 +1,5 @@
-
-from maya import cmds
-import maya.api.OpenMaya as om
-
-from edRig import ECA, AbsoluteNode, plug, attr
-from edRig.node import RemapValue
+from edRig import ECA, plug
+from edRig.maya.core.node import RemapValue
 
 
 """ basic autorig for setting up the main key press system,

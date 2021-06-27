@@ -11,7 +11,7 @@ import random
 from tree import Tree
 
 from edRig.lib import python
-from edRig.dcc import cmds, om
+from edRig import cmds, om
 
 
 dimTypes = {
@@ -105,7 +105,7 @@ def getMPlug(plugName):
 
 def getMObject(node):
 	sel = om.MSelectionList()
-	sel.add(node)
+	sel.add(str(node))
 	return sel.getDependNode(0)
 
 
@@ -208,14 +208,14 @@ def breakConnections(target, source=True, dest=True):
 # functions for using string attributes like keys in dictionary
 def addTag(tagNode, tagName, tagContent=None, tagSuffix=False):
 	tagName = tagName + "_tag" if tagSuffix else tagName
+	#print("tagNode", tagNode, type(tagNode))
+
 	if not tagName in cmds.listAttr(tagNode):
 		cmds.addAttr(tagNode, ln=tagName, dt="string")
 	if tagContent:
 		# tag content can be anything, keep track of it yourself
-		try:
-			cmds.setAttr(tagNode + "." + tagName, tagContent, type="string")
-		except:
-			pass
+		#cmds.setAttr(tagNode + "." + tagName, tagContent, type="string")
+		setAttr(tagNode + "." + tagName, tagContent)
 	return tagNode+"."+tagName
 
 def edTag(tagNode):
@@ -227,7 +227,7 @@ def edTag(tagNode):
 	]
 	ey = random.randint(0, len(happyList) - 1)
 	addTag(tagNode, tagName="edTag", tagContent=happyList[ey])
-	cmds.setAttr(tagNode + ".edTag", l=True)
+	#cmds.setAttr(tagNode + ".edTag", l=True)
 
 def checkTag(tagNode, tagName, tagContent):
 	# checks if a node has a specific edTag
@@ -278,7 +278,7 @@ BUILT_ATTR = "node_built"
 def tagAsBuilt(node):
 	"""used in conjunction with the listing principle
 	to tell if a node needs to be reconstructed or not"""
-	addAttr(node, attrName=BUILT_ATTR, dv=1, dt="bool")
+	addAttr(node, name=BUILT_ATTR, dv=1, dt="bool")
 
 def isBuilt(node):
 	""" seriously what does this do """
@@ -295,14 +295,15 @@ def setLocked(plug, state=True):
 	# 	print "unable to lock attr {}".format(plug)
 
 
-def addUntypedAttr(node, attrName="untypedAttr"):
+def addUntypedAttr(node, name="untypedAttr"):
 	""" testing api methods for this, may supercede cmd calls """
 	mfnTyped = om.MFnTypedAttribute()
-	aTypedObj = mfnTyped.create( attrName, attrName, om.MFnData.kAny) # kAny
+	aTypedObj = mfnTyped.create( name, name, om.MFnData.kAny) # kAny
 	nodeObj = getMObject(node)
+	assert not nodeObj.isNull()
 	mfnDep = om.MFnDependencyNode(nodeObj)
 	mfnDep.addAttribute(aTypedObj)
-	return node + "." + attrName
+	return node + "." + name
 
 
 # track which maya types are defined as 'dt' or 'at'
@@ -362,6 +363,8 @@ pyTypeMap = {
 def addAttr(target, name:str=None, default=0.0, attrType=None, parent:str=None, **kwargs)->str:
 	"""wrapper for more annoying attr types like string
 	returns plug"""
+
+	target = str(target)
 
 	# check for pre-existing
 	name = name or kwargs.get("ln")
@@ -427,12 +430,12 @@ def makeAttrsFromDict(node, attrDict, parent=None):
 	and futureproof for array attributes"""
 	for k, v in attrDict.items():
 		if v.get("children"): # it's a compound
-			parent = addAttr(node, attrName=k, attrType="compound",
+			parent = addAttr(node, name=k, attrType="compound",
 			                 nc=len(list(v["children"].keys())))
 			makeAttrsFromDict(node, v["children"], parent=parent)
 		elif v.get("dt"): # it's a normal attribute
 			kwargs = {nk : nv for nk, nv in v.items() if nk != "dt"}
-			addAttr(node, attrName=k, attrType=v["dt"], parent=parent, **kwargs)
+			addAttr(node, name=k, attrType=v["dt"], parent=parent, **kwargs)
 
 def copyAttr(sourcePlug, targetNode, newName=None, driveOriginal=True):
 	"""currently for use only with simple attributes
@@ -445,7 +448,7 @@ def copyAttr(sourcePlug, targetNode, newName=None, driveOriginal=True):
 	# until i get the proper procedural way working
 	if not newName : newName = sourceAttr
 	val = getAttr(sourcePlug)
-	newAttr = addAttr(targetNode, attrName=newName)
+	newAttr = addAttr(targetNode, name=newName)
 	setAttr(newAttr, val)
 	if driveOriginal:
 		con(targetNode + "." + newName, sourcePlug)
@@ -515,8 +518,10 @@ def setAttr(targetPlug, value=None, absNode=None, **kwargs):
 		if isinstance(value, (tuple, list)):
 			""" catch those fun times when you get a value like [ ( 1.0, ) ] """
 			value = python.flatten(value)
-			#cmds.setAttr(targetPlug, *attrValue)
-			_setAttrSafe(targetPlug, *value)
+			# #cmds.setAttr(targetPlug, *attrValue)
+			# _setAttrSafe(targetPlug, *value)
+			for target, val in zip(unrollPlug(targetPlug), value):
+				setAttr(target, val)
 			return
 
 		# this is used to specify one value for a multi attr
@@ -618,12 +623,12 @@ def getImmediatePast(target, wantPlug=False):
 
 def makeMutualConnection(startNode, endNode, attrType="string",
                          startName="start", startContent=None,
-                         endName="end"):
+                         endName=""):
 	"""base function for connecting two nodes"""
-	startPlug = addAttr(startNode, attrName=startName, attrType=attrType)
+	startPlug = addAttr(startNode, name=startName, attrType=attrType)
 	if startContent:
 		setAttr(startPlug, startContent)
-	endPlug = addAttr(endNode, attrName=endName, attrType=attrType)
+	endPlug = addAttr(endNode, name=endName or startName, attrType=attrType)
 	con(startPlug, endPlug)
 
 def makeStringConnection(startNode, endNode,

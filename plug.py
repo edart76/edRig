@@ -2,8 +2,10 @@
 import math
 
 
-from edRig import core, attr, ECA, debug, cmds, om, oma
-
+from edRig import (
+	attr, ECA,
+	cmds, oma,
+)
 
 
 def conOrSet(driver, driven):
@@ -45,7 +47,7 @@ def multPlugs(*plugs):
 
 def multLinearPlugs(*plugs):
 	""" optimise the above using combinationShape node """
-	debug(plugs)
+	#debug(plugs)
 	if len(plugs) == 2: # special, common case
 		node = ECA("multDoubleLinear")
 		node.conOrSet(plugs[0], node + ".input1")

@@ -1,6 +1,6 @@
 """holds callback functions for when maya is opened or closed"""
 
-from edRig.node import AbsoluteNode, ECA
+from edRig.maya.core.node import AbsoluteNode, ECA
 from edRig import pipeline, attr, callback, COMMON_PATH
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma

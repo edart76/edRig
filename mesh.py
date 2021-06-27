@@ -2,13 +2,10 @@
 # interfacing between weights and maps etc
 # additionally for working with nurbs shapes
 
-import math
-from six import iteritems, string_types
 
-
-from edRig import core, attr, transform, naming, cmds, om, oma, con
-from edRig.lib.python import AbstractTree
-from edRig.node import AbsoluteNode, ECA
+from edRig import attr, transform, naming, cmds, om, oma, con
+from edRig.maya import core
+from edRig.maya.core.node import AbsoluteNode, ECA
 
 def getMObject(node):
 	sel = om.MSelectionList()

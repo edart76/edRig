@@ -1,6 +1,7 @@
 
-from edRig import scene, core, log, beauty, om, cmds
-from edRig.node import AbsoluteNode, ECA
+from edRig import log, beauty, cmds
+from edRig.maya.core.node import AbsoluteNode
+
 
 class Material(AbsoluteNode):
 	"""base class for materials idk"""

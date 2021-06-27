@@ -1,111 +1,169 @@
-""" wip refit of memory to inherit directly from abstractTree"""
-
+"""
+ANOTHER refit of memory - memory system is now only a wrapper AROUND
+basic tree data
+"""
+from __future__ import annotations
+from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
+from functools import partial
+from enum import Enum
+import pprint
 import copy
 from edRig import cmds, om, ECA, AbsoluteNode
 from edRig import attr, transform, curve, mesh, surface
 from edRig.lib.python import AbstractTree
 
+# example dict structure
+{"joints": {
+	"nodes": ["joint1", "joint2", ...],
+	"xform": [
+		{
+			"translate": (13),
+			"rotate": (204),
+			... : ...
+		}
+	],
+	"attr": [..., ...]
+},
+	"curve": {...}
+}
 
-class Memory2(AbstractTree):
+class InfoTypes(Enum):
+	Attr = "attr",
+	Xform = "xform",
+	Weight = "weight",
+	Shape = "shape"
+
+# class Memory2(AbstractTree):
+class Memory2(object):
 	""" a long time ago Matt Goutte told me that trees are all you need
 	in cg
-	he was so right """
+	he was so right
+
+	each branch of the data tree is a separate named memory cell,
+	applying to a single set of nodes
+	each cell may contain data of different types - eg attr, xform
+
+	"""
 	infoKinds = ["attr", "xform", "weight", "shape", "multi"]
 
-	def __init__(self, name="memory", val=None):
-		super(Memory2, self).__init__(name, val)
-		#self["nodes"] = [] # node storage
+	def __init__(self, dataTree:AbstractTree):
+		self.data = dataTree
 
+	def __getitem__(self, item):
+		return self.data[item]
+	def __setitem__(self, key, value):
+		self.data[key] = value
+	def __call__(self, *args, **kwargs):
+		return self.data(*args, **kwargs)
 
+	def get(self, key, default=None):
+		return self.data.get(key, default)
 
-	def _allocateSpace(self, infoName, nodes=None):
-		"""creates blank memory dict
+	@property
+	def nodes(self)->set:
+		"""return all nodes that this memory accesses"""
+		nodes = set()
+		for cell in self.data.branches:
+			nodes.update(set(cell["nodes"]))
+		return nodes
+
+	def infoNames(self):
+		"""return names of all named branches"""
+		return list(self.data.keys())
+
+	def cellInfoTypes(self, cellName):
+		"""all types of data in the given cell"""
+		return list(self[cellName].keys())
+
+	def _allocateNamedCell(self, infoName, nodes=None):
+		"""creates blank named memory cell,
+		as a new branch in data tree
 		"""
 		nodes = nodes or []
 		if self.get(infoName):
 			return
 
-		self[infoName] = {}
-		#self[infoName]["CLOSED"] = False
-		self[infoName]["nodes"] = nodes
-		self["nodes"] += nodes
-
-		"""currently fragile, expecting to be called just once per data
-		does not yet support addition"""
-
-		"""use:
-		{"joints" : {
-			"nodes" : ["joint1", "joint2" etc],
-			"xform" : [
-				{
-					"translate" : (010), 
-					"rotate" : (204),
-					etc
-					}
-				],
-			"attr" : [etc, etc]
-			},
-		"curve" : {etc}
+		# create branch
+		self[infoName] = {
+			"nodes" : nodes
 		}
-		no memory cell will ever store different infotypes per node"""
 
-	def infoNames(self):
-		return list(self.keys())
+	def _allocateTypeCell(self, cellName, infoType, nodes=None):
+		"""initialise a memory cell of given name and type"""
+		if not cellName in self.infoNames():
+			self._allocateNamedCell(cellName, nodes=nodes)
 
-	def infoTypes(self, infoName):
-		return list(self[infoName].keys())
-
-	def _initialiseCell(self, infoName, infoType, nodes=None):
-		if not infoName in self.infoNames():
-			#print "allocating blank space for infoName {}".format(infoName)
-			self._allocateSpace(infoName, nodes=nodes)
-
-		if not infoType in list(self[infoName].keys()):
-			#print "gathering goss, making blank info"
-			self[infoName][infoType] = self.makeBlankInfoType(
+		if not infoType in list(self[cellName].keys()):
+			self[cellName][infoType] = self.makeBlankInfoType(
 				infoType)
 
-	def remember(self, infoName, infoType, nodes=None, **kwargs):
-		"""add information to op's memory if none exists
+	def remove(self, infoName, infoType=None):
+		"""clears memory selectively without going into the datafile
+		take note FS"""
+		if infoType:
+			self[infoName].pop(infoType, None)
+		else:
+			self.data.pop(infoName, None)
+
+	def renewableMemory(self):
+		"""returns all memory slots that have a value - eg that
+		can be renewed from scene"""
+		returnDict = {}
+		for i in self.data.branches:
+			if i.name == "nodes":
+				continue
+			if i.get("closed"):
+				continue
+			returnDict[i.name] = []
+
+			for n in list(i.value.keys()):
+				#print("n branch {}".format(n))
+				if n == "nodes" or n== "closed":
+					continue
+				returnDict[i.name].append(n)
+		return returnDict
+
+
+	# region Maya systems
+	def registerData(self, infoName, infoType, nodes:List=None, **kwargs):
+		"""
+		main entrypoint
+		sets up memory if name/type does not exist,
+		then registers info
 		we remember lists here
-		main entrypoint"""
+		"""
 		print(("remember infoName {}, infotype {}, nodes {}".format(
 			infoName, infoType, nodes)
 		))
 
-		# multi memory support
+		# multi memory support - register multiple data types
 		if isinstance(infoType, list):
 			for i in infoType:
-				self.remember(infoName, i, nodes)
+				self.registerData(infoName, i, nodes)
 			return
 
-		if not isinstance(nodes, list):
-			nodes = [nodes]
+		# if infoType in InfoTypes:
+		# 	infoType = infoType.value
 
-		self._initialiseCell(infoName, infoType, nodes=nodes)
+		self._allocateTypeCell(infoName, infoType, nodes=nodes)
 
 		if not self[infoName][infoType]:
-
-			# pre-existing information will not be lost, nodes will still be refreshed
-
-			gatheredGoss = [self._gatherInfo(infoType, target=i, **kwargs) for i in nodes]
+			gatheredGoss = [self._gatherInfo(
+				infoType, target=i, **kwargs) for i in nodes]
 			self[infoName][infoType] = gatheredGoss
 
-		# only store NAMES of nodes
-		self[infoName]["nodes"] = [AbsoluteNode(i)() for i in nodes]
+		self[infoName]["nodes"] = [AbsoluteNode(i) for i in nodes]
 
 
-	def recall(self, infoName, infoType="all", **kwargs):
+	def reapplyData(self, infoName, infoType="all", **kwargs):
 		"""retrieve saved info AND APPLY IT """
-		#print("memory recall infoName {}, infoType {}".format(infoName, infoType))
+		#print("memory reapplyData infoName {}, infoType {}".format(infoName, infoType))
 		if not infoType in self.infoKinds and infoType != "all":
 			raise RuntimeError("infoType {} is not recognised".format(infoType))
 		if infoType == "all":
-
-			for i in self.infoKinds:
-				self.recall(infoName, infoType=i)
+			for i in self.cellInfoTypes(infoName):
+				self.reapplyData(infoName, infoType=i)
 		else:
-			# return self[infoName][infoType]
 			self._applyInfo(infoName, infoType,
 			                target=self.nodesFromInfoName(infoName),
 			                **kwargs)
@@ -119,125 +177,93 @@ class Memory2(AbstractTree):
 		self[infoName][infoType] = gatheredGoss
 
 
-	def remove(self, infoName, infoType=None):
-		"""clears memory selectively without going into the datafile
-		take note FS"""
-		if infoType:
-			self[infoName].pop(infoType, None)
-		else:
-			self.pop(infoName, None)
 
-	def renewableMemory(self):
-		"""returns all memory slots that have a value - eg that
-		can be renewed from scene"""
-		# print("renewable memory")
-		# print(self.display())
-		returnDict = {}
-		for i in self.branches:
-			#print("i branch {} value {}".format(i.name, i.value))
-			if not isinstance(i.value, dict):
-				continue
-			if i.name == "nodes":
-				continue
-			if i.get("closed"):
-				continue
-			returnDict[i.name] = []
-			#print("i branches {}".format(i.branches))
-			for n in list(i.value.keys()):
-				#print("n branch {}".format(n))
-				if n == "nodes" or n== "closed":
-					continue
-				returnDict[i.name].append(n)
-
-		return returnDict
 
 	def _gatherInfo(self, infoType, target=None, **kwargs):
 		"""implements specific methods of gathering information from scene
 		"""
 		target = AbsoluteNode(target)
-		if infoType not in self.infoKinds:
+		print(InfoTypes)
+		print(InfoTypes._value2member_map_)
+		print(InfoTypes._member_map_)
+		if infoType not in InfoTypes and not \
+				InfoTypes._value2member_map_.get(
+					(infoType, )
+				):
 			raise RuntimeError("cannot gather info of type {}".format(infoType))
 		if not cmds.objExists(target):
 			raise RuntimeError("no object found named {}".format(target))
 
-		# print ""
-		# print "GATHERING GOSS"
+		if isinstance(infoType, str):
+			infoType = InfoTypes._value2member_map_[
+				(infoType, ) ]
 
-		""" IMPLEMENT RELATIVE VS ABOLUTE 
-		gather both - apply only one as per state of node"""
+		gatherFns = {
+			InfoTypes.Attr : self._gatherAttrInfo,
+			InfoTypes.Xform : self._gatherXformInfo,
+			InfoTypes.Weight : self.getWeightInfo,
+			InfoTypes.Shape : self.getShapeInfo,
+		}
 
-		returnDict = {}
-		attrList = []
+		returnDict = gatherFns[infoType](target, **kwargs)
 
-		# print("infotype {}".format(infoType))
-		# print("target {}".format(target))
-		# print("kwargs {}".format(kwargs))
-
-		if infoType == "attr":
-
-			# check if transform attributes are specifically requested
-			baseList = cmds.listAttr(target, keyable=1)
-			omitList = ["translate", "rotate", "scale"]
-			outList = []
-
-			if kwargs.get("xformAttrs"):
-				omitList = []
-
-			for i in baseList:
-				if any([n in i for n in omitList]):
-					continue
-				outList.append(i)
-
-			for i in outList:
-				returnDict[i] = attr.getAttr(target + "." + i)
-
-
-		elif infoType == "xform":
-			# speed is not yet of the essence
-			for space, truth in zip(["world", "local"], (True, False)):
-				spaceDict = {
-					"translate" : cmds.xform(target, q=True, ws=truth, t=True),
-					"rotate" : cmds.xform(target, q=True, ws=truth, ro=True),
-					"scale" : cmds.xform(target, q=True, ws=truth, s=True),
-				}
-				returnDict[space] = spaceDict
-			if kwargs.get("jointMode"):
-				for ax in "XYZ":
-					jointOrient = cmds.getAttr(target + ".jointOrient" + ax)
-					returnDict["jointOrient" + ax] = jointOrient
-				returnDict["rotateOrder"] = cmds.getAttr(target + ".rotateOrder")
-
-			if kwargs.get("relative"):
-				"""still not sure of the best way to handle this"""
-				mat = transform.MMatrixFromPlug(kwargs["relative"])
-				pass
-
-
-
-		elif infoType == "weight":
-			# woah there
-			#raise NotImplementedError("not yet fool")
-			returnDict = self.getWeightInfo(targetNode=target, targetAttr=None)
-
-		elif infoType == "shape":
-			# this is where the fun begins
-			if not target.shapeFnType:
-				raise RuntimeError("tried to gather the shape of shapeless")
-				pass
-			returnDict = self.getShapeInfo(target)
-		#print "gathered goss is {}".format(returnDict)
 		return returnDict
+
+
+	def _gatherAttrInfo(self, target, **kwargs):
+		returnDict = {}
+		# check if transform attributes are specifically requested
+		baseList = cmds.listAttr(target, keyable=1)
+		omitList = ["translate", "rotate", "scale"]
+		outList = []
+
+		if kwargs.get("xformAttrs"):
+			omitList = []
+		for i in baseList:
+			if any([n in i for n in omitList]):
+				continue
+			outList.append(i)
+		for i in outList:
+			returnDict[i] = attr.getAttr(target + "." + i)
+		return returnDict
+
+	def _gatherXformInfo(self, target, **kwargs):
+		returnDict = {}
+		# speed is not yet of the essence
+		for space, truth in zip(["world", "local"], (True, False)):
+			spaceDict = {
+				"translate": cmds.xform(target, q=True, ws=truth, t=True),
+				"rotate": cmds.xform(target, q=True, ws=truth, ro=True),
+				"scale": cmds.xform(target, q=True, ws=truth, s=True),
+			}
+			returnDict[space] = spaceDict
+		if kwargs.get("jointMode"):
+			for ax in "XYZ":
+				jointOrient = cmds.getAttr(target + ".jointOrient" + ax)
+				returnDict["jointOrient" + ax] = jointOrient
+			returnDict["rotateOrder"] = cmds.getAttr(target + ".rotateOrder")
+
+		if kwargs.get("relative"):
+			"""still not sure of the best way to handle this"""
+			mat = transform.MMatrixFromPlug(kwargs["relative"])
+		return returnDict
+
+	def getWeightInfo(self, target, targetAttr=None, **kwargs):
+		return {}
+
+
 
 	def _applyInfo(self, infoName, infoType, target=None,
 	               relative=None, **kwargs):
 
 		# test view all data
-		#print(self.serialise(pretty=True))
+		#print(self.data.serialise(pretty=True))
+		pprint.pprint(self.data.serialise())
 
 		allInfo = self[infoName]
 
-		print(("allInfo {}".format(allInfo)))
-		print(("target {}".format(target)))
+		# print(("allInfo {}".format(allInfo)))
+		# print(("target {}".format(target)))
 
 		space = kwargs.get("space") or "world"
 
@@ -296,7 +322,7 @@ class Memory2(AbstractTree):
 	def getFlattenedNodes(self):
 		"""ensure nodes are stored as strings, not AbsNodes"""
 		#self.nodes = [str(i) for i in self.nodes] # for some reason | characters screw up strings
-		return [str(i) for i in self["nodes"]]
+		return [str(i) for i in self.nodes]
 
 	@staticmethod
 	def makeBlankInfoType(infoType):
@@ -314,7 +340,7 @@ class Memory2(AbstractTree):
 	def setClosed(self, infoName, infoType=None, status=True):
 		"""prevent a memory infotype or whole cell from being refreshed"""
 		return # more trouble than worth
-		self._initialiseCell(infoName, infoType)
+		self._allocateTypeCell(infoName, infoType)
 		if infoType:
 			self[infoName][infoType]["CLOSED"] = status
 		else:
@@ -372,15 +398,12 @@ class Memory2(AbstractTree):
 	def serialise(self):
 		#print("serialise nodes {}".format(self["nodes"]))
 		self["nodes"] = [ str(i) for i in self.get("nodes") or []]
-		return super(Memory2, self).serialise()
+		return self.data.serialise()
+
+	def display(self):
+		return pprint.pformat(self.serialise())
 
 """
-graph nodeData is one contiguous tree, with persistent references
-to all nodes' memory
-
-real ops have access to:
-data { # abstractTree containing all data belonging to this node
-	memory : Memory2 # memory branch
 
 
 """

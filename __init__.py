@@ -1,6 +1,5 @@
 
 import sys, os
-import importlib
 
 global reload
 try:
@@ -13,17 +12,21 @@ except:
 from edRig import dcc
 reload(dcc)
 
+
 # import all the things
-from edRig.dcc import cmds, mel, om, oma, omui, \
-	hou, stateutils, objecttoolutils, hutil,\
-	bpy, \
-	hostDict, \
-	QtCore, QtWidgets, QtGui \
+from edRig.dcc import ( hostDict,
+	cmds, mel, om, oma, omui,
+	hou, stateutils, objecttoolutils, hutil,
+	bpy,
+	hostDict,
+	QtCore, QtWidgets, QtGui,
+	unreal
+    )
 
-from edRig.lib.python import debug
+if hostDict["maya"]:
 
-from edRig.node import AbsoluteNode, ECA, ECN
-from edRig.attr import con
+	from edRig.maya import AbsoluteNode, ECA, ECN
+	from edRig.attr import con
 
 sys.dont_write_bytecode = True
 ROOT_PATH = "F:" + "/" + "all_projects_desktop" # root path of asset system

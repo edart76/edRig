@@ -1,6 +1,6 @@
-from edRig.node import AbsoluteNode, ECA
+from edRig.maya.core.node import ECA
 from edRig.tesserae.ops.layer import LayerOp
-from edRig import utils, control, curve
+from edRig import control, curve
 
 
 class BezierOp(LayerOp):

@@ -1,7 +1,7 @@
 # operations for listing, grouping, adding to sets etc
-from edRig.node import ECA, AbsoluteNode, invokeNode
-from edRig import cmds, mel, om, attr, core, pipeline, naming, expression
-from edRig.lib.python import AbstractTree, debug
+from edRig.maya.core.node import ECA, AbsoluteNode, invokeNode
+from edRig import cmds, mel, attr, pipeline
+from edRig.lib.python import AbstractTree
 import traceback
 
 
@@ -175,7 +175,7 @@ def listTaggedNodes(searchNodes=None, searchTag="", searchContent=None, searchDi
 	"""looks up all nodes with tag value that equals searchContent
 	would be cool to enable this to search using a tag : content dict"""
 	#print ""
-	tests = searchNodes or listAllNodes()
+	tests = searchNodes or cmds.ls("::*", dep=1, recursive=1)
 	#print "tests are {}".format(tests)
 	if searchDict:
 		for k, v in searchDict.items():
@@ -183,11 +183,16 @@ def listTaggedNodes(searchNodes=None, searchTag="", searchContent=None, searchDi
 		return tests
 
 	returns = []
-
 	for i in tests:
 		if searchTag in cmds.listAttr(i):
+			#print("search", searchTag, "found on", i)
+
 			if searchContent:
-				if cmds.getAttr(i+"."+searchTag) == searchContent:
+				#if cmds.getAttr(i+"."+searchTag) == searchContent:
+				# print("search", searchContent,
+				#       "found", cmds.getAttr(i + "." + searchTag))
+				if cmds.getAttr(i + "." + searchTag) == searchContent:
+					#print("found matching")
 					returns.append(i)
 			else:
 				returns.append(i)

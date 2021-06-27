@@ -5,11 +5,11 @@ wider ecosystem: reload references, export outputs, import inputs, everything
 """
 
 sdsffsaawad
-from edRig import cmds, om, pipeline, scene
-from edRig.node import AbsoluteNode, ECA, ObjectSet
+from edRig import cmds, pipeline, scene
+from edRig.maya.core.node import ObjectSet
 
 from edRig import hou # it's happening
-from edRig.core import debug
+from edRig.maya.core import debug
 
 def getBridgeSet():
 	""" creates basic bridge sets for scene """

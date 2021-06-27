@@ -1,13 +1,11 @@
 # layers working with transforms, hierarchy, point data, joints
 
-import edRig.node
-from edRig.core import ECN
-from edRig import core, transform, attrio, control, curve, point, ECA, plug, \
-	con, cmds, om
+import edRig.maya.core.node
+from edRig import transform, control, curve, point, ECA, plug, \
+	cmds, om
+from edRig.maya import core
 
 from edRig.tesserae.ops.layer import LayerOp
-
-import random
 
 
 # is it a good idea to split joint and point ops? idk but we're gonna find out
@@ -185,7 +183,7 @@ class JointCurveOp(SpookyLayerOp):
 		# first make linear curve
 		#linearShape = curve.curveFromCvs(points, deg=1, name=self.prefix+"_crv")
 		linearShape = curve.curveFromCvs(points, deg=1, name=self.opName+"_mainCrv")
-		self.mainCurve = edRig.node.AbsoluteNode(
+		self.mainCurve = edRig.maya.core.node.AbsoluteNode(
 			cmds.rebuildCurve(linearShape, ch=False, degree=degree,
 		                        rebuildType=0, fitRebuild=True)[0])
 		# now create upCurve
@@ -196,7 +194,7 @@ class JointCurveOp(SpookyLayerOp):
 				mat, point=(1,0,0), length=1))
 		#self.log("upPoints are {}".format(upPoints))
 		upShape = curve.curveFromCvs(upPoints, deg=1, name=self.opName+"_upCrv")
-		self.upCurve = edRig.node.AbsoluteNode(
+		self.upCurve = edRig.maya.core.node.AbsoluteNode(
 			cmds.rebuildCurve(upShape, ch=False, degree=degree,
 		    rebuildType=0, fitRebuild=True)[0])
 		cmds.parent([self.mainCurve, self.upCurve], self.spaceGrp)
@@ -255,8 +253,8 @@ class JointCurveOp(SpookyLayerOp):
 		self.remember("joints", "attr", self.joints, transformAttrs=False)
 		self.remember("curves", "shape", [self.upCurve.shape, self.mainCurve.shape])
 		#print "memory after remember is {}".format(self.memory.serialiseMemory())
-		# self.memory.recall("joints", "attr")
-		# self.memory.recall("joints", "xform")
+		# self.memory.reapplyData("joints", "attr")
+		# self.memory.reapplyData("joints", "xform")
 		# no but seriously swedes wat up now
 
 	def updateSavedJointData(self):

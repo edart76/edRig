@@ -1,7 +1,8 @@
 
 """ import stuff from scene or file """
 import os
-from edRig import cmds, om, core, pipeline, COMMON_PATH, AbsoluteNode, ECA, scene
+from edRig import cmds, om, pipeline, COMMON_PATH, AbsoluteNode, ECA, scene
+from maya import core
 from edRig.tesserae.ops.layer import LayerOp
 from edRig.lib.python import AbstractTree
 

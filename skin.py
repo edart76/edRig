@@ -1,7 +1,6 @@
-from edRig import AbsoluteNode, ECA
-from edRig import attr, plug, core
-from maya import cmds
-import maya.api.OpenMaya as om
+from edRig import AbsoluteNode
+from edRig import attr
+from edRig.maya import core
 import maya.api.OpenMayaAnim as oma
 
 class SkinCluster(AbsoluteNode):
@@ -52,7 +51,7 @@ class SkinCluster(AbsoluteNode):
 
 	def _makeProxyOutputShape(self):
 		"""create shape node for showing current output of skincluster"""
-		shape = core.makeShape(self.name+"Output", "mesh")
+		shape = core.makeShape(self.name + "Output", "mesh")
 		self.con( self.output, shape + ".inMesh")
 
 	@property

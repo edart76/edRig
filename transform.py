@@ -1,8 +1,9 @@
 # move stuff around
-import edRig.node
-from edRig import core, attr, cmds, om, con
-from .core import ECN
-from edRig.node import AbsoluteNode, ECA
+import edRig.maya.core.node
+from edRig import attr, cmds, om, con
+from edRig.maya import core
+from edRig.maya.core import ECN
+from edRig.maya.core.node import AbsoluteNode, ECA
 
 
 import math
@@ -241,7 +242,7 @@ def driveShapeWithPivot(shape, tf=None):
 		con(tf+".rotatePivot", tfMat+".inputTranslate")
 
 	geoTf = cmds.createNode("transformGeometry")
-	initShape = edRig.node.duplicateShape(shape, search="Shape", replace="initShape")
+	initShape = edRig.maya.core.node.duplicateShape(shape, search="Shape", replace="initShape")
 	con(tfMat+".outputMatrix", geoTf+".transform")
 	# polygon discrimination
 	con(initShape+".local", geoTf+".inputGeometry")

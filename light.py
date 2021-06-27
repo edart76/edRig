@@ -1,4 +1,4 @@
-from edRig.node import AbsoluteNode, ECA
+from edRig.maya.core.node import ECA
 from edRig.control import FkControl
 
 def makePhysicalSunSky(name="sunSky", control=True):

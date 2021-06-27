@@ -21,7 +21,7 @@ from edRig.lib.python import itersubclasses, \
 
 from edRig import ROOT_PATH
 
-print((layers.__file__))
+#print((layers.__file__))
 layerDir = os.path.dirname(layers.__file__)
 
 layerModuleNames = ("pointlayers", "curvelayers",
@@ -53,7 +53,7 @@ def classDataFromAST(baseAstNode):
 
 for i in layerModuleNames:
 	scanDir = os.path.join(layerDir, i)
-	print(scanDir)
+	#print(scanDir)
 	classes = []
 	for scanFile in os.listdir(scanDir):
 		if not scanFile.endswith(".py"):
@@ -66,11 +66,11 @@ for i in layerModuleNames:
 
 		# print classes
 		classData = classDataFromAST(astNode)
-		pprint.pprint(classData)
+		#pprint.pprint(classData)
 		# opClasses = [n for n in foundClasses if "Op" in n.bases]
 		#
 		# classes.extend(opClasses)
-	print(classes)
+	#print(classes)
 
 
 
@@ -91,10 +91,10 @@ class OpList(object):
 		"""find all known op (real) classes"""
 		# first import all packages where op classes might be
 		for package in self.opPackages:
-			print(package)
+			#print(package)
 			moduleNames = iterSubModuleNames(
 				package=package, debug=True)
-			print(moduleNames)
+			#print(moduleNames)
 			for moduleName in moduleNames:
 				#print ("moduleName {}".format(moduleName))
 				module = safeLoadModule(moduleName)
@@ -106,7 +106,7 @@ class OpList(object):
 			# 	continue
 			self.ops.add(op)
 
-		print (pprint.pformat("ops {}".format(self.ops)))
+		#print (pprint.pformat("ops {}".format(self.ops)))
 		#pprint.pprint(self.ops)
 
 		# works for now, just don't sneeze near it

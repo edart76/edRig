@@ -55,7 +55,7 @@ class ControlOp(PointLayerOp):
 
 	def connectInputs(self):
 		"""connect driving space to control
-		offset not necessary as we recall world transforms just after"""
+		offset not necessary as we reapplyData world transforms just after"""
 
 		transform.decomposeMatrixPlug(self.getInput("driverSpace").plug,
 		                              self.control.offsets[0])

@@ -1,17 +1,15 @@
 
 from __future__ import annotations
-from typing import List, Dict, Union, TYPE_CHECKING, Set, Callable
+from typing import Union, TYPE_CHECKING, Set, Callable
 
-
-from weakref import WeakSet, WeakValueDictionary
 from enum import Enum
 
-from traceback import print_exc, format_exc
+from traceback import print_exc
 
 # container interfacing with the graph - concerned with connections
 #from edRig.structures import ActionItem
 from edRig.tesserae.action import Action
-from edRig.core import shortUUID
+from edRig.lib.python import shortUUID
 from edRig import pipeline
 # from edRig.tesserae.ops.op import Op
 
@@ -184,10 +182,11 @@ class AbstractNode(AbstractTree):
 		data = self.graph.getNodeMemoryCell(self)
 		# check that memory class is placed correctly
 		# temp
-		if not data.get("memory"):
-			print("did not find memory cell, creating new")
-			memory = Memory2()
-			data.addChild(memory)
+		# if not data.get("memory"):
+		# 	print("did not find memory cell, creating new")
+		# 	memory = Memory2()
+		# 	#memory = self.real.memory
+		# 	data.addChild(memory)
 		return data
 
 

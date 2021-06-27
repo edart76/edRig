@@ -1,8 +1,9 @@
 
 
 from maya import cmds
+from edRig.maya import core
 
-from edRig import core, transform, curve, ECA
+from edRig import transform, curve, ECA
 
 
 def getPoint(on=None, near=None, live=True):

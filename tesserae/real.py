@@ -2,20 +2,16 @@
 # currently for use only in maya, but fully extensible to anything
 from __future__ import annotations
 from typing import List, Dict, Union, TYPE_CHECKING, Set, Callable
-
+import traceback
 
 
 from edRig.lib.python import AbstractTree
-
 from edRig.tesserae.action import Action
-
 
 from edRig.tesserae.lib import GeneralExecutionManager
 # from edRig.lib.deltastack import DeltaStack, StackDelta
 # from edRig.tesserae.abstractnode import AbstractAttr
 from edRig.tesserae.abstractnode import AbstractNode
-
-import traceback
 
 
 
@@ -24,6 +20,12 @@ class AbstractReal(type):
 	def __new__(mcs, *args, **kwargs):
 		real = super(AbstractReal, mcs).__new__(*args, **kwargs)
 		return real
+
+class RealMemory(AbstractTree):
+	"""base class for node memory
+	basic tree for now"""
+	def __init__(self, name="memory"):
+		super(RealMemory, self).__init__(name)
 
 class RealComponent(AbstractTree):
 # class RealComponent(AbstractNode):
@@ -51,6 +53,8 @@ class RealComponent(AbstractTree):
 			self.abstract = abstract
 		self.actions = AbstractTree("realActions")
 
+		self._memory = None
+
 
 	@property
 	def abstract(self)->AbstractNode:
@@ -59,6 +63,12 @@ class RealComponent(AbstractTree):
 	@abstract.setter
 	def abstract(self, val:AbstractNode):
 		self._abstract = val
+
+	@property
+	def name(self):
+		if self.abstract:
+			return self.abstract.name
+		return super(RealComponent, self).name
 
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		""" shuffle all required references on to this object
@@ -105,33 +115,17 @@ class RealComponent(AbstractTree):
 	def executionManager(self):
 			return self.executionManagerType(self)
 
-	# # attrs to look up on abstract when called from within real
-	# deferAttrs = [
-	# 	"inputs", "outputs", "inputRoot", "outputRoot",
-	# ]
-	# directLookups = [
-	# 	"abstract", "_abstract"
-	# ]
-	#
-	# # def __getattr__(self, item):
-	# # 	if item in RealComponent.directLookups:
-	# # 		return object.__getattr__(self, item)
-	# #
-	# # 	try:
-	# # 		return super(RealComponent).__getattr__(self, item)
-	# # 	# look up attribute on abstract
-	# # 	except:
-	# # 		return getattr(self.abstract, item)
-	#
-	# # dynamic lookups like this can't be run with code completion
-	# # feels bad
-
-
 	# ATTRIBUTES
+	@property
+	def inputRoot(self):
+		return self.abstract.inputRoot
+	@property
+	def outputRoot(self):
+		return self.abstract.outputRoot
+
 	@property
 	def inputs(self):
 		return self.abstract.inputs
-
 	@property
 	def outputs(self):
 		return self.abstract.outputs
@@ -146,19 +140,23 @@ class RealComponent(AbstractTree):
 		else:
 			self.actions[name or action.name] = action
 
-	def getAllActions(self)->AbstractTree[str, Action]:
+	def getAllActions(self)->AbstractTree[Action]:
 		return self.actions
 
-# def substituteRoot(self, role="input", newAttr=None):
-	# 	"""used to supplant op root attributes with abstract ones"""
-	# 	if role == "input":
-	# 		attr = self.inputRoot
-	# 		vals = attr.serialise()
-	# 		self.inputRoot = newAttr.fromDict(vals)
-	# 	else:
-	# 		attr = self.outputRoot
-	# 		vals = attr.serialise()
-	# 		self.outputRoot = newAttr.fromDict(vals)
+	# Real component behaviour
+	# Memory has to be a wrapper around base tree
+
+	@property
+	def data(self):
+		""" looks up abstract's data """
+		return self.abstract.data
+
+	@property
+	def memory(self)->AbstractTree:
+		"""returns basic tree"""
+		return self.data("memory")
+
+
 
 class RealAttrInterface(object):
 	"""this can be assigned to an attribute procedurally by real class

@@ -1,8 +1,6 @@
 """wrappers for OpenMaya callbacks"""
-from maya import cmds
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
-from edRig import core
 
 
 class RegenCallback(object):

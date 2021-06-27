@@ -54,35 +54,11 @@ try:
 
 	hostDict["maya"] = True
 
-	from functools import wraps
-	import traceback
-	# patch maya cmds "list-" functions to return lists no matter what
-	listFunctions = ["ls", "listRelatives", "listHistory", "listConnections",
-	                 "listAttr"]
-
-	def returnList(wrapFn):
-		@wraps(wrapFn)
-		def _innerFn(*args, **kwargs):
-			result = wrapFn(*args, **kwargs)
-			if result is None:
-				print("returned None, changing to list")
-				return []
-			return result
-		return _innerFn
-
-	for fnName in listFunctions:
-		try:
-			fn = getattr(cmds, fnName)
-			base = getattr(cmds, "_" + fnName, None)
-			if base:
-				setattr(cmds, fnName, returnList(base))
-			else:
-				setattr(cmds, "_" + fnName, fn)
-				setattr(cmds, fnName, returnList(fn))
-
-		except:
-			print(("error wrapping {}".format(fn.__name__)))
-			print((traceback.format_exc()))
+	# test
+	import copy
+	cmds = copy.deepcopy(cmds)
+	om = copy.deepcopy(om)
+	# will be reassigned to this file as the wrapped cmds module
 
 
 except Exception as e:

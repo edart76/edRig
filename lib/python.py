@@ -1,8 +1,13 @@
 """general lib for nifty python things like decorators and debugs"""
+from __future__ import annotations
+from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
+from functools import partial
+from enum import Enum, IntEnum
 
 import inspect,importlib, pprint, pkgutil, string, re, os, ast
+import random
 from weakref import WeakSet, WeakKeyDictionary, proxy
-from collections import OrderedDict, MutableSet
+from collections import OrderedDict, MutableSet, namedtuple
 from functools import partial, wraps
 from abc import ABCMeta
 import types
@@ -178,62 +183,8 @@ def poolToTree(items, treeCls=Tree, key=None):
 #
 # # spider: web developer
 # # stand up lizard jokes : stand up chamaeleon
-#
-# #class StringLikeMeta(ABCMeta):
-# class StringLikeMeta(type, metaclass=ABCMeta):
-#
-# 	"""hopefully a more efficient 'mutable string' than doing directly that -
-# 	works on an internal _base string, which is free to change
-#
-# 	leaving all the weird and wonderful attempts at method shuffling here
-# 	for curiosity, in the end I just overrode them one by one manually"""
-#
-# 	stringMethods = ['__add__', '__contains__',
-# 					 '__delslice__', '__doc__', '__eq__',
-# 					 '__format__', '__ge__', '__getitem__', #'__hash__',
-# 					 '__getslice__', '__gt__', '__iadd__', '__imul__',
-# 					 '__iter__', '__le__', '__len__', '__lt__',
-# 					 '__mul__', '__ne__', '__new__', '__reduce__',
-# 					 '__reduce_ex__', '__repr__', '__reversed__', '__rmul__',
-# 					 #'__setattr__', #'__setitem__', #'__setslice__',
-# 					 ]
-#
-#
-# 	def __new__(mcs, *args, **kwargs):
-# 		new = super(StringLikeMeta, mcs).__new__(mcs, *args, **kwargs)
-# 		return new
-#
-# 	def __call__(cls, *args, **kwargs):
-# 		#cls.register(basestring)
-# 		new = super(StringLikeMeta, cls).__call__(*args, **kwargs)
-# 		#StringLikeMeta.register(cls)
-# 	# 	for i in StringLikeMeta.stringMethods:
-# 	# 		if i in str.__dict__:
-# 	# 			new.__dict__[i] = str.__dict__[i]
-# 	# 			new.__dict__[i] = lambda *args, **kwargs : \
-# 	# 				str.__dict__[i](*args, **kwargs)
-# 	#
-# 		return new
-#
-# 	# def __eq__(self, other):
-# 	# 	if other == type(str):
-# 	# 		return True
-# 	# 	if other == str or other == basestring:
-# 	# 		return True
-# 	# 	return super(StringLikeMeta, self).__eq__(other)
-
-#StringLikeMeta.register(str)
-#StringLikeMeta.register(basestring)
-#StringLikeMeta.register(type("") )
-
-""" beginning to think there is something specifically wrong with maya
-cmds, everything else works without directly inheriting from string
-registering str as a false type is the next step, but I can't get that
-to work either """
 
 
-#class StringLike(str, object):
-#class StringLike(object, str):
 #class StringLike(str, metaclass=StringLikeMeta): # best I can do for now
 class StringLike(object):
 	""" a proper, usable user string
@@ -420,6 +371,47 @@ class AbstractTree(Tree):
 		# 	branchName = combo[0]
 		# 	nodes = combo[1:]
 
+
+# system for visiting all elements of an object
+class ElementTypes(Enum):
+	SequenceItem = 0
+	DictKey = 1
+	DictValue = 2
+
+walkElement = namedtuple("WalkElement", ["element", "parent", "elType"])
+
+def walkObject(obj,
+               sequenceItems=True, dictKeys=True, dictValues=True,
+               _parent=None, _elementType=None
+               ):
+	"""recursively visit all items in given structure -
+	expects only primitive tuple/list/dict arrangements
+	"""
+	#yield obj
+	yield walkElement(obj, _parent, _elementType)
+	if isinstance(obj, (tuple, list, set)) and sequenceItems:
+		for i in obj:
+			yield walkObject(i,
+			                 sequenceItems, dictKeys, dictValues,
+			                 _parent=obj,
+			                 _elementType=ElementTypes.SequenceItem)
+
+	elif isinstance(obj, (dict, )):
+		if dictKeys:
+			for i in obj.keys():
+				yield walkObject(i,
+				                 sequenceItems, dictKeys, dictValues,
+				                 _parent=obj,
+				                 _elementType=ElementTypes.DictKey)
+		if dictValues:
+			for i in obj.values():
+				yield walkObject(i,
+				                 sequenceItems, dictKeys, dictValues,
+				                 _parent=obj,
+				                 _elementType=ElementTypes.DictValue)
+
+
+
 def movingMask(seq, maskWidth=1, nullVal=None):
 	""" generates a symmetrical moving frame over sequence
 	eg seq = [ 1, 2, 3, 4, 5, 6 ]
@@ -489,19 +481,12 @@ def iterSubModuleNames(package=None, path=None, fullPath=True, debug=False):
 	"""yields names of all modules in package - DOES NOT import them"""
 	names = []
 	if not path:
-		# loader = pkgutil.get_loader(package)
-		# if not loader.is_package(loader.name):
-		# 	names.append(package.__name__)
-		# 	return names
-		#
-		# path = [loader.path]
 		path = package.__path__
 
 		if debug: print("path {}".format(path))
 
 	for loader, module_name, is_pkg in pkgutil.walk_packages(path):
 		if debug: print("module name {}".format(module_name))
-
 		names.append(module_name)
 	if fullPath:
 		names = [package.__name__ + "." + i for i in names]
@@ -636,3 +621,10 @@ if __name__ == '__main__':
 	# test.map[1] = False
 	# print(test.prop)
 
+
+def shortUUID(length=4):
+	uid = ""
+	for i in range(length):
+		o = str(random.randint(0, 9))
+		uid += o
+	return uid

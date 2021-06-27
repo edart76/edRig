@@ -1,13 +1,10 @@
 # ops to be main stages, able to be blended in a control chain
 import edRig.pipeline
 from edRig.tesserae.ops.op import Op
-from edRig import core, attrio, utils, transform, control, beauty
+from edRig import attrio, utils, transform, control, beauty
 
-#from edRig.tesserae.ops.memory import Memory2
+from edRig.tesserae.ops.memory import Memory2, InfoTypes
 from edRig.structures import ActionItem
-import functools, inspect
-import copy
-import pprint
 from collections import OrderedDict
 
 class LayerOp(Op):
@@ -19,7 +16,8 @@ class LayerOp(Op):
 	GPUable = False
 	# use to chain surface deformers directly
 
-
+	# reference to memory info types
+	InfoTypes = InfoTypes
 
 	def __init__(self, *args, **kwargs):
 		super(LayerOp, self).__init__(*args, **kwargs)
@@ -31,10 +29,10 @@ class LayerOp(Op):
 
 
 	@property
-	def memory(self):
+	def memory(self)->Memory2:
 		""" looks up memory from abstract's data
 		:rtype Memory2"""
-		return self.data("memory")
+		return Memory2(self.data("memory", "data"))
 
 
 	def renameOp(self, newName, renameData=False):
@@ -143,23 +141,23 @@ class LayerOp(Op):
 			return True
 
 		"""relative left None to ignore - otherwise specify transform or matrix
-		plug to remember and recall only in local space
+		plug to remember and reapplyData only in local space
 		actually any kind of plug, corresponding to the value being recalled"""
 
 		if infoName in self.memory.infoNames():
-			if infoType in self.memory.infoTypes(infoName):
+			if infoType in self.memory.cellInfoTypes(infoName):
 				# print ""
 				# print "RECALLING from remember"
 				self.memory.setNodes(infoName, nodes)
-				self.memory.recall(infoName, infoType, **kwargs)
+				self.memory.reapplyData(infoName, infoType, **kwargs)
 			else:
-				self.log("infoType {} not found in memory {}".format(infoType,
-				                                                  self.memory.infoTypes(infoName)) )
+				self.log("infoType {} not found in memory {}".format(
+					infoType, self.memory.cellInfoTypes(infoName)) )
 
 		else:
-			self.log( "infoName {} not found in memory {}".format(infoName,
-			                                                  self.memory.infoNames()) )
-		self.memory.remember(infoName, infoType, nodes, **kwargs)
+			self.log( "infoName {} not found in memory {}".format(
+				infoName, self.memory.infoNames()) )
+		self.memory.registerData(infoName, infoType, nodes, **kwargs)
 
 
 	def getAllActions(self):

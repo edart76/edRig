@@ -1,9 +1,9 @@
 """lib for manipulating nDynamics nodes"""
 from maya import cmds
+from edRig.maya import core
 
-from edRig.node import AbsoluteNode, ECA
-import time
-from edRig import attr, naming, plug, scene, callback, core
+from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig import attr
 
 
 def makeSolverCell(name):

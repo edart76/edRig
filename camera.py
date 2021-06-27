@@ -1,5 +1,5 @@
 
-from edRig.node import AbsoluteNode, ECA
+from edRig.maya.core.node import AbsoluteNode
 from edRig import transform
 
 class Camera(AbsoluteNode):
