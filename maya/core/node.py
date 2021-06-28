@@ -426,7 +426,7 @@ class AbsoluteNode(StringLike,
 
 	def attrs(self, **kwargs):
 		"""return all the attributes of the node"""
-		print(self())
+		#print(self())
 		return cmds.listAttr(self(), **kwargs)
 
 	def parseAttrArgs(self, args=None):
@@ -435,7 +435,7 @@ class AbsoluteNode(StringLike,
 		append node name to it (UNLESS set, in which case string
 		value is allowed)
 		"""
-		print(args)
+		#print(args)
 		for i in range(len(args)):
 			val = args[i]
 			if not isinstance(val, str):

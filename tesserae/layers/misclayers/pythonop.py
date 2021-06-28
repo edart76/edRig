@@ -1,10 +1,15 @@
 
 from edRig.tesserae.ops.layer import LayerOp
 
+from edRig import cmds, om
 
 
 class PythonOp(LayerOp):
-	"""base class for text-editor python snippets"""
+	"""
+	op allowing execution of arbitrary code
+	from files
+	or in very worst case text snippet
+	"""
 
 
 	def defineAttrs(self):
@@ -15,7 +20,14 @@ class PythonOp(LayerOp):
 		self.text = ""
 
 	def execute(self):
+
+		# define scope in which to execute code
+		scopeVars = {"cmds" : cmds,
+		             "om" : om,
+		             "op" : self}
+
 		text = self.getInput("code")
+
 		scope = (locals(), globals())
 		exec(text, scope)
 

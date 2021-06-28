@@ -91,11 +91,11 @@ class AbstractScene(QtWidgets.QGraphicsScene):
 	### region graph signal functions
 	def onNodesChanged(self, node, parent=None,
 	                   eventType=Tree.StructureEvents.branchRemoved):
-		print("scene onNodesChanged")
-		print("node", node, "parent", parent)
-		print("tiles", self.tiles)
+		#print("scene onNodesChanged")
+		#print("node", node, "parent", parent)
+		#print("tiles", self.tiles)
 		if not isinstance(node, AbstractNode):
-			print("node is not abstract, skipping")
+			#print("node is not abstract, skipping")
 			return
 		# node created
 		if eventType == Tree.StructureEvents.branchAdded:

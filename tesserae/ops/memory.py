@@ -110,8 +110,7 @@ class Memory2(object):
 		can be renewed from scene"""
 		returnDict = {}
 		for i in self.data.branches:
-			if i.name == "nodes":
-				continue
+
 			if i.get("closed"):
 				continue
 			returnDict[i.name] = []
@@ -142,15 +141,13 @@ class Memory2(object):
 				self.registerData(infoName, i, nodes)
 			return
 
-		# if infoType in InfoTypes:
-		# 	infoType = infoType.value
 
 		self._allocateTypeCell(infoName, infoType, nodes=nodes)
 
-		if not self[infoName][infoType]:
-			gatheredGoss = [self._gatherInfo(
-				infoType, target=i, **kwargs) for i in nodes]
-			self[infoName][infoType] = gatheredGoss
+		#if not self[infoName][infoType]:
+		gatheredGoss = [self._gatherInfo(
+			infoType, target=i, **kwargs) for i in nodes]
+		self[infoName][infoType] = gatheredGoss
 
 		self[infoName]["nodes"] = [AbsoluteNode(i) for i in nodes]
 
@@ -206,6 +203,8 @@ class Memory2(object):
 		}
 
 		returnDict = gatherFns[infoType](target, **kwargs)
+		print("gatherInfo result")
+		print(returnDict)
 
 		return returnDict
 
@@ -397,7 +396,7 @@ class Memory2(object):
 
 	def serialise(self):
 		#print("serialise nodes {}".format(self["nodes"]))
-		self["nodes"] = [ str(i) for i in self.get("nodes") or []]
+		#self["nodes"] = [ str(i) for i in self.get("nodes") or []]
 		return self.data.serialise()
 
 	def display(self):

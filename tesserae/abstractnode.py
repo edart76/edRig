@@ -180,13 +180,6 @@ class AbstractNode(AbstractTree):
 		abstractNodes only have access to data - graph may know more
 		:rtype AbstractTree """
 		data = self.graph.getNodeMemoryCell(self)
-		# check that memory class is placed correctly
-		# temp
-		# if not data.get("memory"):
-		# 	print("did not find memory cell, creating new")
-		# 	memory = Memory2()
-		# 	#memory = self.real.memory
-		# 	data.addChild(memory)
 		return data
 
 

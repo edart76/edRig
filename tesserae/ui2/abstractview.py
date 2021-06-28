@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import List, Dict, Union, TYPE_CHECKING, Set, Callable
 
+import pprint
+
 # viewer widget for the abstract view
 from PySide2 import QtCore, QtWidgets, QtGui
 
@@ -593,8 +595,17 @@ class AbstractView(QtWidgets.QGraphicsView):
 		and adds them to default"""
 		self.contextMenu.clearCustomEntries()
 
+		nodeTrees = []
+		memoryTrees = []
+
+		for i in self.selectedTiles():
+			nodeTrees.append(i.abstract.getAllActions())
+			if i.abstract.real:
+				memoryTrees.append(i.abstract.real.memoryActions())
+
 		nodeActions = lib.mergeActionTrees(
 			self.getTileActions())
+		pprint.pprint(nodeActions.serialise())
 		nodeActions.name = "Nodes"
 		if nodeActions:
 			#self.contextMenu.buildMenusFromDict(nodeActions)

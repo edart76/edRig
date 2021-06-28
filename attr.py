@@ -671,14 +671,14 @@ def getNextAvailablePlug(arrayPlug):
 	"""gets the first free index for an array attribute"""
 	if isinstance(arrayPlug, om.MPlug):
 		length = arrayPlug.numElements()
-		print("length {}".format(length))
+		#print("length {}".format(length))
 		name = arrayPlug.partialName( includeNodeName=True,
 		                              useFullAttributePath=True)
 		baseName = "[".join(name.split("[")[:-1]) or name
 		return baseName + "[{}]".format(length)
 
 	length = cmds.getAttr(arrayPlug, size=True)
-	print("length {}".format(length))
+	#print("length {}".format(length))
 	if arrayPlug[-1] == "]" :
 		arrayPlug = "[".join( arrayPlug.split("[")[:-1] )
 	return arrayPlug+"[{}]".format(length)

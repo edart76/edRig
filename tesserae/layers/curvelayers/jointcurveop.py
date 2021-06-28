@@ -1,4 +1,9 @@
-# layers working with transforms, hierarchy, point data, joints
+
+
+from __future__ import annotations
+from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
+from functools import partial
+import pprint
 
 import edRig.maya.core.node
 from edRig import transform, control, curve, point, ECA, plug, \
@@ -93,9 +98,7 @@ class JointCurveOp(SpookyLayerOp):
 			self.matchCurveToJoints()
 			self.remember("joints", "attr", self.joints, transformAttrs=False)
 			self.remember("joints", "xform", self.joints, jointMode=True)
-			# self.remember("joints", "attr", self.joints, transformAttrs=False)
 			self.freezeJoints()
-			#self.refreshMemoryAndSave()
 
 		else:
 			self.matchJointsToCurve()
@@ -105,6 +108,8 @@ class JointCurveOp(SpookyLayerOp):
 		# self.memory.setClosed("curves", status=True)
 		# self.memory.setClosed("joints", status=True)
 		self.updateOutputs()
+		print(self.memory.display())
+
 
 	""" consider behaviour when adding new joints - 
 	a curve-driven system should seek to preserve original point positions

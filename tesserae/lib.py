@@ -23,7 +23,8 @@ class GeneralExecutionManager(object):
 
 
 def mergeActionTrees(trees:List[AbstractTree])->AbstractTree[Action]:
-	"""given a list of trees with actionItems as leaves,
+	"""given a list of trees with actionItems as values,
+	OR DICTS OF ACTION ITEMS as values,
 	merge corresponding actions into single"""
 
 	resultTree = AbstractTree("actions")
@@ -31,6 +32,7 @@ def mergeActionTrees(trees:List[AbstractTree])->AbstractTree[Action]:
 	keySet = set()
 	for tree in trees:
 		keySet.update(set(tree.keys()))
+
 
 	# iterate over all trees to combine their keys
 	# if a key leads to a tree branch,

@@ -141,7 +141,8 @@ class RealComponent(AbstractTree):
 			self.actions[name or action.name] = action
 
 	def getAllActions(self)->AbstractTree[Action]:
-		return self.actions
+		# return self.actions.__copy__()
+		return self.actions.__deepcopy__()
 
 	# Real component behaviour
 	# Memory has to be a wrapper around base tree

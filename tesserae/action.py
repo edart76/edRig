@@ -5,6 +5,7 @@ a 'partial-plus' if you will """
 from __future__ import annotations
 from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
 from functools import partial
+import pprint
 from enum import Enum
 
 def evalLambdaSequence(seq):
@@ -35,7 +36,7 @@ class Action(object):
 			return self.fn.func.__name__
 		return self.fn.__name__
 
-	def addAction(self, action):
+	def addAction(self, action:Union[Action, Callable]):
 		if not isinstance(action, Action):
 			action = Action(action)
 		self.subActions.append(action)
@@ -45,8 +46,12 @@ class Action(object):
 		#print(self.name, "execute")
 		try:
 			if isinstance(self.fn, partial):
-				return self.fn()
-			result = self.fn(*self.args, **self.kwargs)
+				result = self.fn()
+			elif not self.fn:
+				pass
+			else:
+				result = self.fn(*self.args, **self.kwargs)
+
 			for i in self.subActions:
 				i.execute()
 

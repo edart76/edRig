@@ -1,5 +1,7 @@
 # ops to be main stages, able to be blended in a control chain
 import edRig.pipeline
+from edRig.lib.python import AbstractTree
+from edRig.tesserae.action import Action
 from edRig.tesserae.ops.op import Op
 from edRig import attrio, utils, transform, control, beauty
 
@@ -35,65 +37,46 @@ class LayerOp(Op):
 		return Memory2(self.data("memory", "data"))
 
 
-	def renameOp(self, newName, renameData=False):
-		"""old stuff about data can be managed at graph"""
-		if self.abstract:
-			self.opName = newName
-		else:
-			newDataPath = attrio.dataFolder + newName
-			oldDataPath = self.dataFilePath
-			self.opName = newName
-			# check if data exists already
-			if renameData and not edRig.pipeline.checkJsonFileExists(newDataPath):
-				attrio.renameFile(old=oldDataPath, new=newDataPath)
-			else:
-				self.checkDataFileExists()
-
-	@property
-	def dataFilePath(self):
-		# one file per op
-		if self.abstract:
-			path = self.abstract.dataPath
-		else:
-			path = attrio.dataFolder + self.opName # in the past
-		# self.checkDataFileExists(path)
-		return path
-
-	def checkDataFileExists(self):
-		if self.abstract:
-			return True
-		if edRig.pipeline.checkJsonFileExists(self.dataFilePath):
-			print("data file for {} exists".format(self.opName))
-			self.dataFileExists = True
-		else:
-			print("data file for {} does not exist, making new one".format(self.opName))
-			edRig.pipeline.makeBlankFile(path=self.dataFilePath)
-			self.dataFileExists = True
-
 	def setAbstract(self, abstract, inDict=None, outDict=None, define=True):
 		super(LayerOp, self).setAbstract(abstract, inDict, outDict, define)
 
-	def memoryActions(self):
-		openDict = self.memory.renewableMemory()
 
-		returnDict = OrderedDict()
+	def memoryActions(self):
+		"""tree of available memory options"""
+		openDict = self.memory.renewableMemory()
+		# print("openMemory", openDict)
+
+		tree = AbstractTree("Memory")
 		# add "all" options
 		if len(list(openDict.keys())) > 1:
-			returnDict["all"] = ActionItem(
-				{"func" : self.refreshAllMemory}, name="all")
+			tree["all"] = Action(fn=self.refreshAllMemory,
+			                           name="all")
 		for k,v in openDict.items():
-			returnDict[k] = {}
+			allAction = None
+			if len(v) > 1:
+				allAction = Action(name="all")
+				tree[k, "all"] = allAction
 
 			for i in v:
-				returnDict[k][i] = ActionItem({
-					#"func" : self.memory.refresh,
-					"func" : self.refreshMemoryAndSave,
-					"kwargs" : {
+				action = Action(self.refreshMemoryAndSave,
+					kwargs={
 						"infoName" : k,
 						"infoType" : i,
-					} }, name=i )
+					}, name=i )
+				tree[k, i] = action
+				if allAction:
+					allAction.addAction(action)
+		return tree
 
-		return returnDict
+	def getAllActions(self):
+		"""super call freaks out for some reason with regen'd objects
+		no it freaked out because reloading edRig deleted all system modules"""
+		base = super(LayerOp, self).getAllActions()
+
+		# base["memory"] = self.memoryActions()
+		base.addChild(self.memoryActions())
+		return base
+
 
 	def refreshMemoryAndSave(self, infoName=None, infoType=None):
 		"""save out memory with every refresh"""
@@ -159,14 +142,6 @@ class LayerOp(Op):
 				infoName, self.memory.infoNames()) )
 		self.memory.registerData(infoName, infoType, nodes, **kwargs)
 
-
-	def getAllActions(self):
-		"""super call freaks out for some reason with regen'd objects
-		no it freaked out because reloading edRig deleted all system modules"""
-		base = super(LayerOp, self).getAllActions()
-
-		base["memory"] = self.memoryActions()
-		return base
 
 	# convenience and standardisation
 	def makeStarter(self, name=None, d="0D"):
