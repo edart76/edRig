@@ -464,6 +464,7 @@ function void projectsurfacespace(int geo;
 
     float debugweight; // temp
     int success;
+    int debugparent; // parent to connect debug lines
 )
     {
     /* given face and vector to project,
@@ -506,7 +507,7 @@ function void projectsurfacespace(int geo;
         getcomp(orientmat, 1, 1),
         getcomp(orientmat, 1, 0));
 
-    normal = prim(geo, "N", face);
+    normal = normalize(prim(geo, "N", face));
 
     setpointattrib(0, "N", ptnum, normal);
 
@@ -536,6 +537,9 @@ function void projectsurfacespace(int geo;
 
     setpointattrib(0, "tanvec", ptnum, tanvec);
 
+    // set back to original direction
+    //dir = tanvec;
+
     origin = projectpostoplane(midpos, normalize(normal), origin); // correct in general
     escapepos = origin;
 
@@ -561,6 +565,15 @@ function void projectsurfacespace(int geo;
             current = hedge_next( geo, current );
             continue;
         }
+
+        // add points to show which hedge is being used
+        int hedgept = addpointline( 0,
+            point(geo, "P", hedge_srcpoint(geo, current)),
+            debugparent, "hedgetest" )[0];
+        hedgept = addpointline( 0,
+            point(geo, "P", hedge_dstpoint(geo, current)),
+            hedgept, "hedgetest" )[0];
+
         // get hedge ray
         vector hedgevecs[] = hedgeray(geo, current);
         vector hedgepos = hedgevecs[0];
@@ -578,11 +591,17 @@ function void projectsurfacespace(int geo;
             skewpointa, skewpointb
         );
 
+        addpointline(0, skewpointa, debugparent, "skewA"  );
+        addpointline(0, skewpointb, debugparent, "skewB"  );
+        // skews work - checking within span doesn't
+
+
         // // check first if hedge is behind tangent vector
         float tandot = dot(tanvec, skewpointa - origin);
 
         if(tandot < 0){ // goes backwards, ignore hedge
             current = hedge_next( geo, current );
+            addpointline(0, skewpointa, debugparent, "backwardsSkew");
             continue;
         }
 
@@ -591,8 +610,6 @@ function void projectsurfacespace(int geo;
         float dist = length(nearestpointonline(
             hedgepos, hedgepos + hedgespan, skewpointa
         ));
-
-        dist = 0; /// temp, sus, remove once everything else works
 
         if(dist < minskewd){
             minskewd = dist;
@@ -604,17 +621,13 @@ function void projectsurfacespace(int geo;
             minhedgespan = hedgespan;
             minhedgedir = hedgedir;
         }
-
         current = hedge_next( geo, current );
     }while(start != current);
 
     setpointattrib(0, "hedgescovered", ptnum, hedgescovered);
 
-
     // point to intersection hedge
     vector skewhegev[] = hedgeray(geo, skewhedge);
-    //addpointline(0, skewhegev[0] + skewhegev[1] / 2, ptnum);
-    //addpointline(0, minskewposa, ptnum, "debug");
 
     // does tangent vector escape
     if (length(minskewposa - origin) > length(tanvec)){ // does not escape
@@ -633,21 +646,24 @@ function void projectsurfacespace(int geo;
     // vector escapes face
     escapehedge = skewhedge;
     escapepos = minskewposa;
-    //escapepos = minhedgepos + minhedgespan / 2;
 
     outputlin = tandir * ((length(tanvec) - length(escapepos - origin)));
+    // outputlin works, only hook doesn't
 
-    //outputlin = tanvec;
+    // point to escapehedge
+    vector escapemid = hedgeray(geo, escapehedge)[0] + hedgeray(geo, escapehedge)[1] / 2;
+    addpointline(0, escapemid, debugparent, "escapemid");
+
 
     // hook vector over to next face if it exists
     int nextprim = hedge_prim(geo, hedge_nextequiv(geo, escapehedge));
-    vector nextnormal = prim(geo, "N", nextprim);
+    vector nextnormal = normalize(prim(geo, "N", nextprim));
     outputlin = projectpostoplane(
         null, normalize(nextnormal), outputlin); // correct in general
 
     // quaternion representing half of this rotation
     float rotaterad = acos(dot(normal, nextnormal));
-    rotaterad = (dot(normal, nextnormal));
+    //rotaterad = -(dot(normal, nextnormal)) / 2;
     vector4 rotquat = quaternion(rotaterad, minhedgedir);
 
     vector rotresult = qrotate(rotquat, outputlin);
