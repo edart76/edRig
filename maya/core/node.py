@@ -1,4 +1,4 @@
-"""AbsoluteNode wrapper """
+"""EdNode wrapper """
 
 import ast
 
@@ -20,7 +20,7 @@ def invokeNode(name="", type="", parent="", func=None):
 	# print "core invokeNode looking for {}".format(name)
 	if cmds.objExists(name):
 		#print("found {}".format(name)
-		return AbsoluteNode(name)
+		return EdNode(name)
 	if not func:
 		func = ECA
 	node = func(type, name=name)
@@ -52,10 +52,10 @@ only 4 strokes over 6, looks freaky, no argument support
 """
 
 # admitting defeat on subclassing string properly
-class AbsoluteNode(StringLike,
-                   #metaclass=Singleton
-                   NodeBase
-                   ):
+class EdNode(StringLike,
+             #metaclass=Singleton
+             NodeBase
+             ):
 	# DON'T LOSE YOUR WAAAAY
 
 	allInfo = {
@@ -103,7 +103,7 @@ class AbsoluteNode(StringLike,
 	withPrefix = None
 
 	def __init__(self, node="", useCache=True):
-		super(AbsoluteNode, self).__init__(base=node)
+		super(EdNode, self).__init__(base=node)
 
 		self.MObject = None
 		self.MFnDependency = None
@@ -173,7 +173,7 @@ class AbsoluteNode(StringLike,
 	## refreshing mechanism
 	def __str__(self):
 		self.value = self.refreshPath()
-		return super(AbsoluteNode, self).__str__()
+		return super(EdNode, self).__str__()
 
 	def __call__(self, *args, **kwargs):
 		self.value = self.refreshPath()
@@ -184,7 +184,8 @@ class AbsoluteNode(StringLike,
 
 	def refreshDagPath(self):
 		#self.MDagPath = om.MDagPath.getAPathTo(self.MObject)
-		self.value = self.MFnDagNode.fullPathName()[1:]
+		#self.value = self.MFnDagNode.fullPathName()[1:]
+		self.value = self.MFnDagNode.name()
 		""" leading | was being annoying"""
 		return self.value
 
@@ -251,7 +252,7 @@ class AbsoluteNode(StringLike,
 			test = shapeFrom( self() )
 			if not test:
 				return None
-			self._shape = AbsoluteNode( test )
+			self._shape = EdNode(test)
 		return self._shape
 
 	@property
@@ -259,19 +260,19 @@ class AbsoluteNode(StringLike,
 		if self.isTransform():
 			return self
 		elif not self._transform:
-			self._transform = AbsoluteNode( tfFrom( self() ) )
+			self._transform = EdNode(tfFrom(self()))
 		return self._transform
 
 	@property
 	def parent(self):
 		"""replace with api call"""
 		test = cmds.listRelatives(self(), parent=True)
-		return AbsoluteNode(test[0]) if test else None
+		return EdNode(test[0]) if test else None
 
 	@property
 	def children(self):
 		test = cmds.listRelatives(self, children=True)
-		return [AbsoluteNode(i) for i in test] if test else []
+		return [EdNode(i) for i in test] if test else []
 
 	def parentTo(self, targetParent=None, *args, **kwargs):
 		"""reparents node under target dag
@@ -405,7 +406,7 @@ class AbsoluteNode(StringLike,
 	def fromMObject(obj):
 		"""find node associated with obj and wrap it"""
 		name = stringFromMObject(obj)
-		return AbsoluteNode(name)
+		return EdNode(name)
 
 	@classmethod
 	def create(cls, name=None, n=None, *args, **kwargs):
@@ -475,14 +476,14 @@ class AbsoluteNode(StringLike,
 		"""set attribute directly"""
 		attr.setAttr(plug, value)
 
-	def set(self, attrName=None, val=None, multi=None, **kwargs):
+	def set(self, name=None, val=None, multi=None, **kwargs):
 		"""sets value of node's own attr
 		REFACTOR to catalogue MPlugs and set them directly"""
 		if isinstance(multi, dict):
 			attr.setAttrsFromDict(multi, node=self())
 			return
-		attrName = self.parseAttrArgs([attrName])[0]
-		attr.setAttr(attrName, val, **kwargs)
+		name = self.parseAttrArgs([name])[0]
+		attr.setAttr(name, val, **kwargs)
 
 	def get(self, attrName=None, **kwargs):
 		"""duplication rip"""
@@ -508,7 +509,7 @@ class AbsoluteNode(StringLike,
 			self.transform.MObject
 		parentObj = parent.MObject
 		newShape = self.shapeFn.copy(self.MObject, parentObj)
-		newNode = AbsoluteNode.fromMObject(newShape)
+		newNode = EdNode.fromMObject(newShape)
 		newNode.name = name+"Shape"
 
 		print( "new {}, {}".format(newNode, newNode.inShape))
@@ -538,7 +539,7 @@ class AbsoluteNode(StringLike,
 	def dataTree(self):
 		""" initialise data tree object and return it
 		connect value changed signal to serialise method
-		given AbsoluteNode register, there SHOULD be no way this will ever
+		given EdNode register, there SHOULD be no way this will ever
 		desync from node, as any AbsNode call should return
 		 the correct wrapper, and so the correct tree """
 		if self._dataTree:
@@ -660,9 +661,9 @@ class AbsoluteNode(StringLike,
 		"""copies node, without copying children"""
 		name = name or self.name+"_copy"
 		if children:
-			node = AbsoluteNode(cmds.duplicate(self(), n=name)[0])
+			node = EdNode(cmds.duplicate(self(), n=name)[0])
 		else:
-			node = AbsoluteNode(cmds.duplicate(
+			node = EdNode(cmds.duplicate(
 				self(), parentOnly=True, n=name)[0])
 		if self.isShape():
 			cmds.parent(node, self.parent, r=True, s=True)
@@ -680,31 +681,31 @@ class WithPrefix(ContextDecorator):
 		self.prefix = prefix
 
 	def __enter__(self):
-		AbsoluteNode.prefixStack.append(self.prefix)
+		EdNode.prefixStack.append(self.prefix)
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
-		AbsoluteNode.prefixStack.pop(-1)
+		EdNode.prefixStack.pop(-1)
 
-AbsoluteNode.withPrefix = WithPrefix
+EdNode.withPrefix = WithPrefix
 
 
 def ECA(type, name="", colour=None, *args, **kwargs):
 	# node = cmds.createNode(type, n=name)
 	name = kwargs.get("n") or name
 
-	name = AbsoluteNode.prefix() + name
+	name = EdNode.prefix() + name
 	# check for current name stacks
 	# ?
 
 	node = ECN(type, name, *args, **kwargs)
-	a = AbsoluteNode(node)
+	a = EdNode(node)
 	# avoid annoying material errors
 	if type == "mesh" or type == "nurbsSurface":
 		a.assignMaterial("lambert1")
 	return a
 
 
-class RemapValue(AbsoluteNode):
+class RemapValue(EdNode):
 	"""wrapper for rempValue nodes"""
 	nodeType = "remapValue"
 
@@ -740,7 +741,7 @@ class RemapValue(AbsoluteNode):
 		"""look up ramps connected to master by string"""
 		return attr.getImmediateFuture(self+".instances")
 
-class ObjectSet(AbsoluteNode):
+class ObjectSet(EdNode):
 	""" wrapper for adding things to node sets in a sane way """
 
 	def addToSet(self, target):
@@ -750,7 +751,7 @@ class ObjectSet(AbsoluteNode):
 	def objects(self):
 		items = cmds.sets( self, q=True )
 		if not items: return []
-		return set( [AbsoluteNode(i) for i in items])
+		return set([EdNode(i) for i in items])
 
 	def sets(self):
 		items = cmds.sets( self, q=True) or []

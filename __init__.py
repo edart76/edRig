@@ -25,7 +25,7 @@ from edRig.dcc import ( hostDict,
 
 if hostDict["maya"]:
 
-	from edRig.maya import AbsoluteNode, ECA, ECN
+	from edRig.maya import EdNode, ECA, ECN
 	from edRig.attr import con
 
 sys.dont_write_bytecode = True

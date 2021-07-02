@@ -22,4 +22,4 @@ from edRig import cmds
 
 import inspect
 
-from edRig.maya.core.node import ECA, ECN, AbsoluteNode
+from edRig.maya.core.node import ECA, ECN, EdNode

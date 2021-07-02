@@ -1,5 +1,5 @@
 # s o o n
-from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig.maya.core.node import EdNode, ECA
 from edRig import COMMON_PATH, attr, cmds, om, mel
 
 
@@ -25,7 +25,7 @@ def exportShapeToTempFile(target):
 
 def getSurfaceInfo(shape):
 	"""return info necessary to reconstruct surface
-	:param shape : AbsoluteNode"""
+	:param shape : EdNode"""
 	surfInfo = {}
 	fn = shape.shapeFn
 	tf = shape.transform
@@ -54,13 +54,13 @@ def getSurfaceInfo(shape):
 def setSurfaceInfo(info, target=None, create=True, parent=None):
 	"""apply info from dict, or just create anew"""
 	fn = om.MFnNurbsSurface()
-	target = AbsoluteNode(target).shape
+	target = EdNode(target).shape
 	#return
 
 	target.delete()
 	targetName = target.name
 
-	parent = AbsoluteNode(parent)
+	parent = EdNode(parent)
 
 	print("info to set is {}".format(info))
 
@@ -77,7 +77,7 @@ def setSurfaceInfo(info, target=None, create=True, parent=None):
 		parent=parent.MObject,
 	)
 	fn.updateSurface()
-	newShape = AbsoluteNode.fromMObject(shapeObj)
+	newShape = EdNode.fromMObject(shapeObj)
 	print("newShape is " + newShape)
 	cmds.select(newShape, ne=True)
 	for i in (info["cached"], info["tf"]):

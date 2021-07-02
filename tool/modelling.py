@@ -1,6 +1,6 @@
 
 from maya import cmds
-from edRig import deformer, AbsoluteNode, ECA, dynamics, muscle
+from edRig import deformer, EdNode, ECA, dynamics, muscle
 from edRig.tool.ui.setup import UiTool
 from edRig.lib.python import getUserInput
 
@@ -10,7 +10,7 @@ def addSelectedToDeformer(sel):
 	"""check through selection to see if there are deformers
 	if not get deformer in first geo history and use that"""
 	targetDeformer = None
-	sel = [AbsoluteNode(i)for i in sel]
+	sel = [EdNode(i) for i in sel]
 	sel = [i.shape for i in sel if i.isDag()]
 	print("sel {}".format(sel))
 	if not sel:
@@ -42,7 +42,7 @@ def makeShapeLayer(sel):
 		return
 	name = getUserInput("name new layer") or "newLayer"
 	#print( name )
-	sel = [AbsoluteNode(i).shape for i in sel]
+	sel = [EdNode(i).shape for i in sel]
 	sel = [i for i in sel if i.isShape()]
 	shapes = [i.getShapeLayer(name=name) for i in sel]
 	#print("type shapes {}, {}".format( type( shapes[0]), shapes[0] ) )
@@ -65,7 +65,7 @@ def makeMuscleCurve(sel):
 	"""creates a muscle curve from target, following source live by default"""
 	if not sel:
 		return
-	sel = [AbsoluteNode(i) for i in sel]
+	sel = [EdNode(i) for i in sel]
 	muscle.MuscleCurve.create(sel)
 
 def constrainDynamicCurves(sel):
@@ -75,7 +75,7 @@ def constrainDynamicCurves(sel):
 		raise RuntimeError("select two dynamic curves' cvs")
 
 
-	# sel = [AbsoluteNode(i) for i in sel]
+	# sel = [EdNode(i) for i in sel]
 	# sel = [dynamics.NHair.fromDynamicCurve(i) for i in sel]
 	# dynamics.constrainClosestPoints(sel[0], sel[1])
 

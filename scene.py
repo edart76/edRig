@@ -1,5 +1,5 @@
 # operations for listing, grouping, adding to sets etc
-from edRig.maya.core.node import ECA, AbsoluteNode, invokeNode
+from edRig.maya.core.node import ECA, EdNode, invokeNode
 from edRig import cmds, mel, attr, pipeline
 from edRig.lib.python import AbstractTree
 import traceback
@@ -38,7 +38,7 @@ class TidyManager(object):
 		"""clean up TOP LEVEL maya scene nodes regardless"""
 		self.afterSet = set(listAllNodes())
 		new = self.afterSet - self.beforeSet
-		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()
+		newDags = [n for n in [EdNode(i) for i in new] if n.isDag()
 		           and not n.parent]
 		newDags = [i for i in newDags if i not in self.excludeList
 		           and not cmds.listRelatives(i, parent=True)]
@@ -139,7 +139,7 @@ class Globals(object):
 
 	@property
 	def globalsControl(self):
-		node = AbsoluteNode(invokeNode("globals_ctrl", "transform"))
+		node = EdNode(invokeNode("globals_ctrl", "transform"))
 		for i in node.TRS():
 			attr.setAttr(i, l=True, cb=False)
 		return node

@@ -1,13 +1,13 @@
 from edRig import con
-from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig.maya.core.node import EdNode, ECA
 
 
 def collidePoint(collisionTransform, collisionMesh=None,
                  preserveLength=True):
 	"""help
 	only mesh colliders for now"""
-	collider = AbsoluteNode(collisionMesh).shape
-	tf = AbsoluteNode(collisionTransform)
+	collider = EdNode(collisionMesh).shape
+	tf = EdNode(collisionTransform)
 	cpa = ECA("closestPointOnMesh", n="closestPointOnMesh")
 	cpw = ClosestPoint(cpa, kind="mesh")
 	cpa.con(collider.outWorld, cpw.inShape)

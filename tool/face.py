@@ -1,18 +1,18 @@
 """ temp file to test face setups before the full infrastructure is ready """
 
-from edRig import cmds, om, AbsoluteNode, ECA
+from edRig import cmds, om, EdNode, ECA
 from edRig import plug, attr, curve, surface, muscle, dynamics, anim
 
 
 def faceMuscleSetup():
 
 	if cmds.ls("rig_grp"):
-		rigGrp = AbsoluteNode("rig_grp")
+		rigGrp = EdNode("rig_grp")
 	else:
 		rigGrp = ECA("transform", n="rig_grp")
 
-	baseCurves = [AbsoluteNode(i) for i in cmds.listRelatives(
-		"L_grp", children=True) ]
+	baseCurves = [EdNode(i) for i in cmds.listRelatives(
+		"L_grp", children=True)]
 	for i in baseCurves:
 		# print type(i)
 		# print i
@@ -30,7 +30,7 @@ def faceMuscleSetup():
 	browPlugs = []
 	contractPlugs = []
 	for i in contractCurves:
-		d = AbsoluteNode(cmds.duplicate(i, n=i + "_contract")[0])
+		d = EdNode(cmds.duplicate(i, n=i + "_contract")[0])
 		print(d)
 		print(cmds.objExists(d))
 		cmds.parent(d, rigGrp)

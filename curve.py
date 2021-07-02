@@ -1,13 +1,13 @@
 # in framestore, they called me the curve guy
 from edRig.maya import core as core
 from edRig.maya.core import ECN
-from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig.maya.core.node import EdNode, ECA
 from edRig import attr, plug, transform, cmds, om, con
 
 sceneScale = 1
 # for later
 
-class NurbsCurve(AbsoluteNode):
+class NurbsCurve(EdNode):
 	"""is this a mistake"""
 
 
@@ -20,14 +20,14 @@ def isCurve(node):
 
 def makeLine(name):
 	"""makes a basic nurbs curve"""
-	newCurve = AbsoluteNode(cmds.curve(point=[(0,0,0), (0, sceneScale, 0)],
-	                                   degree=1))
+	newCurve = EdNode(cmds.curve(point=[(0, 0, 0), (0, sceneScale, 0)],
+	                             degree=1))
 	# i love not being able to name a curve when you create it
 	newCurve.name = name
 	return newCurve
 
 def rebuildCurve(curve, **kwargs):
-	curve = AbsoluteNode(curve).shape
+	curve = EdNode(curve).shape
 	return cmds.rebuildCurve(curve, **kwargs)
 
 
@@ -37,7 +37,7 @@ def getCurveInfo(shape=None, fn=None):
 	"""gather information to regenerate nurbs curve from data"""
 	curveInfo = {}
 	if isCurve(shape) and not fn:
-		shape = AbsoluteNode(shape)
+		shape = EdNode(shape)
 		fn = shape.shapeFn
 
 	curveInfo["cvs"] = [(i.x, i.y, i.z) for i in fn.cvPositions()]
@@ -53,7 +53,7 @@ def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
 	"""apply info from dict, or just create anew"""
 
 	fn = om.MFnNurbsCurve()
-	target = AbsoluteNode(target)
+	target = EdNode(target)
 	targetName = target.name
 
 	parentTf = cmds.createNode("transform", n="tempCurveRecall_tf")
@@ -67,7 +67,7 @@ def setCurveInfo(info, target=None, create=True, parent=None, fn=None):
 	)
 	# connect attr to maintain references
 	dfn = om.MFnDependencyNode( shapeObj )
-	shape = AbsoluteNode(dfn.name())
+	shape = EdNode(dfn.name())
 	cmds.connectAttr(shape + ".local", target + ".create", f=True)
 	try:
 		cmds.getAttr(target + ".local")
@@ -111,7 +111,7 @@ def matchCurve(base, target):
 
 def getLengthRatio(crv, uFraction):
 	"""retrieve arc length ratio"""
-	fn = AbsoluteNode(crv).shapeFn
+	fn = EdNode(crv).shapeFn
 	return uFraction
 
 
@@ -248,7 +248,7 @@ def curveFromCvs(points, closed=False, deg=3, name="pointCrv",
 			else:
 				con(item, "{}.controlPoints[{}]".format(outCrvShape, i))
 				pass
-	return AbsoluteNode(outCrvShape)
+	return EdNode(outCrvShape)
 
 def curveFromCvPlugs(plugs, closed=False, deg=1, name="pointCrv", useApi=True):
 	""" improved rewrite of above to explicitly deal with plugs """
@@ -268,7 +268,7 @@ def curveFromCvPlugs(plugs, closed=False, deg=1, name="pointCrv", useApi=True):
 
 def createBaseCurve(name, useApi=True, nPoints=3):
 	""" create nurbs curve using shapeFn, cvs at x0 and x1
-	:returns AbsoluteNode"""
+	:returns EdNode"""
 	if useApi:
 		points = [om.MPoint(0, 0, 0,), om.MPoint(1, 0, 0)]
 		fn = om.MFnNurbsCurve()
@@ -278,7 +278,7 @@ def createBaseCurve(name, useApi=True, nPoints=3):
 		                                 om.MFnNurbsCurve.kOpen, # form, kOpen
 		                                 False, # is2D
 		                                 True) # isRational
-		node = AbsoluteNode.fromMObject(newObj)
+		node = EdNode.fromMObject(newObj)
 
 	else:
 		node = cmds.curve(p=[(0, 0, 0)],
@@ -287,9 +287,9 @@ def createBaseCurve(name, useApi=True, nPoints=3):
 		points = [(i,0,0) for i in range( nPoints)]
 		for i in range(1, nPoints):
 			cmds.curve(node, p=[points[i]], worldSpace=True, append=True)
-		node = AbsoluteNode(node)
+		node = EdNode(node)
 
-	node = AbsoluteNode(node.rename(name))
+	node = EdNode(node.rename(name))
 	return node.transform
 
 
@@ -323,7 +323,7 @@ def curveFnFrom(curve):
 	return curveFn
 
 def arcLength(curve):
-	if isinstance(curve, AbsoluteNode):
+	if isinstance(curve, EdNode):
 		return curve.shape.shapeFn.length()
 	else:
 		return cmds.arcLen(curve, ch=False)
@@ -430,7 +430,7 @@ def matrixAtU(crv, u=0.5, percentage=True):
 
 def matrixPlugFromPci(pci, upVector=None):
 	""" more atomic rewrite of curve functions using clear plug
-	:param pci : AbsoluteNode
+	:param pci : EdNode
 	:param upVector : tuple or plug"""
 
 	mat = ECA("4x4", "matAtU")
@@ -506,14 +506,14 @@ def liveMatrixAtU(crvShape, u=0.5, constantU=True, purpose="anyPurpose",
 	con(pci+".positionZ", mat+".in32")
 	mat.set("in33", 0)
 
-	data["mat"] = AbsoluteNode(mat)
+	data["mat"] = EdNode(mat)
 	data["vec"] = vec
 	data["pci"] = pci
 	return data
 
 def staticClosestPoint(curve, point):
 	""" uses api to find closest point on curve """
-	curve = AbsoluteNode(curve)
+	curve = EdNode(curve)
 	point = om.MPoint(point)
 	closestPoint, closestU = curve.shapeFn.closestPoint(point)
 	return closestPoint, closestU
@@ -522,8 +522,8 @@ def staticClosestPoint(curve, point):
 
 def mutualClosestPoints( curveA, curveB, steps=5 ):
 	""" find points of closest approach between two curves """
-	curveA = AbsoluteNode(curveA)
-	curveB = AbsoluteNode(curveB)
+	curveA = EdNode(curveA)
+	curveB = EdNode(curveB)
 	point = curveB.shapeFn.getPointAtParam(0.5)
 	for i in range(steps):
 		point = staticClosestPoint(curveA, point)[0]

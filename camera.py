@@ -1,8 +1,8 @@
 
-from edRig.maya.core.node import AbsoluteNode
+from edRig.maya.core.node import EdNode
 from edRig import transform
 
-class Camera(AbsoluteNode):
+class Camera(EdNode):
 	""""""
 
 class CubeMapCamera(object):

@@ -1,4 +1,4 @@
-from edRig import AbsoluteNode, ECA, curve, beauty, attr, \
+from edRig import EdNode, ECA, curve, beauty, attr, \
 	control, plug, transform
 from edRig.dynamics import Nucleus, NHair, makeCurveDynamic
 from edRig.scene import TidyManager, SceneObject
@@ -69,7 +69,7 @@ class MuscleCurve(Muscle):
 
 	@property
 	def outputShape(self):
-		""":returns AbsoluteNode"""
+		""":returns EdNode"""
 		return self.hair.outputLocalShape
 
 	@classmethod
@@ -103,7 +103,7 @@ class MuscleCurve(Muscle):
 	@classmethod
 	def rebuildCurve(cls, baseShapePlug, name=""):
 		rebuild = curve.rebuildCurve(baseShapePlug, name + "Rebuild")
-		newCrv = AbsoluteNode(baseShapePlug).shape.getShapeLayer(
+		newCrv = EdNode(baseShapePlug).shape.getShapeLayer(
 			name=baseShapePlug + "_rebuilt")
 		newCrv.con(rebuild + ".outputCurve", "create")
 		return newCrv.transform, rebuild
@@ -124,7 +124,7 @@ class MuscleCurve(Muscle):
 		"""create control attributes"""
 		self.ctrl = control.TileControl(name=self.name,
 		                                colour=(56, 120, 256) )
-		node = AbsoluteNode(self.ctrl.first)
+		node = EdNode(self.ctrl.first)
 		#print "inputShape {}".format(self.hair.inputShape)
 		baseTf = self.hair.inputShape.transform
 		self.ctrl.root.parentTo(baseTf)
@@ -313,7 +313,7 @@ class MuscleCurve(Muscle):
 				aim = attr.getImmediatePast(i + ".rotate")[0]
 				npm = ECA("nearestPointOnMesh", n=i+"upSurface_point")
 				npm.con(pciPlug, "inPosition")
-				upSource = AbsoluteNode(self.upSurface).shape.outLocal
+				upSource = EdNode(self.upSurface).shape.outLocal
 				npm.con(upSource, "inMesh")
 				npm.con("normal", aim + ".worldUpVector")
 

@@ -540,7 +540,7 @@ function void projectsurfacespace(int geo;
     // set back to original direction
     //dir = tanvec;
 
-    origin = projectpostoplane(midpos, normalize(normal), origin); // correct in general
+    //origin = projectpostoplane(midpos, normalize(normal), origin); // correct in general
     escapepos = origin;
 
     // iterate over halfedges
@@ -605,13 +605,17 @@ function void projectsurfacespace(int geo;
             continue;
         }
 
+        // check skewpoint lies on hedge ray
+        vector hedgeposskew = skewpointa - hedgepos;
+        float skewdot = dot(hedgeposskew, normalize(hedgespan));
 
         // check for lower distance to skewpoint
         float dist = length(nearestpointonline(
             hedgepos, hedgepos + hedgespan, skewpointa
         ));
 
-        if(dist < minskewd){
+
+        if( (0 <= skewdot) && (skewdot < length(hedgespan))){
             minskewd = dist;
             minskewposa = skewpointa;
             minskewposb = skewpointb;
@@ -620,7 +624,16 @@ function void projectsurfacespace(int geo;
             minhedgepos = hedgepos;
             minhedgespan = hedgespan;
             minhedgedir = hedgedir;
+
+            // point to escapehedge
+            vector escapemid = hedgeray(geo, current)[0] +
+                hedgeray(geo, current)[1] / 2;
+            addpointline(0, escapemid, debugparent, "endmid");
+
+
+            break;
         }
+
         current = hedge_next( geo, current );
     }while(start != current);
 
@@ -633,6 +646,9 @@ function void projectsurfacespace(int geo;
     if (length(minskewposa - origin) > length(tanvec)){ // does not escape
         escapehedge = -1;
         outputlin = tanvec * 0.9;
+
+
+
 
         outputlin = projectpostoplane(
             null, normalize(normal), outputlin); // correct in general
@@ -663,14 +679,12 @@ function void projectsurfacespace(int geo;
 
     // quaternion representing half of this rotation
     float rotaterad = acos(dot(normal, nextnormal));
-    //rotaterad = -(dot(normal, nextnormal)) / 2;
     vector4 rotquat = quaternion(rotaterad, minhedgedir);
 
     vector rotresult = qrotate(rotquat, outputlin);
     outputhook = rotresult;
     setpointattrib(0, "stat", ptnum, 1);
 
-    //setpointattrib(0, "pscale", ptnum, pscale);
     success = 1;
 
     return;

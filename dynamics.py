@@ -2,7 +2,7 @@
 from maya import cmds
 from edRig.maya import core
 
-from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig.maya.core.node import EdNode, ECA
 from edRig import attr
 
 
@@ -39,7 +39,7 @@ def updateCell(source, sink):
 
 
 
-class NDynamicsElement(AbsoluteNode):
+class NDynamicsElement(EdNode):
 	"""what do all physics things need"""
 
 	# def __init__(self, *args, **kwargs):
@@ -110,7 +110,7 @@ class NDynamicsElement(AbsoluteNode):
 	@property
 	def outputLocalShape(self):
 		test = attr.getImmediateFuture(self.outLocal)
-		if test: return AbsoluteNode(test[0])
+		if test: return EdNode(test[0])
 
 	@property
 	def nComponents(self):
@@ -211,7 +211,7 @@ class NHair(NDynamicsElement):
 		return self.follicle+".startPosition"
 	@property
 	def inputShape(self):
-		return AbsoluteNode(attr.getImmediatePast(self.inputShapePlug)[0])
+		return EdNode(attr.getImmediatePast(self.inputShapePlug)[0])
 	@property
 	def restShapePlug(self):
 		return self.follicle+".restPosition"
@@ -223,7 +223,7 @@ class NHair(NDynamicsElement):
 	def follicle(self):
 		"""look up connected follicle node"""
 		test = attr.getImmediateFuture(self+".outputHair[0]")
-		if test: return AbsoluteNode(test[0])
+		if test: return EdNode(test[0])
 
 	@property
 	def follicles(self):
@@ -342,7 +342,7 @@ class NParticle(NDynamicsElement):
 		         nucleus + ".inputActive[{}]".format(newIndex))
 		self.set( "active", 1)
 
-class Nucleus(AbsoluteNode):
+class Nucleus(EdNode):
 	"""specific capacities for working with nucleus nodes"""
 
 	@classmethod
@@ -379,7 +379,7 @@ class Nucleus(AbsoluteNode):
 
 	def addCollider(self, mesh, name):
 		""" adds a new collider to nucleus from shape node """
-		shape = AbsoluteNode(mesh).shape
+		shape = EdNode(mesh).shape
 		collider = NCollider.create(name=name+"_rigid")
 		collider.connectInputShape(shape.outLocal)
 		collider.connectToNucleus( self() )
@@ -429,7 +429,7 @@ def makeCurveDynamic(targetCurve,
 	nucleus = nucleus or Nucleus.create(timeInput=timeInput)
 	tidyGrp = tidyGrp or ECA("transform", n="dynamicsGrp")
 
-	targetCurve = AbsoluteNode(targetCurve).shape
+	targetCurve = EdNode(targetCurve).shape
 	if not live:
 		targetCurve = targetCurve.copy(name=name+"_static", children=True)
 

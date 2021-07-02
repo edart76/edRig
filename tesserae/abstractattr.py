@@ -325,8 +325,7 @@ class AbstractAttr(AbstractTree):
 		childSet = {i.name for i in self.children}
 		excessChildren = childSet - nameSet
 		newNames = nameSet - childSet
-
-		print(( "newNames {}".format(newNames)))
+		#print(( "newNames {}".format(newNames)))
 
 		for i in excessChildren:
 			self.remove(i)

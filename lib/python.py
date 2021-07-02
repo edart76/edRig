@@ -301,6 +301,7 @@ class AbstractTree(Tree):
 	def makeChildBranch(self, name=None, *args, **kwargs):
 		""" to be overridden """
 		defaultKwargs = { "val" : None }
+		defaultKwargs.update(kwargs)
 		newBranch = self.__class__(name=name, **defaultKwargs)
 		return newBranch
 

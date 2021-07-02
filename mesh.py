@@ -5,7 +5,7 @@
 
 from edRig import attr, transform, naming, cmds, om, oma, con
 from edRig.maya import core
-from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig.maya.core.node import EdNode, ECA
 
 def getMObject(node):
 	sel = om.MSelectionList()
@@ -44,7 +44,7 @@ def getLiveShapeLayer(target, local=True):
 
 def getMeshInfo(target):
 	"""saves mesh vertex positions and connections to data"""
-	fn = AbsoluteNode(target).shapeFn
+	fn = EdNode(target).shapeFn
 
 	connectList = []
 	countList = []
@@ -79,7 +79,7 @@ def setMeshInfo(target, parent, info):
 	vValues - same
 	parent - MObject
 	"""
-	parent = AbsoluteNode(parent).MObject
+	parent = EdNode(parent).MObject
 	meshObj = om.MFnMesh().create(
 		vertices=info["vertices"],
 		polygonCounts=info["polygonCounts"],
@@ -96,7 +96,7 @@ def getWeights(targetMesh, targetDeformer, attr):
 def getSkinWeights(shape, skin, influenceList=None, weightAttr="weightList"):
 	"""returns large tuple of form
 	( (weights list for influence i), (for i+1)) etc"""
-	skin = AbsoluteNode(skin)
+	skin = EdNode(skin)
 	plug = skin.getMPlug("weightList")
 
 
@@ -115,7 +115,7 @@ def splitHistoryAtPlug(inputPlug, name="split"):
 
 def getLiveMatrixOnMesh(meshShape, closeTo):
 	"""attach a nurbs surface to nearest face, then get matrix from that"""
-	mesh = AbsoluteNode(meshShape).shape
+	mesh = EdNode(meshShape).shape
 	closePoint = transform.pointFrom(closeTo)
 	point, face = getClosestPoint(meshShape, closePoint)
 	iterator = om.MItMeshPolygon(mesh.MObject) # use flat init and reset(object) if this fails
@@ -131,7 +131,7 @@ def getClosestPoint(meshShape, closeTo):
 	"""return index of closest face
 	:returns (MPoint closest point, int faceIndex)"""
 	point = transform.pointFrom(closeTo)
-	mesh = AbsoluteNode(meshShape)
+	mesh = EdNode(meshShape)
 	return mesh.shapeFn.getClosestPoint(point, om.MSpace.kWorld)
 
 def attachNurbsSurfaceToMesh(meshShape, pntList):
@@ -344,7 +344,7 @@ class DeformerWrapper(object):
 		} # tried to make this a class attribute, but couldn't
 		# work out how to direct to call instance methods
 
-		self.node = AbsoluteNode(deformerNode)
+		self.node = EdNode(deformerNode)
 		self.deformerType = self.node.MFnDependency.typeName
 		print(( "new deformer wrapper is type {}".format(self.deformerType)))
 

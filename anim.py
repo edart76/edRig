@@ -1,5 +1,5 @@
 """ functions for working with animation keys, saving out anim etc """
-from edRig import cmds, om, AbsoluteNode, ECA
+from edRig import cmds, om, EdNode, ECA
 from edRig import attr, plug
 
 
@@ -11,7 +11,7 @@ def keyPlug(keyPlug=None, time=1, value=0.0):
 	cmds.setKeyframe(node, attribute=at, time=time, float=time, value=value)
 
 
-class AnimCurve(AbsoluteNode):
+class AnimCurve(EdNode):
 	""" base class for wrapping anim curves """
 
 	def __init__(self, node=""):

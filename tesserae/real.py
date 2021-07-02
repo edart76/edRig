@@ -117,12 +117,11 @@ class RealComponent(AbstractTree):
 
 	# ATTRIBUTES
 	@property
-	def inputRoot(self):
+	def input(self):
 		return self.abstract.inputRoot
 	@property
-	def outputRoot(self):
+	def output(self):
 		return self.abstract.outputRoot
-
 	@property
 	def inputs(self):
 		return self.abstract.inputs

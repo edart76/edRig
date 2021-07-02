@@ -7,7 +7,7 @@ import edRig.maya.core.node
 #from edRig.structures import AttrItem
 
 from edRig import attrio, mesh, curve, surface, attr, transform
-from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig.maya.core.node import EdNode, ECA
 #from edRig.tesserae.ops.op import Op
 #from edRig.layers import Env
 import copy
@@ -110,7 +110,7 @@ class Memory(object):
 			gatheredGoss = [self._gatherInfo(infoType, target=i, **kwargs) for i in nodes]
 			self._storage[infoName][infoType] = gatheredGoss
 		# always set node regardless to ensure info is relevant in scene
-		# self.setNode(infoName, core.AbsoluteNode(node))
+		# self.setNode(infoName, core.EdNode(node))
 		self._storage[infoName]["nodes"] = [maya.core.node.AbsoluteNode(i) for i in nodes]
 		#print ""
 
@@ -177,7 +177,7 @@ class Memory(object):
 	def _gatherInfo(self, infoType, target=None, **kwargs):
 		"""implements specific methods of gathering information from scene
 		could have done some fancy metamethod but i am but a basic boi"""
-		target = AbsoluteNode(target)
+		target = EdNode(target)
 		if infoType not in self.infoKinds:
 			raise RuntimeError("cannot gather info of type {}".format(infoType))
 		if not cmds.objExists(target):
@@ -187,7 +187,7 @@ class Memory(object):
 		print("GATHERING GOSS")
 
 		returnDict = {}
-		target = edRig.maya.core.node.AbsoluteNode(target)  # speed
+		target = edRig.maya.core.node.EdNode(target)  # speed
 		attrList = []
 		if infoType == "attr":
 			# gather dict of attribute names and values
@@ -288,7 +288,7 @@ class Memory(object):
 
 	def nodesFromInfoName(self, infoName):
 		"""returns list of all nodes tracked by infoName"""
-		return [AbsoluteNode(i) for i in self._storage[infoName]["nodes"]]
+		return [EdNode(i) for i in self._storage[infoName]["nodes"]]
 
 	def infoFromInfoName(self, infoName):
 		return self._storage[infoName]
@@ -361,7 +361,7 @@ class Memory(object):
 	def setShapeInfo(info, target):
 		"""recreates a shape node directly from the api
 		:param info: dict
-		:param target = AbsoluteNode"""
+		:param target = EdNode"""
 		parent = target.transform # shape nodes are irrelevant
 		kSuccess = False
 		if target.isCurve and info.get("shapeType") == "nurbsCurve":
@@ -656,7 +656,7 @@ class InvokedNode(object):
 
 	def __repr__(self):
 		if cmds.objExists(self.name):
-			return AbsoluteNode(self.name)
+			return EdNode(self.name)
 		else:
 			return self.makeNode()
 

@@ -101,9 +101,9 @@ class AbstractNode(AbstractTree):
 
 		"""initialise attribute hierarchy"""
 		self.inputRoot = AbstractAttr(node=self, role="input", dataType="null",
-		                              hType="root", name="inputRoot")
+		                              hType="root", name="input")
 		self.outputRoot = AbstractAttr(node=self, role="output", dataType="null",
-		                              hType="root", name="outputRoot")
+		                              hType="root", name="output")
 
 		# signals
 		self.sync = Signal()
@@ -367,12 +367,12 @@ class AbstractNode(AbstractTree):
 	# ATTRIBUTES
 	@property
 	def inputs(self):
-		#return {i.name : i for i in self.inputRoot.getAllChildren()}
+		#return {i.name : i for i in self.input.getAllChildren()}
 		return self.inputRoot.getAllChildren()
 
 	@property
 	def outputs(self):
-		#return {i.name : i for i in self.outputRoot.getAllChildren()}
+		#return {i.name : i for i in self.output.getAllChildren()}
 		return self.outputRoot.getAllChildren()
 
 	@staticmethod
@@ -524,8 +524,8 @@ class AbstractNode(AbstractTree):
 		serial = {
 			"uid" : self.uid,
 			"nodeName" : self.nodeName,
-			"inputRoot" : self.inputRoot.serialise(),
-			"outputRoot" : self.outputRoot.serialise(),
+			"input" : self.inputRoot.serialise(),
+			"output" : self.outputRoot.serialise(),
 			"extras" : self.extras,
 			"settings" : self.settings.serialise(),
 			#"CLASS" : self.__class__.__name__
@@ -556,13 +556,13 @@ class AbstractNode(AbstractTree):
 		newInst.uid = fromDict["uid"]
 		newInst.rename(fromDict["nodeName"])
 
-		# newInst.outputRoot = AbstractAttr.fromDict(regenDict=fromDict["outputRoot"],
+		# newInst.output = AbstractAttr.fromDict(regenDict=fromDict["output"],
 		#                                            node=newInst)
-		newInst.outputRoot = AbstractAttr.fromDict(regenDict=fromDict["outputRoot"])
+		newInst.outputRoot = AbstractAttr.fromDict(regenDict=fromDict["output"])
 		newInst.outputRoot._node = newInst
-		# newInst.inputRoot = AbstractAttr.fromDict(regenDict=fromDict["inputRoot"],
+		# newInst.input = AbstractAttr.fromDict(regenDict=fromDict["input"],
 		#                                           node=newInst)
-		newInst.inputRoot = AbstractAttr.fromDict(regenDict=fromDict["inputRoot"])
+		newInst.inputRoot = AbstractAttr.fromDict(regenDict=fromDict["input"])
 		newInst.inputRoot._node = newInst
 		newInst.settings = AbstractTree.fromDict(fromDict["settings"])
 

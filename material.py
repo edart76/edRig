@@ -1,9 +1,9 @@
 
 from edRig import log, beauty, cmds
-from edRig.maya.core.node import AbsoluteNode
+from edRig.maya.core.node import EdNode
 
 
-class Material(AbsoluteNode):
+class Material(EdNode):
 	"""base class for materials idk"""
 
 	outColourPlug = "outColor"
@@ -12,7 +12,7 @@ class Material(AbsoluteNode):
 	@property
 	def shadingGroup(self):
 		"""returns connected shading group"""
-		return AbsoluteNode(getSGfromShader(self()))
+		return EdNode(getSGfromShader(self()))
 
 	def applyTo(self, target):
 		applyMaterialNode(self(), target)

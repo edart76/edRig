@@ -431,7 +431,7 @@ class TileEntry(QtWidgets.QGraphicsRectItem):
 
 		height = sum([i.rect().height() for i in childEntries])
 		# remove input and output
-		if self.tree.name in ("inputRoot", "outputRoot"):
+		if self.tree.name in ("input", "output"):
 			#self.text.setVisible(False)
 			pass
 		else:

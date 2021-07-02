@@ -1,7 +1,7 @@
 # define all the pretty colours, and how to saving them
 from edRig import CURRENT_PATH
 from edRig.maya.core import ECN
-from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig.maya.core.node import EdNode, ECA
 from edRig import cmds, transform, pipeline, beauty, plug
 
 import string
@@ -47,9 +47,9 @@ class Control(object):
 		self.name = name
 		self.guide = None # template guide control
 
-		self.uis = [None] * uiLayers # type: [AbsoluteNode]
-		self.locals = [None] * uiLayers # type: AbsoluteNode
-		self.offsets = [None] * max(1, offsetLayers) # type: list([AbsoluteNode])
+		self.uis = [None] * uiLayers # type: [EdNode]
+		self.locals = [None] * uiLayers # type: EdNode
+		self.offsets = [None] * max(1, offsetLayers) # type: list([EdNode])
 		self.colour = colour
 
 		self._output = None
@@ -151,7 +151,7 @@ class Control(object):
 		for ax in "XYZ":
 			cmds.setAttr(ctrl + ".scale" + ax, 1.0 - 0.1 * iteration)
 		cmds.makeIdentity(ctrl, apply=True)
-		return AbsoluteNode(ctrl)
+		return EdNode(ctrl)
 
 	def showGuides(self):
 		"""turns everything bright yellow"""
@@ -188,7 +188,7 @@ class Control(object):
 	@property
 	def first(self):
 		"""returns first layer
-		:return AbsoluteNode"""
+		:return EdNode"""
 		return self.layers[0]
 
 	def memoryInfo(self):
@@ -309,14 +309,14 @@ class OldControl(object):
 def makeDomainCtrlTemp(domainSurface, name="domainCtl"):
 
 	offsetGrp = ECA("transform", name=name+"_valueOffset")
-	ctl = AbsoluteNode(cmds.circle(name=name + "_CTL", ch=0)[0])
+	ctl = EdNode(cmds.circle(name=name + "_CTL", ch=0)[0])
 	jnt = ECA("joint", n=name + "_jnt", parent=ctl)
 	slideGrp = ECA("transform", n=name+"_slide")
 	staticGrp = ECA("transform", n=name+"_static", parent=slideGrp)
 	ctl.parentTo(offsetGrp) # offset specifies starting position
 	offsetGrp.parentTo(staticGrp)
 
-	surface = AbsoluteNode(domainSurface).shape
+	surface = EdNode(domainSurface).shape
 
 	# scaling attribute
 	ctl.addAttr(ln="valueScale", dv=0.3)
@@ -368,7 +368,7 @@ class TileControl(Control):
 	def makeSquare(self, name=None):
 		""""""
 		name = name or self.name
-		return AbsoluteNode(cmds.polyPlane(n=name, ch=False, sx=1, sy=0)[0])
+		return EdNode(cmds.polyPlane(n=name, ch=False, sx=1, sy=0)[0])
 
 	def createHierarchy(self):
 		"""make a square and make a group"""
@@ -414,7 +414,7 @@ class ProximityControl(Control):
 
 	def makeSphere(self, name=None):
 		name = name or "sphere"
-		return AbsoluteNode(cmds.sphere(n=name)[0])
+		return EdNode(cmds.sphere(n=name)[0])
 
 	def createHierarchy(self):
 		self.root = self.uiRoot = ECA(

@@ -3,7 +3,7 @@ import edRig.maya.core.node
 from edRig import attr, cmds, om, con
 from edRig.maya import core
 from edRig.maya.core import ECN
-from edRig.maya.core.node import AbsoluteNode, ECA
+from edRig.maya.core.node import EdNode, ECA
 
 
 import math
@@ -121,7 +121,7 @@ def pointFrom(source):
 	try:
 		return om.MPoint(source)
 	except: # it's a node
-		return AbsoluteNode(source).worldPos()
+		return EdNode(source).worldPos()
 
 def blendTwoMatrixPlugs(a, b, weight=0.5):
 	"""creates a wtAddMatrix node and connects up matrix plugs, either static or live blend"""
@@ -185,8 +185,8 @@ def matchMatrix(transform, matchMat, pos=True, rot=True):
 		tFn.setRotation(rot, om.MSpace.kTransform)
 
 def matchTransformation(targetNode, followerNode, translation=True, rotation=True):
-	followerMTransform = AbsoluteNode(followerNode).MFnTransform
-	targetMTransform = AbsoluteNode(targetNode).MFnTransform
+	followerMTransform = EdNode(followerNode).MFnTransform
+	targetMTransform = EdNode(targetNode).MFnTransform
 	targetMTMatrix = om.MTransformationMatrix(om.MMatrix(cmds.xform(targetNode, matrix=True, ws=1, q=True)))
 	if translation:
 		targetRotatePivot = om.MVector(targetMTransform.rotatePivot(om.MSpace.kWorld))
@@ -351,7 +351,7 @@ def decomposeMatrixPlug(plug, target=None, t=1, r=1, s=1, shear=0):
 	cmds.connectAttr(plug, decomp+".inputMatrix")
 
 	if target: # hopefully a dag
-		target = AbsoluteNode(target)
+		target = EdNode(target)
 		for i in unpackTRS(t, r, s):
 			for n in "XYZ":
 				cmds.connectAttr(decomp+".output"+i.capitalize()+n,

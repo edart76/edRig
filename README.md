@@ -6,7 +6,7 @@ includes such dubious highlights as
 # Tesserae
 node-based procedural rigging system
 it doesn't work yet
-# AbsoluteNode
+# EdNode
 object-oriented persistent wrapper for maya node - like a stripped-down version of pymel
 check it out at node.py
 

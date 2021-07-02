@@ -1,9 +1,9 @@
-from edRig import AbsoluteNode
+from edRig import EdNode
 from edRig import attr
 from edRig.maya import core
 import maya.api.OpenMayaAnim as oma
 
-class SkinCluster(AbsoluteNode):
+class SkinCluster(EdNode):
 
 	def __new__(cls, node):
 		# make sure node always has access to MFnSkinCluster
@@ -27,7 +27,7 @@ class SkinCluster(AbsoluteNode):
 	def influences(self):
 		""" returns absoluteNodes for all connected drivers """
 		dags = self.skinFn.influenceObjects()
-		return [AbsoluteNode( i.fullPathName() ) for i in dags]
+		return [EdNode(i.fullPathName()) for i in dags]
 
 	def connectDirtyPlugs(self, target):
 		"""effectively creates a master/slave relationship between skcs,
@@ -42,7 +42,7 @@ class SkinCluster(AbsoluteNode):
 		"""
 		unfortunately we need a shape to make the api work properly """
 		test = attr.getImmediateFuture( self + ".outputGeometry[0]" )
-		test = [ AbsoluteNode(i) for i in test]
+		test = [EdNode(i) for i in test]
 		shape = [i for i in test if i.isShape()]
 		if not shape:
 			self._makeProxyOutputShape()

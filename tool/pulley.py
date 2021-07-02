@@ -1,7 +1,7 @@
 """ create live networks of connected wheels and cables under tension """
 from edRig import cmds, om
 
-from edRig import AbsoluteNode, ECA, attr, plug, transform, curve
+from edRig import EdNode, ECA, attr, plug, transform, curve
 
 
 class PulleySystem(object):
@@ -56,8 +56,8 @@ class Wheel(object):
 	the right way"""
 
 	def __init__(self, basePoint=None, name="wheel"):
-		""":type basePoint : AbsoluteNode
-		:param basePoint : AbsoluteNode
+		""":type basePoint : EdNode
+		:param basePoint : EdNode
 		central point from which main vector will compute
 
 		each wheel deals with itself and the relationship to its next
@@ -86,7 +86,7 @@ class Wheel(object):
 		pass
 
 
-	#@AbsoluteNode.withPrefix(self.name)
+	#@EdNode.withPrefix(self.name)
 	def build(self):
 
 		""" creates base node network """
@@ -193,7 +193,7 @@ class Wheel(object):
 		but at least it's all pretty parallel
 		"""
 
-		AbsoluteNode.prefixStack.append(self.name)
+		EdNode.prefixStack.append(self.name)
 
 		flipXOR = plug.xorPlugs(self.pin + ".flip",
 		                          self.next.pin + ".flip")
@@ -342,7 +342,7 @@ class Wheel(object):
 		    self.next.prevPoint + ".worldPosition[0]"],
 			useApi=0, name=self.name + "nextLine")
 
-		AbsoluteNode.prefixStack.remove(self.name)
+		EdNode.prefixStack.remove(self.name)
 
 
 
@@ -351,9 +351,9 @@ class Wheel(object):
 		wheel orientation and size
 		move to dedicated proxy/polygon lib sometime maybe """
 
-		proxy = AbsoluteNode( cmds.polyCylinder(
+		proxy = EdNode(cmds.polyCylinder(
 			axis=[0,1,0], ch=0, n=self.name + "_proxy",
-		height=0.1, radius=0.4)[0] )
+		height=0.1, radius=0.4)[0])
 
 		return proxy
 

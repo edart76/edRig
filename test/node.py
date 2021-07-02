@@ -1,7 +1,7 @@
-"""tests for AbsoluteNode
+"""tests for EdNode
 sick of it breaking"""
 
-from edRig import AbsoluteNode, ECA
+from edRig import EdNode, ECA
 from edRig.lib.python import StringLike
 from edRig.test import test
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 # import maya.api.OpenMaya as om
 from edRig import cmds
 from edRig.maya.core import ECN
-from edRig.maya.core.node import AbsoluteNode, invokeNode
+from edRig.maya.core.node import EdNode, invokeNode
 from edRig import scene, attr, transform
 # from edRig.tesserae.abstractnode import AbstractAttr
 
@@ -39,7 +39,7 @@ class OpExecutionManager(GeneralExecutionManager):
 		self.op.afterExecution()
 		self.afterSet = set(scene.listAllNodes())
 		new = self.afterSet - self.beforeSet
-		newDags = [n for n in [AbsoluteNode(i) for i in new] if n.isDag()
+		newDags = [n for n in [EdNode(i) for i in new] if n.isDag()
 		           and not n.parent]
 		newDags = [i for i in newDags if i not in self.excludeList]
 
@@ -265,7 +265,7 @@ class Op(MayaReal):
 		"""CRUCIAL aspect of rigging system - allows exposing individual
 		nodes AND ATTRIBUTES in the graph, to be driven by expressions or
 		later lower-class graph connections"""
-		node = AbsoluteNode(node)
+		node = EdNode(node)
 		self.addSetting(parent, entryName, value=node)
 
 	# ever look at a node and think
@@ -324,7 +324,7 @@ class Op(MayaReal):
 		name = kwargs.get("n") or name or self.name + "_" + type
 		node = self.ECN(type, *args, name=name, cleanup=cleanup, **kwargs)
 		#print("ECASimple ECN node ", node)
-		return AbsoluteNode(node)
+		return EdNode(node)
 
 	def ECA(self, type, name="blankName", category=None, *args, **kwargs):
 		node = self.ECAsimple(type, name, cleanup=False, *args, **kwargs)
@@ -363,7 +363,7 @@ class Op(MayaReal):
 		              "opCategory" : "opIo",
 		              "role" : "output"}
 		node = self.getTaggedNodes(self.nodes, searchDict=searchDict)
-		return None if not node else AbsoluteNode(node[0])
+		return None if not node else EdNode(node[0])
 
 
 	@staticmethod
@@ -392,14 +392,14 @@ class Op(MayaReal):
 
 		#print(self.inputNetwork, self.outputNetwork)
 
-		for i in self.inputRoot.getAllLeaves():
+		for i in self.input.getAllLeaves():
 			self.makeOpIoNodeAttrs(self.inputNetwork, i)
 
-		for i in self.outputRoot.getAllLeaves():
+		for i in self.output.getAllLeaves():
 			self.makeOpIoNodeAttrs(self.outputNetwork, i)
 
 		# now connect inputs to previous outputs
-		# for i in self.inputRoot.getAllLeaves():
+		# for i in self.input.getAllLeaves():
 		# 	self.connectInputPlug(i)
 		self.connectIoPlugs() # spam this all the time
 
@@ -434,7 +434,7 @@ class Op(MayaReal):
 
 	def makeOpIoNodeAttrs(self, node, attrItem, parentItem=None):
 		""" populates opIo network nodes procedurally from op attr hierarchy
-		:param node: AbsoluteNode
+		:param node: EdNode
 		:param attrItem : AbstractAttr
 		:param parentItem : attrItem"""
 		#for i in attrItem.getAllChildren(): # get all leaves maybe?
@@ -520,10 +520,10 @@ class Op(MayaReal):
 
 	def connectIoPlugs(self):
 		"""tries to connect attrItems on both sides of node"""
-		for i in self.inputRoot.getAllLeaves():
+		for i in self.input.getAllLeaves():
 			self.connectInputPlug(i)
 
-		for i in self.outputRoot.getAllLeaves():
+		for i in self.output.getAllLeaves():
 			self.connectOutputPlug(i)
 
 
@@ -546,7 +546,7 @@ class Op(MayaReal):
 	                       suffix="", desc=""):
 		"""allows user to add input whenever - name or datatype undefined here will
 		be requested from user as direct input"""
-		parent = parent or self.inputRoot
+		parent = parent or self.input
 		def _addInputWithAction(op=self, parent=parent, name=name, datatype=datatype,
 		                        copy=copy, suffix=suffix, desc=desc):
 			if not name:
@@ -581,8 +581,8 @@ class Op(MayaReal):
 		opInstance = opCls(name=regenDict["opName"])
 
 		if abstract:
-			opInstance.inputRoot = abstract.inputRoot
-			opInstance.outputRoot = abstract.outputRoot
+			opInstance.input = abstract.input
+			opInstance.output = abstract.output
 
 		opInstance.makeBaseActions()
 		return opInstance

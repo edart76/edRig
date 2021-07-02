@@ -3,7 +3,7 @@ basically things to generate things algorithmically from maya """
 
 
 from maya import cmds
-from edRig import deformer, AbsoluteNode, ECA, dynamics, muscle
+from edRig import deformer, EdNode, ECA, dynamics, muscle
 from edRig.tool.ui.setup import UiTool
 from edRig.lib.python import getUserInput
 

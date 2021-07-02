@@ -1,6 +1,6 @@
 
 """ maya-specific graph functions"""
-from edRig import cmds, AbsoluteNode, scene
+from edRig import cmds, EdNode, scene
 
 def listOpNodes():
     """ returns list of all nodes created by tesserae """

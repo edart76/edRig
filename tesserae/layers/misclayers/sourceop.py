@@ -1,7 +1,7 @@
 
 """ import stuff from scene or file """
 import os
-from edRig import cmds, om, pipeline, COMMON_PATH, AbsoluteNode, ECA, scene
+from edRig import cmds, om, pipeline, COMMON_PATH, EdNode, ECA, scene
 from maya import core
 from edRig.tesserae.ops.layer import LayerOp
 from edRig.lib.python import AbstractTree
@@ -97,7 +97,7 @@ class SourceOp(LayerOp):
 		if not cmds.ls(nodeName):
 			self.log("no node found of name {}, skipping source".format(nodeName))
 			return None
-		node = AbsoluteNode( nodeName )
+		node = EdNode(nodeName)
 
 		#dataType = sourceBranch.value
 
@@ -110,7 +110,7 @@ class SourceOp(LayerOp):
 
 			sourcePlug = node.outWorld
 			outputPlug = self.getOutput(sourceBranch.name).plug
-			AbsoluteNode.con(sourcePlug, outputPlug)
+			EdNode.con(sourcePlug, outputPlug)
 		else:
 			dataType = "0D"
 		""" no sophisticated guessing for input nodes

@@ -10,7 +10,7 @@ eventually replace this with op sets, but those don't work yet
 
 """
 
-from edRig import cmds, om, AbsoluteNode, ECA
+from edRig import cmds, om, EdNode, ECA
 from edRig.tesserae.ops import layer
 
 from edRig import dynamics, muscle

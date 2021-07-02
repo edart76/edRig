@@ -6,6 +6,7 @@ from functools import partial
 import pprint
 
 import edRig.maya.core.node
+from edRig.maya import EdNode
 from edRig import transform, control, curve, point, ECA, plug, \
 	cmds, om
 from edRig.maya import core
@@ -74,18 +75,16 @@ class JointCurveOp(SpookyLayerOp):
 
 	def matchOutputsToSettings(self):
 		jointTree = self.settings("joints")
-		outputs = list(jointTree.keys())
-		pointPlug = self.getOutput("points")
-		specList = [ {"name" : i} for i in outputs]
-		#self.log( "specList {}".format(specList))
-		#print( pointPlug.display())
+		joints = list(jointTree.keys())
+		pointPlug = self.output("points")
+		specList = [ {"name" : i} for i in joints]
+
 		pointPlug.matchArrayToSpec(spec=specList)
 
 
 	def execute(self):
 
-		#self.prefix = self.settings["prefix"]
-		self.joints = []
+		self.joints = [] #type: List[EdNode]
 		self.mainCurve, self.upCurve = None, None
 
 		self.createJoints()
@@ -105,10 +104,8 @@ class JointCurveOp(SpookyLayerOp):
 			self.remember("curve", "shape",
 			              nodes=[self.mainCurve.shape, self.upCurve.shape])
 
-		# self.memory.setClosed("curves", status=True)
-		# self.memory.setClosed("joints", status=True)
 		self.updateOutputs()
-		print(self.memory.display())
+		#print(self.memory.display())
 
 
 	""" consider behaviour when adding new joints - 
@@ -124,6 +121,49 @@ class JointCurveOp(SpookyLayerOp):
 	each other
 	
 	"""
+
+	def createJoints(self):
+		entry = self.settings("joints")
+		for i, val in enumerate(entry.keys()):
+			joint = self.ECA("joint", name=val)
+			self.joints.append(joint)
+			joint.set("translateY", i * 5)
+
+			if i :
+				joint.parentTo(self.joints[i - 1])
+				print(joint())
+				cmds.joint(self.joints[i-1], e=1, orientJoint="xyz", sao="zup")
+		self.joints[-1].set("jointOrient", (0, 0, 0))
+
+		return self.joints
+
+	def createCurves(self):
+		# first main curve
+		points = []
+		upPoints = []
+		degree = int(self.settings["curve.degree"])
+		# matching to joints on creation is fine, both will be reset later
+		for i in self.joints:
+			points.append(cmds.xform(i, q=True, ws=True, t=True))
+		# first make linear curve
+		#linearShape = curve.curveFromCvs(points, deg=1, name=self.prefix+"_crv")
+		linearShape = curve.curveFromCvs(points, deg=1, name=self.opName+"_mainCrv")
+		self.mainCurve = edRig.maya.core.node.EdNode(
+			cmds.rebuildCurve(linearShape, ch=False, degree=degree,
+		                        rebuildType=0, fitRebuild=True)[0])
+		# now create upCurve
+		# we will one day be free of it
+		for i in self.joints:
+			mat = om.MMatrix(cmds.getAttr(i+".worldMatrix[0]"))
+			upPoints.append(transform.staticVecMatrixMult(
+				mat, point=(1,0,0), length=1))
+		#self.log("upPoints are {}".format(upPoints))
+		upShape = curve.curveFromCvs(upPoints, deg=1, name=self.opName+"_upCrv")
+		self.upCurve = edRig.maya.core.node.EdNode(
+			cmds.rebuildCurve(upShape, ch=False, degree=degree,
+		    rebuildType=0, fitRebuild=True)[0])
+		cmds.parent([self.mainCurve, self.upCurve], self.spaceGrp)
+
 
 	def matchJointsToCurve(self):
 		""" rivet joints to curve and upCurve"""
@@ -149,6 +189,13 @@ class JointCurveOp(SpookyLayerOp):
 
 	def matchCurveToJoints(self):
 		""" attach curve and upcurve to joints """
+		# resample to match joint count, don't care if this isn't correct
+		degree = self.mainCurve.get("degree")
+		nSpans = len(self.joints) - degree
+		cmds.rebuildCurve(self.mainCurve, spans=nSpans, degree=degree)
+		cmds.rebuildCurve(self.upCurve, spans=nSpans, degree=degree)
+
+
 		for i, val in enumerate(self.joints):
 			# main curve points
 			posPmm = ECA("pointMatrixMult", n="main{}_pos".format(i))
@@ -163,46 +210,6 @@ class JointCurveOp(SpookyLayerOp):
 
 		# simple for now in that it only affects cvs, not edit points
 		pass
-
-
-	def createJoints(self):
-		entry = self.settings("joints")
-		for i, val in enumerate(entry.keys()):
-			joint = self.ECA("joint", name=val)
-			self.joints.append(joint)
-			joint.set("translateY", i * 5)
-
-			if i :
-				joint.parentTo(self.joints[i - 1])
-
-		return self.joints
-
-	def createCurves(self):
-		# first main curve
-		points = []
-		upPoints = []
-		degree = int(self.settings["curve.degree"])
-		# matching to joints on creation is fine, both will be reset later
-		for i in self.joints:
-			points.append(cmds.xform(i, q=True, ws=True, t=True))
-		# first make linear curve
-		#linearShape = curve.curveFromCvs(points, deg=1, name=self.prefix+"_crv")
-		linearShape = curve.curveFromCvs(points, deg=1, name=self.opName+"_mainCrv")
-		self.mainCurve = edRig.maya.core.node.AbsoluteNode(
-			cmds.rebuildCurve(linearShape, ch=False, degree=degree,
-		                        rebuildType=0, fitRebuild=True)[0])
-		# now create upCurve
-		# we will one day be free of it
-		for i in self.joints:
-			mat = om.MMatrix(cmds.getAttr(i+".worldMatrix[0]"))
-			upPoints.append(transform.staticVecMatrixMult(
-				mat, point=(1,0,0), length=1))
-		#self.log("upPoints are {}".format(upPoints))
-		upShape = curve.curveFromCvs(upPoints, deg=1, name=self.opName+"_upCrv")
-		self.upCurve = edRig.maya.core.node.AbsoluteNode(
-			cmds.rebuildCurve(upShape, ch=False, degree=degree,
-		    rebuildType=0, fitRebuild=True)[0])
-		cmds.parent([self.mainCurve, self.upCurve], self.spaceGrp)
 
 
 	#@tidy
@@ -319,7 +326,7 @@ class JointCurveOp(SpookyLayerOp):
 
 # lib functions --------
 def skinToPoints( points=None, curve=None, name=None):
-	""" :param points : list(AbsoluteNode) """
+	""" :param points : list(EdNode) """
 	null = ECA("joint", name=name+"SkinNull")
 	mainSkin = cmds.skinCluster(null.node, curve, name=name+"mainSkin",
 	                            toSelectedBones=True, skinMethod=1)

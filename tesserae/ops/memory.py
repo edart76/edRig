@@ -8,7 +8,7 @@ from functools import partial
 from enum import Enum
 import pprint
 import copy
-from edRig import cmds, om, ECA, AbsoluteNode
+from edRig import cmds, om, ECA, EdNode
 from edRig import attr, transform, curve, mesh, surface
 from edRig.lib.python import AbstractTree
 
@@ -149,7 +149,7 @@ class Memory2(object):
 			infoType, target=i, **kwargs) for i in nodes]
 		self[infoName][infoType] = gatheredGoss
 
-		self[infoName]["nodes"] = [AbsoluteNode(i) for i in nodes]
+		self[infoName]["nodes"] = [EdNode(i) for i in nodes]
 
 
 	def reapplyData(self, infoName, infoType="all", **kwargs):
@@ -179,7 +179,7 @@ class Memory2(object):
 	def _gatherInfo(self, infoType, target=None, **kwargs):
 		"""implements specific methods of gathering information from scene
 		"""
-		target = AbsoluteNode(target)
+		target = EdNode(target)
 		print(InfoTypes)
 		print(InfoTypes._value2member_map_)
 		print(InfoTypes._member_map_)
@@ -310,13 +310,13 @@ class Memory2(object):
 
 	def nodesFromInfoName(self, infoName):
 		"""returns list of all nodes tracked by infoName"""
-		return [AbsoluteNode(i) for i in self[infoName]["nodes"]]
+		return [EdNode(i) for i in self[infoName]["nodes"]]
 
 
 	def setNodes(self, infoName, nodes):
 		if not isinstance(nodes, list):
 			nodes = [nodes]
-		self[infoName]["nodes"] = [AbsoluteNode(i)() for i in nodes ]
+		self[infoName]["nodes"] = [EdNode(i)() for i in nodes]
 
 	def getFlattenedNodes(self):
 		"""ensure nodes are stored as strings, not AbsNodes"""
@@ -367,7 +367,7 @@ class Memory2(object):
 	def setShapeInfo(info, target):
 		"""recreates a shape node directly from the api
 		:param info: dict
-		:param target = AbsoluteNode"""
+		:param target = EdNode"""
 		parent = target.transform # shape nodes are irrelevant
 		kSuccess = False
 		if target.isCurve and info.get("shapeType") == "nurbsCurve":
