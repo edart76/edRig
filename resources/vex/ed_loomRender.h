@@ -1,5 +1,32 @@
 
 /*
+
+loom attrs:
+loom_maxrad - max distance at which loom effects activate
+loom_minrad - minimum distance, loom effects at maximum
+loom_weight - relative strength of this field component
+loom_power - power falloff of field strength
+
+loom_map - primitive number to map to. for now has to be merged
+
+loom_domainid - prim and point flag used for geometry representing maximum distance
+    of loom effect - if ray collides with this, begin loom processing.
+    id corresponds to field's index
+
+loom_type - preprocessor enum int flag for different types of loom fields
+
+loom_wells - point group on loom geo input (2) -
+    denotes point wells
+
+
+ray attrs:
+loom_indomain - ray flag saying how many layers deep ray is in loom fields
+loom_indomains - indices of fields affecting ray
+ray_dead - increments with each max-distance iteration
+    without collision - after cutoff rays are ignored
+
+
+
 testing basic principles behind loom field / spatial distortion
 and light transport here in vex,
 before likely herculaean task of porting to maya
@@ -18,20 +45,9 @@ lighting is entirely decoupled from rendering - trace out from lights first,
 store result as primitive attributes
 
 */
+#include "ed_ray.h"
 
 
-struct Ray {
-    vector pos;
-    vector dir;
-    float time;
-    vector colour;
-    int vtx;
-};
-
-struct RayHit {
-    vector colour;
-    vector pos;
-};
 
 function int castlightray(Ray ray; int fieldgeo; int maxbounces;
     float bias; float decay;

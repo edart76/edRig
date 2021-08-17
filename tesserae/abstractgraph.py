@@ -160,7 +160,7 @@ class AbstractGraph2(AbstractTree):
 	# register of all active graphs to async lookup and interaction
 	graphRegister = AbstractTree(name="graphs")
 
-	branchesInherit = False
+	branchesInheritType = False
 
 	class State(Enum): # graph states
 		neutral = "neutral"

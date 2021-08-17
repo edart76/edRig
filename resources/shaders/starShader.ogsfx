@@ -1,0 +1,68 @@
+
+
+
+// maya-facing front end to shader for pixellated screens
+
+# version 430
+
+#define OGSFX 1
+
+#define HIDE_OGSFX_UNIFORMS 0
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 1
+
+#include "templateShaderVertex.glsl"
+#include "screenShaderFragment.glsl"
+
+uniform float focalLength=1.0;
+uniform float tileSize=1.0;
+
+
+//uniform bool debugColours <string UIGroup="Main";> = False;
+
+
+// code definition
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 0
+#define HIDE_OGSFX_CODE 1
+
+#include "starShaderVertex.glsl"
+#include "templateShaderFragment.glsl"
+
+
+//**********
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 0
+
+
+
+// link main files
+GLSLShader VS {
+#include "starShaderVertex.glsl"
+}
+
+GLSLShader FS {
+  #include "templateShaderFragment.glsl"
+}
+
+
+// define technique
+technique Main
+<
+//tell Maya to support transparency for this technique
+//string Transparency = "Transparent";
+
+// Disable consolidation -- the displacement uses the World matrix which is modified when the consolidation is active
+string handlesConsolidatedGeometry = "false";
+>
+{
+
+
+  // eye passes
+  pass p0 { VertexShader (in appdata, out vertexOutput) = VS;
+    PixelShader (in vertexOutput, out fragmentOutput) = FS;
+  }
+}

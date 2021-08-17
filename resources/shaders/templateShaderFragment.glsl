@@ -49,7 +49,7 @@ in vec3 normalOut;
 // gl-supplied
 in vec4 gl_FragCoord;
 
-uniform float testRayStep;
+//uniform float testRayStep;
 uniform float focalLength;
 
 

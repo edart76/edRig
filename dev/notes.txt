@@ -1,0 +1,34 @@
+
+what do we need
+
+
+
+tree-like asset database
+    - full support for tree breakpoints, allowing different levels of iteration within the same tree
+    - assetRef integration
+
+
+basic control rig
+    - robust way of creating and linking joints
+    - in-scene mirroring tools based on name (leave live instancing for now)
+
+
+body deformation rig
+
+
+
+ephrig
+    - graph generation / regeneration
+    - marking menu from tree
+    - drawing context for snapping joints
+
+
+what WILL we need
+- full tree instancing
+- dynamics rig integration
+
+
+
+for loops:
+- choice between "compile-time" generation, as we have with the tree templating system, and actually running the same op multiple times.
+- going with the second one. Although it makes save data assignment more complex, it's way easier to evaluate things like loop iteration variables at the time that they're needed

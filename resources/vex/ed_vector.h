@@ -4,7 +4,7 @@
 #define _ED_VECTOR_H
 #include "array.h"
 
-#define EPS 0.00001
+#define EPS 0.001
 
 // lib file for pure vector operations
 
@@ -76,6 +76,28 @@ function void skewlinepoints(
     return;
 }
 
+function void tetdirs(
+    vector pos;
+    // outputs
+    vector tetpoints[]){
+        /* after Inigo Quilez and Paulo Falcao
+        find gradient of a scalar field by sampling in
+        tetrahedral pattern around pos.
+        tetpoints
+            - array of 4 vectors corresponding to
+            tet point positions
+            - multiply sampled value of each point by
+            its original tet vector here,
+            then sum and optionally normalise
+
+        */
+        vector base = {1, -1, 0};
+        append(tetpoints, base.xyy);
+        append(tetpoints, base.yyx);
+        append(tetpoints, base.yxy);
+        append(tetpoints, base.xxx);
+
+    }
 
 
 #endif

@@ -23,7 +23,7 @@ class AbstractAttr(AbstractTree):
 		"nD" : ["0D", "1D", "2D", "3D"],
 		# this should probably be exposed to user per-attribute
 	}
-	branchesInherit = False
+	branchesInheritType = False
 
 	def __init__(self, name="blankName", node=None, role="input", dataType="0D",
 				 hType="leaf", desc="", default=None,

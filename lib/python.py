@@ -23,7 +23,11 @@ importlib.reload(tree)
 Tree = tree.Tree
 Signal = tree.Signal
 
+
+
 from tree.lib import safeLoadModule, saveObjectClass, loadObjectClass
+#
+####kjhkj
 
 
 class Decorator(object):
@@ -543,9 +547,9 @@ testTree["parent.nestedList"] = "[eyyy, test, 4.3, '', [4e4, i, 33, True], 2e-10
 if __name__ == '__main__':
 
 	class NewTree(AbstractTree):
-		branchesInherit = True
+		branchesInheritType = True
 	class BreakTree(AbstractTree):
-		branchesInherit = False
+		branchesInheritType = False
 
 	newTree = NewTree("newTreeName", val=21)
 	newTree["newTreeBranch.end"] = "jljlkjl"

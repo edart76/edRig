@@ -1,0 +1,21 @@
+
+how should individual assets be tracked and indexed?
+
+
+use uids - each asset has one master uid, independent of its path or name.
+all other properties are just indexed under it.
+
+asset objects constructed once by index - lookup and search handled by assetContext facade object
+
+
+how should uids interact with versioning?
+consider a composite uid formed of 2 tokens - <main uid>_<version>
+
+to avoid problem of zfilling, should we just flip representation of version numbers?
+
+0
+5
+01
+51
+02
+
